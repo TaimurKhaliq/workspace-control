@@ -245,7 +245,8 @@ def test_analyze_feature_compares_ui_persistence_and_event_requests(
     persistence_by_repo = {impact.repo_name: impact for impact in persistence_impacts}
     event_by_repo = {impact.repo_name: impact for impact in event_impacts}
 
-    assert ui_impacts[0].repo_name == "web-ui"
+    assert ui_impacts[0].repo_name == "profile-api"
+    assert ui_by_repo["profile-api"].role == "primary-owner"
     assert ui_by_repo["web-ui"].role == "direct-dependent"
     assert "deterministic_intent:" in ui_by_repo["web-ui"].reason
     assert "adapter_discovery:" in ui_by_repo["web-ui"].reason

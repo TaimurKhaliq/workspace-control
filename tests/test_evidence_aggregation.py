@@ -61,7 +61,8 @@ def test_evidence_aggregator_collects_all_feature_sources(tmp_path: Path) -> Non
     assert {"domain", "backend", "ownership", "keyword_overlap"} <= categories
     assert "backend adapter discovery" in signals
     assert all(item.repo_name == "profile-api" for item in evidence)
-    assert all(item.weight > 0 for item in evidence)
+    assert any(item.weight > 0 for item in evidence if item.source == "stackpilot.yml")
+    assert any(item.weight > 0 for item in evidence if item.source == "deterministic_intent")
 
 
 def test_evidence_aggregator_is_deterministic(tmp_path: Path) -> None:

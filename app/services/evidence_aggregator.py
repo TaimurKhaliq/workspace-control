@@ -437,7 +437,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "frontend",
                     "frontend adapter discovery",
-                    4,
+                    0,
                     discovery.detected_frameworks,
                     discovery.likely_ui_locations,
                 )
@@ -454,7 +454,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "backend",
                     "backend adapter discovery",
-                    2,
+                    0,
                     discovery.detected_frameworks,
                     discovery.likely_api_locations or discovery.likely_service_locations,
                 )
@@ -469,7 +469,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "data",
                     "data adapter discovery",
-                    2,
+                    0,
                     discovery.detected_frameworks,
                     discovery.likely_persistence_locations,
                 )
@@ -481,7 +481,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "downstream",
                     "event adapter discovery",
-                    2,
+                    0,
                     discovery.detected_frameworks,
                     discovery.likely_event_locations,
                 )
