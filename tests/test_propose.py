@@ -252,3 +252,45 @@ def test_propose_changes_metadata_only_repo_stays_conservative(tmp_path: Path) -
     assert backend.possible_new_files == []
     assert "metadata-only mode" in backend.rationale
     assert "manifest hints" in backend.rationale
+
+
+def test_propose_changes_mutable_domain_field_metadata_only_keeps_two_owners(
+    tmp_path: Path,
+) -> None:
+    _write_manifest(
+        tmp_path,
+        repo_name="web-ui",
+        repo_type="frontend",
+        domain="customer-profile",
+        language="typescript",
+        build_commands=["npm run build"],
+        test_commands=["npm test"],
+        api_keywords=["profile screen"],
+    )
+    _write_manifest(
+        tmp_path,
+        repo_name="service-a",
+        repo_type="backend-service",
+        domain="customer-profile",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+        owns_entities=["customer_profile"],
+        owns_fields=["phone_number"],
+        owns_tables=["customer_profiles"],
+        api_keywords=["profile update"],
+    )
+
+    feature_request = "Allow users to update their phone number from the profile screen"
+    rows = build_inventory(tmp_path)
+    proposal = create_change_proposal(feature_request, rows, scan_root=tmp_path)
+    by_repo = _proposal_by_repo(proposal)
+
+    assert proposal.implementation_owner == "web-ui"
+    assert proposal.domain_owner == "service-a"
+    assert set(proposal.feature_intents).issuperset({"ui", "api"})
+    assert set(by_repo) == {"service-a", "web-ui"}
+    assert by_repo["service-a"].possible_new_files == []
+    assert by_repo["web-ui"].possible_new_files == []
+    assert "metadata-only mode" in by_repo["service-a"].rationale
+    assert "manifest hints" in by_repo["web-ui"].rationale

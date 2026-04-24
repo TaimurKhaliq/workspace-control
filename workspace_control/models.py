@@ -60,6 +60,8 @@ class FeaturePlan(BaseModel):
     confidence: Literal["high", "medium", "low"] = "medium"
     missing_evidence: list[str] = Field(default_factory=list)
     primary_owner: str | None = None
+    implementation_owner: str | None = None
+    domain_owner: str | None = None
     direct_dependents: list[str] = Field(default_factory=list)
     possible_downstreams: list[str] = Field(default_factory=list)
     db_change_needed: bool = False
@@ -96,4 +98,6 @@ class ChangeProposal(BaseModel):
     ] = Field(default_factory=list)
     confidence: Literal["high", "medium", "low"] = "medium"
     missing_evidence: list[str] = Field(default_factory=list)
+    implementation_owner: str | None = None
+    domain_owner: str | None = None
     proposed_changes: list[ChangeProposalItem] = Field(default_factory=list)

@@ -61,6 +61,19 @@ API_CONTRACT_CHANGE_PHRASES = (
     "contract",
 )
 
+MUTABLE_DOMAIN_FIELD_PHRASES = (
+    "phone number",
+    "email",
+    "email address",
+    "preferred language",
+    "language preference",
+    "marketing opt in",
+    "marketing opt-in",
+    "marketing opt_in",
+)
+MUTABLE_DOMAIN_UPDATE_ACTIONS = {"change", "edit", "modify", "set", "update"}
+UI_COPY_ONLY_TOKENS = {"copy", "label", "rename", "text"}
+
 MIN_RELEVANT_SCORE = 5
 MIN_SECONDARY_SCORE = 8
 
@@ -211,6 +224,25 @@ def _api_contract_change_requested(feature_request: str) -> bool:
     return bool(_phrase_matches(normalized_feature, API_CONTRACT_CHANGE_PHRASES))
 
 
+def _with_feature_intent(feature_intents: Sequence[str], intent: str) -> list[str]:
+    intent_set = set(feature_intents)
+    intent_set.add(intent)
+    return [current for current in INTENT_ORDER if current in intent_set]
+
+
+def _mutable_domain_field_update_requested(feature_request: str) -> bool:
+    normalized_feature = _normalize_text(feature_request)
+    tokens = _tokenize(feature_request)
+    field_matches = _phrase_matches(normalized_feature, MUTABLE_DOMAIN_FIELD_PHRASES)
+    if not field_matches:
+        return False
+    if not tokens & MUTABLE_DOMAIN_UPDATE_ACTIONS:
+        return False
+    if tokens & UI_COPY_ONLY_TOKENS and not tokens & {"field", "value"}:
+        return False
+    return True
+
+
 def _row_is_frontend(row: InventoryRow) -> bool:
     row_tokens = _tokenize(row.type)
     return bool({"frontend", "web", "ui", "client"} & row_tokens)
@@ -269,6 +301,44 @@ def _weakly_specified_request(
 
 def _has_specific_ownership_evidence(reason: str) -> bool:
     return "owns_fields" in reason
+
+
+def _strong_backend_domain_owner(
+    impacts: Sequence[FeatureImpact],
+    by_repo: dict[str, InventoryRow],
+) -> FeatureImpact | None:
+    candidates = [
+        impact
+        for impact in impacts
+        if (row := by_repo.get(impact.repo_name)) is not None
+        and _row_is_backend(row)
+        and "backend ownership" in impact.reason
+        and any(
+            marker in impact.reason
+            for marker in ("owns_entities", "owns_fields", "owns_tables")
+        )
+    ]
+    if not candidates:
+        return None
+    candidates.sort(key=lambda impact: (-impact.score, impact.repo_name))
+    return candidates[0]
+
+
+def _frontend_implementation_owner(
+    impacts: Sequence[FeatureImpact],
+    by_repo: dict[str, InventoryRow],
+) -> FeatureImpact | None:
+    candidates = [
+        impact
+        for impact in impacts
+        if (row := by_repo.get(impact.repo_name)) is not None
+        and _row_is_frontend(row)
+        and impact.role != "weak-match"
+    ]
+    if not candidates:
+        return None
+    candidates.sort(key=lambda impact: (-impact.score, impact.repo_name))
+    return candidates[0]
 
 
 def _has_real_downstream_evidence(
@@ -707,8 +777,27 @@ def create_feature_plan(
     )
     by_repo = {row.repo_name: row for row in rows}
     feature_intents = _classify_feature_intents(feature_request)
-    event_integration_mode = "event_integration" in feature_intents
     discovery_by_repo = _architecture_by_repo(scan_root)
+    mutable_domain_update = _mutable_domain_field_update_requested(feature_request)
+    domain_owner_impact = (
+        _strong_backend_domain_owner(resolved_impacts, by_repo)
+        if mutable_domain_update
+        else None
+    )
+    implementation_owner_impact = (
+        _frontend_implementation_owner(resolved_impacts, by_repo)
+        if mutable_domain_update
+        else None
+    )
+    inferred_api_for_mutable_field = bool(
+        "ui" in feature_intents
+        and domain_owner_impact is not None
+        and implementation_owner_impact is not None
+    )
+    if inferred_api_for_mutable_field:
+        feature_intents = _with_feature_intent(feature_intents, "api")
+
+    event_integration_mode = "event_integration" in feature_intents
     weak_request = _weakly_specified_request(feature_request, feature_intents)
 
     filtered_impacts = _filter_impacts_for_plan(
@@ -736,10 +825,23 @@ def create_feature_plan(
         for impact in filtered_impacts
         if impact.role == "possible-downstream"
     ]
+    implementation_owner = (
+        implementation_owner_impact.repo_name
+        if inferred_api_for_mutable_field and implementation_owner_impact is not None
+        else primary_owner
+    )
+    domain_owner = (
+        domain_owner_impact.repo_name
+        if inferred_api_for_mutable_field and domain_owner_impact is not None
+        else None
+    )
 
     ui_change_needed = "ui" in feature_intents
     db_change_needed = "persistence" in feature_intents
-    api_change_needed = _api_contract_change_requested(feature_request)
+    api_change_needed = (
+        _api_contract_change_requested(feature_request)
+        or inferred_api_for_mutable_field
+    )
 
     likely_paths_by_repo: dict[str, list[str]] = {}
     validation_commands: list[str] = []
@@ -815,7 +917,11 @@ def create_feature_plan(
             + "."
         )
 
-    requires_human_approval = db_change_needed or bool(possible_downstreams)
+    requires_human_approval = (
+        db_change_needed
+        or bool(possible_downstreams)
+        or inferred_api_for_mutable_field
+    )
     missing_evidence = _missing_evidence_for_plan(
         primary_owner=primary_owner,
         possible_downstreams=possible_downstreams,
@@ -839,6 +945,8 @@ def create_feature_plan(
         confidence=confidence,
         missing_evidence=missing_evidence,
         primary_owner=primary_owner,
+        implementation_owner=implementation_owner,
+        domain_owner=domain_owner,
         direct_dependents=direct_dependents,
         possible_downstreams=possible_downstreams,
         db_change_needed=db_change_needed,

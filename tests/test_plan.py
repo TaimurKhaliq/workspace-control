@@ -226,6 +226,62 @@ def test_cli_plan_feature_prints_feature_plan_json(tmp_path: Path, capsys) -> No
     assert "likely_paths_by_repo" in parsed
     assert "confidence" in parsed
     assert "missing_evidence" in parsed
+    assert "implementation_owner" in parsed
+    assert "domain_owner" in parsed
+
+
+def test_plan_feature_mutable_domain_field_from_screen_keeps_backend_owner(
+    tmp_path: Path,
+) -> None:
+    _write_manifest(
+        tmp_path,
+        repo_name="web-ui",
+        repo_type="frontend",
+        domain="customer-profile",
+        language="typescript",
+        build_commands=["npm run build"],
+        test_commands=["npm test"],
+        api_keywords=["profile screen"],
+    )
+    _write_manifest(
+        tmp_path,
+        repo_name="service-a",
+        repo_type="backend-service",
+        domain="customer-profile",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+        owns_entities=["customer_profile"],
+        owns_fields=["phone_number"],
+        owns_tables=["customer_profiles"],
+        api_keywords=["profile update"],
+    )
+    _write_manifest(
+        tmp_path,
+        repo_name="service-b",
+        repo_type="backend-service",
+        domain="customer-profile",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+    )
+
+    feature_request = "Allow users to update their phone number from the profile screen"
+    rows = build_inventory(tmp_path)
+    impacts = analyze_feature(feature_request, rows, scan_root=tmp_path)
+    plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
+
+    assert plan.implementation_owner == "web-ui"
+    assert plan.domain_owner == "service-a"
+    assert set(plan.feature_intents).issuperset({"ui", "api"})
+    assert plan.primary_owner == "service-a"
+    assert "web-ui" in plan.direct_dependents
+    assert plan.db_change_needed is False
+    assert plan.api_change_needed is True
+    assert plan.requires_human_approval is True
+    assert "no API contract file found" in plan.missing_evidence
+    assert "service-a" in plan.likely_paths_by_repo
+    assert "web-ui" in plan.likely_paths_by_repo
 
 
 def test_plan_feature_high_confidence_clear_owner(tmp_path: Path) -> None:

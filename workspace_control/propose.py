@@ -154,6 +154,8 @@ def create_change_proposal(
         feature_intents=plan.feature_intents,
         confidence=plan.confidence,
         missing_evidence=plan.missing_evidence,
+        implementation_owner=plan.implementation_owner,
+        domain_owner=plan.domain_owner,
         proposed_changes=proposed_changes,
     )
 
