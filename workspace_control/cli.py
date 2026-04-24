@@ -73,6 +73,11 @@ def run(argv: list[str] | None = None) -> int:
         print(format_feature_analysis(args.feature_description, impacts))
         return 0
 
-    plan = create_feature_plan(args.feature_description, rows, impacts=impacts)
+    plan = create_feature_plan(
+        args.feature_description,
+        rows,
+        impacts=impacts,
+        scan_root=args.scan_root,
+    )
     print(format_feature_plan(plan))
     return 0
