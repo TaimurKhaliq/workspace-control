@@ -81,7 +81,38 @@ UI_COPY_ONLY_TOKENS = {"copy", "label", "rename", "text"}
 MIN_RELEVANT_SCORE = 5
 MIN_SECONDARY_SCORE = 8
 
-VAGUE_REQUEST_TOKENS = {"fix", "improve", "stuff", "things", "misc", "general"}
+VAGUE_REQUEST_TOKENS = {
+    "fix",
+    "general",
+    "improve",
+    "manage",
+    "management",
+    "misc",
+    "stuff",
+    "things",
+    "update",
+}
+REQUEST_ACTION_TOKENS = {
+    "add",
+    "allow",
+    "change",
+    "create",
+    "edit",
+    "emit",
+    "enable",
+    "fix",
+    "improve",
+    "manage",
+    "persist",
+    "publish",
+    "remove",
+    "rename",
+    "search",
+    "set",
+    "store",
+    "sync",
+    "update",
+}
 SPECIFIC_FEATURE_TOKENS = {
     "address",
     "email",
@@ -336,6 +367,33 @@ def _weakly_specified_request(
     return not any(
         intent in feature_intents for intent in ("persistence", "api", "event_integration")
     )
+
+
+def _low_signal_request(
+    feature_request: str,
+    feature_intents: Sequence[str],
+) -> bool:
+    if feature_intents:
+        return False
+    tokens = _tokenize(feature_request)
+    if tokens & REQUEST_ACTION_TOKENS:
+        return False
+    if tokens & SPECIFIC_FEATURE_TOKENS:
+        return False
+    if tokens & SPECIFIC_UI_TOKENS:
+        return False
+    return True
+
+
+def _api_surface_expansion_requested(
+    feature_request: str,
+    feature_intents: Sequence[str],
+) -> bool:
+    if "api" not in feature_intents:
+        return False
+    if not _api_contract_change_requested(feature_request):
+        return False
+    return bool(_tokenize(feature_request) & {"add", "create", "new"})
 
 
 def _has_specific_ownership_evidence(reason: str) -> bool:
@@ -1102,6 +1160,12 @@ def create_feature_plan(
 
     event_integration_mode = "event_integration" in feature_intents
     weak_request = _weakly_specified_request(feature_request, feature_intents)
+    low_signal_request = _low_signal_request(feature_request, feature_intents)
+    weak_evidence_request = weak_request or low_signal_request
+    api_surface_expansion = _api_surface_expansion_requested(
+        feature_request,
+        feature_intents,
+    )
 
     filtered_impacts = _filter_impacts_for_plan(
         feature_request,
@@ -1109,11 +1173,11 @@ def create_feature_plan(
         by_repo,
         feature_intents,
         discovery_by_repo,
-        weak_request,
+        weak_evidence_request,
     )
     filtered_impacts = _promote_primary_owner_if_missing(
         filtered_impacts,
-        allow_promotion=not weak_request,
+        allow_promotion=not weak_evidence_request,
     )
 
     primary_owner = next(
@@ -1252,6 +1316,8 @@ def create_feature_plan(
         or bool(possible_downstreams)
         or inferred_api_for_mutable_field
         or inferred_api_for_new_field_with_contract
+        or api_surface_expansion
+        or weak_evidence_request
     )
     missing_evidence = _missing_evidence_for_plan(
         primary_owner=primary_owner,
@@ -1262,7 +1328,7 @@ def create_feature_plan(
         event_integration_mode=event_integration_mode,
         architecture_by_repo=discovery_by_repo,
         impacts=filtered_impacts,
-        weakly_specified_request=weak_request,
+        weakly_specified_request=weak_evidence_request,
     )
     confidence = _confidence_for_plan(
         primary_owner=primary_owner,

@@ -27,6 +27,8 @@ EXPECTATION_ALIASES = {
     "contains": "array_contains",
     "array_excludes": "array_excludes",
     "excludes": "array_excludes",
+    "array_excludes_substring": "array_excludes_substring",
+    "array_items_exclude_substring": "array_excludes_substring",
     "field_in": "field_in",
     "field_in_allowed_set": "field_in",
     "nonempty_list": "nonempty_list",
@@ -187,6 +189,12 @@ def evaluate_expectation(
         expected = expectation.get("value")
         result["expected"] = f"excludes {expected!r}"
         result["passed"] = isinstance(actual, list) and expected not in actual
+    elif expectation_type == "array_excludes_substring":
+        expected = str(expectation.get("value", ""))
+        result["expected"] = f"items exclude substring {expected!r}"
+        result["passed"] = isinstance(actual, list) and all(
+            expected not in str(item) for item in actual
+        )
     elif expectation_type == "field_in":
         allowed = expectation.get("allowed", expectation.get("values", []))
         result["expected"] = f"in {allowed!r}"
@@ -302,7 +310,8 @@ def _resolve_segment(current: Any, segment: str) -> Any:
         if segment.isdigit():
             index = int(segment)
             return current[index] if 0 <= index < len(current) else None
-        return [_resolve_segment(item, segment) for item in current]
+        resolved = [_resolve_segment(item, segment) for item in current]
+        return _flatten_one_level(resolved)
 
     if not isinstance(current, dict):
         return None
@@ -332,6 +341,19 @@ def _select_from_list(value: Any, selector: str) -> Any:
         if isinstance(item, dict) and str(item.get(selector_key)) == selector_value:
             return item
     return None
+
+
+def _flatten_one_level(values: Sequence[Any]) -> list[Any]:
+    if not any(isinstance(value, list) for value in values):
+        return list(values)
+
+    flattened: list[Any] = []
+    for value in values:
+        if isinstance(value, list):
+            flattened.extend(value)
+        else:
+            flattened.append(value)
+    return flattened
 
 
 def _resolve_path(path: Path, repo_root: Path) -> Path:

@@ -160,6 +160,21 @@ def test_plan_feature_backend_only_event_publishing_feature(tmp_path: Path) -> N
     assert "outbox/producer/integration path" in owner_step
 
 
+def test_plan_feature_backend_api_creation_requires_human_approval(
+    tmp_path: Path,
+) -> None:
+    _seed_common_workspace(tmp_path)
+
+    feature_request = "Add a new customer search API by email address"
+    rows = build_inventory(tmp_path)
+    plan = create_feature_plan(feature_request, rows, scan_root=tmp_path)
+
+    assert plan.primary_owner == "profile-api"
+    assert "api" in plan.feature_intents
+    assert plan.ui_change_needed is False
+    assert plan.requires_human_approval is True
+
+
 def test_plan_feature_event_and_downstream_notification_feature(tmp_path: Path) -> None:
     _seed_common_workspace(tmp_path)
 
@@ -436,6 +451,7 @@ def test_plan_feature_fix_profile_stuff_reports_weak_evidence(tmp_path: Path) ->
         in plan.missing_evidence
     )
     assert "no primary owner identified from strong evidence" in plan.missing_evidence
+    assert plan.requires_human_approval is True
 
 
 def test_plan_feature_improve_customer_settings_filters_low_signal(tmp_path: Path) -> None:
@@ -456,6 +472,25 @@ def test_plan_feature_improve_customer_settings_filters_low_signal(tmp_path: Pat
         in plan.missing_evidence
     )
     assert all("pages/components/forms" not in step for step in plan.ordered_steps)
+    assert plan.requires_human_approval is True
+
+
+def test_plan_feature_nonsense_profile_prompt_reports_low_signal(
+    tmp_path: Path,
+) -> None:
+    _seed_common_workspace(tmp_path)
+
+    feature_request = "Banana rocket llama profile"
+    rows = build_inventory(tmp_path)
+    plan = create_feature_plan(feature_request, rows, scan_root=tmp_path)
+
+    assert plan.confidence == "low"
+    assert plan.primary_owner is None
+    assert (
+        "weak evidence for concrete repo ownership or implementation steps"
+        in plan.missing_evidence
+    )
+    assert "no primary owner identified from strong evidence" in plan.missing_evidence
 
 
 def test_plan_feature_generic_api_owner_reports_inferred_owner_gap(

@@ -36,6 +36,117 @@
         {"type": "array_contains", "path": "proposed_changes[service-a].possible_new_files", "value": "new event payload class"},
         {"type": "array_excludes", "path": "proposed_changes[service-a].possible_new_files", "value": "src/main/java/events/UserUpdatesPreferredLanguagePublishEvent.java"}
       ]
+    },
+    {
+      "id": "ui-copy-only",
+      "command": "plan-feature",
+      "feature": "Rename the preferred language label on the profile screen",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "web-ui"},
+        {"type": "exact", "path": "implementation_owner", "value": "web-ui"},
+        {"type": "exact", "path": "domain_owner", "value": null},
+        {"type": "exact", "path": "feature_intents", "value": ["ui"]},
+        {"type": "exact", "path": "db_change_needed", "value": false},
+        {"type": "exact", "path": "api_change_needed", "value": false},
+        {"type": "exact", "path": "ui_change_needed", "value": true},
+        {"type": "exact", "path": "requires_human_approval", "value": false}
+      ]
+    },
+    {
+      "id": "ui-existing-field-update",
+      "command": "plan-feature",
+      "feature": "Allow users to update their preferred language from the profile screen",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "exact", "path": "implementation_owner", "value": "web-ui"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "feature_intents", "value": "ui"},
+        {"type": "array_contains", "path": "feature_intents", "value": "api"},
+        {"type": "exact", "path": "db_change_needed", "value": false},
+        {"type": "exact", "path": "api_change_needed", "value": true},
+        {"type": "exact", "path": "ui_change_needed", "value": true},
+        {"type": "exact", "path": "requires_human_approval", "value": true}
+      ]
+    },
+    {
+      "id": "ui-new-field-persisted",
+      "command": "plan-feature",
+      "feature": "Add preferred language to the customer profile form and persist it",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "exact", "path": "implementation_owner", "value": "web-ui"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "feature_intents", "value": "ui"},
+        {"type": "array_contains", "path": "feature_intents", "value": "persistence"},
+        {"type": "array_contains", "path": "feature_intents", "value": "api"},
+        {"type": "exact", "path": "db_change_needed", "value": true},
+        {"type": "exact", "path": "api_change_needed", "value": true},
+        {"type": "exact", "path": "ui_change_needed", "value": true},
+        {"type": "exact", "path": "requires_human_approval", "value": true}
+      ]
+    },
+    {
+      "id": "backend-api-only",
+      "command": "plan-feature",
+      "feature": "Add a new customer search API by email address",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "exact", "path": "implementation_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "feature_intents", "value": "api"},
+        {"type": "exact", "path": "ui_change_needed", "value": false},
+        {"type": "exact", "path": "requires_human_approval", "value": true}
+      ]
+    },
+    {
+      "id": "event-integration",
+      "command": "plan-feature",
+      "feature": "When a user updates their preferred language, publish a profile-updated event to downstream systems",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "exact", "path": "implementation_owner", "value": "service-a"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "feature_intents", "value": "event_integration"},
+        {"type": "array_contains", "path": "possible_downstreams", "value": "service-b"},
+        {"type": "exact", "path": "db_change_needed", "value": false},
+        {"type": "exact", "path": "api_change_needed", "value": false},
+        {"type": "exact", "path": "ui_change_needed", "value": false},
+        {"type": "exact", "path": "requires_human_approval", "value": true}
+      ]
+    },
+    {
+      "id": "event-propose-changes",
+      "command": "propose-changes",
+      "feature": "When a user updates their preferred language, publish a profile-updated event to downstream systems",
+      "expectations": [
+        {"type": "exact", "path": "implementation_owner", "value": "service-a"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "proposed_changes[].repo_name", "value": "service-a"},
+        {"type": "array_contains", "path": "proposed_changes[].repo_name", "value": "service-b"},
+        {"type": "array_excludes", "path": "proposed_changes[].repo_name", "value": "web-ui"},
+        {"type": "array_excludes", "path": "proposed_changes[].likely_files_to_inspect", "value": "stackpilot.yml"},
+        {"type": "array_excludes_substring", "path": "proposed_changes[].likely_files_to_inspect", "value": "*"},
+        {"type": "array_excludes_substring", "path": "proposed_changes[].possible_new_files", "value": "UserUpdatesPreferredLanguage"},
+        {"type": "array_excludes_substring", "path": "proposed_changes[].possible_new_files", "value": "WhenAUserUpdates"}
+      ]
+    },
+    {
+      "id": "vague-ambiguous",
+      "command": "plan-feature",
+      "feature": "Improve profile management",
+      "expectations": [
+        {"type": "field_in", "path": "confidence", "allowed": ["low", "medium"]},
+        {"type": "nonempty_list", "path": "missing_evidence"},
+        {"type": "exact", "path": "requires_human_approval", "value": true}
+      ]
+    },
+    {
+      "id": "nonsense-negative",
+      "command": "plan-feature",
+      "feature": "Banana rocket llama profile",
+      "expectations": [
+        {"type": "exact", "path": "confidence", "value": "low"},
+        {"type": "nonempty_list", "path": "missing_evidence"}
+      ]
     }
   ]
 }

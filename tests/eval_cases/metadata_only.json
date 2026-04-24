@@ -33,6 +33,30 @@
         {"type": "exact", "path": "proposed_changes[service-a].possible_new_files", "value": []},
         {"type": "exact", "path": "proposed_changes[web-ui].possible_new_files", "value": []}
       ]
+    },
+    {
+      "id": "metadata-field-update",
+      "command": "plan-feature",
+      "feature": "Allow users to update their preferred language from the profile screen",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "exact", "path": "implementation_owner", "value": "web-ui"},
+        {"type": "array_contains", "path": "feature_intents", "value": "ui"},
+        {"type": "array_contains", "path": "feature_intents", "value": "api"},
+        {"type": "field_in", "path": "confidence", "allowed": ["low", "medium"]},
+        {"type": "nonempty_list", "path": "missing_evidence"}
+      ]
+    },
+    {
+      "id": "metadata-event",
+      "command": "plan-feature",
+      "feature": "When a user updates their preferred language, publish a profile-updated event to downstream systems",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "possible_downstreams", "value": "service-b"},
+        {"type": "array_contains", "path": "feature_intents", "value": "event_integration"},
+        {"type": "field_in", "path": "confidence", "allowed": ["low", "medium"]}
+      ]
     }
   ]
 }
