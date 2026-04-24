@@ -164,11 +164,18 @@ def test_propose_changes_ui_and_persistence_feature(tmp_path: Path) -> None:
     assert "src/main/resources/db/migration" in backend.likely_files_to_inspect
     assert "src/main/java/com/acme/profile/entity" in backend.likely_files_to_inspect
     assert "src/main/java/com/acme/profile/repository" in backend.likely_files_to_inspect
-    assert any(path.endswith(".sql") for path in backend.possible_new_files)
+    assert backend.possible_new_files == [
+        "new request DTO",
+        "new response DTO",
+        "new migration file",
+    ]
     assert "src/pages" in frontend.likely_files_to_inspect
     assert "src/forms" in frontend.likely_files_to_inspect
     assert "src/api" in frontend.likely_files_to_inspect
-    assert any(path.endswith(".tsx") for path in frontend.possible_new_files)
+    assert frontend.possible_new_files == [
+        "new UI form component",
+        "new client API helper",
+    ]
 
 
 def test_propose_changes_backend_only_api_feature(tmp_path: Path, capsys) -> None:
@@ -223,12 +230,56 @@ def test_propose_changes_prefers_specific_backend_file_names(tmp_path: Path) -> 
     for expected_file in expected_files:
         assert expected_file in backend.likely_files_to_inspect
 
-    assert backend.likely_files_to_inspect.index(expected_files[0]) < (
-        backend.likely_files_to_inspect.index("src/main/java/com/acme/profile/controller")
+    assert "src/main/java/com/acme/profile/controller" not in (
+        backend.likely_files_to_inspect
     )
     assert "owns_fields" in backend.rationale
     assert "spring_boot" in backend.rationale
     assert "Concrete files were inferred" in backend.rationale
+
+
+def test_propose_changes_source_discovered_ui_persistence_stays_conservative() -> None:
+    feature_request = (
+        "Add a phone number field to the profile screen and persist it for each customer"
+    )
+    rows = build_inventory(FIXTURE_ROOT)
+    proposal = create_change_proposal(feature_request, rows, scan_root=FIXTURE_ROOT)
+    by_repo = _proposal_by_repo(proposal)
+
+    backend = by_repo["service-a"]
+    frontend = by_repo["web-ui"]
+    all_new_files = [
+        path
+        for item in proposal.proposed_changes
+        for path in item.possible_new_files
+    ]
+
+    assert backend.likely_files_to_inspect[:6] == [
+        "src/main/java/com/example/servicea/controller/ProfileController.java",
+        "src/main/java/com/example/servicea/dto/ProfileRequest.java",
+        "src/main/resources/openapi.yaml",
+        "src/main/java/com/example/servicea/service/ProfileService.java",
+        "src/main/java/com/example/servicea/repository/UserProfileRepository.java",
+        "src/main/java/com/example/servicea/entity/UserProfile.java",
+    ]
+    assert "src/main/java/com/example/servicea/controller" not in (
+        backend.likely_files_to_inspect
+    )
+    assert "src/main/java/com/example/servicea/dto" not in backend.likely_files_to_inspect
+    assert "src/main/resources/db/migration" in backend.likely_files_to_inspect
+    assert frontend.likely_files_to_inspect[0] == "src/components/ProfileForm.tsx"
+    assert "src/components" not in frontend.likely_files_to_inspect
+    assert backend.possible_new_files == [
+        "new request DTO",
+        "new response DTO",
+        "new migration file",
+    ]
+    assert frontend.possible_new_files == [
+        "new UI form component",
+        "new client API helper",
+    ]
+    assert not any("AddPhoneNumberFieldProfile" in path for path in all_new_files)
+    assert not any("add-phone-number-field-profile" in path for path in all_new_files)
 
 
 def test_propose_changes_metadata_only_repo_stays_conservative(tmp_path: Path) -> None:

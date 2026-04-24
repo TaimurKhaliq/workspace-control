@@ -191,9 +191,7 @@
           "passed": true,
           "actual": [
             "src/main/java/com/example/servicea/service/ProfileService.java",
-            "src/main/java/com/example/servicea/service",
             "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
-            "src/main/java/com/example/serviceb/events",
             "src/main/java/com/example/serviceb/integration"
           ],
           "expected": "excludes 'stackpilot.yml'"
@@ -204,9 +202,7 @@
           "passed": true,
           "actual": [
             "src/main/java/com/example/servicea/service/ProfileService.java",
-            "src/main/java/com/example/servicea/service",
             "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
-            "src/main/java/com/example/serviceb/events",
             "src/main/java/com/example/serviceb/integration"
           ],
           "expected": "items exclude substring '*'"
@@ -687,8 +683,7 @@
           "path": "proposed_changes[service-a].likely_files_to_inspect",
           "passed": true,
           "actual": [
-            "src/main/java/com/example/servicea/service/ProfileService.java",
-            "src/main/java/com/example/servicea/service"
+            "src/main/java/com/example/servicea/service/ProfileService.java"
           ],
           "expected": "contains 'src/main/java/com/example/servicea/service/ProfileService.java'"
         },
@@ -697,8 +692,7 @@
           "path": "proposed_changes[service-a].likely_files_to_inspect",
           "passed": true,
           "actual": [
-            "src/main/java/com/example/servicea/service/ProfileService.java",
-            "src/main/java/com/example/servicea/service"
+            "src/main/java/com/example/servicea/service/ProfileService.java"
           ],
           "expected": "excludes 'stackpilot.yml'"
         },
@@ -708,7 +702,6 @@
           "passed": true,
           "actual": [
             "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
-            "src/main/java/com/example/serviceb/events",
             "src/main/java/com/example/serviceb/integration"
           ],
           "expected": "excludes 'stackpilot.yml'"
@@ -719,7 +712,6 @@
           "passed": true,
           "actual": [
             "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
-            "src/main/java/com/example/serviceb/events",
             "src/main/java/com/example/serviceb/integration"
           ],
           "expected": "excludes 'src/main/java/**/events'"

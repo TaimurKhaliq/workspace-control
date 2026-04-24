@@ -375,8 +375,6 @@ def _possible_new_files(
     discovery: RepoDiscovery | None,
 ) -> list[str]:
     files: list[str] = []
-    slug = _feature_slug(plan.feature_request)
-    class_name = _pascal_case(slug)
     backend = _row_is_backend(row)
     frontend = _row_is_frontend(row)
     event_mode = "event_integration" in plan.feature_intents
@@ -388,42 +386,15 @@ def _possible_new_files(
         return []
 
     if frontend and plan.ui_change_needed:
-        page_base = _first_path_with_marker(inspect_paths, ("pages",)) or "src/pages"
-        form_base = _first_path_with_marker(inspect_paths, ("forms",)) or "src/forms"
-        api_base = (
-            _first_folder_with_marker(inspect_paths, ("api",))
-            or _first_folder_with_marker(inspect_paths, ("services",))
-            or "src/api"
-        )
-        files.extend(
-            [
-                f"{page_base}/{slug}.tsx",
-                f"{form_base}/{slug}-form.tsx",
-                f"{api_base}/{slug}.ts",
-            ]
-        )
+        files.append("new UI form component")
+        if plan.api_change_needed:
+            files.append("new client API helper")
 
     if backend and plan.api_change_needed and row.language.lower() == "java":
-        api_base = (
-            _first_folder_with_marker(inspect_paths, ("dto",))
-            or _first_folder_with_marker(inspect_paths, ("api", "controller"))
-            or "src/main/java/dto"
-        )
-        files.extend(
-            [
-                f"{api_base}/{class_name}Request.java",
-                f"{api_base}/{class_name}Response.java",
-            ]
-        )
-        if discovery is None or not discovery.likely_api_locations:
-            files.append("src/main/resources/openapi.yaml")
+        files.extend(["new request DTO", "new response DTO"])
 
     if backend and plan.db_change_needed:
-        migration_base = (
-            _first_folder_with_marker(inspect_paths, ("migration", "changelog"))
-            or "src/main/resources/db/migration"
-        )
-        files.append(f"{migration_base}/V000__{slug}.sql")
+        files.append("new migration file")
 
     if backend and event_mode and row.language.lower() == "java":
         files.extend(_event_possible_new_files(role, inspect_paths))
@@ -536,6 +507,10 @@ def _final_inspect_paths(
         for path in folders
         if not _path_is_glob(path) and not _path_looks_like_file(path)
     ]
+    concrete_folders = _remove_parent_folders_with_files(
+        concrete_folders,
+        concrete_files,
+    )
     concrete_source_paths = [*concrete_files, *concrete_folders]
     include_manifest = not (
         discovery is not None
@@ -548,6 +523,19 @@ def _final_inspect_paths(
         paths.insert(0, "stackpilot.yml")
 
     return _dedupe_preserve_order(paths)
+
+
+def _remove_parent_folders_with_files(
+    folders: Sequence[str],
+    files: Sequence[str],
+) -> list[str]:
+    if not files:
+        return list(folders)
+    return [
+        folder
+        for folder in folders
+        if not any(file_path.startswith(f"{folder}/") for file_path in files)
+    ]
 
 
 def _backend_event_paths(row: InventoryRow, paths: Sequence[str]) -> list[str]:
@@ -569,7 +557,10 @@ def _event_possible_new_files(
     role: str,
     inspect_paths: Sequence[str],
 ) -> list[str]:
-    event_base = _first_java_folder_with_marker(inspect_paths, EVENT_PATH_MARKERS)
+    event_base = _event_base_from_existing(inspect_paths) or _first_java_folder_with_marker(
+        inspect_paths,
+        EVENT_PATH_MARKERS,
+    )
     naming_stem = _event_naming_stem_from_existing(inspect_paths)
     existing_files = {path for path in inspect_paths if _path_looks_like_file(path)}
 
@@ -584,6 +575,16 @@ def _event_possible_new_files(
     if role == "possible-downstream":
         return ["new consumer/handler class"]
     return []
+
+
+def _event_base_from_existing(paths: Sequence[str]) -> str | None:
+    for path in paths:
+        if not _path_looks_like_file(path):
+            continue
+        name = Path(path).stem
+        if any(name.endswith(suffix) for suffix in EVENT_CLASS_SUFFIXES):
+            return str(Path(path).parent)
+    return None
 
 
 def _event_named_candidates(role: str, event_base: str, naming_stem: str) -> list[str]:
@@ -777,18 +778,6 @@ def _merge_paths(*groups: Sequence[str]) -> list[str]:
     return _dedupe_preserve_order([path for group in groups for path in group])
 
 
-def _first_path_with_marker(paths: Sequence[str], markers: Sequence[str]) -> str | None:
-    matches = _matching_paths(paths, markers)
-    return matches[0] if matches else None
-
-
-def _first_folder_with_marker(paths: Sequence[str], markers: Sequence[str]) -> str | None:
-    for path in _matching_paths(paths, markers):
-        if "*" not in path and "." not in Path(path).name:
-            return path
-    return None
-
-
 def _first_java_folder_with_marker(
     paths: Sequence[str],
     markers: Sequence[str],
@@ -813,20 +802,6 @@ def _row_is_backend(row: InventoryRow) -> bool:
 
 def _tokenize(text: str) -> set[str]:
     return set(re.findall(r"[a-z0-9]+", text.lower()))
-
-
-def _feature_slug(feature_request: str) -> str:
-    tokens = [
-        token
-        for token in re.findall(r"[a-z0-9]+", feature_request.lower())
-        if token not in GENERIC_STOPWORDS
-    ]
-    meaningful = tokens[:5] or ["feature"]
-    return "-".join(meaningful)
-
-
-def _pascal_case(slug: str) -> str:
-    return "".join(part.capitalize() for part in slug.split("-") if part) or "Feature"
 
 
 def _dedupe_preserve_order(items: Sequence[str]) -> list[str]:

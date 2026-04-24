@@ -158,13 +158,7 @@ Command: `python3 main.py propose-changes "Add a phone number field to the profi
         "src/main/java/com/example/servicea/service/ProfileService.java",
         "src/main/java/com/example/servicea/repository/UserProfileRepository.java",
         "src/main/java/com/example/servicea/entity/UserProfile.java",
-        "src/main/java/com/example/servicea/controller",
-        "src/main/java/com/example/servicea/dto",
-        "src/main/java/com/example/servicea/service",
-        "src/main/resources/db/migration",
-        "src/main/java/com/example/servicea/repository",
-        "src/main/java/com/example/servicea/entity",
-        "src/main/resources"
+        "src/main/resources/db/migration"
       ],
       "likely_changes": [
         "Update API request/response contract and DTO mapping.",
@@ -173,9 +167,9 @@ Command: `python3 main.py propose-changes "Add a phone number field to the profi
         "Add or update migration/changelog files for schema changes."
       ],
       "possible_new_files": [
-        "src/main/java/com/example/servicea/dto/AddPhoneNumberFieldProfileRequest.java",
-        "src/main/java/com/example/servicea/dto/AddPhoneNumberFieldProfileResponse.java",
-        "src/main/resources/db/migration/V000__add-phone-number-field-profile.sql"
+        "new request DTO",
+        "new response DTO",
+        "new migration file"
       ],
       "rationale": "Selected as primary-owner by plan-feature for intents: ui, persistence, api; strongest signals: score=62, backend ownership (stackpilot.yml: owns_tables: tokens: customer profile, user profile | stackpilot.yml: api_keywords: phone number; tokens: account profile, customer profile, profile details | adapter_discovery: source-backed ownership (owns_tables: customer profile, user profile; discovered controller/dto, service, entity/repository, migration), stackpilot.yml: domain match (customer, profile), discovered frameworks=flyway, openapi, spring_boot, hinted frameworks=spring_boot; Concrete files were inferred from discovered naming conventions. confidence=high."
     },
@@ -185,7 +179,6 @@ Command: `python3 main.py propose-changes "Add a phone number field to the profi
       "likely_files_to_inspect": [
         "src/components/ProfileForm.tsx",
         "src/pages",
-        "src/components",
         "src/forms",
         "src/api",
         "src/services"
@@ -195,9 +188,8 @@ Command: `python3 main.py propose-changes "Add a phone number field to the profi
         "Update client API request wiring and submit/error handling."
       ],
       "possible_new_files": [
-        "src/pages/add-phone-number-field-profile.tsx",
-        "src/forms/add-phone-number-field-profile-form.tsx",
-        "src/api/add-phone-number-field-profile.ts"
+        "new UI form component",
+        "new client API helper"
       ],
       "rationale": "Selected as direct-dependent by plan-feature for intents: ui, persistence, api; strongest signals: score=25, deterministic_intent: frontend signals (keywords: screen; repo type; manifest: frontend, ui), stackpilot.yml: domain match (customer, profile), discovered frameworks=react, hinted frameworks=react; Concrete files were inferred from discovered naming conventions. confidence=high."
     }
