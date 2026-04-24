@@ -1,4 +1,4 @@
-"""Service that runs repository adapters to discover architecture locations."""
+"""Service that materializes discovery targets and runs repository adapters."""
 
 from collections.abc import Sequence
 from pathlib import Path
@@ -9,9 +9,21 @@ from app.adapters.flyway import FlywayAdapter
 from app.adapters.openapi import OpenAPIAdapter
 from app.adapters.react import ReactAdapter
 from app.adapters.spring_boot import SpringBootAdapter
-from app.models.discovery import AdapterDiscovery, ArchitectureDiscoveryReport, RepoDiscovery
+from app.models.discovery import (
+    AdapterDiscovery,
+    ArchitectureDiscoveryReport,
+    DiscoverySnapshot,
+    DiscoveryTarget,
+    RepoDiscovery,
+)
 from app.models.evidence import Evidence
 from app.models.repo_manifest import RepoManifest
+from app.providers import (
+    DiscoveryProvider,
+    GitUrlProvider,
+    LocalPathProvider,
+    RemoteAgentProvider,
+)
 from workspace_control.manifests import MANIFEST_FILENAME, load_manifest
 
 BUILD_FILES = (
@@ -47,9 +59,13 @@ FRAMEWORK_ALIASES = {
 
 
 class ArchitectureDiscoveryService:
-    """Builds deterministic architecture discovery reports from repository folders."""
+    """Build deterministic architecture reports from source-agnostic targets."""
 
-    def __init__(self, adapters: Sequence[RepoAdapter] | None = None):
+    def __init__(
+        self,
+        adapters: Sequence[RepoAdapter] | None = None,
+        providers: Sequence[DiscoveryProvider] | None = None,
+    ):
         self._adapters = tuple(
             adapters
             if adapters is not None
@@ -60,9 +76,36 @@ class ArchitectureDiscoveryService:
                 ReactAdapter(),
             )
         )
+        self._providers = tuple(
+            providers
+            if providers is not None
+            else (
+                LocalPathProvider(),
+                GitUrlProvider(),
+                RemoteAgentProvider(),
+            )
+        )
 
     def discover(self, base_dir: Path) -> ArchitectureDiscoveryReport:
         """Discover adapter findings for direct child repositories under `base_dir`."""
+
+        return self.snapshot(DiscoveryTarget.local_path(base_dir)).report
+
+    def snapshot(self, target: DiscoveryTarget) -> DiscoverySnapshot:
+        """Materialize a target and return its source-agnostic discovery snapshot."""
+
+        workspace = self._provider_for(target).materialize(target)
+        report = self._discover_local_workspace(workspace.root_path)
+        return DiscoverySnapshot(target=target, workspace=workspace, report=report)
+
+    def _provider_for(self, target: DiscoveryTarget) -> DiscoveryProvider:
+        for provider in self._providers:
+            if provider.supports(target):
+                return provider
+        raise ValueError(f"No discovery provider supports target source {target.source}")
+
+    def _discover_local_workspace(self, base_dir: Path) -> ArchitectureDiscoveryReport:
+        """Discover adapter findings for a materialized local workspace path."""
 
         repos: list[RepoDiscovery] = []
         for repo_path in self._repo_dirs(base_dir):
