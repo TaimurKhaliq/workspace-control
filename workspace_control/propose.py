@@ -33,6 +33,15 @@ PERSISTENCE_PATH_MARKERS = (
     "resources",
 )
 EVENT_PATH_MARKERS = ("event", "events", "integration", "integrations")
+EVENT_CLASS_SUFFIXES = (
+    "Publisher",
+    "Producer",
+    "Consumer",
+    "Listener",
+    "Handler",
+    "Subscriber",
+    "Event",
+)
 CATEGORY_TOKENS = {
     "frontend": {"api", "client", "component", "form", "page", "service"},
     "api": {"api", "controller", "dto", "openapi", "request", "resource", "response"},
@@ -302,7 +311,7 @@ def _likely_files_to_inspect(
     if not files and not folders:
         folders.extend(planned_paths)
 
-    return _dedupe_preserve_order([*files, "stackpilot.yml", *folders])
+    return _final_inspect_paths(files, folders, discovery)
 
 
 def _likely_changes(plan: FeaturePlan, row: InventoryRow, role: str) -> list[str]:
@@ -417,24 +426,7 @@ def _possible_new_files(
         files.append(f"{migration_base}/V000__{slug}.sql")
 
     if backend and event_mode and row.language.lower() == "java":
-        event_base = (
-            _first_java_folder_with_marker(inspect_paths, EVENT_PATH_MARKERS)
-            or "src/main/java/events"
-        )
-        if role == "primary-owner":
-            files.extend(
-                [
-                    f"{event_base}/{class_name}Event.java",
-                    f"{event_base}/{class_name}Publisher.java",
-                ]
-            )
-        elif role == "possible-downstream":
-            files.extend(
-                [
-                    f"{event_base}/{class_name}Consumer.java",
-                    f"{event_base}/{class_name}Handler.java",
-                ]
-            )
+        files.extend(_event_possible_new_files(role, inspect_paths))
 
     return _dedupe_preserve_order(files)
 
@@ -519,12 +511,43 @@ def _locations_for_mode(
 
 
 def _matching_paths(paths: Sequence[str], markers: Sequence[str]) -> list[str]:
-    normalized_markers = tuple(marker.lower() for marker in markers)
+    normalized_markers = {marker.lower() for marker in markers}
     return [
         path
         for path in paths
-        if any(marker in path.lower() for marker in normalized_markers)
+        if _path_marker_tokens(path) & normalized_markers
     ]
+
+
+def _path_marker_tokens(path: str) -> set[str]:
+    return set(re.findall(r"[a-z0-9]+", path.lower()))
+
+
+def _final_inspect_paths(
+    files: Sequence[str],
+    folders: Sequence[str],
+    discovery: RepoDiscovery | None,
+) -> list[str]:
+    concrete_files = [
+        path for path in files if not _path_is_glob(path) and _path_looks_like_file(path)
+    ]
+    concrete_folders = [
+        path
+        for path in folders
+        if not _path_is_glob(path) and not _path_looks_like_file(path)
+    ]
+    concrete_source_paths = [*concrete_files, *concrete_folders]
+    include_manifest = not (
+        discovery is not None
+        and discovery.evidence_mode in {"mixed", "source-discovered"}
+        and concrete_source_paths
+    )
+
+    paths = [*concrete_files, *concrete_folders]
+    if include_manifest:
+        paths.insert(0, "stackpilot.yml")
+
+    return _dedupe_preserve_order(paths)
 
 
 def _backend_event_paths(row: InventoryRow, paths: Sequence[str]) -> list[str]:
@@ -540,6 +563,59 @@ def _backend_event_paths(row: InventoryRow, paths: Sequence[str]) -> list[str]:
         else:
             java_paths.append(path)
     return _dedupe_preserve_order(java_paths)
+
+
+def _event_possible_new_files(
+    role: str,
+    inspect_paths: Sequence[str],
+) -> list[str]:
+    event_base = _first_java_folder_with_marker(inspect_paths, EVENT_PATH_MARKERS)
+    naming_stem = _event_naming_stem_from_existing(inspect_paths)
+    existing_files = {path for path in inspect_paths if _path_looks_like_file(path)}
+
+    if event_base is not None and naming_stem is not None:
+        candidates = _event_named_candidates(role, event_base, naming_stem)
+        candidates = [path for path in candidates if path not in existing_files]
+        if candidates:
+            return candidates
+
+    if role == "primary-owner":
+        return ["new event payload class", "new publisher/producer class"]
+    if role == "possible-downstream":
+        return ["new consumer/handler class"]
+    return []
+
+
+def _event_named_candidates(role: str, event_base: str, naming_stem: str) -> list[str]:
+    if role == "primary-owner":
+        event_name = (
+            f"{naming_stem}.java"
+            if naming_stem.endswith("Event")
+            else f"{naming_stem}Event.java"
+        )
+        return [
+            f"{event_base}/{event_name}",
+            f"{event_base}/{naming_stem}Publisher.java",
+            f"{event_base}/{naming_stem}Producer.java",
+        ]
+    if role == "possible-downstream":
+        return [
+            f"{event_base}/{naming_stem}Consumer.java",
+            f"{event_base}/{naming_stem}Handler.java",
+        ]
+    return []
+
+
+def _event_naming_stem_from_existing(paths: Sequence[str]) -> str | None:
+    for path in paths:
+        if not _path_looks_like_file(path):
+            continue
+        name = Path(path).stem
+        for suffix in EVENT_CLASS_SUFFIXES:
+            if not name.endswith(suffix) or len(name) <= len(suffix):
+                continue
+            return name.removesuffix(suffix)
+    return None
 
 
 def _existing_files_for_category(
@@ -691,6 +767,10 @@ def _strongest_reason_parts(reason: str) -> list[str]:
 
 def _path_looks_like_file(path: str) -> bool:
     return bool(Path(path).suffix)
+
+
+def _path_is_glob(path: str) -> bool:
+    return any(marker in path for marker in ("*", "?", "[", "]"))
 
 
 def _merge_paths(*groups: Sequence[str]) -> list[str]:

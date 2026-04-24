@@ -6,6 +6,8 @@ from workspace_control.cli import run
 from workspace_control.manifests import build_inventory
 from workspace_control.propose import create_change_proposal
 
+FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "mixed_source_stack"
+
 
 def _write_manifest(
     root: Path,
@@ -135,10 +137,12 @@ def test_propose_changes_event_publishing_feature(tmp_path: Path) -> None:
     assert "src/main/java/com/acme/profile/events" in primary.likely_files_to_inspect
     assert "src/main/java/com/acme/profile/service" in primary.likely_files_to_inspect
     assert any("publish logic" in change for change in primary.likely_changes)
-    assert any(path.endswith("Event.java") for path in primary.possible_new_files)
-    assert any(path.endswith("Publisher.java") for path in primary.possible_new_files)
+    assert primary.possible_new_files == [
+        "new event payload class",
+        "new publisher/producer class",
+    ]
     assert any("integration" in path for path in downstream.likely_files_to_inspect)
-    assert any(path.endswith("Consumer.java") for path in downstream.possible_new_files)
+    assert downstream.possible_new_files == ["new consumer/handler class"]
 
 
 def test_propose_changes_ui_and_persistence_feature(tmp_path: Path) -> None:
@@ -247,8 +251,10 @@ def test_propose_changes_metadata_only_repo_stays_conservative(tmp_path: Path) -
     proposal = create_change_proposal(feature_request, rows, scan_root=tmp_path)
     backend = _proposal_by_repo(proposal)["profile-api"]
 
-    assert "src/main/java/**/controller" in backend.likely_files_to_inspect
-    assert "src/main/java/**/service" in backend.likely_files_to_inspect
+    assert "stackpilot.yml" in backend.likely_files_to_inspect
+    assert "src/main/java/controller" in backend.likely_files_to_inspect
+    assert "src/main/java/service" in backend.likely_files_to_inspect
+    assert all("*" not in path for path in backend.likely_files_to_inspect)
     assert backend.possible_new_files == []
     assert "metadata-only mode" in backend.rationale
     assert "manifest hints" in backend.rationale
@@ -294,3 +300,42 @@ def test_propose_changes_mutable_domain_field_metadata_only_keeps_two_owners(
     assert by_repo["web-ui"].possible_new_files == []
     assert "metadata-only mode" in by_repo["service-a"].rationale
     assert "manifest hints" in by_repo["web-ui"].rationale
+
+
+def test_propose_changes_source_discovered_event_avoids_literal_new_files() -> None:
+    feature_request = (
+        "When a user updates their preferred language, publish a profile-updated "
+        "event to downstream systems"
+    )
+    rows = build_inventory(FIXTURE_ROOT)
+    proposal = create_change_proposal(feature_request, rows, scan_root=FIXTURE_ROOT)
+    by_repo = _proposal_by_repo(proposal)
+
+    assert set(by_repo) == {"service-a", "service-b"}
+
+    all_inspect_paths = [
+        path
+        for item in proposal.proposed_changes
+        for path in item.likely_files_to_inspect
+    ]
+    all_new_files = [
+        path
+        for item in proposal.proposed_changes
+        for path in item.possible_new_files
+    ]
+
+    assert "stackpilot.yml" not in all_inspect_paths
+    assert all("*" not in path for path in all_inspect_paths)
+    assert all("**" not in path for path in all_inspect_paths)
+    assert "src/main/java/com/example/servicea/service/ProfileService.java" in (
+        by_repo["service-a"].likely_files_to_inspect
+    )
+    assert "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java" in (
+        by_repo["service-b"].likely_files_to_inspect
+    )
+    assert by_repo["service-a"].possible_new_files == [
+        "new event payload class",
+        "new publisher/producer class",
+    ]
+    assert not any("UserUpdatesPreferredLanguage" in path for path in all_new_files)
+    assert not any("WhenAUserUpdates" in path for path in all_new_files)
