@@ -46,3 +46,19 @@ class FeatureImpact(BaseModel):
     ]
     score: int
     reason: str
+
+
+class FeaturePlan(BaseModel):
+    """Deterministic execution plan derived from feature analysis."""
+
+    feature_request: str
+    primary_owner: str | None = None
+    direct_dependents: list[str] = Field(default_factory=list)
+    possible_downstreams: list[str] = Field(default_factory=list)
+    db_change_needed: bool = False
+    api_change_needed: bool = False
+    ui_change_needed: bool = False
+    likely_paths_by_repo: dict[str, list[str]] = Field(default_factory=dict)
+    validation_commands: list[str] = Field(default_factory=list)
+    ordered_steps: list[str] = Field(default_factory=list)
+    requires_human_approval: bool = False

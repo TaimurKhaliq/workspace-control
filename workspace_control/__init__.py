@@ -6,4 +6,5 @@ __all__ = [
     "inventory",
     "manifests",
     "models",
+    "plan",
 ]
