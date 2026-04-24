@@ -254,6 +254,7 @@ def _likely_files_to_inspect(
     planned_paths = plan.likely_paths_by_repo.get(row.repo_name, [])
     backend = _row_is_backend(row)
     frontend = _row_is_frontend(row)
+    allow_concrete_files = not _has_ungrounded_concepts(plan)
 
     if frontend and plan.ui_change_needed:
         ui_paths = _merge_paths(
@@ -261,7 +262,8 @@ def _likely_files_to_inspect(
             _matching_paths(planned_paths, FRONTEND_PATH_MARKERS),
             _discovery_paths(discovery, "api"),
         )
-        files.extend(_existing_files_for_category(repo_dir, ui_paths, plan, row, "frontend"))
+        if allow_concrete_files:
+            files.extend(_existing_files_for_category(repo_dir, ui_paths, plan, row, "frontend"))
         folders.extend(ui_paths)
 
     if backend and plan.api_change_needed:
@@ -273,10 +275,11 @@ def _likely_files_to_inspect(
             _discovery_paths(discovery, "service"),
             _matching_paths(planned_paths, SERVICE_PATH_MARKERS),
         )
-        files.extend(_existing_files_for_category(repo_dir, api_paths, plan, row, "api"))
-        files.extend(
-            _existing_files_for_category(repo_dir, service_paths, plan, row, "service")
-        )
+        if allow_concrete_files:
+            files.extend(_existing_files_for_category(repo_dir, api_paths, plan, row, "api"))
+            files.extend(
+                _existing_files_for_category(repo_dir, service_paths, plan, row, "service")
+            )
         folders.extend(api_paths)
         folders.extend(service_paths)
 
@@ -285,15 +288,16 @@ def _likely_files_to_inspect(
             _discovery_paths(discovery, "persistence"),
             _matching_paths(planned_paths, PERSISTENCE_PATH_MARKERS),
         )
-        files.extend(
-            _existing_files_for_category(
-                repo_dir,
-                persistence_paths,
-                plan,
-                row,
-                "persistence",
+        if allow_concrete_files:
+            files.extend(
+                _existing_files_for_category(
+                    repo_dir,
+                    persistence_paths,
+                    plan,
+                    row,
+                    "persistence",
+                )
             )
-        )
         folders.extend(persistence_paths)
 
     if backend and "event_integration" in plan.feature_intents:
@@ -302,16 +306,18 @@ def _likely_files_to_inspect(
             _matching_paths(planned_paths, EVENT_PATH_MARKERS),
         )
         event_paths = _backend_event_paths(row, event_paths)
-        files.extend(_existing_files_for_category(repo_dir, event_paths, plan, row, "event"))
+        if allow_concrete_files:
+            files.extend(_existing_files_for_category(repo_dir, event_paths, plan, row, "event"))
         folders.extend(event_paths)
         if role == "primary-owner":
             service_paths = _merge_paths(
                 _discovery_paths(discovery, "service"),
                 _matching_paths(planned_paths, SERVICE_PATH_MARKERS),
             )
-            files.extend(
-                _existing_files_for_category(repo_dir, service_paths, plan, row, "service")
-            )
+            if allow_concrete_files:
+                files.extend(
+                    _existing_files_for_category(repo_dir, service_paths, plan, row, "service")
+                )
             folders.extend(service_paths)
 
     if not files and not folders:
@@ -325,6 +331,12 @@ def _likely_changes(plan: FeaturePlan, row: InventoryRow, role: str) -> list[str
     backend = _row_is_backend(row)
     frontend = _row_is_frontend(row)
     event_mode = "event_integration" in plan.feature_intents
+
+    if _has_ungrounded_concepts(plan):
+        return [
+            "Validate whether the ungrounded requested concept exists in this repo before making implementation changes.",
+            "Inspect only the high-level planned folders until the concept is grounded.",
+        ]
 
     if event_mode and role == "primary-owner":
         changes.extend(
@@ -390,6 +402,8 @@ def _possible_new_files(
 
     if metadata_only:
         return []
+    if _has_ungrounded_concepts(plan):
+        return []
 
     if frontend and plan.ui_change_needed:
         files.append("new UI form component")
@@ -424,7 +438,11 @@ def _rationale(
     metadata_only = (
         discovery is not None and discovery.evidence_mode == "metadata-only"
     )
-    if metadata_only:
+    if _has_ungrounded_concepts(plan):
+        path_note = (
+            "One or more requested concepts are ungrounded; concrete file suggestions are intentionally suppressed."
+        )
+    elif metadata_only:
         path_note = (
             "metadata-only mode; planning is based on manifest hints rather than "
             "discovered source structure."
@@ -438,6 +456,13 @@ def _rationale(
         f"Selected as {role} by plan-feature for intents: {intents}; "
         f"strongest signals: {', '.join(strongest_signals)}; "
         f"{path_note} confidence={plan.confidence}."
+    )
+
+
+def _has_ungrounded_concepts(plan: FeaturePlan) -> bool:
+    return any(
+        item.status == "ungrounded"
+        for item in getattr(plan, "concept_grounding", [])
     )
 
 

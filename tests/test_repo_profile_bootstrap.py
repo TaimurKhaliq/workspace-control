@@ -282,3 +282,108 @@ def test_public_repo_like_single_repo_api_feature_sets_domain_owner(
     assert plan["implementation_owner"] == "spring-petclinic"
     assert plan["domain_owner"] == "spring-petclinic"
     assert plan["api_change_needed"] is True
+
+
+def test_concept_grounding_reports_direct_match_for_owner(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_public_like_backend_workspace(tmp_path)
+
+    exit_code = run(
+        [
+            "plan-feature",
+            "Add a new owner search API",
+            "--scan-root",
+            str(tmp_path),
+        ]
+    )
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+    grounding = {item["concept"]: item for item in plan["concept_grounding"]}
+
+    assert exit_code == 0
+    assert grounding["owner"]["status"] == "direct_match"
+    assert grounding["owner"]["matched_terms"]
+
+
+def test_concept_grounding_reports_alias_match_for_phone_number(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_public_like_backend_workspace(tmp_path)
+    _write(
+        tmp_path
+        / "spring-petclinic"
+        / "src/main/java/org/springframework/samples/petclinic/owner/OwnerTelephoneRequest.java",
+        "class OwnerTelephoneRequest { private String telephone; }",
+    )
+
+    exit_code = run(
+        [
+            "plan-feature",
+            "Add a phone number field to the owner record and persist it",
+            "--scan-root",
+            str(tmp_path),
+        ]
+    )
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+    grounding = {item["concept"]: item for item in plan["concept_grounding"]}
+
+    assert exit_code == 0
+    assert grounding["phone number"]["status"] == "alias_match"
+    assert any("telephone" in term for term in grounding["phone number"]["matched_terms"])
+    assert grounding["owner"]["status"] == "direct_match"
+
+
+def test_concept_grounding_reports_ungrounded_preferred_language(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_public_like_backend_workspace(tmp_path)
+
+    feature_request = "Add preferred language field to the owner record and persist it"
+    exit_code = run(
+        [
+            "plan-feature",
+            feature_request,
+            "--scan-root",
+            str(tmp_path),
+        ]
+    )
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+    grounding = {item["concept"]: item for item in plan["concept_grounding"]}
+
+    assert exit_code == 0
+    assert grounding["preferred language"]["status"] == "ungrounded"
+    assert plan["confidence"] == "low"
+    assert (
+        "requested concept 'preferred language' was not grounded in discovered source or metadata"
+        in plan["missing_evidence"]
+    )
+    assert any("Validate whether the requested concept" in step for step in plan["ordered_steps"])
+
+    exit_code = run(
+        [
+            "propose-changes",
+            feature_request,
+            "--scan-root",
+            str(tmp_path),
+        ]
+    )
+    captured = capsys.readouterr()
+    proposal = json.loads(captured.out)
+    proposed_change = proposal["proposed_changes"][0]
+
+    assert exit_code == 0
+    assert proposed_change["possible_new_files"] == []
+    assert all(
+        not path.endswith(".java")
+        for path in proposed_change["likely_files_to_inspect"]
+    )
+    assert any(
+        "ungrounded requested concept" in change
+        for change in proposed_change["likely_changes"]
+    )

@@ -51,6 +51,15 @@ class FeatureImpact(BaseModel):
     reason: str
 
 
+class ConceptGrounding(BaseModel):
+    """Grounding result for one feature-request concept."""
+
+    concept: str
+    status: Literal["direct_match", "alias_match", "weak_match", "ungrounded"]
+    matched_terms: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+
+
 class FeaturePlan(BaseModel):
     """Deterministic execution plan derived from feature analysis."""
 
@@ -61,6 +70,7 @@ class FeaturePlan(BaseModel):
     unsupported_intents: list[
         Literal["ui", "persistence", "api", "event_integration"]
     ] = Field(default_factory=list)
+    concept_grounding: list[ConceptGrounding] = Field(default_factory=list)
     confidence: Literal["high", "medium", "low"] = "medium"
     missing_evidence: list[str] = Field(default_factory=list)
     primary_owner: str | None = None

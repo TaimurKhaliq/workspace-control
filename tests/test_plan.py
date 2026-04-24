@@ -196,6 +196,17 @@ def test_plan_feature_event_and_downstream_notification_feature(tmp_path: Path) 
 
 def test_plan_feature_pure_ui_rename_feature(tmp_path: Path) -> None:
     _seed_common_workspace(tmp_path)
+    _write_manifest(
+        tmp_path,
+        repo_name="web-ui",
+        repo_type="frontend",
+        domain="customer-profile",
+        language="typescript",
+        build_commands=["npm run build"],
+        test_commands=["npm test"],
+        owns_fields=["preferred_language"],
+        api_keywords=["profile settings page", "preferred language"],
+    )
 
     feature_request = "Rename the preferred language label on the profile screen"
     rows = build_inventory(tmp_path)

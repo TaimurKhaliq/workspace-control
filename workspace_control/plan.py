@@ -9,10 +9,11 @@ from app.models.discovery import (
     RepoDiscovery,
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
+from app.services.concept_grounding import ConceptGroundingService
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 
 from .analyze import analyze_feature
-from .models import FeatureImpact, FeaturePlan, InventoryRow
+from .models import ConceptGrounding, FeatureImpact, FeaturePlan, InventoryRow
 
 INTENT_ORDER = ("ui", "persistence", "api", "event_integration")
 INTENT_PHRASES = {
@@ -759,6 +760,20 @@ def _missing_evidence_for_plan(
     return _dedupe_preserve_order(missing)
 
 
+def _concept_missing_evidence(grounding: Sequence[ConceptGrounding]) -> list[str]:
+    missing: list[str] = []
+    for item in grounding:
+        if item.status == "ungrounded":
+            missing.append(
+                f"requested concept '{item.concept}' was not grounded in discovered source or metadata"
+            )
+    return missing
+
+
+def _ungrounded_concepts(grounding: Sequence[ConceptGrounding]) -> list[str]:
+    return [item.concept for item in grounding if item.status == "ungrounded"]
+
+
 def _unsupported_intents_for_plan(
     feature_intents: Sequence[str],
     impacts: Sequence[FeatureImpact],
@@ -789,6 +804,7 @@ def _confidence_for_plan(
     filtered_impacts: Sequence[FeatureImpact],
     missing_evidence: Sequence[str],
     unsupported_intents: Sequence[str] = (),
+    concept_grounding: Sequence[ConceptGrounding] = (),
 ) -> str:
     if primary_owner is None or not filtered_impacts:
         return "low"
@@ -817,9 +833,11 @@ def _confidence_for_plan(
         "no UI/component paths were discovered" in item
         for item in missing_evidence
     )
+    has_ungrounded_concept = bool(_ungrounded_concepts(concept_grounding))
 
     if (
         weak_concrete_evidence
+        or has_ungrounded_concept
         or "ui" in unsupported_intents
         or has_ambiguity
         or len(missing_evidence) >= 2
@@ -829,6 +847,35 @@ def _confidence_for_plan(
     if uncertain_ui_evidence or missing_evidence or score_gap < 8:
         return "medium"
     return "high"
+
+
+def _conservative_steps_for_ungrounded_concepts(
+    ordered_steps: Sequence[str],
+    *,
+    primary_owner: str | None,
+    concept_grounding: Sequence[ConceptGrounding],
+) -> list[str]:
+    concepts = _ungrounded_concepts(concept_grounding)
+    if not concepts or not ordered_steps:
+        return list(ordered_steps)
+
+    validation_steps = [
+        step for step in ordered_steps if step.startswith("Run validation commands")
+    ]
+    concept_text = ", ".join(concepts)
+    steps = [
+        (
+            "Validate whether the requested concept(s) are represented in the selected "
+            f"repo before implementation: {concept_text}."
+        )
+    ]
+    if primary_owner is not None:
+        steps.append(
+            f"In {primary_owner}, inspect discovered high-level API/service/data paths for those concept(s) "
+            "before planning specific edits."
+        )
+    steps.extend(validation_steps)
+    return steps
 
 
 def _infer_likely_paths(
@@ -1230,6 +1277,12 @@ def create_feature_plan(
     pure_ui_copy_change = _pure_ui_copy_change_requested(feature_request, feature_intents)
     discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
     workspace_root = _workspace_root(scan_root, discovery_snapshot)
+    concept_grounding = ConceptGroundingService().ground(
+        feature_request,
+        effective_rows,
+        scan_root=scan_root,
+        discovery_snapshot=discovery_snapshot,
+    )
     mutable_domain_update = _mutable_domain_field_update_requested(feature_request)
     domain_owner_impact = _strong_backend_domain_owner(resolved_impacts, by_repo)
     implementation_owner_impact = (
@@ -1465,22 +1518,32 @@ def create_feature_plan(
         impacts=filtered_impacts,
         weakly_specified_request=weak_evidence_request,
     )
+    missing_evidence = _dedupe_preserve_order(
+        [*missing_evidence, *_concept_missing_evidence(concept_grounding)]
+    )
     unsupported_intents = _unsupported_intents_for_plan(
         feature_intents,
         filtered_impacts,
         discovery_by_repo,
+    )
+    ordered_steps = _conservative_steps_for_ungrounded_concepts(
+        ordered_steps,
+        primary_owner=primary_owner,
+        concept_grounding=concept_grounding,
     )
     confidence = _confidence_for_plan(
         primary_owner=primary_owner,
         filtered_impacts=filtered_impacts,
         missing_evidence=missing_evidence,
         unsupported_intents=unsupported_intents,
+        concept_grounding=concept_grounding,
     )
 
     return FeaturePlan(
         feature_request=feature_request,
         feature_intents=feature_intents,
         unsupported_intents=unsupported_intents,
+        concept_grounding=concept_grounding,
         confidence=confidence,
         missing_evidence=missing_evidence,
         primary_owner=primary_owner,
