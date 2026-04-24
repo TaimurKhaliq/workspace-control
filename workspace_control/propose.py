@@ -623,12 +623,18 @@ def _strongest_signals(
         signals.extend(_strongest_reason_parts(impact.reason)[:2])
 
     if discovery is not None and discovery.detected_frameworks:
-        signals.append(f"frameworks={', '.join(discovery.detected_frameworks[:3])}")
+        signals.append(
+            f"discovered frameworks={', '.join(discovery.detected_frameworks[:3])}"
+        )
+    if discovery is not None and discovery.hinted_frameworks:
+        signals.append(
+            f"hinted frameworks={', '.join(discovery.hinted_frameworks[:3])}"
+        )
 
     if not signals:
         signals.append(f"repo type={row.type}")
 
-    return signals[:4]
+    return signals[:5]
 
 
 def _strongest_reason_parts(reason: str) -> list[str]:

@@ -13,6 +13,8 @@ class RepoManifest(BaseModel):
     domain: str
     build_commands: list[str] = Field(default_factory=list)
     test_commands: list[str] = Field(default_factory=list)
+    framework: str | None = None
+    frameworks: list[str] = Field(default_factory=list)
     owns_entities: list[str] = Field(default_factory=list)
     owns_fields: list[str] = Field(default_factory=list)
     owns_tables: list[str] = Field(default_factory=list)

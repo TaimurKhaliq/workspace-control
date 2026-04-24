@@ -35,6 +35,15 @@ EVENT_HINT_TOKENS = {
     "subscriber",
     "sync",
 }
+FRAMEWORK_ALIASES = {
+    "angular": "angular",
+    "flyway": "flyway",
+    "openapi": "openapi",
+    "react": "react",
+    "spring": "spring_boot",
+    "springboot": "spring_boot",
+    "swagger": "openapi",
+}
 
 
 class ArchitectureDiscoveryService:
@@ -107,7 +116,21 @@ class ArchitectureDiscoveryService:
         manifest: RepoManifest,
         discoveries: Sequence[AdapterDiscovery],
     ) -> RepoDiscovery:
-        frameworks = merge_paths(*(item.frameworks for item in discoveries))
+        adapter_frameworks = merge_paths(*(item.frameworks for item in discoveries))
+        hinted_frameworks = _hinted_frameworks(manifest, self._read_agents_hint(repo_path))
+        discovered_frameworks = [
+            framework
+            for framework in adapter_frameworks
+            if _framework_is_discovered(repo_path, framework)
+        ]
+        hinted_frameworks = merge_paths(
+            hinted_frameworks,
+            [
+                framework
+                for framework in adapter_frameworks
+                if framework not in discovered_frameworks
+            ],
+        )
         api_locations = merge_paths(*(item.api_locations for item in discoveries))
         service_locations = merge_paths(*(item.service_locations for item in discoveries))
         persistence_locations = merge_paths(
@@ -158,7 +181,8 @@ class ArchitectureDiscoveryService:
             evidence_mode=evidence_mode,
             confidence=confidence,
             missing_evidence=missing_evidence,
-            detected_frameworks=frameworks,
+            detected_frameworks=discovered_frameworks,
+            hinted_frameworks=hinted_frameworks,
             likely_api_locations=api_locations,
             likely_service_locations=service_locations,
             likely_persistence_locations=persistence_locations,
@@ -187,7 +211,8 @@ def format_architecture_discovery(report: ArchitectureDiscoveryReport) -> str:
         lines.append(f"  confidence: {repo.confidence}")
         if repo.missing_evidence:
             lines.append(f"  missing_evidence: {_format_values(repo.missing_evidence)}")
-        lines.append(f"  frameworks: {_format_values(repo.detected_frameworks)}")
+        lines.append(f"  discovered frameworks: {_format_values(repo.detected_frameworks)}")
+        lines.append(f"  hinted frameworks: {_format_values(repo.hinted_frameworks)}")
         lines.append(f"  discovered api: {_format_values(repo.likely_api_locations)}")
         lines.append(
             "  discovered service/business logic: "
@@ -293,6 +318,84 @@ def _hinted_locations(manifest: RepoManifest, agents_text: str) -> dict[str, lis
         locations["service"].append("src/services")
 
     return {key: merge_paths(value) for key, value in locations.items()}
+
+
+def _hinted_frameworks(manifest: RepoManifest, agents_text: str) -> list[str]:
+    frameworks: list[str] = []
+    for value in _manifest_framework_values(manifest):
+        normalized = _normalize_framework(value)
+        if normalized:
+            frameworks.append(normalized)
+
+    hint_tokens = set(_tokens(agents_text))
+    for token in sorted(hint_tokens):
+        normalized = FRAMEWORK_ALIASES.get(token)
+        if normalized:
+            frameworks.append(normalized)
+
+    return merge_paths(frameworks)
+
+
+def _manifest_framework_values(manifest: RepoManifest) -> list[str]:
+    values: list[str] = []
+    if manifest.framework:
+        values.append(manifest.framework)
+    values.extend(manifest.frameworks)
+    return values
+
+
+def _normalize_framework(value: str) -> str | None:
+    token = "_".join(_tokens(value))
+    if not token:
+        return None
+    if token == "spring_boot":
+        return "spring_boot"
+    return FRAMEWORK_ALIASES.get(token, token)
+
+
+def _framework_is_discovered(repo_path: Path, framework: str) -> bool:
+    if framework == "react":
+        package_text = _read_text(repo_path / "package.json").lower()
+        return '"react"' in package_text or "'react'" in package_text
+    if framework == "angular":
+        package_text = _read_text(repo_path / "package.json").lower()
+        return (repo_path / "angular.json").is_file() or "@angular/core" in package_text
+    if framework == "spring_boot":
+        build_text = _build_text(repo_path)
+        return "spring-boot" in build_text or "org.springframework.boot" in build_text
+    if framework == "flyway":
+        build_text = _build_text(repo_path)
+        return "flyway" in build_text or any(
+            (repo_path / path).exists()
+            for path in ("src/main/resources/db/migration", "db/migration", "migrations")
+        )
+    if framework == "openapi":
+        return any(
+            (repo_path / path).is_file()
+            for path in (
+                "openapi.yaml",
+                "openapi.yml",
+                "openapi.json",
+                "swagger.yaml",
+                "swagger.yml",
+                "swagger.json",
+                "docs/openapi.yaml",
+                "docs/openapi.yml",
+                "src/main/resources/openapi.yaml",
+                "src/main/resources/openapi.yml",
+            )
+        )
+    return False
+
+
+def _build_text(repo_path: Path) -> str:
+    return " ".join(_read_text(repo_path / filename) for filename in BUILD_FILES).lower()
+
+
+def _read_text(path: Path) -> str:
+    if not path.is_file():
+        return ""
+    return path.read_text(encoding="utf-8", errors="ignore")
 
 
 def _missing_evidence(
@@ -409,6 +512,8 @@ def _hint_text(manifest: RepoManifest, agents_text: str) -> str:
         manifest.type,
         manifest.language,
         manifest.domain,
+        *(value for value in [manifest.framework] if value),
+        *manifest.frameworks,
         *manifest.build_commands,
         *manifest.test_commands,
         *manifest.owns_entities,

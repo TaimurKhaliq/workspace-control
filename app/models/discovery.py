@@ -30,6 +30,7 @@ class RepoDiscovery(BaseModel):
     confidence: Literal["high", "medium", "low"] = "low"
     missing_evidence: list[str] = Field(default_factory=list)
     detected_frameworks: list[str] = Field(default_factory=list)
+    hinted_frameworks: list[str] = Field(default_factory=list)
     likely_api_locations: list[str] = Field(default_factory=list)
     likely_service_locations: list[str] = Field(default_factory=list)
     likely_persistence_locations: list[str] = Field(default_factory=list)
