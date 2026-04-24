@@ -215,6 +215,7 @@ def test_public_repo_like_single_repo_persisted_screen_field_flags_api_and_ui_un
     assert plan["implementation_owner"] == "spring-petclinic"
     assert plan["domain_owner"] == "spring-petclinic"
     assert set(plan["feature_intents"]).issuperset({"ui", "persistence", "api"})
+    assert "ui" in plan["unsupported_intents"]
     assert plan["db_change_needed"] is True
     assert plan["api_change_needed"] is True
     assert plan["ui_change_needed"] is True
@@ -222,8 +223,62 @@ def test_public_repo_like_single_repo_persisted_screen_field_flags_api_and_ui_un
         "no UI/component paths were discovered" in item
         for item in plan["missing_evidence"]
     )
-    assert plan["confidence"] in {"low", "medium"}
+    assert plan["confidence"] == "low"
     assert "src/main/resources/openapi.yaml" in plan["likely_paths_by_repo"]["spring-petclinic"]
     assert "src/main/java/org/springframework/samples/petclinic/owner" in plan[
         "likely_paths_by_repo"
     ]["spring-petclinic"]
+
+
+def test_public_repo_like_unsupported_ui_label_change_reports_unbacked_intent(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_public_like_backend_workspace(tmp_path)
+
+    feature_request = "Rename the telephone label on the owner edit screen"
+    exit_code = run(
+        [
+            "plan-feature",
+            feature_request,
+            "--scan-root",
+            str(tmp_path),
+        ]
+    )
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+
+    assert exit_code == 0
+    assert "ui" in plan["feature_intents"]
+    assert "ui" in plan["unsupported_intents"]
+    assert plan["confidence"] == "low"
+    assert plan["primary_owner"] is None
+    assert plan["implementation_owner"] is None
+    assert plan["domain_owner"] is None
+    assert plan["likely_paths_by_repo"] == {}
+    assert plan["ordered_steps"] == []
+
+
+def test_public_repo_like_single_repo_api_feature_sets_domain_owner(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_public_like_backend_workspace(tmp_path)
+
+    feature_request = "Add a new search API for owners by telephone"
+    exit_code = run(
+        [
+            "plan-feature",
+            feature_request,
+            "--scan-root",
+            str(tmp_path),
+        ]
+    )
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+
+    assert exit_code == 0
+    assert plan["primary_owner"] == "spring-petclinic"
+    assert plan["implementation_owner"] == "spring-petclinic"
+    assert plan["domain_owner"] == "spring-petclinic"
+    assert plan["api_change_needed"] is True

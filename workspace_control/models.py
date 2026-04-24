@@ -58,6 +58,9 @@ class FeaturePlan(BaseModel):
     feature_intents: list[
         Literal["ui", "persistence", "api", "event_integration"]
     ] = Field(default_factory=list)
+    unsupported_intents: list[
+        Literal["ui", "persistence", "api", "event_integration"]
+    ] = Field(default_factory=list)
     confidence: Literal["high", "medium", "low"] = "medium"
     missing_evidence: list[str] = Field(default_factory=list)
     primary_owner: str | None = None

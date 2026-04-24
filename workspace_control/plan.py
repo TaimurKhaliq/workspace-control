@@ -607,6 +607,33 @@ def _single_repo_inferred_domain_owner(
     )
 
 
+def _single_repo_inferred_primary_backend_owner(
+    filtered_impacts: Sequence[FeatureImpact],
+    by_repo: dict[str, InventoryRow],
+    feature_intents: Sequence[str],
+    pure_ui_copy_change: bool,
+) -> str | None:
+    if pure_ui_copy_change or len(filtered_impacts) != 1:
+        return None
+
+    impact = filtered_impacts[0]
+    if impact.role != "primary-owner":
+        return None
+
+    row = by_repo.get(impact.repo_name)
+    if row is None or not _row_is_backend(row):
+        return None
+    if getattr(row, "metadata_source", "stackpilot.yml") != "inferred_metadata":
+        return None
+    if not any(
+        intent in feature_intents
+        for intent in ("persistence", "api", "event_integration")
+    ):
+        return None
+
+    return impact.repo_name
+
+
 def _workspace_root(
     scan_root: Path | None,
     discovery_snapshot: DiscoverySnapshot | None,
@@ -732,6 +759,20 @@ def _missing_evidence_for_plan(
     return _dedupe_preserve_order(missing)
 
 
+def _unsupported_intents_for_plan(
+    feature_intents: Sequence[str],
+    impacts: Sequence[FeatureImpact],
+    architecture_by_repo: dict[str, RepoDiscovery],
+) -> list[str]:
+    unsupported: list[str] = []
+    if "ui" in feature_intents and not _impacted_ui_paths_found(
+        impacts,
+        architecture_by_repo,
+    ):
+        unsupported.append("ui")
+    return _dedupe_preserve_order(unsupported)
+
+
 def _impacted_ui_paths_found(
     impacts: Sequence[FeatureImpact],
     architecture_by_repo: dict[str, RepoDiscovery],
@@ -747,6 +788,7 @@ def _confidence_for_plan(
     primary_owner: str | None,
     filtered_impacts: Sequence[FeatureImpact],
     missing_evidence: Sequence[str],
+    unsupported_intents: Sequence[str] = (),
 ) -> str:
     if primary_owner is None or not filtered_impacts:
         return "low"
@@ -778,6 +820,7 @@ def _confidence_for_plan(
 
     if (
         weak_concrete_evidence
+        or "ui" in unsupported_intents
         or has_ambiguity
         or len(missing_evidence) >= 2
         or score_gap <= 2
@@ -1299,6 +1342,13 @@ def create_feature_plan(
         pure_ui_copy_change,
     ):
         domain_owner = domain_owner_impact.repo_name
+    if domain_owner is None:
+        domain_owner = _single_repo_inferred_primary_backend_owner(
+            filtered_impacts,
+            by_repo,
+            feature_intents,
+            pure_ui_copy_change,
+        )
 
     ui_change_needed = "ui" in feature_intents
     db_change_needed = "persistence" in feature_intents
@@ -1415,15 +1465,22 @@ def create_feature_plan(
         impacts=filtered_impacts,
         weakly_specified_request=weak_evidence_request,
     )
+    unsupported_intents = _unsupported_intents_for_plan(
+        feature_intents,
+        filtered_impacts,
+        discovery_by_repo,
+    )
     confidence = _confidence_for_plan(
         primary_owner=primary_owner,
         filtered_impacts=filtered_impacts,
         missing_evidence=missing_evidence,
+        unsupported_intents=unsupported_intents,
     )
 
     return FeaturePlan(
         feature_request=feature_request,
         feature_intents=feature_intents,
+        unsupported_intents=unsupported_intents,
         confidence=confidence,
         missing_evidence=missing_evidence,
         primary_owner=primary_owner,
