@@ -121,6 +121,18 @@ def _seed_public_like_nested_frontend_workspace(root: Path) -> None:
         repo / "client/src/components/owners/OwnerEditor.tsx",
         "export const OwnerEditor = ({ telephone }: { telephone: string }) => null;\n",
     )
+    _write(
+        repo / "client/src/types/index.ts",
+        "export interface Owner { telephone?: string }\n",
+    )
+    _write(
+        repo / "client/src/components/pets/PetEditor.tsx",
+        "export const PetEditor = () => null;\n",
+    )
+    _write(
+        repo / "client/src/components/vets/VetList.tsx",
+        "export const VetList = () => null;\n",
+    )
 
 
 def test_bootstrap_profiles_supplement_explicit_stackpilot_metadata() -> None:
@@ -292,8 +304,20 @@ def test_nested_frontend_source_supports_ui_intent_in_public_repo_like_layout(
     assert "ui" not in plan["unsupported_intents"]
     assert plan["primary_owner"] == "spring-petclinic-fullstack"
     assert plan["implementation_owner"] == "spring-petclinic-fullstack"
-    assert any(path.startswith("client/src/components") for path in repo_paths)
+    assert set(plan["feature_intents"]).issuperset({"ui", "api"})
+    assert plan["ui_change_needed"] is True
+    assert "client/src/components/owners" in repo_paths
+    assert "client/src/types" in repo_paths
+    assert all("pets" not in path and "vets" not in path for path in repo_paths)
     assert "src/main/java/org/springframework/samples/petclinic/owner" in repo_paths
+    assert any("API request/response" in step for step in plan["ordered_steps"])
+    assert any("frontend/UI" in step for step in plan["ordered_steps"])
+    assert any("edit page" in step for step in plan["ordered_steps"])
+    assert any("editor component" in step for step in plan["ordered_steps"])
+    assert any("client types" in step for step in plan["ordered_steps"])
+    assert "mvn test" in plan["validation_commands"]
+    assert "cd client && npm test" in plan["validation_commands"]
+    assert "cd client && npm run build" in plan["validation_commands"]
     assert all(len(term) < 80 for term in grounding_terms)
 
 

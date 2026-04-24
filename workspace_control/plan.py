@@ -836,6 +836,77 @@ def _source_is_frontend_source(source: str) -> bool:
     return any(marker in lowered for marker in frontend_markers)
 
 
+def _source_path_for_repo(source: str, repo_name: str) -> str | None:
+    parts = source.split(":", 2)
+    if len(parts) != 3 or parts[0] != "source" or parts[1] != repo_name:
+        return None
+    return parts[2]
+
+
+def _frontend_grounded_paths_for_repo(
+    repo_name: str,
+    concept_grounding: Sequence[ConceptGrounding],
+) -> list[str]:
+    paths: list[str] = []
+    for relative in _frontend_grounded_source_paths_for_repo(repo_name, concept_grounding):
+        parent = Path(relative).parent.as_posix()
+        paths.append(relative if parent == "." else parent)
+    return _dedupe_preserve_order(paths)
+
+
+def _frontend_grounded_source_paths_for_repo(
+    repo_name: str,
+    concept_grounding: Sequence[ConceptGrounding],
+) -> list[str]:
+    paths: list[str] = []
+    for grounding in concept_grounding:
+        if grounding.status not in {"direct_match", "alias_match"}:
+            continue
+        for source in grounding.sources:
+            relative = _source_path_for_repo(source, repo_name)
+            if relative is None or not _source_is_frontend_source(source):
+                continue
+            paths.append(relative)
+    return _dedupe_preserve_order(paths)
+
+
+def _frontend_support_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    support_paths = [
+        *discovery.likely_api_locations,
+        *discovery.likely_service_locations,
+    ]
+    return [
+        path
+        for path in _dedupe_preserve_order(support_paths)
+        if _looks_like_frontend_path(path)
+    ]
+
+
+def _looks_like_frontend_path(path: str) -> bool:
+    lowered = path.lower()
+    return (
+        lowered.startswith(("client/", "frontend/", "web/", "ui/"))
+        or "/src/api" in lowered
+        or "/src/services" in lowered
+        or lowered.startswith(("src/api", "src/services"))
+    )
+
+
+def _has_strong_frontend_evidence(
+    repo_name: str | None,
+    discovery: RepoDiscovery | None,
+    concept_grounding: Sequence[ConceptGrounding],
+) -> bool:
+    if repo_name is None:
+        return False
+    return bool(
+        _frontend_grounded_paths_for_repo(repo_name, concept_grounding)
+        or _has_ui_paths(discovery)
+    )
+
+
 def _confidence_for_plan(
     *,
     primary_owner: str | None,
@@ -920,8 +991,10 @@ def _infer_likely_paths(
     row: InventoryRow,
     role: str,
     *,
+    repo_name: str,
     repo_dir: Path | None,
     discovery: RepoDiscovery | None,
+    concept_grounding: Sequence[ConceptGrounding],
     db_change_needed: bool,
     api_change_needed: bool,
     ui_change_needed: bool,
@@ -975,19 +1048,21 @@ def _infer_likely_paths(
                 paths.extend(["src/events", "src/integrations"])
 
         if ui_change_needed and _row_is_frontend(row):
-            frontend_discovered = (
-                _ui_paths(discovery)
-                if ui_copy_only
-                else _frontend_discovered_paths(discovery)
+            frontend_discovered = _frontend_discovered_paths(
+                discovery,
+                repo_name,
+                concept_grounding,
+                include_support=not ui_copy_only,
             )
             if frontend_discovered:
                 paths.extend(frontend_discovered)
 
     elif _row_is_frontend(row):
-        frontend_discovered = (
-            _ui_paths(discovery)
-            if ui_copy_only
-            else _frontend_discovered_paths(discovery)
+        frontend_discovered = _frontend_discovered_paths(
+            discovery,
+            repo_name,
+            concept_grounding,
+            include_support=not ui_copy_only,
         )
         if frontend_discovered:
             paths.extend(frontend_discovered)
@@ -1049,9 +1124,21 @@ def _backend_discovered_paths(
     return _dedupe_preserve_order(paths)
 
 
-def _frontend_discovered_paths(discovery: RepoDiscovery | None) -> list[str]:
+def _frontend_discovered_paths(
+    discovery: RepoDiscovery | None,
+    repo_name: str,
+    concept_grounding: Sequence[ConceptGrounding],
+    *,
+    include_support: bool = True,
+) -> list[str]:
     if discovery is None:
         return []
+    grounded_paths = _frontend_grounded_paths_for_repo(repo_name, concept_grounding)
+    if grounded_paths:
+        support_paths = _frontend_support_paths(discovery) if include_support else []
+        return _dedupe_preserve_order(
+            [*grounded_paths, *support_paths]
+        )
     return _dedupe_preserve_order(
         [
             *discovery.likely_ui_locations,
@@ -1146,6 +1233,56 @@ def _primary_owner_step(
         f"In {repo_name} (primary-owner, score={score}), implement core feature logic and "
         "update internal module contracts."
     )
+
+
+def _frontend_ui_step(
+    repo_name: str,
+    *,
+    score: int,
+    discovery: RepoDiscovery | None,
+    concept_grounding: Sequence[ConceptGrounding],
+    api_change_needed: bool,
+) -> str:
+    paths = _frontend_discovered_paths(discovery, repo_name, concept_grounding)
+    surfaces = _frontend_surface_names(
+        repo_name,
+        paths,
+        concept_grounding,
+        api_change_needed=api_change_needed,
+    )
+    return (
+        f"In {repo_name} (frontend/UI, score={score}), update "
+        f"{', '.join(surfaces)}"
+        f"{_path_note(' using grounded frontend paths', paths)}."
+    )
+
+
+def _frontend_surface_names(
+    repo_name: str,
+    paths: Sequence[str],
+    concept_grounding: Sequence[ConceptGrounding],
+    *,
+    api_change_needed: bool,
+) -> list[str]:
+    source_paths = _frontend_grounded_source_paths_for_repo(repo_name, concept_grounding)
+    evidence_text = _normalize_text(" ".join([*paths, *source_paths]))
+    surfaces: list[str] = []
+    if "edit" in evidence_text and "page" in evidence_text:
+        surfaces.append("edit page")
+    if "editor" in evidence_text:
+        surfaces.append("editor component")
+    if "form" in evidence_text:
+        surfaces.append("form component")
+    if "type" in evidence_text or "types" in evidence_text:
+        surfaces.append("client types")
+    if api_change_needed and any(
+        marker in evidence_text
+        for marker in ("api", "service", "services")
+    ):
+        surfaces.append("client request wiring")
+    if not surfaces:
+        surfaces.append("UI page/component surfaces")
+    return _dedupe_preserve_order(surfaces)
 
 
 def _direct_dependent_step(
@@ -1476,8 +1613,10 @@ def create_feature_plan(
         likely_paths_by_repo[impact.repo_name] = _infer_likely_paths(
             row,
             impact.role,
+            repo_name=impact.repo_name,
             repo_dir=repo_dir,
             discovery=discovery_by_repo.get(impact.repo_name),
+            concept_grounding=concept_grounding,
             db_change_needed=db_change_needed,
             api_change_needed=api_change_needed,
             ui_change_needed=ui_change_needed,
@@ -1508,6 +1647,25 @@ def create_feature_plan(
                 discovery=discovery_by_repo.get(primary_owner),
             )
         )
+        if (
+            ui_change_needed
+            and implementation_owner == primary_owner
+            and _has_strong_frontend_evidence(
+                primary_owner,
+                discovery_by_repo.get(primary_owner),
+                concept_grounding,
+            )
+            and _row_is_backend(by_repo[primary_owner])
+        ):
+            ordered_steps.append(
+                _frontend_ui_step(
+                    primary_owner,
+                    score=owner_score,
+                    discovery=discovery_by_repo.get(primary_owner),
+                    concept_grounding=concept_grounding,
+                    api_change_needed=api_change_needed,
+                )
+            )
 
     for repo_name in direct_dependents:
         impact = impact_by_repo.get(repo_name)

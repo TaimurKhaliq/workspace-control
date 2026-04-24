@@ -97,7 +97,16 @@ SOURCE_SUFFIXES = {
 ENTITY_MARKERS = {"entity", "entities", "model", "models", "repository", "repositories"}
 FIELD_MARKERS = {"dto", "dtos", "request", "response", "form", "forms"}
 TABLE_MARKERS = {"migration", "migrations", "changelog", "db"}
-EVENT_ROLE_TOKENS = {"consumer", "handler", "integration", "listener", "producer", "publisher", "subscriber"}
+EVENT_ROLE_TOKENS = {
+    "consumer",
+    "handler",
+    "integration",
+    "listener",
+    "producer",
+    "publisher",
+    "subscriber",
+}
+FRONTEND_PACKAGE_ROOTS = ("", "client", "frontend", "web", "ui")
 
 
 class RepoProfileBootstrapService:
@@ -403,17 +412,36 @@ def _validation_commands(repo_path: Path) -> list[str]:
     elif (repo_path / "pom.xml").is_file():
         commands.append("mvn test")
 
-    package_path = repo_path / "package.json"
-    if package_path.is_file():
+    for package_path in _package_json_paths(repo_path):
         package = _read_json(package_path)
         scripts = package.get("scripts", {}) if isinstance(package, dict) else {}
         if isinstance(scripts, dict):
+            prefix = _command_prefix_for_package(repo_path, package_path)
             if "test" in scripts:
-                commands.append("npm test")
+                commands.append(f"{prefix}npm test")
             if "build" in scripts:
-                commands.append("npm run build")
+                commands.append(f"{prefix}npm run build")
 
     return merge_paths(commands)
+
+
+def _package_json_paths(repo_path: Path) -> list[Path]:
+    paths: list[Path] = []
+    seen: set[Path] = set()
+    for root in FRONTEND_PACKAGE_ROOTS:
+        package_path = repo_path / root / "package.json"
+        if not package_path.is_file() or package_path in seen:
+            continue
+        paths.append(package_path)
+        seen.add(package_path)
+    return paths
+
+
+def _command_prefix_for_package(repo_path: Path, package_path: Path) -> str:
+    package_dir = package_path.parent
+    if package_dir == repo_path:
+        return ""
+    return f"cd {package_dir.relative_to(repo_path).as_posix()} && "
 
 
 def _package_name_tokens(repo_path: Path) -> list[list[str]]:
