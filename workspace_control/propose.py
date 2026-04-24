@@ -242,27 +242,29 @@ def create_change_proposal(
             inspect_paths,
             discovery,
         )
+        file_plans = _build_file_plans(
+            plan,
+            row,
+            role,
+            inspect_paths,
+            possible_new_files,
+            discovery,
+            repo_dir,
+        )
+        legacy_inspect_paths = _legacy_inspect_paths_from_file_plans(file_plans)
         proposed_changes.append(
             ChangeProposalItem(
                 repo_name=repo_name,
                 role=role,
-                likely_files_to_inspect=inspect_paths,
-                files=_build_file_plans(
-                    plan,
-                    row,
-                    role,
-                    inspect_paths,
-                    possible_new_files,
-                    discovery,
-                    repo_dir,
-                ),
+                likely_files_to_inspect=legacy_inspect_paths,
+                files=file_plans,
                 likely_changes=_likely_changes(plan, row, role),
                 possible_new_files=possible_new_files,
                 rationale=_rationale(
                     plan,
                     row,
                     role,
-                    inspect_paths,
+                    legacy_inspect_paths,
                     impact_by_repo.get(repo_name),
                     discovery,
                 ),
@@ -452,6 +454,14 @@ def _build_file_plans(
     return _dedupe_file_plans(items)
 
 
+def _legacy_inspect_paths_from_file_plans(items: Sequence[FilePlan]) -> list[str]:
+    return [
+        item.path
+        for item in items
+        if item.action != "create"
+    ]
+
+
 def _existing_file_plan(
     plan: FeaturePlan,
     row: InventoryRow,
@@ -479,6 +489,9 @@ def _existing_file_plan(
         confidence = "medium" if concept_match else "low"
     elif group == "frontend":
         if _same_domain_different_flow(path, plan, target_tokens):
+            action = "inspect"
+            confidence = "medium"
+        elif _same_domain_secondary_frontend(path, plan, target_tokens):
             action = "inspect"
             confidence = "medium"
         elif concept_match and plan.ui_change_needed:
@@ -658,6 +671,35 @@ def _same_domain_different_flow(
     )
 
 
+def _same_domain_secondary_frontend(
+    path: str,
+    plan: FeaturePlan,
+    grounded_tokens: set[str],
+) -> bool:
+    if _inspect_path_group(path) != "frontend":
+        return False
+    tokens = _path_all_tokens(path)
+    request_tokens = _tokenize_with_camel_case(plan.feature_request)
+    if not _edit_update_flow_requested(request_tokens):
+        return False
+    if not (tokens & grounded_tokens):
+        return False
+    if tokens & {"edit", "editor", "form"}:
+        return False
+    return bool(
+        tokens
+        & {
+            "detail",
+            "details",
+            "display",
+            "info",
+            "information",
+            "summary",
+            "view",
+        }
+    )
+
+
 def _same_domain_model_file(path: str, grounded_tokens: set[str]) -> bool:
     if _inspect_path_group(path) != "backend":
         return False
@@ -688,7 +730,7 @@ def _path_matches_target_signal(path: str, grounded_tokens: set[str]) -> bool:
 
 def _frontend_high_confidence(path: str, request_tokens: set[str]) -> bool:
     tokens = _path_all_tokens(path)
-    if _edit_update_flow_requested(request_tokens) and tokens & EDIT_FLOW_FILE_TOKENS:
+    if _edit_update_flow_requested(request_tokens) and tokens & {"edit", "editor", "form"}:
         return True
     if _edit_update_flow_requested(request_tokens) and tokens & CREATE_FLOW_FILE_TOKENS:
         return False
@@ -738,6 +780,8 @@ def _existing_file_reason(
 
     if _same_domain_different_flow(path, plan, target_tokens):
         return "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
+    if _same_domain_secondary_frontend(path, plan, target_tokens):
+        return "Same owner domain and may display the telephone field after update, but the request specifically targets the edit screen."
     if any(token in tokens for token in ("edit", "page")) and _inspect_path_group(path) == "frontend":
         return "Feature explicitly mentions the owner edit screen, and this page likely owns the edit flow."
     if any(token in tokens for token in ("editor", "form")) and _inspect_path_group(path) == "frontend":
@@ -762,8 +806,16 @@ def _existing_file_reason(
         mode = "discovered" if discovery is not None else "planned"
         return f"Likely {mode} owner-related area to inspect before editing concrete files."
     if confidence == "high":
-        return "Strong feature, concept, and path evidence points to this file."
-    return "Likely related to the requested feature, but the exact change is not fully certain."
+        if _inspect_path_group(path) == "frontend":
+            return "Frontend file matches the requested owner update flow and is likely to need a targeted UI change."
+        if _inspect_path_group(path) == "backend":
+            return "Backend file matches the requested owner update flow and is likely to need a targeted API change."
+        return "Shared support file matches the requested owner update flow and may need a targeted change."
+    if _inspect_path_group(path) == "frontend":
+        return "Frontend file is related to the owner update flow, but its exact edit responsibility is uncertain."
+    if _inspect_path_group(path) == "backend":
+        return "Backend file is related to the owner update flow, but its exact edit responsibility is uncertain."
+    return "Shared support file is related to the requested flow, but the exact change is uncertain."
 
 
 def _dedupe_file_plans(items: Sequence[FilePlan]) -> list[FilePlan]:
@@ -857,12 +909,19 @@ def _possible_new_files(
     if _has_ungrounded_concepts(plan):
         return []
 
-    if frontend and plan.ui_change_needed:
+    new_surface_likely = _new_file_surface_likely(plan)
+
+    if frontend and plan.ui_change_needed and new_surface_likely:
         files.append("new UI form component")
         if plan.api_change_needed:
             files.append("new client API helper")
 
-    if backend and plan.api_change_needed and row.language.lower() == "java":
+    if (
+        backend
+        and plan.api_change_needed
+        and row.language.lower() == "java"
+        and new_surface_likely
+    ):
         files.extend(["new request DTO", "new response DTO"])
 
     if backend and plan.db_change_needed:
@@ -872,6 +931,11 @@ def _possible_new_files(
         files.extend(_event_possible_new_files(role, inspect_paths))
 
     return _dedupe_preserve_order(files)
+
+
+def _new_file_surface_likely(plan: FeaturePlan) -> bool:
+    request_tokens = _tokenize_with_camel_case(plan.feature_request)
+    return plan.db_change_needed or _create_flow_requested(request_tokens)
 
 
 def _rationale(
@@ -905,9 +969,11 @@ def _rationale(
         path_note = "No concrete file convention matched; likely folders are listed instead."
 
     return (
-        f"Selected as {role} by plan-feature for intents: {intents}; "
-        f"strongest signals: {', '.join(strongest_signals)}; "
-        f"{path_note} confidence={plan.confidence}."
+        f"Role: {role}. "
+        f"Intents: {intents}. "
+        f"Evidence: {', '.join(strongest_signals)}. "
+        f"Path confidence: {path_note} "
+        f"Overall confidence: {plan.confidence}."
     )
 
 
@@ -1455,23 +1521,40 @@ def _strongest_signals(
     discovery: RepoDiscovery | None,
 ) -> list[str]:
     signals: list[str] = []
+    inferred_metadata = "inferred" in row.metadata_source.lower()
+
     if impact is not None:
-        signals.append(f"score={impact.score}")
-        signals.extend(_strongest_reason_parts(impact.reason)[:2])
+        signals.append("ranked by deterministic feature analysis")
+
+    if inferred_metadata:
+        signals.append("inferred ownership from discovered source names")
+    elif row.owns_fields:
+        fields = ", ".join(row.owns_fields[:3])
+        signals.append(f"ownership hints for fields: {fields}")
+    if not inferred_metadata and row.owns_entities:
+        entities = ", ".join(row.owns_entities[:3])
+        signals.append(f"ownership hints for entities: {entities}")
+
+    if impact is not None:
+        role_hint = impact.role.replace("-", " ")
+        signals.append(f"analysis role: {role_hint}")
 
     if discovery is not None and discovery.detected_frameworks:
         signals.append(
-            f"discovered frameworks={', '.join(discovery.detected_frameworks[:3])}"
+            f"discovered frameworks: {', '.join(discovery.detected_frameworks[:3])}"
         )
     if discovery is not None and discovery.hinted_frameworks:
         signals.append(
-            f"hinted frameworks={', '.join(discovery.hinted_frameworks[:3])}"
+            f"hinted frameworks: {', '.join(discovery.hinted_frameworks[:3])}"
         )
+    if discovery is not None:
+        mode = discovery.evidence_mode.replace("-", " ")
+        signals.append(f"{mode} architecture evidence")
 
     if not signals:
-        signals.append(f"repo type={row.type}")
+        signals.append(f"repo type: {row.type}")
 
-    return signals[:5]
+    return _dedupe_preserve_order(signals)[:5]
 
 
 def _strongest_reason_parts(reason: str) -> list[str]:

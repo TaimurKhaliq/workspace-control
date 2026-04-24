@@ -210,6 +210,10 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
         "export function NewOwnerPage() { return null; }\n",
         encoding="utf-8",
     )
+    (repo / "client/src/components/owners/OwnerInformation.tsx").write_text(
+        "export function OwnerInformation() { const telephone = ''; return null; }\n",
+        encoding="utf-8",
+    )
     (repo / "client/src/types/index.ts").write_text(
         "export interface Owner { telephone?: string }\n",
         encoding="utf-8",
@@ -354,8 +358,8 @@ def test_propose_changes_prefers_specific_backend_file_names(tmp_path: Path) -> 
     assert "src/main/java/com/acme/profile/controller" not in (
         backend.likely_files_to_inspect
     )
-    assert "owns_fields" in backend.rationale
-    assert "spring_boot" in backend.rationale
+    assert "ownership hints for fields" in backend.rationale
+    assert "discovered frameworks" in backend.rationale
     assert "Concrete files were inferred" in backend.rationale
 
 
@@ -430,7 +434,6 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
 
     assert "client/src/components/owners/EditOwnerPage.tsx" in inspect_paths
     assert "client/src/components/owners/OwnerEditor.tsx" in inspect_paths
-    assert "client/src/types/index.ts" in inspect_paths
     assert files["client/src/components/owners/EditOwnerPage.tsx"].action == "modify"
     assert files["client/src/components/owners/EditOwnerPage.tsx"].confidence == "high"
     assert (
@@ -443,12 +446,19 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
         files["client/src/components/owners/OwnerEditor.tsx"].reason
         == "Likely owner form component where telephone input and validation are handled."
     )
-    assert "client/src/components/owners/NewOwnerPage.tsx" not in inspect_paths
+    assert "client/src/components/owners/NewOwnerPage.tsx" in inspect_paths
     assert files["client/src/components/owners/NewOwnerPage.tsx"].action == "inspect"
     assert files["client/src/components/owners/NewOwnerPage.tsx"].confidence == "medium"
     assert (
         files["client/src/components/owners/NewOwnerPage.tsx"].reason
         == "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
+    )
+    assert "client/src/components/owners/OwnerInformation.tsx" in inspect_paths
+    assert files["client/src/components/owners/OwnerInformation.tsx"].action == "inspect"
+    assert files["client/src/components/owners/OwnerInformation.tsx"].confidence == "medium"
+    assert (
+        files["client/src/components/owners/OwnerInformation.tsx"].reason
+        == "Same owner domain and may display the telephone field after update, but the request specifically targets the edit screen."
     )
     assert (
         "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java"
@@ -531,8 +541,20 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
         file_plan.path in {"new UI form component", "new client API helper"}
         for file_plan in item.files
     )
-    assert len(frontend_paths) <= 4
-    assert len(backend_paths) <= 5
+    assert item.possible_new_files == []
+    assert item.likely_files_to_inspect == [
+        file_plan.path
+        for file_plan in item.files
+        if file_plan.action != "create"
+    ]
+    assert not any(
+        file_plan.reason == "Strong feature, concept, and path evidence points to this file."
+        for file_plan in item.files
+    )
+    assert "tokens:" not in item.rationale
+    assert "inferred_metadata" not in item.rationale
+    assert len(frontend_paths) <= 5
+    assert len(backend_paths) <= 6
     assert len(shared_paths) <= 2
     assert not any(
         token in path.lower()
