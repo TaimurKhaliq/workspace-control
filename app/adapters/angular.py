@@ -1,36 +1,47 @@
-"""Angular adapter for frontend repository hints."""
+"""Angular adapter for deterministic frontend architecture discovery."""
 
-from app.adapters.base import ArchitectureAdapter, normalize_text
-from app.models.evidence import Evidence
+from pathlib import Path
+
+from app.adapters.base import (
+    RepoAdapter,
+    first_existing_paths,
+    manifest_hint_text,
+    read_text_if_exists,
+)
+from app.models.discovery import AdapterDiscovery
 from app.models.repo_manifest import RepoManifest
 
 
-class AngularAdapter(ArchitectureAdapter):
-    """Detects repositories likely using Angular conventions."""
+class AngularAdapter(RepoAdapter):
+    """Detects Angular-style frontends and common UI/client locations."""
 
     name = "angular"
 
-    def collect(self, repo_name: str, manifest: RepoManifest) -> list[Evidence]:
-        normalized = normalize_text(
-            [
-                manifest.type,
-                manifest.language,
-                *manifest.build_commands,
-                *manifest.test_commands,
-                *manifest.api_keywords,
-            ]
-        )
-        frontend_type = any(token in normalize_text([manifest.type]) for token in ("frontend", "web", "ui", "client"))
-        angular_signals = any(token in normalized for token in ("angular", "ng", "typescript"))
-        if not (frontend_type and angular_signals):
-            return []
+    def detect(
+        self, repo_path: Path, manifest: RepoManifest, agents_text: str = ""
+    ) -> bool:
+        hints = manifest_hint_text(manifest, agents_text)
+        package_text = read_text_if_exists(repo_path / "package.json").lower()
+        angular_package = "@angular/core" in package_text
+        angular_hint = "angular" in hints
+        return angular_package or angular_hint
 
-        return [
-            Evidence(
-                repo_name=repo_name,
-                adapter=self.name,
-                signal="angular-frontend",
-                weight=2,
-                details={"language": manifest.language},
-            )
-        ]
+    def discover(
+        self, repo_path: Path, manifest: RepoManifest, agents_text: str = ""
+    ) -> AdapterDiscovery:
+        return AdapterDiscovery(
+            adapter=self.name,
+            frameworks=["angular"],
+            api_locations=first_existing_paths(
+                repo_path,
+                ["src/app/api", "src/app/services", "src/services"],
+            ),
+            service_locations=first_existing_paths(
+                repo_path,
+                ["src/app/services", "src/app/state", "src/services"],
+            ),
+            ui_locations=first_existing_paths(
+                repo_path,
+                ["src/app/components", "src/app/pages", "src/components"],
+            ),
+        )

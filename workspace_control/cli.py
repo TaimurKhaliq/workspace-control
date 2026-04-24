@@ -5,6 +5,11 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
+from app.services.architecture_discovery import (
+    ArchitectureDiscoveryService,
+    format_architecture_discovery,
+)
+
 from .analyze import analyze_feature, format_feature_analysis
 from .inventory import format_inventory_table
 from .manifests import build_inventory
@@ -22,6 +27,16 @@ def run(argv: list[str] | None = None) -> int:
         type=Path,
         default=default_scan_root,
         help="Directory whose child folders are scanned for stackpilot.yml",
+    )
+    discover_parser = subparsers.add_parser(
+        "discover-architecture",
+        help="Discover framework and architecture locations across repositories",
+    )
+    discover_parser.add_argument(
+        "--scan-root",
+        type=Path,
+        default=default_scan_root,
+        help="Directory whose child folders are scanned for repositories",
     )
     analyze_parser = subparsers.add_parser(
         "analyze-feature",
@@ -54,9 +69,24 @@ def run(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    if args.command not in {"inventory", "analyze-feature", "plan-feature"}:
+    if args.command not in {
+        "inventory",
+        "discover-architecture",
+        "analyze-feature",
+        "plan-feature",
+    }:
         parser.print_help()
         return 1
+
+    if args.command == "discover-architecture":
+        try:
+            report = ArchitectureDiscoveryService().discover(args.scan_root)
+        except (OSError, yaml.YAMLError, ValidationError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        print(format_architecture_discovery(report))
+        return 0
 
     try:
         rows = build_inventory(args.scan_root)

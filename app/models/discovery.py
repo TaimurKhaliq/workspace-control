@@ -1,17 +1,35 @@
-"""Discovery models used to report adapter evidence by repository."""
+"""Discovery models used to report adapter findings by repository."""
 
 from pydantic import BaseModel, Field
 
 from .evidence import Evidence
 
 
+class AdapterDiscovery(BaseModel):
+    """Locations and framework hints discovered by one repository adapter."""
+
+    adapter: str
+    frameworks: list[str] = Field(default_factory=list)
+    api_locations: list[str] = Field(default_factory=list)
+    service_locations: list[str] = Field(default_factory=list)
+    persistence_locations: list[str] = Field(default_factory=list)
+    ui_locations: list[str] = Field(default_factory=list)
+    event_locations: list[str] = Field(default_factory=list)
+
+
 class RepoDiscovery(BaseModel):
-    """Architecture signals collected for one repository."""
+    """Architecture signals and likely code locations collected for one repository."""
 
     repo_name: str
     repo_type: str
     language: str
     domain: str
+    detected_frameworks: list[str] = Field(default_factory=list)
+    likely_api_locations: list[str] = Field(default_factory=list)
+    likely_service_locations: list[str] = Field(default_factory=list)
+    likely_persistence_locations: list[str] = Field(default_factory=list)
+    likely_ui_locations: list[str] = Field(default_factory=list)
+    likely_event_locations: list[str] = Field(default_factory=list)
     evidence: list[Evidence] = Field(default_factory=list)
 
 

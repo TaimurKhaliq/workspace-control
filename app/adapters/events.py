@@ -1,36 +1,64 @@
-"""Events adapter for integration and messaging hints."""
+"""Events adapter for deterministic integration and messaging discovery."""
 
-from app.adapters.base import ArchitectureAdapter, normalize_text
-from app.models.evidence import Evidence
+from pathlib import Path
+
+from app.adapters.base import (
+    RepoAdapter,
+    first_existing_paths,
+    manifest_hint_text,
+    matching_file_parent_paths,
+    merge_paths,
+)
+from app.models.discovery import AdapterDiscovery
 from app.models.repo_manifest import RepoManifest
 
 
-class EventsAdapter(ArchitectureAdapter):
+class EventsAdapter(RepoAdapter):
     """Detects repositories likely involved in eventing or downstream sync."""
 
     name = "events"
 
-    def collect(self, repo_name: str, manifest: RepoManifest) -> list[Evidence]:
-        normalized = normalize_text(
+    def detect(
+        self, repo_path: Path, manifest: RepoManifest, agents_text: str = ""
+    ) -> bool:
+        hints = manifest_hint_text(manifest, agents_text)
+        explicit_paths = first_existing_paths(
+            repo_path,
             [
-                manifest.domain,
-                manifest.type,
-                *manifest.api_keywords,
-                *manifest.build_commands,
-            ]
+                "src/events",
+                "src/integrations",
+                "src/main/java/events",
+                "src/main/java/integration",
+            ],
         )
-        if not any(
-            token in normalized
+        event_hint = any(
+            token in hints
             for token in ("event", "sync", "downstream", "integration", "notify")
-        ):
-            return []
+        )
+        return bool(explicit_paths or event_hint)
 
-        return [
-            Evidence(
-                repo_name=repo_name,
-                adapter=self.name,
-                signal="event-integration",
-                weight=2,
-                details={"domain": manifest.domain},
-            )
-        ]
+    def discover(
+        self, repo_path: Path, manifest: RepoManifest, agents_text: str = ""
+    ) -> AdapterDiscovery:
+        event_locations = merge_paths(
+            first_existing_paths(
+                repo_path,
+                [
+                    "src/events",
+                    "src/integrations",
+                    "src/main/java/events",
+                    "src/main/java/integration",
+                ],
+            ),
+            matching_file_parent_paths(
+                repo_path,
+                ["*Event*.*", "*Producer.*", "*Consumer.*", "*Subscriber.*"],
+                ["src", "src/main/java"],
+            ),
+        )
+
+        return AdapterDiscovery(
+            adapter=self.name,
+            frameworks=["events"],
+            event_locations=event_locations,
+        )
