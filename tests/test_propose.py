@@ -109,6 +109,112 @@ def _seed_proposal_workspace(tmp_path: Path) -> None:
     )
 
 
+def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
+    repo = tmp_path / "spring-petclinic-fullstack"
+    (repo / "src/main/java/org/springframework/samples/petclinic/owner").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/pet").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/vet").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/visit").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/specialty").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/root").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/user").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (repo / "client/src/components/owners").mkdir(parents=True, exist_ok=True)
+    (repo / "client/src/components/pets").mkdir(parents=True, exist_ok=True)
+    (repo / "client/src/components/vets").mkdir(parents=True, exist_ok=True)
+    (repo / "client/src/components/visits").mkdir(parents=True, exist_ok=True)
+    (repo / "client/src/types").mkdir(parents=True, exist_ok=True)
+    (repo / "src/main/resources").mkdir(parents=True, exist_ok=True)
+
+    (repo / "pom.xml").write_text(
+        "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>",
+        encoding="utf-8",
+    )
+    (repo / "client/package.json").write_text(
+        json.dumps(
+            {
+                "name": "petclinic-client",
+                "dependencies": {"react": "18.2.0", "typescript": "5.0.0"},
+                "scripts": {"test": "vitest", "build": "vite build"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (repo / "src/main/resources/openapi.yaml").write_text(
+        "paths:\n  /owners/{ownerId}:\n    put:\n      operationId: updateOwner\n",
+        encoding="utf-8",
+    )
+
+    owner_files = {
+        "OwnerRestController.java": "class OwnerRestController { private String telephone; }",
+        "OwnerRequest.java": "class OwnerRequest { private String telephone; }",
+        "OwnerResponse.java": "class OwnerResponse { private String telephone; }",
+        "OwnerService.java": "class OwnerService { private String telephone; }",
+        "Owner.java": "class Owner { private String telephone; }",
+        "OwnerRepository.java": "class OwnerRepository {}",
+    }
+    for filename, text in owner_files.items():
+        (repo / "src/main/java/org/springframework/samples/petclinic/owner" / filename).write_text(
+            text,
+            encoding="utf-8",
+        )
+
+    for relative in [
+        "pet/PetRestController.java",
+        "vet/VetRestController.java",
+        "visit/VisitRestController.java",
+        "specialty/SpecialtyRestController.java",
+        "root/RootRestController.java",
+        "user/UserRestController.java",
+    ]:
+        (repo / "src/main/java/org/springframework/samples/petclinic" / relative).write_text(
+            "class UnrelatedController {}",
+            encoding="utf-8",
+        )
+
+    (repo / "client/src/components/owners/EditOwnerPage.tsx").write_text(
+        "export function EditOwnerPage() { const telephone = ''; return null; }\n",
+        encoding="utf-8",
+    )
+    (repo / "client/src/components/owners/OwnerEditor.tsx").write_text(
+        "export const OwnerEditor = ({ telephone }: { telephone: string }) => null;\n",
+        encoding="utf-8",
+    )
+    (repo / "client/src/types/index.ts").write_text(
+        "export interface Owner { telephone?: string }\n",
+        encoding="utf-8",
+    )
+    for relative in [
+        "pets/PetEditor.tsx",
+        "vets/VetList.tsx",
+        "visits/VisitList.tsx",
+    ]:
+        (repo / "client/src/components" / relative).write_text(
+            "export const Unrelated = () => null;\n",
+            encoding="utf-8",
+        )
+
+
 def _proposal_by_repo(proposal):
     return {item.repo_name: item for item in proposal.proposed_changes}
 
@@ -280,6 +386,73 @@ def test_propose_changes_source_discovered_ui_persistence_stays_conservative() -
     ]
     assert not any("AddPhoneNumberFieldProfile" in path for path in all_new_files)
     assert not any("add-phone-number-field-profile" in path for path in all_new_files)
+
+
+def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
+    tmp_path: Path,
+) -> None:
+    _seed_public_repo_like_proposal_workspace(tmp_path)
+
+    feature_request = "Allow users to update the owner's telephone on the owner edit screen"
+    rows = build_inventory(tmp_path)
+    proposal = create_change_proposal(feature_request, rows, scan_root=tmp_path)
+    item = _proposal_by_repo(proposal)["spring-petclinic-fullstack"]
+    inspect_paths = item.likely_files_to_inspect
+    frontend_paths = [
+        path for path in inspect_paths if path.startswith("client/")
+    ]
+    backend_paths = [
+        path
+        for path in inspect_paths
+        if path.startswith("src/main/java/")
+    ]
+    shared_paths = [
+        path
+        for path in inspect_paths
+        if any(token in path.lower() for token in ("openapi", "swagger", "schema"))
+    ]
+
+    assert "client/src/components/owners/EditOwnerPage.tsx" in inspect_paths
+    assert "client/src/components/owners/OwnerEditor.tsx" in inspect_paths
+    assert "client/src/types/index.ts" in inspect_paths
+    assert (
+        "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java"
+        in inspect_paths
+    )
+    assert (
+        "src/main/java/org/springframework/samples/petclinic/owner/OwnerService.java"
+        in inspect_paths
+    )
+    assert (
+        "src/main/java/org/springframework/samples/petclinic/owner/OwnerRequest.java"
+        in inspect_paths
+    )
+    assert len(frontend_paths) <= 4
+    assert len(backend_paths) <= 5
+    assert len(shared_paths) <= 2
+    assert not any(
+        token in path.lower()
+        for path in inspect_paths
+        for token in (
+            "/pet/",
+            "/pets/",
+            "/root/",
+            "/vet/",
+            "/vets/",
+            "/visit/",
+            "/visits/",
+        )
+    )
+    assert not any(
+        token in path
+        for path in inspect_paths
+        for token in (
+            "PetRestController",
+            "RootRestController",
+            "VetRestController",
+            "VisitRestController",
+        )
+    )
 
 
 def test_propose_changes_metadata_only_repo_stays_conservative(tmp_path: Path) -> None:

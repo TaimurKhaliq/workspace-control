@@ -191,6 +191,10 @@
           "passed": true,
           "actual": [
             "src/main/java/com/example/servicea/service/ProfileService.java",
+            "src/main/java/com/example/servicea/controller/ProfileController.java",
+            "src/main/java/com/example/servicea/dto/ProfileRequest.java",
+            "src/main/java/com/example/servicea/entity/UserProfile.java",
+            "src/main/java/com/example/servicea/repository/UserProfileRepository.java",
             "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
             "src/main/java/com/example/serviceb/integration"
           ],
@@ -202,6 +206,10 @@
           "passed": true,
           "actual": [
             "src/main/java/com/example/servicea/service/ProfileService.java",
+            "src/main/java/com/example/servicea/controller/ProfileController.java",
+            "src/main/java/com/example/servicea/dto/ProfileRequest.java",
+            "src/main/java/com/example/servicea/entity/UserProfile.java",
+            "src/main/java/com/example/servicea/repository/UserProfileRepository.java",
             "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
             "src/main/java/com/example/serviceb/integration"
           ],
@@ -685,7 +693,11 @@
           "path": "proposed_changes[service-a].likely_files_to_inspect",
           "passed": true,
           "actual": [
-            "src/main/java/com/example/servicea/service/ProfileService.java"
+            "src/main/java/com/example/servicea/service/ProfileService.java",
+            "src/main/java/com/example/servicea/controller/ProfileController.java",
+            "src/main/java/com/example/servicea/dto/ProfileRequest.java",
+            "src/main/java/com/example/servicea/entity/UserProfile.java",
+            "src/main/java/com/example/servicea/repository/UserProfileRepository.java"
           ],
           "expected": "contains 'src/main/java/com/example/servicea/service/ProfileService.java'"
         },
@@ -694,7 +706,11 @@
           "path": "proposed_changes[service-a].likely_files_to_inspect",
           "passed": true,
           "actual": [
-            "src/main/java/com/example/servicea/service/ProfileService.java"
+            "src/main/java/com/example/servicea/service/ProfileService.java",
+            "src/main/java/com/example/servicea/controller/ProfileController.java",
+            "src/main/java/com/example/servicea/dto/ProfileRequest.java",
+            "src/main/java/com/example/servicea/entity/UserProfile.java",
+            "src/main/java/com/example/servicea/repository/UserProfileRepository.java"
           ],
           "expected": "excludes 'stackpilot.yml'"
         },

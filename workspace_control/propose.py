@@ -6,6 +6,7 @@ from pathlib import Path
 from app.models.discovery import (
     ArchitectureDiscoveryReport,
     DiscoverySnapshot,
+    DiscoveryTarget,
     RepoDiscovery,
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
@@ -84,6 +85,21 @@ FILE_PATTERNS = {
         "*Subscriber.java",
     ),
 }
+STRICT_GROUP_LIMITS = {
+    "frontend": 4,
+    "backend": 5,
+    "shared": 2,
+}
+FRONTEND_FOCUS_TOKENS = {"edit", "editor", "form", "info", "page", "screen", "view"}
+BACKEND_FOCUS_TOKENS = {
+    "controller": 5,
+    "request": 4,
+    "response": 4,
+    "service": 3,
+    "entity": 2,
+    "repository": 1,
+}
+SHARED_SUPPORT_TOKENS = {"contract", "openapi", "schema", "swagger"}
 
 GENERIC_STOPWORDS = {
     "a",
@@ -103,6 +119,53 @@ GENERIC_STOPWORDS = {
     "whenever",
     "with",
 }
+TECHNICAL_GROUNDING_TOKENS = {
+    "api",
+    "class",
+    "client",
+    "component",
+    "components",
+    "controller",
+    "dto",
+    "edit",
+    "editor",
+    "entity",
+    "form",
+    "index",
+    "java",
+    "main",
+    "model",
+    "openapi",
+    "org",
+    "page",
+    "repository",
+    "request",
+    "resources",
+    "response",
+    "rest",
+    "service",
+    "src",
+    "string",
+    "ts",
+    "tsx",
+    "type",
+    "types",
+    "yaml",
+}
+UNRELATED_DOMAIN_TOKENS = {
+    "pet",
+    "pets",
+    "root",
+    "roots",
+    "specialties",
+    "specialty",
+    "user",
+    "users",
+    "vet",
+    "vets",
+    "visit",
+    "visits",
+}
 
 
 def create_change_proposal(
@@ -115,10 +178,20 @@ def create_change_proposal(
 ) -> ChangeProposal:
     """Create deterministic read-only change proposals from a feature plan."""
 
+    effective_snapshot = discovery_snapshot
+    if effective_snapshot is None and scan_root is not None and scan_root.is_dir():
+        effective_snapshot = ArchitectureDiscoveryService().discover(
+            DiscoveryTarget.local_path(scan_root)
+        )
+    effective_scan_root = (
+        effective_snapshot.workspace.root_path
+        if effective_snapshot is not None
+        else scan_root
+    )
     effective_rows = RepoProfileBootstrapService().effective_inventory_for_scan(
         rows,
-        scan_root=scan_root,
-        discovery_snapshot=discovery_snapshot,
+        scan_root=effective_scan_root,
+        discovery_snapshot=effective_snapshot,
     )
     resolved_impacts = (
         list(impacts)
@@ -126,21 +199,21 @@ def create_change_proposal(
         else analyze_feature(
             feature_request,
             effective_rows,
-            scan_root=scan_root,
-            discovery_snapshot=discovery_snapshot,
+            scan_root=effective_scan_root,
+            discovery_snapshot=effective_snapshot,
         )
     )
     plan = create_feature_plan(
         feature_request,
         effective_rows,
         impacts=resolved_impacts,
-        scan_root=scan_root,
-        discovery_snapshot=discovery_snapshot,
+        scan_root=effective_scan_root,
+        discovery_snapshot=effective_snapshot,
     )
     by_repo = {row.repo_name: row for row in effective_rows}
     impact_by_repo = {impact.repo_name: impact for impact in resolved_impacts}
-    discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
-    workspace_root = _workspace_root(scan_root, discovery_snapshot)
+    discovery_by_repo = _architecture_by_repo(effective_scan_root, effective_snapshot)
+    workspace_root = _workspace_root(effective_scan_root, effective_snapshot)
 
     proposed_changes: list[ChangeProposalItem] = []
     for repo_name in _ordered_impacted_repos(plan):
@@ -323,7 +396,14 @@ def _likely_files_to_inspect(
     if not files and not folders:
         folders.extend(planned_paths)
 
-    return _final_inspect_paths(files, folders, discovery)
+    if allow_concrete_files:
+        files.extend(_grounded_source_files_for_repo(plan, row.repo_name, repo_dir))
+
+    return _narrow_inspect_paths_for_grounded_concepts(
+        plan,
+        row,
+        _final_inspect_paths(files, folders, discovery),
+    )
 
 
 def _likely_changes(plan: FeaturePlan, row: InventoryRow, role: str) -> list[str]:
@@ -466,6 +546,34 @@ def _has_ungrounded_concepts(plan: FeaturePlan) -> bool:
     )
 
 
+def _grounded_source_files_for_repo(
+    plan: FeaturePlan,
+    repo_name: str,
+    repo_dir: Path | None,
+) -> list[str]:
+    if repo_dir is None or not repo_dir.is_dir():
+        return []
+
+    files: list[str] = []
+    for grounding in getattr(plan, "concept_grounding", []):
+        if grounding.status not in {"direct_match", "alias_match"}:
+            continue
+        for source in grounding.sources:
+            relative = _source_path_for_repo(source, repo_name)
+            if relative is None:
+                continue
+            if (repo_dir / relative).is_file():
+                files.append(relative)
+    return _dedupe_preserve_order(files)
+
+
+def _source_path_for_repo(source: str, repo_name: str) -> str | None:
+    parts = source.split(":", 2)
+    if len(parts) != 3 or parts[0] != "source" or parts[1] != repo_name:
+        return None
+    return parts[2]
+
+
 def _discovery_paths(discovery: RepoDiscovery | None, category: str) -> list[str]:
     if discovery is None:
         return []
@@ -554,6 +662,176 @@ def _final_inspect_paths(
         paths.insert(0, "stackpilot.yml")
 
     return _dedupe_preserve_order(paths)
+
+
+def _narrow_inspect_paths_for_grounded_concepts(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    paths: Sequence[str],
+) -> list[str]:
+    grounded_tokens = _grounded_concept_tokens(plan)
+    if not _should_apply_strict_grounded_filter(plan, row.repo_name, paths, grounded_tokens):
+        return list(paths)
+
+    grouped_paths: dict[str, list[tuple[int, int, str]]] = {
+        "frontend": [],
+        "backend": [],
+        "shared": [],
+    }
+    for index, path in enumerate(paths):
+        if not _strict_grounded_path_allowed(plan, row.repo_name, path, grounded_tokens):
+            continue
+        group = _inspect_path_group(path)
+        grouped_paths[group].append(
+            (_strict_grounded_path_score(plan, row.repo_name, path, grounded_tokens, group), index, path)
+        )
+
+    ordered: list[str] = []
+    for group in ("frontend", "backend", "shared"):
+        ranked = sorted(grouped_paths[group], key=lambda item: (-item[0], item[1], item[2]))
+        ordered.extend(path for _, _, path in ranked[:STRICT_GROUP_LIMITS[group]])
+
+    return _dedupe_preserve_order(ordered or list(paths))
+
+
+def _should_apply_strict_grounded_filter(
+    plan: FeaturePlan,
+    repo_name: str,
+    paths: Sequence[str],
+    grounded_tokens: set[str],
+) -> bool:
+    if not grounded_tokens:
+        return False
+    if _has_ungrounded_concepts(plan):
+        return False
+    if not _has_source_grounding_for_repo(plan, repo_name):
+        return False
+    return any(_path_has_unrelated_domain(path, grounded_tokens) for path in paths)
+
+
+def _strict_grounded_path_allowed(
+    plan: FeaturePlan,
+    repo_name: str,
+    path: str,
+    grounded_tokens: set[str],
+) -> bool:
+    if _path_has_unrelated_domain(path, grounded_tokens):
+        return False
+    if _path_is_grounded_source(plan, repo_name, path):
+        return True
+
+    tokens = _path_all_tokens(path)
+    if tokens & grounded_tokens:
+        return True
+    if _path_looks_like_file(path):
+        parent_tokens = _path_all_tokens(Path(path).parent.as_posix())
+        if parent_tokens & grounded_tokens:
+            return True
+
+    group = _inspect_path_group(path)
+    if group == "shared":
+        return _shared_path_is_strongly_justified(path, plan)
+    return False
+
+
+def _inspect_path_group(path: str) -> str:
+    lowered = path.lower()
+    if lowered.startswith(("client/", "frontend/", "web/", "ui/")) or any(
+        marker in lowered for marker in FRONTEND_PATH_MARKERS
+    ):
+        return "frontend"
+    if any(token in lowered for token in SHARED_SUPPORT_TOKENS):
+        return "shared"
+    return "backend"
+
+
+def _strict_grounded_path_score(
+    plan: FeaturePlan,
+    repo_name: str,
+    path: str,
+    grounded_tokens: set[str],
+    group: str,
+) -> int:
+    tokens = _path_all_tokens(path)
+    stem_tokens = _tokenize_with_camel_case(Path(path).stem)
+    score = len(tokens & grounded_tokens) * 3
+    score += len(stem_tokens & grounded_tokens) * 5
+    if _path_is_grounded_source(plan, repo_name, path):
+        score += 12
+    if group == "frontend":
+        score += len(tokens & FRONTEND_FOCUS_TOKENS) * 2
+    elif group == "backend":
+        score += sum(
+            weight for token, weight in BACKEND_FOCUS_TOKENS.items() if token in tokens
+        )
+    elif group == "shared" and _shared_path_is_strongly_justified(path, plan):
+        score += 4
+    return score
+
+
+def _has_source_grounding_for_repo(plan: FeaturePlan, repo_name: str) -> bool:
+    return any(
+        grounding.status in {"direct_match", "alias_match"}
+        and any(_source_path_for_repo(source, repo_name) is not None for source in grounding.sources)
+        for grounding in getattr(plan, "concept_grounding", [])
+    )
+
+
+def _path_is_grounded_source(plan: FeaturePlan, repo_name: str, path: str) -> bool:
+    return any(
+        grounding.status in {"direct_match", "alias_match"}
+        and any(_source_path_for_repo(source, repo_name) == path for source in grounding.sources)
+        for grounding in getattr(plan, "concept_grounding", [])
+    )
+
+
+def _grounded_concept_tokens(plan: FeaturePlan) -> set[str]:
+    tokens: set[str] = set()
+    for grounding in getattr(plan, "concept_grounding", []):
+        if grounding.status not in {"direct_match", "alias_match"}:
+            continue
+        values = [grounding.concept, *grounding.matched_terms]
+        for value in values:
+            for token in _tokenize_with_camel_case(value):
+                if _useful_grounding_token(token):
+                    tokens.add(token)
+    return _expand_token_variants(tokens)
+
+
+def _useful_grounding_token(token: str) -> bool:
+    return (
+        len(token) > 1
+        and token not in GENERIC_STOPWORDS
+        and token not in TECHNICAL_GROUNDING_TOKENS
+    )
+
+
+def _expand_token_variants(tokens: set[str]) -> set[str]:
+    expanded = set(tokens)
+    for token in tokens:
+        if token.endswith("ies") and len(token) > 3:
+            expanded.add(f"{token[:-3]}y")
+        elif token.endswith("s") and len(token) > 3:
+            expanded.add(token[:-1])
+        else:
+            expanded.add(f"{token}s")
+    return expanded
+
+
+def _path_has_unrelated_domain(path: str, grounded_tokens: set[str]) -> bool:
+    tokens = _path_all_tokens(path)
+    return bool((tokens & UNRELATED_DOMAIN_TOKENS) and not (tokens & grounded_tokens))
+
+
+def _shared_path_is_strongly_justified(path: str, plan: FeaturePlan) -> bool:
+    lowered = path.lower()
+    if not plan.api_change_needed:
+        return False
+    return any(token in lowered for token in SHARED_SUPPORT_TOKENS)
+
+
+def _path_all_tokens(path: str) -> set[str]:
+    return _tokenize_with_camel_case(path.replace("/", " "))
 
 
 def _remove_parent_folders_with_files(
