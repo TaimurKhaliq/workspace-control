@@ -14,6 +14,7 @@ from .analyze import analyze_feature, format_feature_analysis
 from .inventory import format_inventory_table
 from .manifests import build_inventory
 from .plan import create_feature_plan, format_feature_plan
+from .propose import create_change_proposal, format_change_proposal
 
 
 def run(argv: list[str] | None = None) -> int:
@@ -66,6 +67,20 @@ def run(argv: list[str] | None = None) -> int:
         default=default_scan_root,
         help="Directory whose child folders are scanned for stackpilot.yml",
     )
+    propose_parser = subparsers.add_parser(
+        "propose-changes",
+        help="Suggest deterministic read-only change hints for a feature request",
+    )
+    propose_parser.add_argument(
+        "feature_description",
+        help='Feature description, for example: "Allow users to update phone number"',
+    )
+    propose_parser.add_argument(
+        "--scan-root",
+        type=Path,
+        default=default_scan_root,
+        help="Directory whose child folders are scanned for stackpilot.yml",
+    )
 
     args = parser.parse_args(argv)
 
@@ -74,6 +89,7 @@ def run(argv: list[str] | None = None) -> int:
         "discover-architecture",
         "analyze-feature",
         "plan-feature",
+        "propose-changes",
     }:
         parser.print_help()
         return 1
@@ -101,6 +117,16 @@ def run(argv: list[str] | None = None) -> int:
     impacts = analyze_feature(args.feature_description, rows, scan_root=args.scan_root)
     if args.command == "analyze-feature":
         print(format_feature_analysis(args.feature_description, impacts))
+        return 0
+
+    if args.command == "propose-changes":
+        proposal = create_change_proposal(
+            args.feature_description,
+            rows,
+            impacts=impacts,
+            scan_root=args.scan_root,
+        )
+        print(format_change_proposal(proposal))
         return 0
 
     plan = create_feature_plan(

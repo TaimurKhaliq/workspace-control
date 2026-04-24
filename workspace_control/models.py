@@ -67,3 +67,31 @@ class FeaturePlan(BaseModel):
     validation_commands: list[str] = Field(default_factory=list)
     ordered_steps: list[str] = Field(default_factory=list)
     requires_human_approval: bool = False
+
+
+class ChangeProposalItem(BaseModel):
+    """Read-only proposed change hints for one impacted repository."""
+
+    repo_name: str
+    role: Literal[
+        "primary-owner",
+        "direct-dependent",
+        "possible-downstream",
+        "weak-match",
+    ]
+    likely_files_to_inspect: list[str] = Field(default_factory=list)
+    likely_changes: list[str] = Field(default_factory=list)
+    possible_new_files: list[str] = Field(default_factory=list)
+    rationale: str
+
+
+class ChangeProposal(BaseModel):
+    """Deterministic read-only change proposal derived from a feature plan."""
+
+    feature_request: str
+    feature_intents: list[
+        Literal["ui", "persistence", "api", "event_integration"]
+    ] = Field(default_factory=list)
+    confidence: Literal["high", "medium", "low"] = "medium"
+    missing_evidence: list[str] = Field(default_factory=list)
+    proposed_changes: list[ChangeProposalItem] = Field(default_factory=list)
