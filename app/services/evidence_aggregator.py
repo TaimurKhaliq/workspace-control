@@ -437,7 +437,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "frontend",
                     "frontend adapter discovery",
-                    2,
+                    4,
                     discovery.detected_frameworks,
                     discovery.likely_ui_locations,
                 )

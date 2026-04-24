@@ -157,10 +157,13 @@ def _reasons_for_category(evidence: Sequence[Evidence], category: str) -> list[s
         if item.category != category:
             continue
         reason = item.details.get("reason")
-        if not reason or reason in seen:
+        if not reason:
             continue
-        reasons.append(reason)
-        seen.add(reason)
+        source_reason = f"{item.source}: {reason}"
+        if source_reason in seen:
+            continue
+        reasons.append(source_reason)
+        seen.add(source_reason)
     return reasons
 
 

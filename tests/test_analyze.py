@@ -175,3 +175,87 @@ def test_cli_analyze_feature_prints_repo_role_score_reason(
     assert "score" in captured.out
     assert "reason" in captured.out
     assert "profile-api" in captured.out
+
+
+def test_analyze_feature_compares_ui_persistence_and_event_requests(
+    tmp_path: Path,
+) -> None:
+    _seed_workspace(tmp_path)
+
+    (tmp_path / "web-ui" / "package.json").write_text(
+        '{"dependencies": {"react": "18.2.0"}}',
+        encoding="utf-8",
+    )
+    for path in ["src/pages", "src/components", "src/forms", "src/services", "src/api"]:
+        (tmp_path / "web-ui" / path).mkdir(parents=True, exist_ok=True)
+
+    (tmp_path / "profile-api" / "AGENTS.md").write_text(
+        "Owns customer profile phone number persistence and validation.",
+        encoding="utf-8",
+    )
+    (tmp_path / "profile-api" / "build.gradle").write_text(
+        'plugins { id "org.springframework.boot" version "3.2.0" }\n'
+        'dependencies { implementation "org.flywaydb:flyway-core" }',
+        encoding="utf-8",
+    )
+    for path in [
+        "src/main/java/com/acme/profile/controller",
+        "src/main/java/com/acme/profile/service",
+        "src/main/java/com/acme/profile/entity",
+        "src/main/java/com/acme/profile/repository",
+        "src/main/resources/db/migration",
+    ]:
+        (tmp_path / "profile-api" / path).mkdir(parents=True, exist_ok=True)
+
+    (tmp_path / "notification-api" / "AGENTS.md").write_text(
+        "Handles downstream notification sync and event integration.",
+        encoding="utf-8",
+    )
+    (tmp_path / "notification-api" / "build.gradle").write_text(
+        'plugins { id "org.springframework.boot" version "3.2.0" }',
+        encoding="utf-8",
+    )
+    (tmp_path / "notification-api" / "src/main/java/com/acme/notification/integration").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    rows = build_inventory(tmp_path)
+
+    ui_impacts = analyze_feature(
+        "Update the customer profile settings page form",
+        rows,
+        scan_root=tmp_path,
+    )
+    persistence_impacts = analyze_feature(
+        "Persist customer profile phone number field with database migration",
+        rows,
+        scan_root=tmp_path,
+    )
+    event_impacts = analyze_feature(
+        (
+            "Publish event when customer profile phone number changes for "
+            "downstream notification sync"
+        ),
+        rows,
+        scan_root=tmp_path,
+    )
+
+    ui_by_repo = {impact.repo_name: impact for impact in ui_impacts}
+    persistence_by_repo = {impact.repo_name: impact for impact in persistence_impacts}
+    event_by_repo = {impact.repo_name: impact for impact in event_impacts}
+
+    assert ui_impacts[0].repo_name == "web-ui"
+    assert ui_by_repo["web-ui"].role == "direct-dependent"
+    assert "deterministic_intent:" in ui_by_repo["web-ui"].reason
+    assert "adapter_discovery:" in ui_by_repo["web-ui"].reason
+
+    assert persistence_impacts[0].repo_name == "profile-api"
+    assert persistence_by_repo["profile-api"].role == "primary-owner"
+    assert "stackpilot.yml:" in persistence_by_repo["profile-api"].reason
+    assert "adapter_discovery:" in persistence_by_repo["profile-api"].reason
+
+    assert event_by_repo["profile-api"].role == "primary-owner"
+    assert event_by_repo["notification-api"].role == "possible-downstream"
+    assert "deterministic_intent:" in event_by_repo["notification-api"].reason
+    assert "adapter_discovery:" in event_by_repo["notification-api"].reason
