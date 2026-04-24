@@ -1,0 +1,417 @@
+{
+  "summary": {
+    "total_cases": 4,
+    "passed": 4,
+    "failed": 0,
+    "failed_case_ids": []
+  },
+  "cases": [
+    {
+      "id": "metadata-plan-phone-profile-screen",
+      "case_file": "tests/eval_cases/metadata_only.json",
+      "command": "plan-feature",
+      "feature": "Allow users to update their phone number from the profile screen",
+      "scan_root": "tests/fixtures/metadata_only_stack",
+      "exit_code": 0,
+      "passed": true,
+      "expectations": [
+        {
+          "type": "exact",
+          "path": "primary_owner",
+          "passed": true,
+          "actual": "service-a",
+          "expected": "service-a"
+        },
+        {
+          "type": "exact",
+          "path": "implementation_owner",
+          "passed": true,
+          "actual": "web-ui",
+          "expected": "web-ui"
+        },
+        {
+          "type": "exact",
+          "path": "domain_owner",
+          "passed": true,
+          "actual": "service-a",
+          "expected": "service-a"
+        },
+        {
+          "type": "array_contains",
+          "path": "feature_intents",
+          "passed": true,
+          "actual": [
+            "ui",
+            "api"
+          ],
+          "expected": "contains 'ui'"
+        },
+        {
+          "type": "array_contains",
+          "path": "feature_intents",
+          "passed": true,
+          "actual": [
+            "ui",
+            "api"
+          ],
+          "expected": "contains 'api'"
+        },
+        {
+          "type": "field_in",
+          "path": "confidence",
+          "passed": true,
+          "actual": "medium",
+          "expected": "in ['low', 'medium']"
+        },
+        {
+          "type": "array_contains",
+          "path": "missing_evidence",
+          "passed": true,
+          "actual": [
+            "no API contract file found"
+          ],
+          "expected": "contains 'no API contract file found'"
+        },
+        {
+          "type": "exact",
+          "path": "db_change_needed",
+          "passed": true,
+          "actual": false,
+          "expected": false
+        },
+        {
+          "type": "exact",
+          "path": "api_change_needed",
+          "passed": true,
+          "actual": true,
+          "expected": true
+        },
+        {
+          "type": "nonempty_list",
+          "path": "ordered_steps",
+          "passed": true,
+          "actual": [
+            "In service-a (primary-owner, score=42), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility.",
+            "In web-ui (direct-dependent, score=17), update pages/components/forms, client request payload handling, and submission/error states.",
+            "Run validation commands in impacted repos: ./gradlew build ; ./gradlew test ; npm run build ; npm test."
+          ],
+          "expected": "nonempty list"
+        }
+      ]
+    },
+    {
+      "id": "metadata-propose-phone-profile-screen",
+      "case_file": "tests/eval_cases/metadata_only.json",
+      "command": "propose-changes",
+      "feature": "Allow users to update their phone number from the profile screen",
+      "scan_root": "tests/fixtures/metadata_only_stack",
+      "exit_code": 0,
+      "passed": true,
+      "expectations": [
+        {
+          "type": "exact",
+          "path": "implementation_owner",
+          "passed": true,
+          "actual": "web-ui",
+          "expected": "web-ui"
+        },
+        {
+          "type": "exact",
+          "path": "domain_owner",
+          "passed": true,
+          "actual": "service-a",
+          "expected": "service-a"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[].repo_name",
+          "passed": true,
+          "actual": [
+            "service-a",
+            "web-ui"
+          ],
+          "expected": "contains 'service-a'"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[].repo_name",
+          "passed": true,
+          "actual": [
+            "service-a",
+            "web-ui"
+          ],
+          "expected": "contains 'web-ui'"
+        },
+        {
+          "type": "array_excludes",
+          "path": "proposed_changes[].repo_name",
+          "passed": true,
+          "actual": [
+            "service-a",
+            "web-ui"
+          ],
+          "expected": "excludes 'service-b'"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[service-a].likely_files_to_inspect",
+          "passed": true,
+          "actual": [
+            "stackpilot.yml",
+            "src/main/java/controller",
+            "src/main/java/dto",
+            "src/main/java/service"
+          ],
+          "expected": "contains 'stackpilot.yml'"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[web-ui].likely_files_to_inspect",
+          "passed": true,
+          "actual": [
+            "stackpilot.yml",
+            "src/pages",
+            "src/components",
+            "src/forms",
+            "src/services",
+            "src/api"
+          ],
+          "expected": "contains 'stackpilot.yml'"
+        },
+        {
+          "type": "exact",
+          "path": "proposed_changes[service-a].possible_new_files",
+          "passed": true,
+          "actual": [],
+          "expected": []
+        },
+        {
+          "type": "exact",
+          "path": "proposed_changes[web-ui].possible_new_files",
+          "passed": true,
+          "actual": [],
+          "expected": []
+        }
+      ]
+    },
+    {
+      "id": "mixed-plan-phone-profile-screen",
+      "case_file": "tests/eval_cases/mixed_source.json",
+      "command": "plan-feature",
+      "feature": "Allow users to update their phone number from the profile screen",
+      "scan_root": "tests/fixtures/mixed_source_stack",
+      "exit_code": 0,
+      "passed": true,
+      "expectations": [
+        {
+          "type": "exact",
+          "path": "primary_owner",
+          "passed": true,
+          "actual": "service-a",
+          "expected": "service-a"
+        },
+        {
+          "type": "exact",
+          "path": "implementation_owner",
+          "passed": true,
+          "actual": "web-ui",
+          "expected": "web-ui"
+        },
+        {
+          "type": "exact",
+          "path": "domain_owner",
+          "passed": true,
+          "actual": "service-a",
+          "expected": "service-a"
+        },
+        {
+          "type": "array_contains",
+          "path": "feature_intents",
+          "passed": true,
+          "actual": [
+            "ui",
+            "api"
+          ],
+          "expected": "contains 'ui'"
+        },
+        {
+          "type": "array_contains",
+          "path": "feature_intents",
+          "passed": true,
+          "actual": [
+            "ui",
+            "api"
+          ],
+          "expected": "contains 'api'"
+        },
+        {
+          "type": "field_in",
+          "path": "confidence",
+          "passed": true,
+          "actual": "high",
+          "expected": "in ['medium', 'high']"
+        },
+        {
+          "type": "exact",
+          "path": "db_change_needed",
+          "passed": true,
+          "actual": false,
+          "expected": false
+        },
+        {
+          "type": "exact",
+          "path": "api_change_needed",
+          "passed": true,
+          "actual": true,
+          "expected": true
+        },
+        {
+          "type": "nonempty_list",
+          "path": "ordered_steps",
+          "passed": true,
+          "actual": [
+            "In service-a (primary-owner, score=54), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility using discovered controller/dto/service paths: src/main/resources/openapi.yaml, src/main/java/com/example/servicea/controller, src/main/java/com/example/servicea/dto.",
+            "In web-ui (direct-dependent, score=24), update pages/components/forms, client request payload handling, and submission/error states using discovered UI/client paths: src/pages, src/components, src/forms.",
+            "Run validation commands in impacted repos: ./gradlew build ; ./gradlew test ; npm run build ; npm test."
+          ],
+          "expected": "nonempty list"
+        },
+        {
+          "type": "array_contains",
+          "path": "direct_dependents",
+          "passed": true,
+          "actual": [
+            "web-ui"
+          ],
+          "expected": "contains 'web-ui'"
+        }
+      ]
+    },
+    {
+      "id": "mixed-propose-preferred-language-event",
+      "case_file": "tests/eval_cases/mixed_source.json",
+      "command": "propose-changes",
+      "feature": "When a user updates their preferred language, publish a profile-updated event to downstream systems",
+      "scan_root": "tests/fixtures/mixed_source_stack",
+      "exit_code": 0,
+      "passed": true,
+      "expectations": [
+        {
+          "type": "exact",
+          "path": "implementation_owner",
+          "passed": true,
+          "actual": "service-a",
+          "expected": "service-a"
+        },
+        {
+          "type": "exact",
+          "path": "domain_owner",
+          "passed": true,
+          "actual": "service-a",
+          "expected": "service-a"
+        },
+        {
+          "type": "array_contains",
+          "path": "feature_intents",
+          "passed": true,
+          "actual": [
+            "event_integration"
+          ],
+          "expected": "contains 'event_integration'"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[].repo_name",
+          "passed": true,
+          "actual": [
+            "service-a",
+            "service-b"
+          ],
+          "expected": "contains 'service-a'"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[].repo_name",
+          "passed": true,
+          "actual": [
+            "service-a",
+            "service-b"
+          ],
+          "expected": "contains 'service-b'"
+        },
+        {
+          "type": "array_excludes",
+          "path": "proposed_changes[].repo_name",
+          "passed": true,
+          "actual": [
+            "service-a",
+            "service-b"
+          ],
+          "expected": "excludes 'web-ui'"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[service-a].likely_files_to_inspect",
+          "passed": true,
+          "actual": [
+            "src/main/java/com/example/servicea/service/ProfileService.java",
+            "src/main/java/com/example/servicea/service"
+          ],
+          "expected": "contains 'src/main/java/com/example/servicea/service/ProfileService.java'"
+        },
+        {
+          "type": "array_excludes",
+          "path": "proposed_changes[service-a].likely_files_to_inspect",
+          "passed": true,
+          "actual": [
+            "src/main/java/com/example/servicea/service/ProfileService.java",
+            "src/main/java/com/example/servicea/service"
+          ],
+          "expected": "excludes 'stackpilot.yml'"
+        },
+        {
+          "type": "array_excludes",
+          "path": "proposed_changes[service-b].likely_files_to_inspect",
+          "passed": true,
+          "actual": [
+            "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
+            "src/main/java/com/example/serviceb/events",
+            "src/main/java/com/example/serviceb/integration"
+          ],
+          "expected": "excludes 'stackpilot.yml'"
+        },
+        {
+          "type": "array_excludes",
+          "path": "proposed_changes[service-b].likely_files_to_inspect",
+          "passed": true,
+          "actual": [
+            "src/main/java/com/example/serviceb/events/ProfileEventConsumer.java",
+            "src/main/java/com/example/serviceb/events",
+            "src/main/java/com/example/serviceb/integration"
+          ],
+          "expected": "excludes 'src/main/java/**/events'"
+        },
+        {
+          "type": "array_contains",
+          "path": "proposed_changes[service-a].possible_new_files",
+          "passed": true,
+          "actual": [
+            "new event payload class",
+            "new publisher/producer class"
+          ],
+          "expected": "contains 'new event payload class'"
+        },
+        {
+          "type": "array_excludes",
+          "path": "proposed_changes[service-a].possible_new_files",
+          "passed": true,
+          "actual": [
+            "new event payload class",
+            "new publisher/producer class"
+          ],
+          "expected": "excludes 'src/main/java/events/UserUpdatesPreferredLanguagePublishEvent.java'"
+        }
+      ]
+    }
+  ]
+}

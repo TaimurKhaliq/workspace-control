@@ -1,0 +1,41 @@
+{
+  "scan_root": "tests/fixtures/mixed_source_stack",
+  "cases": [
+    {
+      "id": "mixed-plan-phone-profile-screen",
+      "command": "plan-feature",
+      "feature": "Allow users to update their phone number from the profile screen",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "exact", "path": "implementation_owner", "value": "web-ui"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "feature_intents", "value": "ui"},
+        {"type": "array_contains", "path": "feature_intents", "value": "api"},
+        {"type": "field_in", "path": "confidence", "allowed": ["medium", "high"]},
+        {"type": "exact", "path": "db_change_needed", "value": false},
+        {"type": "exact", "path": "api_change_needed", "value": true},
+        {"type": "nonempty_list", "path": "ordered_steps"},
+        {"type": "array_contains", "path": "direct_dependents", "value": "web-ui"}
+      ]
+    },
+    {
+      "id": "mixed-propose-preferred-language-event",
+      "command": "propose-changes",
+      "feature": "When a user updates their preferred language, publish a profile-updated event to downstream systems",
+      "expectations": [
+        {"type": "exact", "path": "implementation_owner", "value": "service-a"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "feature_intents", "value": "event_integration"},
+        {"type": "array_contains", "path": "proposed_changes[].repo_name", "value": "service-a"},
+        {"type": "array_contains", "path": "proposed_changes[].repo_name", "value": "service-b"},
+        {"type": "array_excludes", "path": "proposed_changes[].repo_name", "value": "web-ui"},
+        {"type": "array_contains", "path": "proposed_changes[service-a].likely_files_to_inspect", "value": "src/main/java/com/example/servicea/service/ProfileService.java"},
+        {"type": "array_excludes", "path": "proposed_changes[service-a].likely_files_to_inspect", "value": "stackpilot.yml"},
+        {"type": "array_excludes", "path": "proposed_changes[service-b].likely_files_to_inspect", "value": "stackpilot.yml"},
+        {"type": "array_excludes", "path": "proposed_changes[service-b].likely_files_to_inspect", "value": "src/main/java/**/events"},
+        {"type": "array_contains", "path": "proposed_changes[service-a].possible_new_files", "value": "new event payload class"},
+        {"type": "array_excludes", "path": "proposed_changes[service-a].possible_new_files", "value": "src/main/java/events/UserUpdatesPreferredLanguagePublishEvent.java"}
+      ]
+    }
+  ]
+}

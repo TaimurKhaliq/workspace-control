@@ -1,0 +1,38 @@
+{
+  "scan_root": "tests/fixtures/metadata_only_stack",
+  "cases": [
+    {
+      "id": "metadata-plan-phone-profile-screen",
+      "command": "plan-feature",
+      "feature": "Allow users to update their phone number from the profile screen",
+      "expectations": [
+        {"type": "exact", "path": "primary_owner", "value": "service-a"},
+        {"type": "exact", "path": "implementation_owner", "value": "web-ui"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "feature_intents", "value": "ui"},
+        {"type": "array_contains", "path": "feature_intents", "value": "api"},
+        {"type": "field_in", "path": "confidence", "allowed": ["low", "medium"]},
+        {"type": "array_contains", "path": "missing_evidence", "value": "no API contract file found"},
+        {"type": "exact", "path": "db_change_needed", "value": false},
+        {"type": "exact", "path": "api_change_needed", "value": true},
+        {"type": "nonempty_list", "path": "ordered_steps"}
+      ]
+    },
+    {
+      "id": "metadata-propose-phone-profile-screen",
+      "command": "propose-changes",
+      "feature": "Allow users to update their phone number from the profile screen",
+      "expectations": [
+        {"type": "exact", "path": "implementation_owner", "value": "web-ui"},
+        {"type": "exact", "path": "domain_owner", "value": "service-a"},
+        {"type": "array_contains", "path": "proposed_changes[].repo_name", "value": "service-a"},
+        {"type": "array_contains", "path": "proposed_changes[].repo_name", "value": "web-ui"},
+        {"type": "array_excludes", "path": "proposed_changes[].repo_name", "value": "service-b"},
+        {"type": "array_contains", "path": "proposed_changes[service-a].likely_files_to_inspect", "value": "stackpilot.yml"},
+        {"type": "array_contains", "path": "proposed_changes[web-ui].likely_files_to_inspect", "value": "stackpilot.yml"},
+        {"type": "exact", "path": "proposed_changes[service-a].possible_new_files", "value": []},
+        {"type": "exact", "path": "proposed_changes[web-ui].possible_new_files", "value": []}
+      ]
+    }
+  ]
+}
