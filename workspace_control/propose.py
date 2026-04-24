@@ -9,6 +9,7 @@ from app.models.discovery import (
     RepoDiscovery,
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
+from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 
 from .analyze import analyze_feature
 from .models import (
@@ -114,24 +115,29 @@ def create_change_proposal(
 ) -> ChangeProposal:
     """Create deterministic read-only change proposals from a feature plan."""
 
+    effective_rows = RepoProfileBootstrapService().effective_inventory_for_scan(
+        rows,
+        scan_root=scan_root,
+        discovery_snapshot=discovery_snapshot,
+    )
     resolved_impacts = (
         list(impacts)
         if impacts is not None
         else analyze_feature(
             feature_request,
-            rows,
+            effective_rows,
             scan_root=scan_root,
             discovery_snapshot=discovery_snapshot,
         )
     )
     plan = create_feature_plan(
         feature_request,
-        rows,
+        effective_rows,
         impacts=resolved_impacts,
         scan_root=scan_root,
         discovery_snapshot=discovery_snapshot,
     )
-    by_repo = {row.repo_name: row for row in rows}
+    by_repo = {row.repo_name: row for row in effective_rows}
     impact_by_repo = {impact.repo_name: impact for impact in resolved_impacts}
     discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
     workspace_root = _workspace_root(scan_root, discovery_snapshot)

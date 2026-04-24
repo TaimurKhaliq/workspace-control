@@ -321,7 +321,7 @@
           "type": "field_in",
           "path": "confidence",
           "passed": true,
-          "actual": "medium",
+          "actual": "low",
           "expected": "in ['low', 'medium']"
         },
         {
@@ -329,7 +329,8 @@
           "path": "missing_evidence",
           "passed": true,
           "actual": [
-            "no API contract file found"
+            "no API contract file found",
+            "UI intent came from request text, but no UI/component paths were discovered"
           ],
           "expected": "nonempty list"
         }
@@ -389,7 +390,7 @@
           "type": "field_in",
           "path": "confidence",
           "passed": true,
-          "actual": "medium",
+          "actual": "low",
           "expected": "in ['low', 'medium']"
         },
         {
@@ -397,7 +398,8 @@
           "path": "missing_evidence",
           "passed": true,
           "actual": [
-            "no API contract file found"
+            "no API contract file found",
+            "UI intent came from request text, but no UI/component paths were discovered"
           ],
           "expected": "contains 'no API contract file found'"
         },
@@ -599,8 +601,8 @@
           "path": "ordered_steps",
           "passed": true,
           "actual": [
-            "In service-a (primary-owner, score=54), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility using discovered controller/dto/service paths: src/main/resources/openapi.yaml, src/main/java/com/example/servicea/controller, src/main/java/com/example/servicea/dto.",
-            "In web-ui (direct-dependent, score=24), update pages/components/forms, client request payload handling, and submission/error states using discovered UI/client paths: src/pages, src/components, src/forms.",
+            "In service-a (primary-owner, score=102), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility using discovered controller/dto/service paths: src/main/resources/openapi.yaml, src/main/java/com/example/servicea/controller, src/main/java/com/example/servicea/dto.",
+            "In web-ui (direct-dependent, score=28), update pages/components/forms, client request payload handling, and submission/error states using discovered UI/client paths: src/pages, src/components, src/forms.",
             "Run validation commands in impacted repos: ./gradlew build ; ./gradlew test ; npm run build ; npm test."
           ],
           "expected": "nonempty list"
@@ -759,8 +761,7 @@
           "path": "missing_evidence",
           "passed": true,
           "actual": [
-            "weak evidence for concrete repo ownership or implementation steps",
-            "no primary owner identified from strong evidence"
+            "weak evidence for concrete repo ownership or implementation steps"
           ],
           "expected": "nonempty list"
         }
@@ -1031,8 +1032,7 @@
           "path": "missing_evidence",
           "passed": true,
           "actual": [
-            "weak evidence for concrete repo ownership or implementation steps",
-            "no primary owner identified from strong evidence"
+            "weak evidence for concrete repo ownership or implementation steps"
           ],
           "expected": "nonempty list"
         },

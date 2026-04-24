@@ -34,6 +34,7 @@ class InventoryRow(BaseModel):
     owns_fields: list[str] = Field(default_factory=list)
     owns_tables: list[str] = Field(default_factory=list)
     api_keywords: list[str] = Field(default_factory=list)
+    metadata_source: str = "stackpilot.yml"
 
 
 class FeatureImpact(BaseModel):

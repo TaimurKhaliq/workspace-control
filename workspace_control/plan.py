@@ -9,6 +9,7 @@ from app.models.discovery import (
     RepoDiscovery,
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
+from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 
 from .analyze import analyze_feature
 from .models import FeatureImpact, FeaturePlan, InventoryRow
@@ -444,6 +445,12 @@ def _has_discovered_contract_paths(discovery: RepoDiscovery | None) -> bool:
     return bool(discovery.likely_api_locations)
 
 
+def _has_ui_paths(discovery: RepoDiscovery | None) -> bool:
+    if discovery is None:
+        return False
+    return bool(discovery.likely_ui_locations)
+
+
 def _has_source_discovered_paths(discovery: RepoDiscovery | None) -> bool:
     if discovery is None:
         return False
@@ -573,6 +580,33 @@ def _promote_primary_owner_if_missing(
     return impacts
 
 
+def _single_repo_inferred_domain_owner(
+    domain_owner_impact: FeatureImpact | None,
+    implementation_owner_impact: FeatureImpact | None,
+    filtered_impacts: Sequence[FeatureImpact],
+    by_repo: dict[str, InventoryRow],
+    feature_intents: Sequence[str],
+    pure_ui_copy_change: bool,
+) -> bool:
+    if domain_owner_impact is None or implementation_owner_impact is not None:
+        return False
+    if pure_ui_copy_change or len(filtered_impacts) != 1:
+        return False
+    if filtered_impacts[0].repo_name != domain_owner_impact.repo_name:
+        return False
+
+    row = by_repo.get(domain_owner_impact.repo_name)
+    if row is None or not _row_is_backend(row):
+        return False
+    if getattr(row, "metadata_source", "stackpilot.yml") != "inferred_metadata":
+        return False
+
+    return any(
+        intent in feature_intents
+        for intent in ("persistence", "api", "event_integration")
+    )
+
+
 def _workspace_root(
     scan_root: Path | None,
     discovery_snapshot: DiscoverySnapshot | None,
@@ -661,6 +695,11 @@ def _missing_evidence_for_plan(
     ):
         missing.append("no migration system detected")
 
+    if ui_change_needed and not _impacted_ui_paths_found(impacts, architecture_by_repo):
+        missing.append(
+            "UI intent came from request text, but no UI/component paths were discovered"
+        )
+
     if event_integration_mode:
         event_repos = [repo for repo in [primary_owner, *possible_downstreams] if repo]
         if event_repos and not any(
@@ -693,6 +732,16 @@ def _missing_evidence_for_plan(
     return _dedupe_preserve_order(missing)
 
 
+def _impacted_ui_paths_found(
+    impacts: Sequence[FeatureImpact],
+    architecture_by_repo: dict[str, RepoDiscovery],
+) -> bool:
+    return any(
+        _has_ui_paths(architecture_by_repo.get(impact.repo_name))
+        for impact in impacts
+    )
+
+
 def _confidence_for_plan(
     *,
     primary_owner: str | None,
@@ -718,10 +767,23 @@ def _confidence_for_plan(
     has_ambiguity = any(
         "multiple repos tied on ownership" in item for item in missing_evidence
     )
+    weak_concrete_evidence = any(
+        "weak evidence for concrete repo ownership" in item
+        for item in missing_evidence
+    )
+    uncertain_ui_evidence = any(
+        "no UI/component paths were discovered" in item
+        for item in missing_evidence
+    )
 
-    if has_ambiguity or len(missing_evidence) >= 2 or score_gap <= 2:
+    if (
+        weak_concrete_evidence
+        or has_ambiguity
+        or len(missing_evidence) >= 2
+        or score_gap <= 2
+    ):
         return "low"
-    if missing_evidence or score_gap < 8:
+    if uncertain_ui_evidence or missing_evidence or score_gap < 8:
         return "medium"
     return "high"
 
@@ -1105,17 +1167,22 @@ def create_feature_plan(
 ) -> FeaturePlan:
     """Build a deterministic feature plan from impact analysis."""
 
+    effective_rows = RepoProfileBootstrapService().effective_inventory_for_scan(
+        rows,
+        scan_root=scan_root,
+        discovery_snapshot=discovery_snapshot,
+    )
     resolved_impacts = (
         list(impacts)
         if impacts is not None
         else analyze_feature(
             feature_request,
-            rows,
+            effective_rows,
             scan_root=scan_root,
             discovery_snapshot=discovery_snapshot,
         )
     )
-    by_repo = {row.repo_name: row for row in rows}
+    by_repo = {row.repo_name: row for row in effective_rows}
     feature_intents = _classify_feature_intents(feature_request)
     pure_ui_copy_change = _pure_ui_copy_change_requested(feature_request, feature_intents)
     discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
@@ -1151,10 +1218,17 @@ def create_feature_plan(
         and implementation_owner_impact is not None
         and _has_discovered_contract_paths(domain_owner_discovery)
     )
+    inferred_api_for_new_persisted_field_with_contract = bool(
+        "persistence" in feature_intents
+        and _new_field_requested(feature_request)
+        and domain_owner_impact is not None
+        and _has_discovered_contract_paths(domain_owner_discovery)
+    )
     if (
         inferred_api_for_mutable_field
         or inferred_api_for_ui_persistence
         or inferred_api_for_new_field_with_contract
+        or inferred_api_for_new_persisted_field_with_contract
     ):
         feature_intents = _with_feature_intent(feature_intents, "api")
 
@@ -1216,6 +1290,15 @@ def create_feature_plan(
         )
         else None
     )
+    if domain_owner is None and _single_repo_inferred_domain_owner(
+        domain_owner_impact,
+        implementation_owner_impact,
+        filtered_impacts,
+        by_repo,
+        feature_intents,
+        pure_ui_copy_change,
+    ):
+        domain_owner = domain_owner_impact.repo_name
 
     ui_change_needed = "ui" in feature_intents
     db_change_needed = "persistence" in feature_intents
@@ -1224,6 +1307,7 @@ def create_feature_plan(
         or inferred_api_for_mutable_field
         or inferred_api_for_ui_persistence
         or inferred_api_for_new_field_with_contract
+        or inferred_api_for_new_persisted_field_with_contract
     )
 
     likely_paths_by_repo: dict[str, list[str]] = {}
@@ -1316,6 +1400,7 @@ def create_feature_plan(
         or bool(possible_downstreams)
         or inferred_api_for_mutable_field
         or inferred_api_for_new_field_with_contract
+        or inferred_api_for_new_persisted_field_with_contract
         or api_surface_expansion
         or weak_evidence_request
     )

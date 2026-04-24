@@ -212,6 +212,19 @@ def run_repo_probe(
     write_text_output(report_dir / "discovery.txt", discovery_result)
     command_results.append({"id": "discovery", **discovery_result})
 
+    bootstrap_result = run_cli_command(
+        [
+            "bootstrap-repo-profile",
+            "--target-id",
+            target_id,
+            "--registry-path",
+            str(registry_path),
+        ],
+        python_executable=python_executable,
+    )
+    write_json_output(report_dir / "bootstrap_profile.json", bootstrap_result)
+    command_results.append({"id": "bootstrap_profile", **bootstrap_result})
+
     for prompt in prompts:
         slug = prompt_slug(prompt)
         analyze_result = run_cli_command(
@@ -257,6 +270,7 @@ def run_repo_probe(
         command_results.append({"id": f"propose_{slug}", **propose_result})
 
     success = all(item["exit_code"] == 0 for item in command_results)
+    metadata_modes = metadata_modes_from_bootstrap(bootstrap_result)
     repo_result = {
         "repo_name": repo_name,
         "repo_url": repo_url,
@@ -265,6 +279,7 @@ def run_repo_probe(
         "clone_dir": display_path(clone_dir),
         "report_dir": display_path(report_dir),
         "clone_status": clone_status,
+        "metadata_modes": metadata_modes,
         "success": success,
         "commands": command_results,
     }
@@ -408,6 +423,7 @@ def format_repo_summary(repo_result: dict[str, Any], prompts: Sequence[str]) -> 
         f"- target id: {repo_result['target_id']}",
         f"- clone dir: {repo_result['clone_dir']}",
         f"- clone status: {repo_result['clone_status']}",
+        f"- metadata modes: {_format_list(repo_result['metadata_modes'])}",
         f"- report dir: {repo_result['report_dir']}",
         "- shadow mode: read-only planner/proposal commands; no target repo edits attempted",
         f"- status: {'passed' if repo_result['success'] else 'failed'}",
@@ -436,6 +452,32 @@ def format_repo_summary(repo_result: dict[str, Any], prompts: Sequence[str]) -> 
 
     lines.append("")
     return "\n".join(lines)
+
+
+def metadata_modes_from_bootstrap(result: dict[str, Any]) -> list[str]:
+    """Extract metadata-mode labels from bootstrap output for summaries."""
+
+    if result["exit_code"] != 0:
+        return []
+    try:
+        payload = json.loads(result["stdout"])
+    except json.JSONDecodeError:
+        return []
+    profiles = payload.get("profiles", []) if isinstance(payload, dict) else []
+    if not isinstance(profiles, list):
+        return []
+    modes = [
+        profile.get("metadata_mode")
+        for profile in profiles
+        if isinstance(profile, dict) and isinstance(profile.get("metadata_mode"), str)
+    ]
+    return sorted(set(modes))
+
+
+def _format_list(values: Sequence[str]) -> str:
+    if not values:
+        return "-"
+    return ", ".join(values)
 
 
 def print_probe_summary(report: dict[str, Any]) -> None:

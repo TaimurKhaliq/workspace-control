@@ -11,6 +11,7 @@ from app.services.evidence_aggregator import (
     phrase_matches,
     tokenize,
 )
+from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 
 from .models import FeatureImpact, InventoryRow
 
@@ -28,9 +29,14 @@ def analyze_feature(
     if not feature_tokens:
         return []
 
+    effective_rows = RepoProfileBootstrapService().effective_inventory_for_scan(
+        rows,
+        scan_root=scan_root,
+        discovery_snapshot=discovery_snapshot,
+    )
     evidence = EvidenceAggregator().aggregate(
         feature_description,
-        rows,
+        effective_rows,
         scan_root=scan_root,
         discovery_snapshot=discovery_snapshot,
     )

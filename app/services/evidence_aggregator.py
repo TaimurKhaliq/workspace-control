@@ -248,13 +248,14 @@ class EvidenceAggregator:
         row_type_tokens = tokenize(row.type)
         domain_overlap = sorted(feature_tokens & tokenize(row.domain))
         backend_repo = bool(row_type_tokens & CATEGORY_HINTS["backend"]["repo_type_tokens"])
+        metadata_source = getattr(row, "metadata_source", "stackpilot.yml")
         evidence: list[Evidence] = []
 
         if domain_overlap:
             evidence.append(
                 Evidence(
                     repo_name=row.repo_name,
-                    source="stackpilot.yml",
+                    source=metadata_source,
                     category="domain",
                     signal="domain match",
                     weight=len(domain_overlap) * DOMAIN_WEIGHT,
@@ -328,7 +329,7 @@ class EvidenceAggregator:
                 evidence.append(
                     Evidence(
                         repo_name=row.repo_name,
-                        source="stackpilot.yml",
+                        source=metadata_source,
                         category="ownership",
                         signal=field_name,
                         weight=field_score,
@@ -380,7 +381,7 @@ class EvidenceAggregator:
             evidence.append(
                 Evidence(
                     repo_name=row.repo_name,
-                    source="stackpilot.yml",
+                    source=metadata_source,
                     category="keyword_overlap",
                     signal="manifest keyword overlap",
                     weight=len(generic_overlap),

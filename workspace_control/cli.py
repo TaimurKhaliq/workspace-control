@@ -16,6 +16,10 @@ from app.services.discovery_target_registry import (
     format_target_list,
     parse_hints,
 )
+from app.services.repo_profile_bootstrap import (
+    RepoProfileBootstrapService,
+    format_repo_profile_bootstrap,
+)
 
 from .analyze import analyze_feature, format_feature_analysis
 from .inventory import format_inventory_table
@@ -51,6 +55,26 @@ def run(argv: list[str] | None = None) -> int:
         help="Registered discovery target id to scan instead of --scan-root",
     )
     discover_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    bootstrap_parser = subparsers.add_parser(
+        "bootstrap-repo-profile",
+        help="Infer deterministic repository metadata profiles from discovery",
+    )
+    bootstrap_parser.add_argument(
+        "--scan-root",
+        type=Path,
+        default=default_scan_root,
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    bootstrap_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to bootstrap instead of --scan-root",
+    )
+    bootstrap_parser.add_argument(
         "--registry-path",
         type=Path,
         default=DEFAULT_REGISTRY_PATH,
@@ -177,6 +201,7 @@ def run(argv: list[str] | None = None) -> int:
     if args.command not in {
         "inventory",
         "discover-architecture",
+        "bootstrap-repo-profile",
         "register-discovery-target",
         "list-discovery-targets",
         "analyze-feature",
@@ -227,6 +252,23 @@ def run(argv: list[str] | None = None) -> int:
             return 1
 
         print(format_discovery_snapshot(snapshot))
+        return 0
+
+    if args.command == "bootstrap-repo-profile":
+        try:
+            snapshot = _discover_snapshot_for_args(args)
+            report = RepoProfileBootstrapService().bootstrap(snapshot)
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        print(format_repo_profile_bootstrap(report))
         return 0
 
     discovery_snapshot = None

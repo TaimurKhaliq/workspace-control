@@ -81,7 +81,12 @@ def test_run_public_repo_probe_writes_reports_without_network(
 
     def fake_run_cli_command(args, *, python_executable: str):
         command = args[0]
-        stdout = "discovery output\n" if command == "discover-architecture" else "{}\n"
+        if command == "discover-architecture":
+            stdout = "discovery output\n"
+        elif command == "bootstrap-repo-profile":
+            stdout = '{"profiles": [{"metadata_mode": "inferred-metadata"}]}\n'
+        else:
+            stdout = "{}\n"
         return {
             "command": probe.display_command(args),
             "exit_code": 0,
@@ -110,9 +115,15 @@ def test_run_public_repo_probe_writes_reports_without_network(
         "failed_repos": [],
     }
     assert (report_dir / "discovery.txt").read_text(encoding="utf-8") == "discovery output\n"
+    assert json.loads(
+        (report_dir / "bootstrap_profile.json").read_text(encoding="utf-8")
+    ) == {"profiles": [{"metadata_mode": "inferred-metadata"}]}
     assert json.loads((report_dir / f"plan_{slug}.json").read_text(encoding="utf-8")) == {}
     assert json.loads((report_dir / f"propose_{slug}.json").read_text(encoding="utf-8")) == {}
     assert "shadow mode: read-only" in (report_dir / "summary.md").read_text(
+        encoding="utf-8"
+    )
+    assert "metadata modes: inferred-metadata" in (report_dir / "summary.md").read_text(
         encoding="utf-8"
     )
 

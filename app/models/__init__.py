@@ -13,6 +13,7 @@ from .discovery import (
 from .evidence import Evidence
 from .feature_plan import FeaturePlan
 from .repo_manifest import RepoManifest
+from .repo_profile import InferredRepoProfile, RepoProfileBootstrapReport
 
 __all__ = [
     "ArchitectureDiscoveryReport",
@@ -26,4 +27,6 @@ __all__ = [
     "MaterializedWorkspace",
     "RepoDiscovery",
     "RepoManifest",
+    "InferredRepoProfile",
+    "RepoProfileBootstrapReport",
 ]
