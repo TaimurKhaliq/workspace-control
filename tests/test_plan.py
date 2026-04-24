@@ -182,13 +182,16 @@ def test_plan_feature_event_and_downstream_notification_feature(tmp_path: Path) 
 def test_plan_feature_pure_ui_rename_feature(tmp_path: Path) -> None:
     _seed_common_workspace(tmp_path)
 
-    feature_request = "Rename the phone number label on the profile settings page"
+    feature_request = "Rename the preferred language label on the profile screen"
     rows = build_inventory(tmp_path)
     impacts = analyze_feature(feature_request, rows)
     plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
+    primary_step = plan.ordered_steps[0]
 
     assert plan.feature_intents == ["ui"]
     assert plan.primary_owner == "web-ui"
+    assert plan.implementation_owner == "web-ui"
+    assert plan.domain_owner is None
     assert plan.direct_dependents == []
     assert plan.possible_downstreams == []
     assert plan.ui_change_needed is True
@@ -202,6 +205,15 @@ def test_plan_feature_pure_ui_rename_feature(tmp_path: Path) -> None:
         not path.startswith("src/main/java")
         for path in plan.likely_paths_by_repo["web-ui"]
     )
+    assert "src/api" not in plan.likely_paths_by_repo["web-ui"]
+    assert "src/services" not in plan.likely_paths_by_repo["web-ui"]
+    assert "UI copy" in primary_step
+    assert "label text" in primary_step
+    assert "presentation" in primary_step
+    assert "client service wiring" not in primary_step
+    assert "payload" not in primary_step
+    assert "validation flow" not in primary_step
+    assert "API" not in primary_step
 
 
 def test_cli_plan_feature_prints_feature_plan_json(tmp_path: Path, capsys) -> None:

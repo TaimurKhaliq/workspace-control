@@ -13,6 +13,9 @@ PERSISTED_FIELD_REQUEST = (
     "Add phone number field to the customer profile settings form and persist it to database"
 )
 EVENT_REQUEST = "Publish profile-updated event when phone number changes"
+EVENT_WHEN_FIELD_CHANGES_REQUEST = (
+    "Publish a profile-updated event whenever a user's phone number changes"
+)
 
 
 def _register_fixture_targets(tmp_path: Path) -> DiscoveryTargetRegistry:
@@ -233,5 +236,38 @@ def test_fixture_targets_compare_event_publishing_behavior(tmp_path: Path) -> No
     assert mixed_by_repo["service-a"].score > metadata_by_repo["service-a"].score
     assert mixed_by_repo["service-b"].score > metadata_by_repo["service-b"].score
     assert "adapter_discovery:" in mixed_by_repo["service-b"].reason
-    assert "using discovered API/service trigger paths" in mixed_plan.ordered_steps[0]
+    assert "using discovered event/service trigger paths" in mixed_plan.ordered_steps[0]
     assert "using discovered consumer/integration paths" in mixed_plan.ordered_steps[1]
+
+
+def test_fixture_targets_event_publishing_prefers_service_event_evidence(
+    tmp_path: Path,
+) -> None:
+    registry = _register_fixture_targets(tmp_path)
+    mixed_snapshot = _snapshot_for_target(registry, "mixed-source")
+    _, mixed_plan = _analyze_and_plan(
+        mixed_snapshot,
+        EVENT_WHEN_FIELD_CHANGES_REQUEST,
+    )
+
+    primary_step = mixed_plan.ordered_steps[0]
+
+    assert mixed_plan.primary_owner == "service-a"
+    assert mixed_plan.domain_owner == "service-a"
+    assert "service-b" in mixed_plan.possible_downstreams
+    assert mixed_plan.api_change_needed is False
+    assert "event emission/publish logic" in primary_step
+    assert "trigger point in service flow" in primary_step
+    assert "src/main/java/com/example/servicea/service" in primary_step
+    assert "API request/response" not in primary_step
+    assert "openapi" not in primary_step.lower()
+    assert "controller" not in primary_step.lower()
+    assert "dto" not in primary_step.lower()
+    assert "stackpilot.yml" not in mixed_plan.likely_paths_by_repo["service-a"]
+    assert "src/main/java/com/example/servicea/service" in mixed_plan.likely_paths_by_repo["service-a"]
+    assert "src/main/resources/openapi.yaml" not in mixed_plan.likely_paths_by_repo["service-a"]
+    assert (
+        "src/main/java/com/example/servicea/controller"
+        not in mixed_plan.likely_paths_by_repo["service-a"]
+    )
+    assert "src/main/java/com/example/servicea/dto" not in mixed_plan.likely_paths_by_repo["service-a"]

@@ -190,6 +190,19 @@ FRONTEND_PATH_FALLBACKS = [
     "src/services",
     "src/api",
 ]
+FRONTEND_UI_PATH_CANDIDATES = [
+    "src/pages",
+    "src/components",
+    "src/forms",
+    "pages",
+    "components",
+    "forms",
+]
+FRONTEND_UI_PATH_FALLBACKS = [
+    "src/pages",
+    "src/components",
+    "src/forms",
+]
 
 DOWNSTREAM_PATH_CANDIDATES = [
     "src/events",
@@ -250,6 +263,23 @@ def _mutable_domain_field_update_requested(feature_request: str) -> bool:
 def _new_field_requested(feature_request: str) -> bool:
     tokens = _tokenize(feature_request)
     return bool("field" in tokens and tokens & {"add", "new"})
+
+
+def _pure_ui_copy_change_requested(
+    feature_request: str,
+    feature_intents: Sequence[str],
+) -> bool:
+    if "ui" not in feature_intents:
+        return False
+    if any(
+        intent in feature_intents
+        for intent in ("persistence", "api", "event_integration")
+    ):
+        return False
+    tokens = _tokenize(feature_request)
+    if not tokens & UI_COPY_ONLY_TOKENS:
+        return False
+    return not _mutable_domain_field_update_requested(feature_request)
 
 
 def _row_is_frontend(row: InventoryRow) -> bool:
@@ -354,6 +384,18 @@ def _has_discovered_contract_paths(discovery: RepoDiscovery | None) -> bool:
     if discovery is None:
         return False
     return bool(discovery.likely_api_locations)
+
+
+def _has_source_discovered_paths(discovery: RepoDiscovery | None) -> bool:
+    if discovery is None:
+        return False
+    return bool(
+        discovery.likely_api_locations
+        or discovery.likely_service_locations
+        or discovery.likely_persistence_locations
+        or discovery.likely_ui_locations
+        or discovery.likely_event_locations
+    )
 
 
 def _has_real_downstream_evidence(
@@ -633,15 +675,20 @@ def _infer_likely_paths(
     repo_dir: Path | None,
     discovery: RepoDiscovery | None,
     db_change_needed: bool,
+    api_change_needed: bool,
     ui_change_needed: bool,
+    ui_copy_only: bool,
     event_integration_mode: bool,
 ) -> list[str]:
-    paths: list[str] = ["stackpilot.yml"]
+    paths: list[str] = []
+    if not _has_source_discovered_paths(discovery):
+        paths.append("stackpilot.yml")
 
     if _row_is_backend(row):
         discovered_backend_paths = _backend_discovered_paths(
             discovery,
             db_change_needed=db_change_needed,
+            api_change_needed=api_change_needed,
             event_integration_mode=event_integration_mode,
         )
         if discovered_backend_paths:
@@ -666,7 +713,11 @@ def _infer_likely_paths(
                 else:
                     paths.extend(BACKEND_DB_PATH_PREFERRED)
 
-        if role == "possible-downstream" and event_integration_mode:
+        if (
+            role == "possible-downstream"
+            and event_integration_mode
+            and not discovered_backend_paths
+        ):
             downstream_existing = _existing_candidate_paths(
                 repo_dir, DOWNSTREAM_PATH_CANDIDATES
             )
@@ -676,15 +727,22 @@ def _infer_likely_paths(
                 paths.extend(["src/events", "src/integrations"])
 
     elif _row_is_frontend(row):
-        frontend_discovered = _frontend_discovered_paths(discovery)
+        frontend_discovered = (
+            _ui_paths(discovery)
+            if ui_copy_only
+            else _frontend_discovered_paths(discovery)
+        )
         if frontend_discovered:
             paths.extend(frontend_discovered)
         elif frontend_existing := _existing_candidate_paths(
-            repo_dir, FRONTEND_PATH_CANDIDATES
+            repo_dir,
+            FRONTEND_UI_PATH_CANDIDATES if ui_copy_only else FRONTEND_PATH_CANDIDATES,
         ):
             paths.extend(frontend_existing)
         else:
-            paths.extend(FRONTEND_PATH_FALLBACKS)
+            paths.extend(
+                FRONTEND_UI_PATH_FALLBACKS if ui_copy_only else FRONTEND_PATH_FALLBACKS
+            )
 
         if ui_change_needed and "src/forms" not in paths and "forms" not in paths:
             paths.append("src/forms")
@@ -696,10 +754,26 @@ def _backend_discovered_paths(
     discovery: RepoDiscovery | None,
     *,
     db_change_needed: bool,
+    api_change_needed: bool,
     event_integration_mode: bool,
 ) -> list[str]:
     if discovery is None:
         return []
+
+    if event_integration_mode and not api_change_needed:
+        paths = [
+            *discovery.likely_event_locations,
+            *discovery.likely_service_locations,
+        ]
+        if db_change_needed:
+            paths.extend(discovery.likely_persistence_locations)
+        else:
+            paths.extend(
+                path
+                for path in discovery.likely_persistence_locations
+                if _non_migration_persistence_path(path)
+            )
+        return _dedupe_preserve_order(paths)
 
     paths = [
         *discovery.likely_api_locations,
@@ -745,23 +819,26 @@ def _primary_owner_step(
     score: int,
     db_change_needed: bool,
     api_change_needed: bool,
+    ui_copy_only: bool,
     feature_intents: set[str],
     discovery: RepoDiscovery | None,
 ) -> str:
     if _row_is_backend(row):
         if "event_integration" in feature_intents:
-            event_note = _path_note(
-                " using discovered event/integration paths",
-                _event_paths(discovery),
+            trigger_note = _path_note(
+                " using discovered event/service trigger paths",
+                _event_trigger_paths(discovery, api_change_needed=api_change_needed),
             )
-            api_note = _path_note(
-                " using discovered API/service trigger paths",
-                _api_and_service_paths(discovery),
-            )
+            api_note = ""
+            if api_change_needed:
+                api_note = _path_note(
+                    " and API contract paths",
+                    _api_paths(discovery),
+                )
             step = (
                 f"In {repo_name} (primary-owner, score={score}), implement event emission/publish logic, "
                 "define payload/schema mapping, add the trigger point in service flow, and determine whether "
-                f"an outbox/producer/integration path is needed{event_note}{api_note}."
+                f"an outbox/producer/integration path is needed{trigger_note}{api_note}."
             )
             if db_change_needed:
                 return (
@@ -796,6 +873,12 @@ def _primary_owner_step(
         )
 
     if _row_is_frontend(row):
+        if ui_copy_only:
+            return (
+                f"In {repo_name} (primary-owner, score={score}), update the relevant "
+                "UI copy, label text, and presentation on the profile screen"
+                f"{_path_note(' using discovered UI paths', _ui_paths(discovery))}."
+            )
         return (
             f"In {repo_name} (primary-owner, score={score}), update profile page/form state handling, "
             "UI copy, validation messaging, and client service wiring"
@@ -885,10 +968,22 @@ def _api_and_service_paths(discovery: RepoDiscovery | None) -> list[str]:
     )
 
 
+def _api_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return list(discovery.likely_api_locations)
+
+
 def _persistence_paths(discovery: RepoDiscovery | None) -> list[str]:
     if discovery is None:
         return []
     return list(discovery.likely_persistence_locations)
+
+
+def _service_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return list(discovery.likely_service_locations)
 
 
 def _service_and_data_paths(discovery: RepoDiscovery | None) -> list[str]:
@@ -903,6 +998,31 @@ def _event_paths(discovery: RepoDiscovery | None) -> list[str]:
     if discovery is None:
         return []
     return list(discovery.likely_event_locations)
+
+
+def _event_trigger_paths(
+    discovery: RepoDiscovery | None,
+    *,
+    api_change_needed: bool,
+) -> list[str]:
+    event_paths = _event_paths(discovery)
+    if event_paths:
+        return event_paths
+
+    service_paths = _service_paths(discovery)
+    if service_paths:
+        return service_paths
+
+    if api_change_needed:
+        return _api_paths(discovery)
+
+    return []
+
+
+def _ui_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return list(discovery.likely_ui_locations)
 
 
 def _ui_and_client_paths(discovery: RepoDiscovery | None) -> list[str]:
@@ -939,6 +1059,7 @@ def create_feature_plan(
     )
     by_repo = {row.repo_name: row for row in rows}
     feature_intents = _classify_feature_intents(feature_request)
+    pure_ui_copy_change = _pure_ui_copy_change_requested(feature_request, feature_intents)
     discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
     workspace_root = _workspace_root(scan_root, discovery_snapshot)
     mutable_domain_update = _mutable_domain_field_update_requested(feature_request)
@@ -1020,8 +1141,14 @@ def create_feature_plan(
         domain_owner_impact.repo_name
         if (
             domain_owner_impact is not None
-            and implementation_owner_impact is not None
-            and "ui" in feature_intents
+            and (
+                (
+                    implementation_owner_impact is not None
+                    and "ui" in feature_intents
+                    and not pure_ui_copy_change
+                )
+                or event_integration_mode
+            )
         )
         else None
     )
@@ -1054,7 +1181,9 @@ def create_feature_plan(
             repo_dir=repo_dir,
             discovery=discovery_by_repo.get(impact.repo_name),
             db_change_needed=db_change_needed,
+            api_change_needed=api_change_needed,
             ui_change_needed=ui_change_needed,
+            ui_copy_only=pure_ui_copy_change,
             event_integration_mode=event_integration_mode,
         )
 
@@ -1076,6 +1205,7 @@ def create_feature_plan(
                 score=owner_score,
                 db_change_needed=db_change_needed,
                 api_change_needed=api_change_needed,
+                ui_copy_only=pure_ui_copy_change,
                 feature_intents=feature_intents_set,
                 discovery=discovery_by_repo.get(primary_owner),
             )
