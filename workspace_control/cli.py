@@ -98,7 +98,7 @@ def run(argv: list[str] | None = None) -> int:
         print(format_inventory_table(rows))
         return 0
 
-    impacts = analyze_feature(args.feature_description, rows)
+    impacts = analyze_feature(args.feature_description, rows, scan_root=args.scan_root)
     if args.command == "analyze-feature":
         print(format_feature_analysis(args.feature_description, impacts))
         return 0

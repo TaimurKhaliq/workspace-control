@@ -95,10 +95,11 @@ class ArchitectureDiscoveryService:
         evidence = [
             Evidence(
                 repo_name=repo_path.name,
-                adapter=item.adapter,
+                source="adapter_discovery",
+                category="framework",
                 signal=framework,
                 weight=1,
-                details={},
+                details={"adapter": item.adapter},
             )
             for item in discoveries
             for framework in item.frameworks

@@ -39,10 +39,11 @@ class RepoAdapter(ABC):
         return [
             Evidence(
                 repo_name=repo_name,
-                adapter=self.name,
+                source="adapter_discovery",
+                category="framework",
                 signal=signal,
                 weight=1,
-                details={},
+                details={"adapter": self.name},
             )
             for signal in signals
         ]
