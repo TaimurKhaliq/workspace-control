@@ -181,6 +181,7 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
 
     for relative in [
         "pet/PetRestController.java",
+        "pet/PetTypeRestController.java",
         "vet/VetRestController.java",
         "visit/VisitRestController.java",
         "specialty/SpecialtyRestController.java",
@@ -198,6 +199,10 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
     )
     (repo / "client/src/components/owners/OwnerEditor.tsx").write_text(
         "export const OwnerEditor = ({ telephone }: { telephone: string }) => null;\n",
+        encoding="utf-8",
+    )
+    (repo / "client/src/components/owners/NewOwnerPage.tsx").write_text(
+        "export function NewOwnerPage() { return null; }\n",
         encoding="utf-8",
     )
     (repo / "client/src/types/index.ts").write_text(
@@ -415,6 +420,7 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
     assert "client/src/components/owners/EditOwnerPage.tsx" in inspect_paths
     assert "client/src/components/owners/OwnerEditor.tsx" in inspect_paths
     assert "client/src/types/index.ts" in inspect_paths
+    assert "client/src/components/owners/NewOwnerPage.tsx" not in inspect_paths
     assert (
         "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java"
         in inspect_paths
@@ -448,6 +454,7 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
         for path in inspect_paths
         for token in (
             "PetRestController",
+            "PetTypeRestController",
             "RootRestController",
             "VetRestController",
             "VisitRestController",

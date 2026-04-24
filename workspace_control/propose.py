@@ -86,11 +86,16 @@ FILE_PATTERNS = {
     ),
 }
 STRICT_GROUP_LIMITS = {
-    "frontend": 4,
+    "frontend": 3,
     "backend": 5,
     "shared": 2,
 }
 FRONTEND_FOCUS_TOKENS = {"edit", "editor", "form", "info", "page", "screen", "view"}
+EDIT_FLOW_REQUEST_TOKENS = {"change", "edit", "modify", "update"}
+CREATE_FLOW_REQUEST_TOKENS = {"add", "create", "new"}
+EDIT_FLOW_FILE_TOKENS = {"edit", "editor", "info", "view"}
+CREATE_FLOW_FILE_TOKENS = {"create", "new"}
+FRONTEND_SUPPORT_FILE_TOKENS = {"type", "types"}
 BACKEND_FOCUS_TOKENS = {
     "controller": 5,
     "request": 4,
@@ -754,12 +759,21 @@ def _strict_grounded_path_score(
 ) -> int:
     tokens = _path_all_tokens(path)
     stem_tokens = _tokenize_with_camel_case(Path(path).stem)
+    request_tokens = _tokenize_with_camel_case(plan.feature_request)
     score = len(tokens & grounded_tokens) * 3
     score += len(stem_tokens & grounded_tokens) * 5
     if _path_is_grounded_source(plan, repo_name, path):
         score += 12
     if group == "frontend":
         score += len(tokens & FRONTEND_FOCUS_TOKENS) * 2
+        if _edit_update_flow_requested(request_tokens):
+            score += len(tokens & EDIT_FLOW_FILE_TOKENS) * 5
+            if plan.api_change_needed:
+                score += len(tokens & FRONTEND_SUPPORT_FILE_TOKENS) * 4
+            if tokens & CREATE_FLOW_FILE_TOKENS:
+                score -= 10
+        elif _create_flow_requested(request_tokens):
+            score += len(tokens & CREATE_FLOW_FILE_TOKENS) * 5
     elif group == "backend":
         score += sum(
             weight for token, weight in BACKEND_FOCUS_TOKENS.items() if token in tokens
@@ -767,6 +781,14 @@ def _strict_grounded_path_score(
     elif group == "shared" and _shared_path_is_strongly_justified(path, plan):
         score += 4
     return score
+
+
+def _edit_update_flow_requested(request_tokens: set[str]) -> bool:
+    return bool(request_tokens & EDIT_FLOW_REQUEST_TOKENS)
+
+
+def _create_flow_requested(request_tokens: set[str]) -> bool:
+    return bool(request_tokens & CREATE_FLOW_REQUEST_TOKENS)
 
 
 def _has_source_grounding_for_repo(plan: FeaturePlan, repo_name: str) -> bool:
