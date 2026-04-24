@@ -225,3 +225,30 @@ def test_propose_changes_prefers_specific_backend_file_names(tmp_path: Path) -> 
     assert "owns_fields" in backend.rationale
     assert "spring_boot" in backend.rationale
     assert "Concrete files were inferred" in backend.rationale
+
+
+def test_propose_changes_metadata_only_repo_stays_conservative(tmp_path: Path) -> None:
+    _write_manifest(
+        tmp_path,
+        repo_name="profile-api",
+        repo_type="backend-service",
+        domain="customer-profile",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+        owns_entities=["customer_profile"],
+        owns_fields=["phone_number"],
+        owns_tables=["customer_profiles"],
+        api_keywords=["profile endpoint"],
+    )
+
+    feature_request = "Update customer profile phone number API request"
+    rows = build_inventory(tmp_path)
+    proposal = create_change_proposal(feature_request, rows, scan_root=tmp_path)
+    backend = _proposal_by_repo(proposal)["profile-api"]
+
+    assert "src/main/java/**/controller" in backend.likely_files_to_inspect
+    assert "src/main/java/**/service" in backend.likely_files_to_inspect
+    assert backend.possible_new_files == []
+    assert "metadata-only mode" in backend.rationale
+    assert "manifest hints" in backend.rationale

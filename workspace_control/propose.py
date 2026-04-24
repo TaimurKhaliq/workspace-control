@@ -336,6 +336,12 @@ def _possible_new_files(
     backend = _row_is_backend(row)
     frontend = _row_is_frontend(row)
     event_mode = "event_integration" in plan.feature_intents
+    metadata_only = (
+        discovery is not None and discovery.evidence_mode == "metadata-only"
+    )
+
+    if metadata_only:
+        return []
 
     if frontend and plan.ui_change_needed:
         page_base = _first_path_with_marker(inspect_paths, ("pages",)) or "src/pages"
@@ -411,7 +417,15 @@ def _rationale(
     concrete_files = [
         path for path in inspect_paths if path != "stackpilot.yml" and _path_looks_like_file(path)
     ]
-    if concrete_files:
+    metadata_only = (
+        discovery is not None and discovery.evidence_mode == "metadata-only"
+    )
+    if metadata_only:
+        path_note = (
+            "metadata-only mode; planning is based on manifest hints rather than "
+            "discovered source structure."
+        )
+    elif concrete_files:
         path_note = "Concrete files were inferred from discovered naming conventions."
     else:
         path_note = "No concrete file convention matched; likely folders are listed instead."
@@ -427,16 +441,46 @@ def _discovery_paths(discovery: RepoDiscovery | None, category: str) -> list[str
     if discovery is None:
         return []
     if category == "api":
-        return discovery.likely_api_locations
+        return _locations_for_mode(
+            discovery,
+            discovery.likely_api_locations,
+            discovery.hinted_api_locations,
+        )
     if category == "service":
-        return discovery.likely_service_locations
+        return _locations_for_mode(
+            discovery,
+            discovery.likely_service_locations,
+            discovery.hinted_service_locations,
+        )
     if category == "persistence":
-        return discovery.likely_persistence_locations
+        return _locations_for_mode(
+            discovery,
+            discovery.likely_persistence_locations,
+            discovery.hinted_persistence_locations,
+        )
     if category == "ui":
-        return discovery.likely_ui_locations
+        return _locations_for_mode(
+            discovery,
+            discovery.likely_ui_locations,
+            discovery.hinted_ui_locations,
+        )
     if category == "event":
-        return discovery.likely_event_locations
+        return _locations_for_mode(
+            discovery,
+            discovery.likely_event_locations,
+            discovery.hinted_event_locations,
+        )
     return []
+
+
+def _locations_for_mode(
+    discovery: RepoDiscovery,
+    discovered: Sequence[str],
+    hinted: Sequence[str],
+) -> list[str]:
+    if discovery.evidence_mode == "source-discovered":
+        return list(discovered)
+    return _merge_paths(discovered, hinted)
 
 
 def _matching_paths(paths: Sequence[str], markers: Sequence[str]) -> list[str]:
@@ -619,7 +663,7 @@ def _first_path_with_marker(paths: Sequence[str], markers: Sequence[str]) -> str
 
 def _first_folder_with_marker(paths: Sequence[str], markers: Sequence[str]) -> str | None:
     for path in _matching_paths(paths, markers):
-        if "." not in Path(path).name:
+        if "*" not in path and "." not in Path(path).name:
             return path
     return None
 
@@ -629,7 +673,11 @@ def _first_java_folder_with_marker(
     markers: Sequence[str],
 ) -> str | None:
     for path in _matching_paths(paths, markers):
-        if path.startswith("src/main/java/") and "." not in Path(path).name:
+        if (
+            "*" not in path
+            and path.startswith("src/main/java/")
+            and "." not in Path(path).name
+        ):
             return path
     return None
 

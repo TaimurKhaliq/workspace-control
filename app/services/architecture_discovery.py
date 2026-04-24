@@ -2,6 +2,7 @@
 
 from collections.abc import Sequence
 from pathlib import Path
+import re
 
 from app.adapters.base import RepoAdapter, merge_paths
 from app.adapters.flyway import FlywayAdapter
@@ -12,6 +13,28 @@ from app.models.discovery import AdapterDiscovery, ArchitectureDiscoveryReport, 
 from app.models.evidence import Evidence
 from app.models.repo_manifest import RepoManifest
 from workspace_control.manifests import MANIFEST_FILENAME, load_manifest
+
+BUILD_FILES = (
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
+    "package.json",
+    "pyproject.toml",
+)
+SOURCE_ROOTS = ("src", "app", "lib")
+SOURCE_EXTENSIONS = (".java", ".kt", ".ts", ".tsx", ".js", ".jsx", ".py", ".sql")
+EVENT_HINT_TOKENS = {
+    "consumer",
+    "downstream",
+    "event",
+    "events",
+    "integration",
+    "notify",
+    "producer",
+    "publisher",
+    "subscriber",
+    "sync",
+}
 
 
 class ArchitectureDiscoveryService:
@@ -92,6 +115,28 @@ class ArchitectureDiscoveryService:
         )
         ui_locations = merge_paths(*(item.ui_locations for item in discoveries))
         event_locations = merge_paths(*(item.event_locations for item in discoveries))
+        hinted_locations = _hinted_locations(manifest, self._read_agents_hint(repo_path))
+        missing_evidence = _missing_evidence(
+            manifest,
+            repo_path,
+            api_locations,
+            service_locations,
+            persistence_locations,
+            ui_locations,
+            event_locations,
+        )
+        evidence_mode = _evidence_mode(
+            repo_path,
+            [
+                *api_locations,
+                *service_locations,
+                *persistence_locations,
+                *ui_locations,
+                *event_locations,
+            ],
+            missing_evidence,
+        )
+        confidence = _confidence(evidence_mode, missing_evidence)
         evidence = [
             Evidence(
                 repo_name=repo_path.name,
@@ -110,12 +155,20 @@ class ArchitectureDiscoveryService:
             repo_type=manifest.type,
             language=manifest.language,
             domain=manifest.domain,
+            evidence_mode=evidence_mode,
+            confidence=confidence,
+            missing_evidence=missing_evidence,
             detected_frameworks=frameworks,
             likely_api_locations=api_locations,
             likely_service_locations=service_locations,
             likely_persistence_locations=persistence_locations,
             likely_ui_locations=ui_locations,
             likely_event_locations=event_locations,
+            hinted_api_locations=hinted_locations["api"],
+            hinted_service_locations=hinted_locations["service"],
+            hinted_persistence_locations=hinted_locations["persistence"],
+            hinted_ui_locations=hinted_locations["ui"],
+            hinted_event_locations=hinted_locations["event"],
             evidence=evidence,
         )
 
@@ -130,21 +183,43 @@ def format_architecture_discovery(report: ArchitectureDiscoveryReport) -> str:
     for repo in report.repos:
         lines.append("")
         lines.append(f"repo: {repo.repo_name}")
+        lines.append(f"  mode: {repo.evidence_mode}")
+        lines.append(f"  confidence: {repo.confidence}")
+        if repo.missing_evidence:
+            lines.append(f"  missing_evidence: {_format_values(repo.missing_evidence)}")
         lines.append(f"  frameworks: {_format_values(repo.detected_frameworks)}")
-        lines.append(f"  api: {_format_values(repo.likely_api_locations)}")
+        lines.append(f"  discovered api: {_format_values(repo.likely_api_locations)}")
         lines.append(
-            f"  service/business logic: {_format_values(repo.likely_service_locations)}"
+            "  discovered service/business logic: "
+            + _format_values(repo.likely_service_locations)
         )
         lines.append(
-            "  persistence/migration: "
+            "  discovered persistence/migration: "
             + _format_values(repo.likely_persistence_locations)
         )
-        lines.append(f"  ui/components: {_format_values(repo.likely_ui_locations)}")
-        if repo.likely_event_locations:
+        lines.append(f"  discovered ui/components: {_format_values(repo.likely_ui_locations)}")
+        if repo.likely_event_locations or repo.hinted_event_locations:
             lines.append(
-                "  events/integrations: "
+                "  discovered events/integrations: "
                 + _format_values(repo.likely_event_locations)
             )
+        if _has_hints(repo):
+            lines.append("  hinted locations:")
+            lines.append(f"    api: {_format_values(repo.hinted_api_locations)}")
+            lines.append(
+                "    service/business logic: "
+                + _format_values(repo.hinted_service_locations)
+            )
+            lines.append(
+                "    persistence/migration: "
+                + _format_values(repo.hinted_persistence_locations)
+            )
+            lines.append(f"    ui/components: {_format_values(repo.hinted_ui_locations)}")
+            if repo.hinted_event_locations:
+                lines.append(
+                    "    events/integrations: "
+                    + _format_values(repo.hinted_event_locations)
+                )
 
     return "\n".join(lines)
 
@@ -153,3 +228,204 @@ def _format_values(values: Sequence[str]) -> str:
     if not values:
         return "-"
     return ", ".join(values)
+
+
+def _hinted_locations(manifest: RepoManifest, agents_text: str) -> dict[str, list[str]]:
+    hints = _hint_text(manifest, agents_text)
+    repo_type_tokens = set(_tokens(manifest.type))
+    hint_tokens = set(_tokens(hints))
+    backend = bool(
+        {"backend", "service", "api", "server"} & repo_type_tokens
+        or {"backend", "service", "api", "server", "spring", "springboot"} & hint_tokens
+    )
+    frontend = bool(
+        {"frontend", "web", "ui", "client"} & repo_type_tokens
+        or {"angular", "frontend", "react", "ui", "web"} & hint_tokens
+    )
+    java = manifest.language.lower() == "java" or bool(
+        {"java", "spring", "springboot"} & hint_tokens
+    )
+
+    locations: dict[str, list[str]] = {
+        "api": [],
+        "service": [],
+        "persistence": [],
+        "ui": [],
+        "event": [],
+    }
+
+    if backend:
+        if java:
+            locations["api"].extend(
+                ["src/main/java/**/controller", "src/main/java/**/dto"]
+            )
+            locations["service"].append("src/main/java/**/service")
+        else:
+            locations["api"].extend(["src/controllers", "src/dto"])
+            locations["service"].append("src/services")
+
+        if "openapi" in hints or "swagger" in hints or "endpoint" in hints:
+            locations["api"].append("src/main/resources/openapi.yaml")
+
+        if _has_persistence_hints(manifest, hints):
+            if java:
+                locations["persistence"].extend(
+                    [
+                        "src/main/java/**/entity",
+                        "src/main/java/**/repository",
+                        "src/main/resources/db/migration",
+                    ]
+                )
+            else:
+                locations["persistence"].extend(["src/models", "migrations"])
+
+        if _has_event_hints(hints):
+            if java:
+                locations["event"].extend(
+                    ["src/main/java/**/events", "src/main/java/**/integration"]
+                )
+            else:
+                locations["event"].extend(["src/events", "src/integrations"])
+
+    if frontend:
+        locations["ui"].extend(["src/pages", "src/components", "src/forms"])
+        locations["api"].extend(["src/api", "src/services"])
+        locations["service"].append("src/services")
+
+    return {key: merge_paths(value) for key, value in locations.items()}
+
+
+def _missing_evidence(
+    manifest: RepoManifest,
+    repo_path: Path,
+    api_locations: Sequence[str],
+    service_locations: Sequence[str],
+    persistence_locations: Sequence[str],
+    ui_locations: Sequence[str],
+    event_locations: Sequence[str],
+) -> list[str]:
+    hints = _hint_text(manifest, _read_agents_text(repo_path))
+    missing: list[str] = []
+    has_build = _has_build_file(repo_path)
+    has_source = _has_source_evidence(repo_path)
+    repo_type_tokens = set(_tokens(manifest.type))
+    hint_tokens = set(_tokens(hints))
+    backend = bool(
+        {"backend", "service", "api", "server"} & repo_type_tokens
+        or {"backend", "service", "api", "server", "spring", "springboot"} & hint_tokens
+    )
+    frontend = bool(
+        {"frontend", "web", "ui", "client"} & repo_type_tokens
+        or {"angular", "frontend", "react", "ui", "web"} & hint_tokens
+    )
+
+    if not has_build and not has_source:
+        missing.append("no source folders or build files found")
+        return missing
+
+    if not has_build:
+        missing.append("no build file found")
+
+    if backend:
+        if not service_locations:
+            missing.append("no service/business logic path found")
+        if ("api" in repo_type_tokens or "endpoint" in hints or "openapi" in hints) and not api_locations:
+            missing.append("no API/controller/OpenAPI path found")
+        if _has_persistence_hints(manifest, hints) and not persistence_locations:
+            missing.append("no persistence/migration path found")
+        if _has_event_hints(hints) and not event_locations:
+            missing.append("no event/integration path found")
+
+    if frontend:
+        if not ui_locations:
+            missing.append("no UI/component path found")
+        if ("api" in hints or "service" in hints) and not api_locations:
+            missing.append("no client API/service path found")
+
+    return merge_paths(missing)
+
+
+def _evidence_mode(
+    repo_path: Path,
+    discovered_locations: Sequence[str],
+    missing_evidence: Sequence[str],
+) -> str:
+    if not _has_build_file(repo_path) and not _has_source_evidence(repo_path):
+        return "metadata-only"
+    if discovered_locations and not missing_evidence:
+        return "source-discovered"
+    return "mixed"
+
+
+def _confidence(evidence_mode: str, missing_evidence: Sequence[str]) -> str:
+    if evidence_mode == "source-discovered" and not missing_evidence:
+        return "high"
+    if evidence_mode == "mixed":
+        return "medium"
+    return "low"
+
+
+def _has_hints(repo: RepoDiscovery) -> bool:
+    return any(
+        [
+            repo.hinted_api_locations,
+            repo.hinted_service_locations,
+            repo.hinted_persistence_locations,
+            repo.hinted_ui_locations,
+            repo.hinted_event_locations,
+        ]
+    )
+
+
+def _has_build_file(repo_path: Path) -> bool:
+    return any((repo_path / filename).is_file() for filename in BUILD_FILES)
+
+
+def _has_source_evidence(repo_path: Path) -> bool:
+    if any((repo_path / root).exists() for root in SOURCE_ROOTS):
+        return True
+    return any(
+        path.is_file() and path.suffix.lower() in SOURCE_EXTENSIONS
+        for path in repo_path.rglob("*")
+        if path.name not in {MANIFEST_FILENAME, "AGENTS.md"}
+    )
+
+
+def _has_persistence_hints(manifest: RepoManifest, hints: str) -> bool:
+    return bool(
+        manifest.owns_entities
+        or manifest.owns_fields
+        or manifest.owns_tables
+        or any(token in hints for token in ("database", "flyway", "migration", "persist"))
+    )
+
+
+def _has_event_hints(hints: str) -> bool:
+    return bool(set(_tokens(hints)) & EVENT_HINT_TOKENS)
+
+
+def _hint_text(manifest: RepoManifest, agents_text: str) -> str:
+    values = [
+        manifest.type,
+        manifest.language,
+        manifest.domain,
+        *manifest.build_commands,
+        *manifest.test_commands,
+        *manifest.owns_entities,
+        *manifest.owns_fields,
+        *manifest.owns_tables,
+        *manifest.api_keywords,
+        agents_text,
+    ]
+    return " ".join(_tokens(" ".join(values)))
+
+
+def _read_agents_text(repo_path: Path) -> str:
+    agents_path = repo_path / "AGENTS.md"
+    if not agents_path.is_file():
+        return ""
+    return agents_path.read_text(encoding="utf-8", errors="ignore")
+
+
+def _tokens(text: str) -> list[str]:
+    return re.findall(r"[a-z0-9]+", text.lower())
