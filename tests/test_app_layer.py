@@ -80,7 +80,7 @@ def test_app_services_smoke(tmp_path: Path) -> None:
     )
     assert plan.feature_request == "Update profile page and publish event"
 
-    discovery = ArchitectureDiscoveryService().discover(tmp_path)
+    discovery = ArchitectureDiscoveryService().discover_local(tmp_path)
     repos = {repo.repo_name: repo for repo in discovery.repos}
     assert "profile-api" in repos
     assert "web-ui" in repos

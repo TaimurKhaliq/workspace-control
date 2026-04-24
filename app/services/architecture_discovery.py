@@ -14,6 +14,7 @@ from app.models.discovery import (
     ArchitectureDiscoveryReport,
     DiscoverySnapshot,
     DiscoveryTarget,
+    MaterializedWorkspace,
     RepoDiscovery,
 )
 from app.models.evidence import Evidence
@@ -86,17 +87,22 @@ class ArchitectureDiscoveryService:
             )
         )
 
-    def discover(self, base_dir: Path) -> ArchitectureDiscoveryReport:
-        """Discover adapter findings for direct child repositories under `base_dir`."""
-
-        return self.snapshot(DiscoveryTarget.local_path(base_dir)).report
-
-    def snapshot(self, target: DiscoveryTarget) -> DiscoverySnapshot:
+    def discover(self, target: DiscoveryTarget) -> DiscoverySnapshot:
         """Materialize a target and return its source-agnostic discovery snapshot."""
 
         workspace = self._provider_for(target).materialize(target)
-        report = self._discover_local_workspace(workspace.root_path)
+        report = self._scan_materialized_workspace(workspace)
         return DiscoverySnapshot(target=target, workspace=workspace, report=report)
+
+    def snapshot(self, target: DiscoveryTarget) -> DiscoverySnapshot:
+        """Compatibility alias for source-agnostic discovery snapshots."""
+
+        return self.discover(target)
+
+    def discover_local(self, base_dir: Path) -> ArchitectureDiscoveryReport:
+        """Return the report for a local path target."""
+
+        return self.discover(DiscoveryTarget.local_path(base_dir)).report
 
     def _provider_for(self, target: DiscoveryTarget) -> DiscoveryProvider:
         for provider in self._providers:
@@ -104,11 +110,13 @@ class ArchitectureDiscoveryService:
                 return provider
         raise ValueError(f"No discovery provider supports target source {target.source}")
 
-    def _discover_local_workspace(self, base_dir: Path) -> ArchitectureDiscoveryReport:
+    def _scan_materialized_workspace(
+        self, workspace: MaterializedWorkspace
+    ) -> ArchitectureDiscoveryReport:
         """Discover adapter findings for a materialized local workspace path."""
 
         repos: list[RepoDiscovery] = []
-        for repo_path in self._repo_dirs(base_dir):
+        for repo_path in self._repo_dirs(workspace.root_path):
             manifest = self._load_manifest_hint(repo_path)
             agents_text = self._read_agents_hint(repo_path)
             discoveries = self._discover_repo(repo_path, manifest, agents_text)
@@ -290,6 +298,12 @@ def format_architecture_discovery(report: ArchitectureDiscoveryReport) -> str:
                 )
 
     return "\n".join(lines)
+
+
+def format_discovery_snapshot(snapshot: DiscoverySnapshot) -> str:
+    """Render a source-agnostic discovery snapshot for CLI output."""
+
+    return format_architecture_discovery(snapshot.report)
 
 
 def _format_values(values: Sequence[str]) -> str:

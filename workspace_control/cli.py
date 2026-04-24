@@ -5,9 +5,10 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
+from app.models.discovery import DiscoveryTarget
 from app.services.architecture_discovery import (
     ArchitectureDiscoveryService,
-    format_architecture_discovery,
+    format_discovery_snapshot,
 )
 
 from .analyze import analyze_feature, format_feature_analysis
@@ -96,12 +97,19 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.command == "discover-architecture":
         try:
-            report = ArchitectureDiscoveryService().discover(args.scan_root)
-        except (OSError, yaml.YAMLError, ValidationError, ValueError) as exc:
+            target = DiscoveryTarget.local_path(args.scan_root)
+            snapshot = ArchitectureDiscoveryService().discover(target)
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return 1
 
-        print(format_architecture_discovery(report))
+        print(format_discovery_snapshot(snapshot))
         return 0
 
     try:

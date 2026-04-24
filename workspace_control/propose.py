@@ -170,7 +170,9 @@ def _architecture_by_repo(scan_root: Path | None) -> dict[str, RepoDiscovery]:
     if scan_root is None or not scan_root.is_dir():
         return {}
 
-    report: ArchitectureDiscoveryReport = ArchitectureDiscoveryService().discover(scan_root)
+    report: ArchitectureDiscoveryReport = ArchitectureDiscoveryService().discover_local(
+        scan_root
+    )
     return {repo.repo_name: repo for repo in report.repos}
 
 

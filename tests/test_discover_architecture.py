@@ -74,7 +74,7 @@ def test_discover_architecture_backend_repo_prefers_existing_locations(
         encoding="utf-8",
     )
 
-    report = ArchitectureDiscoveryService().discover(tmp_path)
+    report = ArchitectureDiscoveryService().discover_local(tmp_path)
     repo = report.repos[0]
 
     assert repo.repo_name == "profile-api"
@@ -136,7 +136,7 @@ def test_discover_architecture_frontend_repo_prefers_existing_locations(
         encoding="utf-8",
     )
 
-    report = ArchitectureDiscoveryService().discover(tmp_path)
+    report = ArchitectureDiscoveryService().discover_local(tmp_path)
     repo = report.repos[0]
 
     assert repo.repo_name == "web-ui"
@@ -171,7 +171,7 @@ def test_discover_architecture_metadata_only_repo_reports_hints(
         test_commands=["./gradlew test"],
     )
 
-    report = ArchitectureDiscoveryService().discover(tmp_path)
+    report = ArchitectureDiscoveryService().discover_local(tmp_path)
     repo = report.repos[0]
 
     assert repo.repo_name == "profile-api"
@@ -219,7 +219,7 @@ def test_discover_architecture_mixed_repo_reports_partial_discovery(
         exist_ok=True,
     )
 
-    report = ArchitectureDiscoveryService().discover(tmp_path)
+    report = ArchitectureDiscoveryService().discover_local(tmp_path)
     repo = report.repos[0]
 
     assert repo.evidence_mode == "mixed"
@@ -254,7 +254,7 @@ def test_discover_architecture_metadata_only_frontend_framework_hint(
         encoding="utf-8",
     )
 
-    report = ArchitectureDiscoveryService().discover(tmp_path)
+    report = ArchitectureDiscoveryService().discover_local(tmp_path)
     repo = report.repos[0]
 
     assert repo.repo_name == "web-ui"

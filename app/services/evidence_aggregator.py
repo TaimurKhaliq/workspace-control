@@ -495,7 +495,7 @@ class EvidenceAggregator:
         architecture_report: ArchitectureDiscoveryReport | None,
     ) -> dict[str, RepoDiscovery]:
         if architecture_report is None and scan_root is not None and scan_root.is_dir():
-            architecture_report = ArchitectureDiscoveryService().discover(scan_root)
+            architecture_report = ArchitectureDiscoveryService().discover_local(scan_root)
 
         if architecture_report is None:
             return {}
