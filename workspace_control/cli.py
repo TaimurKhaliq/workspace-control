@@ -44,7 +44,7 @@ def run(argv: list[str] | None = None) -> int:
         "--scan-root",
         type=Path,
         default=default_scan_root,
-        help="Directory whose child folders are scanned for repositories",
+        help="Directory whose child folders are scanned when --target-id is not provided",
     )
     discover_parser.add_argument(
         "--target-id",
@@ -111,7 +111,17 @@ def run(argv: list[str] | None = None) -> int:
         "--scan-root",
         type=Path,
         default=default_scan_root,
-        help="Directory whose child folders are scanned for stackpilot.yml",
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    analyze_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to analyze instead of --scan-root",
+    )
+    analyze_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
     )
     plan_parser = subparsers.add_parser(
         "plan-feature",
@@ -125,7 +135,17 @@ def run(argv: list[str] | None = None) -> int:
         "--scan-root",
         type=Path,
         default=default_scan_root,
-        help="Directory whose child folders are scanned for stackpilot.yml",
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    plan_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to plan against instead of --scan-root",
+    )
+    plan_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
     )
     propose_parser = subparsers.add_parser(
         "propose-changes",
@@ -139,7 +159,17 @@ def run(argv: list[str] | None = None) -> int:
         "--scan-root",
         type=Path,
         default=default_scan_root,
-        help="Directory whose child folders are scanned for stackpilot.yml",
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    propose_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to propose against instead of --scan-root",
+    )
+    propose_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
     )
 
     args = parser.parse_args(argv)
@@ -185,12 +215,7 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.command == "discover-architecture":
         try:
-            if args.target_id:
-                record = DiscoveryTargetRegistry(args.registry_path).get(args.target_id)
-                target = record.to_target()
-            else:
-                target = DiscoveryTarget.local_path(args.scan_root)
-            snapshot = ArchitectureDiscoveryService().discover(target)
+            snapshot = _discover_snapshot_for_args(args)
         except (
             NotImplementedError,
             OSError,
@@ -208,8 +233,7 @@ def run(argv: list[str] | None = None) -> int:
     effective_scan_root = args.scan_root
     if args.command in {"analyze-feature", "plan-feature", "propose-changes"}:
         try:
-            target = DiscoveryTarget.local_path(args.scan_root)
-            discovery_snapshot = ArchitectureDiscoveryService().discover(target)
+            discovery_snapshot = _discover_snapshot_for_args(args)
             effective_scan_root = discovery_snapshot.workspace.root_path
         except (
             NotImplementedError,
@@ -261,3 +285,12 @@ def run(argv: list[str] | None = None) -> int:
     )
     print(format_feature_plan(plan))
     return 0
+
+
+def _discover_snapshot_for_args(args):
+    if getattr(args, "target_id", None):
+        record = DiscoveryTargetRegistry(args.registry_path).get(args.target_id)
+        target = record.to_target()
+    else:
+        target = DiscoveryTarget.local_path(args.scan_root)
+    return ArchitectureDiscoveryService().discover(target)
