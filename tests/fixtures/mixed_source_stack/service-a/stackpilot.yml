@@ -1,0 +1,48 @@
+name: service-a
+type: backend-service
+language: java
+framework: spring-boot
+domain: customer-profile
+
+build_commands:
+  - ./gradlew build
+
+test_commands:
+  - ./gradlew test
+
+migration_paths:
+  - src/main/resources/db/migration
+
+api_contracts:
+  - openapi.yaml
+
+entrypoints:
+  - src/main/java/com/example/servicea/controller
+  - src/main/java/com/example/servicea/service
+  - src/main/java/com/example/servicea/dto
+  - src/main/java/com/example/servicea/entity
+
+owns_entities:
+  - UserProfile
+  - CustomerProfile
+  - PhoneNumber
+
+owns_fields:
+  - phoneNumber
+  - email
+  - firstName
+  - lastName
+  - preferredLanguage
+  - marketingOptIn
+
+owns_tables:
+  - user_profile
+  - customer_profile
+
+api_keywords:
+  - update profile
+  - customer profile
+  - phone number
+  - profile details
+  - user profile
+  - account profile

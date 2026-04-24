@@ -1,0 +1,39 @@
+name: web-ui
+type: frontend
+language: typescript
+framework: react
+domain: customer-profile-ui
+
+build_commands:
+  - npm run build
+
+test_commands:
+  - npm test
+
+entrypoints:
+  - src
+  - src/components
+  - src/pages
+  - src/routes
+  - src/features/profile
+  - src/features/settings
+
+owns_entities:
+  - ProfileScreen
+  - AccountSettingsPage
+  - ProfileForm
+
+owns_fields:
+  - phoneNumber
+  - preferredLanguage
+  - marketingOptIn
+
+owns_tables: []
+
+api_keywords:
+  - profile screen
+  - settings page
+  - account settings
+  - edit profile
+  - update phone number
+  - profile form

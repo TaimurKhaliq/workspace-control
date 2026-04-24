@@ -620,6 +620,7 @@ def _infer_likely_paths(
     role: str,
     *,
     repo_dir: Path | None,
+    discovery: RepoDiscovery | None,
     db_change_needed: bool,
     ui_change_needed: bool,
     event_integration_mode: bool,
@@ -627,9 +628,13 @@ def _infer_likely_paths(
     paths: list[str] = ["stackpilot.yml"]
 
     if _row_is_backend(row):
-        backend_existing = _existing_candidate_paths(repo_dir, BACKEND_PATH_CANDIDATES)
-        if backend_existing:
-            paths.extend(backend_existing)
+        discovered_backend_paths = _backend_discovered_paths(
+            discovery,
+            db_change_needed=db_change_needed,
+            event_integration_mode=event_integration_mode,
+        )
+        if discovered_backend_paths:
+            paths.extend(discovered_backend_paths)
         elif row.language.lower() == "java":
             paths.extend(BACKEND_PATH_FALLBACKS_JAVA)
         else:
@@ -660,8 +665,12 @@ def _infer_likely_paths(
                 paths.extend(["src/events", "src/integrations"])
 
     elif _row_is_frontend(row):
-        frontend_existing = _existing_candidate_paths(repo_dir, FRONTEND_PATH_CANDIDATES)
-        if frontend_existing:
+        frontend_discovered = _frontend_discovered_paths(discovery)
+        if frontend_discovered:
+            paths.extend(frontend_discovered)
+        elif frontend_existing := _existing_candidate_paths(
+            repo_dir, FRONTEND_PATH_CANDIDATES
+        ):
             paths.extend(frontend_existing)
         else:
             paths.extend(FRONTEND_PATH_FALLBACKS)
@@ -670,6 +679,52 @@ def _infer_likely_paths(
             paths.append("src/forms")
 
     return _dedupe_preserve_order(paths)
+
+
+def _backend_discovered_paths(
+    discovery: RepoDiscovery | None,
+    *,
+    db_change_needed: bool,
+    event_integration_mode: bool,
+) -> list[str]:
+    if discovery is None:
+        return []
+
+    paths = [
+        *discovery.likely_api_locations,
+        *discovery.likely_service_locations,
+    ]
+    if db_change_needed:
+        paths.extend(discovery.likely_persistence_locations)
+    else:
+        paths.extend(
+            path
+            for path in discovery.likely_persistence_locations
+            if _non_migration_persistence_path(path)
+        )
+    if event_integration_mode:
+        paths.extend(discovery.likely_event_locations)
+    return _dedupe_preserve_order(paths)
+
+
+def _frontend_discovered_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return _dedupe_preserve_order(
+        [
+            *discovery.likely_ui_locations,
+            *discovery.likely_api_locations,
+            *discovery.likely_service_locations,
+        ]
+    )
+
+
+def _non_migration_persistence_path(path: str) -> bool:
+    lowered = path.lower()
+    return any(
+        marker in lowered
+        for marker in ("entity", "entities", "repository", "repositories")
+    )
 
 
 def _primary_owner_step(
@@ -888,6 +943,7 @@ def create_feature_plan(
             row,
             impact.role,
             repo_dir=repo_dir,
+            discovery=discovery_by_repo.get(impact.repo_name),
             db_change_needed=db_change_needed,
             ui_change_needed=ui_change_needed,
             event_integration_mode=event_integration_mode,
