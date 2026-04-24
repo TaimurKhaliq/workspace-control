@@ -220,6 +220,10 @@ def _add_source_terms(
 def _symbols_from_text(text: str) -> list[str]:
     symbols: list[str] = []
     patterns = (
+        r"\bexport\s+(?:default\s+)?(?:function|class)\s+([A-Z][A-Za-z0-9_]*)",
+        r"\bfunction\s+([A-Z][A-Za-z0-9_]*)",
+        r"\bconst\s+([A-Z][A-Za-z0-9_]*)\s*=",
+        r"\b(?:const|let|var)\s+([a-z][A-Za-z0-9_]*)\b",
         r"\b(?:class|interface|record|enum)\s+([A-Z][A-Za-z0-9_]*)",
         r"\b(?:private|protected|public)\s+[A-Za-z0-9_<>,.?\s]+\s+([a-z][A-Za-z0-9_]*)\s*(?:[;=])",
         r"\b([A-Za-z][A-Za-z0-9_]*)\??\s*:",
@@ -227,7 +231,6 @@ def _symbols_from_text(text: str) -> list[str]:
     )
     for pattern in patterns:
         symbols.extend(match.group(1) for match in re.finditer(pattern, text))
-    symbols.append(text)
     return symbols
 
 

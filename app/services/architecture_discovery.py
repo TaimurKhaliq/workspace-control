@@ -35,6 +35,7 @@ BUILD_FILES = (
     "pyproject.toml",
 )
 SOURCE_ROOTS = ("src", "app", "lib")
+FRONTEND_ROOTS = ("", "client", "frontend", "web", "ui")
 SOURCE_EXTENSIONS = (".java", ".kt", ".ts", ".tsx", ".js", ".jsx", ".py", ".sql")
 EVENT_HINT_TOKENS = {
     "consumer",
@@ -412,11 +413,20 @@ def _normalize_framework(value: str) -> str | None:
 
 def _framework_is_discovered(repo_path: Path, framework: str) -> bool:
     if framework == "react":
-        package_text = _read_text(repo_path / "package.json").lower()
+        package_text = " ".join(
+            _read_text(repo_path / path / "package.json").lower()
+            for path in _frontend_roots(repo_path)
+        )
         return '"react"' in package_text or "'react'" in package_text
     if framework == "angular":
-        package_text = _read_text(repo_path / "package.json").lower()
-        return (repo_path / "angular.json").is_file() or "@angular/core" in package_text
+        package_text = " ".join(
+            _read_text(repo_path / path / "package.json").lower()
+            for path in _frontend_roots(repo_path)
+        )
+        return any(
+            (repo_path / path / "angular.json").is_file()
+            for path in _frontend_roots(repo_path)
+        ) or "@angular/core" in package_text
     if framework == "spring_boot":
         build_text = _build_text(repo_path)
         return "spring-boot" in build_text or "org.springframework.boot" in build_text
@@ -443,6 +453,10 @@ def _framework_is_discovered(repo_path: Path, framework: str) -> bool:
             )
         )
     return False
+
+
+def _frontend_roots(repo_path: Path) -> list[Path]:
+    return [Path(root) for root in FRONTEND_ROOTS if root == "" or (repo_path / root).exists()]
 
 
 def _build_text(repo_path: Path) -> str:

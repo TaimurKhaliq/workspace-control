@@ -69,6 +69,7 @@ API_CONTRACT_CHANGE_PHRASES = (
 
 MUTABLE_DOMAIN_FIELD_PHRASES = (
     "phone number",
+    "telephone",
     "email",
     "email address",
     "preferred language",
@@ -703,6 +704,7 @@ def _missing_evidence_for_plan(
     architecture_by_repo: dict[str, RepoDiscovery],
     impacts: Sequence[FeatureImpact],
     weakly_specified_request: bool,
+    concept_grounding: Sequence[ConceptGrounding] = (),
 ) -> list[str]:
     missing: list[str] = []
     owner_discovery = (
@@ -723,7 +725,10 @@ def _missing_evidence_for_plan(
     ):
         missing.append("no migration system detected")
 
-    if ui_change_needed and not _impacted_ui_paths_found(impacts, architecture_by_repo):
+    if ui_change_needed and not (
+        _impacted_ui_paths_found(impacts, architecture_by_repo)
+        or _frontend_grounding_supports_ui(concept_grounding)
+    ):
         missing.append(
             "UI intent came from request text, but no UI/component paths were discovered"
         )
@@ -778,11 +783,12 @@ def _unsupported_intents_for_plan(
     feature_intents: Sequence[str],
     impacts: Sequence[FeatureImpact],
     architecture_by_repo: dict[str, RepoDiscovery],
+    concept_grounding: Sequence[ConceptGrounding] = (),
 ) -> list[str]:
     unsupported: list[str] = []
-    if "ui" in feature_intents and not _impacted_ui_paths_found(
-        impacts,
-        architecture_by_repo,
+    if "ui" in feature_intents and not (
+        _impacted_ui_paths_found(impacts, architecture_by_repo)
+        or _frontend_grounding_supports_ui(concept_grounding)
     ):
         unsupported.append("ui")
     return _dedupe_preserve_order(unsupported)
@@ -796,6 +802,38 @@ def _impacted_ui_paths_found(
         _has_ui_paths(architecture_by_repo.get(impact.repo_name))
         for impact in impacts
     )
+
+
+def _frontend_grounding_supports_ui(
+    concept_grounding: Sequence[ConceptGrounding],
+) -> bool:
+    return any(
+        grounding.status in {"direct_match", "alias_match"}
+        and any(_source_is_frontend_source(source) for source in grounding.sources)
+        for grounding in concept_grounding
+    )
+
+
+def _source_is_frontend_source(source: str) -> bool:
+    lowered = source.lower()
+    if not lowered.startswith("source:"):
+        return False
+    frontend_markers = (
+        ":client/",
+        ":frontend/",
+        ":web/",
+        ":ui/",
+        "/src/components/",
+        "/src/pages/",
+        "/src/forms/",
+        "/src/features/",
+        "/src/containers/",
+        "/src/routes/",
+        "/src/views/",
+        ".tsx",
+        ".jsx",
+    )
+    return any(marker in lowered for marker in frontend_markers)
 
 
 def _confidence_for_plan(
@@ -935,6 +973,15 @@ def _infer_likely_paths(
                 paths.extend(downstream_existing)
             else:
                 paths.extend(["src/events", "src/integrations"])
+
+        if ui_change_needed and _row_is_frontend(row):
+            frontend_discovered = (
+                _ui_paths(discovery)
+                if ui_copy_only
+                else _frontend_discovered_paths(discovery)
+            )
+            if frontend_discovered:
+                paths.extend(frontend_discovered)
 
     elif _row_is_frontend(row):
         frontend_discovered = (
@@ -1517,6 +1564,7 @@ def create_feature_plan(
         architecture_by_repo=discovery_by_repo,
         impacts=filtered_impacts,
         weakly_specified_request=weak_evidence_request,
+        concept_grounding=concept_grounding,
     )
     missing_evidence = _dedupe_preserve_order(
         [*missing_evidence, *_concept_missing_evidence(concept_grounding)]
@@ -1525,6 +1573,7 @@ def create_feature_plan(
         feature_intents,
         filtered_impacts,
         discovery_by_repo,
+        concept_grounding,
     )
     ordered_steps = _conservative_steps_for_ungrounded_concepts(
         ordered_steps,

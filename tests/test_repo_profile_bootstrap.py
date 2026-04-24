@@ -90,6 +90,39 @@ def _seed_public_like_backend_workspace(root: Path) -> None:
     _write(repo / "src/main/resources/openapi.yaml", "title: Owner API\n")
 
 
+def _seed_public_like_nested_frontend_workspace(root: Path) -> None:
+    repo = root / "spring-petclinic-fullstack"
+    _write(
+        repo / "pom.xml",
+        "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>",
+    )
+    _write(repo / "src/main/java/org/springframework/samples/petclinic/owner/OwnerController.java")
+    _write(repo / "src/main/java/org/springframework/samples/petclinic/owner/OwnerRequest.java")
+    _write(repo / "src/main/java/org/springframework/samples/petclinic/owner/OwnerResponse.java")
+    _write(repo / "src/main/java/org/springframework/samples/petclinic/owner/OwnerService.java")
+    _write(repo / "src/main/java/org/springframework/samples/petclinic/owner/Owner.java")
+    _write(repo / "src/main/java/org/springframework/samples/petclinic/owner/OwnerRepository.java")
+    _write(repo / "src/main/resources/openapi.yaml", "title: Owner API\n")
+    _write(
+        repo / "client/package.json",
+        json.dumps(
+            {
+                "name": "petclinic-client",
+                "dependencies": {"react": "18.2.0", "typescript": "5.0.0"},
+                "scripts": {"test": "vitest", "build": "vite build"},
+            }
+        ),
+    )
+    _write(
+        repo / "client/src/components/owners/EditOwnerPage.tsx",
+        "export function EditOwnerPage() { const telephone = ''; return null; }\n",
+    )
+    _write(
+        repo / "client/src/components/owners/OwnerEditor.tsx",
+        "export const OwnerEditor = ({ telephone }: { telephone: string }) => null;\n",
+    )
+
+
 def test_bootstrap_profiles_supplement_explicit_stackpilot_metadata() -> None:
     scan_root = FIXTURE_ROOT / "mixed_source_stack"
     snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(scan_root))
@@ -228,6 +261,40 @@ def test_public_repo_like_single_repo_persisted_screen_field_flags_api_and_ui_un
     assert "src/main/java/org/springframework/samples/petclinic/owner" in plan[
         "likely_paths_by_repo"
     ]["spring-petclinic"]
+
+
+def test_nested_frontend_source_supports_ui_intent_in_public_repo_like_layout(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_public_like_nested_frontend_workspace(tmp_path)
+
+    feature_request = "Allow users to update the owner's telephone on the owner edit screen"
+    exit_code = run(
+        [
+            "plan-feature",
+            feature_request,
+            "--scan-root",
+            str(tmp_path),
+        ]
+    )
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+    repo_paths = plan["likely_paths_by_repo"]["spring-petclinic-fullstack"]
+    grounding_terms = [
+        term
+        for item in plan["concept_grounding"]
+        for term in item["matched_terms"]
+    ]
+
+    assert exit_code == 0
+    assert "ui" in plan["feature_intents"]
+    assert "ui" not in plan["unsupported_intents"]
+    assert plan["primary_owner"] == "spring-petclinic-fullstack"
+    assert plan["implementation_owner"] == "spring-petclinic-fullstack"
+    assert any(path.startswith("client/src/components") for path in repo_paths)
+    assert "src/main/java/org/springframework/samples/petclinic/owner" in repo_paths
+    assert all(len(term) < 80 for term in grounding_terms)
 
 
 def test_public_repo_like_unsupported_ui_label_change_reports_unbacked_intent(
