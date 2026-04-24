@@ -3,6 +3,9 @@ import re
 from collections.abc import Sequence
 from pathlib import Path
 
+from app.models.discovery import ArchitectureDiscoveryReport, RepoDiscovery
+from app.services.architecture_discovery import ArchitectureDiscoveryService
+
 from .analyze import analyze_feature
 from .models import FeatureImpact, FeaturePlan, InventoryRow
 
@@ -59,6 +62,30 @@ API_CONTRACT_CHANGE_PHRASES = (
 )
 
 MIN_RELEVANT_SCORE = 5
+MIN_SECONDARY_SCORE = 8
+
+VAGUE_REQUEST_TOKENS = {"fix", "improve", "stuff", "things", "misc", "general"}
+SPECIFIC_FEATURE_TOKENS = {
+    "address",
+    "email",
+    "label",
+    "marketing",
+    "name",
+    "number",
+    "opt",
+    "password",
+    "phone",
+}
+SPECIFIC_UI_TOKENS = {"screen", "page", "form", "button", "modal"}
+DOWNSTREAM_REASON_MARKERS = (
+    "downstream",
+    "event",
+    "integration",
+    "notification",
+    "notify",
+    "subscriber",
+    "sync",
+)
 
 FRONTEND_HINTS = {
     "screen",
@@ -224,11 +251,43 @@ def _repo_explicitly_referenced(normalized_feature: str, repo_name: str) -> bool
     return f" {normalized_repo} " in f" {normalized_feature} "
 
 
+def _weakly_specified_request(
+    feature_request: str,
+    feature_intents: Sequence[str],
+) -> bool:
+    tokens = _tokenize(feature_request)
+    if not tokens & VAGUE_REQUEST_TOKENS:
+        return False
+    if tokens & SPECIFIC_FEATURE_TOKENS:
+        return False
+    if tokens & SPECIFIC_UI_TOKENS:
+        return False
+    return not any(
+        intent in feature_intents for intent in ("persistence", "api", "event_integration")
+    )
+
+
+def _has_specific_ownership_evidence(reason: str) -> bool:
+    return "owns_fields" in reason
+
+
+def _has_real_downstream_evidence(
+    impact: FeatureImpact,
+    discovery: RepoDiscovery | None,
+) -> bool:
+    if discovery is not None and discovery.likely_event_locations:
+        return True
+    reason = impact.reason.lower()
+    return any(marker in reason for marker in DOWNSTREAM_REASON_MARKERS)
+
+
 def _filter_impacts_for_plan(
     feature_request: str,
     impacts: Sequence[FeatureImpact],
     by_repo: dict[str, InventoryRow],
     feature_intents: Sequence[str],
+    architecture_by_repo: dict[str, RepoDiscovery],
+    weakly_specified_request: bool,
 ) -> list[FeatureImpact]:
     normalized_feature = _normalize_text(feature_request)
     has_event_intent = "event_integration" in feature_intents
@@ -267,13 +326,31 @@ def _filter_impacts_for_plan(
             score = min(score, MIN_RELEVANT_SCORE - 1)
             reason = f"{reason}; downgraded for UI-only intent"
 
-        if role == "possible-downstream" and not has_event_intent and not explicit_reference:
+        if (
+            role == "possible-downstream"
+            and not has_event_intent
+            and not explicit_reference
+        ):
             continue
+
+        if role == "possible-downstream" and not _has_real_downstream_evidence(
+            impact, architecture_by_repo.get(impact.repo_name)
+        ):
+            continue
+
+        if weakly_specified_request:
+            if role != "primary-owner":
+                continue
+            if not _has_specific_ownership_evidence(reason):
+                continue
 
         if role == "weak-match":
             continue
 
-        if score < MIN_RELEVANT_SCORE and role != "primary-owner":
+        minimum_score = (
+            MIN_RELEVANT_SCORE if role == "primary-owner" else MIN_SECONDARY_SCORE
+        )
+        if score < minimum_score:
             continue
 
         filtered.append(
@@ -289,10 +366,16 @@ def _filter_impacts_for_plan(
     return filtered
 
 
-def _promote_primary_owner_if_missing(impacts: list[FeatureImpact]) -> list[FeatureImpact]:
+def _promote_primary_owner_if_missing(
+    impacts: list[FeatureImpact],
+    *,
+    allow_promotion: bool,
+) -> list[FeatureImpact]:
     if not impacts:
         return impacts
     if any(impact.role == "primary-owner" for impact in impacts):
+        return impacts
+    if not allow_promotion:
         return impacts
 
     top = impacts[0]
@@ -303,6 +386,142 @@ def _promote_primary_owner_if_missing(impacts: list[FeatureImpact]) -> list[Feat
         reason=f"{top.reason}; promoted to primary-owner for intent alignment",
     )
     return impacts
+
+
+def _architecture_by_repo(scan_root: Path | None) -> dict[str, RepoDiscovery]:
+    if scan_root is None or not scan_root.is_dir():
+        return {}
+
+    report: ArchitectureDiscoveryReport = ArchitectureDiscoveryService().discover(scan_root)
+    return {repo.repo_name: repo for repo in report.repos}
+
+
+def _ownership_tie_missing_evidence(
+    impacts: Sequence[FeatureImpact],
+    primary_owner: str | None,
+) -> str | None:
+    primary_impact = next(
+        (impact for impact in impacts if impact.repo_name == primary_owner),
+        None,
+    )
+    if primary_impact is None:
+        return None
+
+    ownership_candidates = [
+        impact
+        for impact in impacts
+        if "backend ownership" in impact.reason
+        and impact.repo_name != primary_impact.repo_name
+        and abs(primary_impact.score - impact.score) <= 3
+    ]
+    if not ownership_candidates:
+        return None
+
+    tied_repos = ", ".join(
+        sorted(
+            [
+                primary_impact.repo_name,
+                *[impact.repo_name for impact in ownership_candidates],
+            ]
+        )
+    )
+    return f"multiple repos tied on ownership without strong differentiators ({tied_repos})"
+
+
+def _missing_evidence_for_plan(
+    *,
+    primary_owner: str | None,
+    possible_downstreams: Sequence[str],
+    ui_change_needed: bool,
+    api_change_needed: bool,
+    db_change_needed: bool,
+    event_integration_mode: bool,
+    architecture_by_repo: dict[str, RepoDiscovery],
+    impacts: Sequence[FeatureImpact],
+    weakly_specified_request: bool,
+) -> list[str]:
+    missing: list[str] = []
+    owner_discovery = (
+        architecture_by_repo.get(primary_owner) if primary_owner is not None else None
+    )
+    owner_impact = next(
+        (impact for impact in impacts if impact.repo_name == primary_owner),
+        None,
+    )
+
+    if primary_owner is not None and api_change_needed and (
+        owner_discovery is None or not owner_discovery.likely_api_locations
+    ):
+        missing.append("no API contract file found")
+
+    if primary_owner is not None and db_change_needed and (
+        owner_discovery is None or not owner_discovery.likely_persistence_locations
+    ):
+        missing.append("no migration system detected")
+
+    if event_integration_mode:
+        event_repos = [repo for repo in [primary_owner, *possible_downstreams] if repo]
+        if event_repos and not any(
+            architecture_by_repo.get(repo) is not None
+            and architecture_by_repo[repo].likely_event_locations
+            for repo in event_repos
+        ):
+            missing.append("no event folder or publisher pattern found")
+
+    ui_only_plan = ui_change_needed and not (
+        api_change_needed or db_change_needed or event_integration_mode
+    )
+    if (
+        owner_impact is not None
+        and "promoted to primary-owner" in owner_impact.reason
+        and not ui_only_plan
+    ):
+        missing.append("primary owner inferred from generic intent alignment")
+
+    if weakly_specified_request:
+        missing.append("weak evidence for concrete repo ownership or implementation steps")
+
+    if primary_owner is None:
+        missing.append("no primary owner identified from strong evidence")
+
+    ownership_tie = _ownership_tie_missing_evidence(impacts, primary_owner)
+    if ownership_tie is not None:
+        missing.append(ownership_tie)
+
+    return _dedupe_preserve_order(missing)
+
+
+def _confidence_for_plan(
+    *,
+    primary_owner: str | None,
+    filtered_impacts: Sequence[FeatureImpact],
+    missing_evidence: Sequence[str],
+) -> str:
+    if primary_owner is None or not filtered_impacts:
+        return "low"
+
+    owner_impact = next(
+        (impact for impact in filtered_impacts if impact.repo_name == primary_owner),
+        None,
+    )
+    if owner_impact is None:
+        return "low"
+
+    competing_scores = [
+        impact.score
+        for impact in filtered_impacts
+        if impact.repo_name != primary_owner
+    ]
+    score_gap = owner_impact.score - max(competing_scores, default=0)
+    has_ambiguity = any(
+        "multiple repos tied on ownership" in item for item in missing_evidence
+    )
+
+    if has_ambiguity or len(missing_evidence) >= 2 or score_gap <= 2:
+        return "low"
+    if missing_evidence or score_gap < 8:
+        return "medium"
+    return "high"
 
 
 def _infer_likely_paths(
@@ -482,16 +701,28 @@ def create_feature_plan(
     """Build a deterministic feature plan from impact analysis."""
 
     resolved_impacts = (
-        list(impacts) if impacts is not None else analyze_feature(feature_request, rows)
+        list(impacts)
+        if impacts is not None
+        else analyze_feature(feature_request, rows, scan_root=scan_root)
     )
     by_repo = {row.repo_name: row for row in rows}
     feature_intents = _classify_feature_intents(feature_request)
     event_integration_mode = "event_integration" in feature_intents
+    discovery_by_repo = _architecture_by_repo(scan_root)
+    weak_request = _weakly_specified_request(feature_request, feature_intents)
 
     filtered_impacts = _filter_impacts_for_plan(
-        feature_request, resolved_impacts, by_repo, feature_intents
+        feature_request,
+        resolved_impacts,
+        by_repo,
+        feature_intents,
+        discovery_by_repo,
+        weak_request,
     )
-    filtered_impacts = _promote_primary_owner_if_missing(filtered_impacts)
+    filtered_impacts = _promote_primary_owner_if_missing(
+        filtered_impacts,
+        allow_promotion=not weak_request,
+    )
 
     primary_owner = next(
         (impact.repo_name for impact in filtered_impacts if impact.role == "primary-owner"),
@@ -585,10 +816,28 @@ def create_feature_plan(
         )
 
     requires_human_approval = db_change_needed or bool(possible_downstreams)
+    missing_evidence = _missing_evidence_for_plan(
+        primary_owner=primary_owner,
+        possible_downstreams=possible_downstreams,
+        ui_change_needed=ui_change_needed,
+        api_change_needed=api_change_needed,
+        db_change_needed=db_change_needed,
+        event_integration_mode=event_integration_mode,
+        architecture_by_repo=discovery_by_repo,
+        impacts=filtered_impacts,
+        weakly_specified_request=weak_request,
+    )
+    confidence = _confidence_for_plan(
+        primary_owner=primary_owner,
+        filtered_impacts=filtered_impacts,
+        missing_evidence=missing_evidence,
+    )
 
     return FeaturePlan(
         feature_request=feature_request,
         feature_intents=feature_intents,
+        confidence=confidence,
+        missing_evidence=missing_evidence,
         primary_owner=primary_owner,
         direct_dependents=direct_dependents,
         possible_downstreams=possible_downstreams,

@@ -224,3 +224,207 @@ def test_cli_plan_feature_prints_feature_plan_json(tmp_path: Path, capsys) -> No
     assert "direct_dependents" in parsed
     assert "possible_downstreams" in parsed
     assert "likely_paths_by_repo" in parsed
+    assert "confidence" in parsed
+    assert "missing_evidence" in parsed
+
+
+def test_plan_feature_high_confidence_clear_owner(tmp_path: Path) -> None:
+    _write_manifest(
+        tmp_path,
+        repo_name="profile-api",
+        repo_type="backend-service",
+        domain="customer-profile",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+        owns_entities=["customer_profile"],
+        owns_fields=["phone_number"],
+        owns_tables=["customer_profiles"],
+        api_keywords=["profile endpoint", "phone number"],
+    )
+    _write_manifest(
+        tmp_path,
+        repo_name="billing-api",
+        repo_type="backend-service",
+        domain="billing",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+    )
+    (tmp_path / "profile-api" / "build.gradle").write_text(
+        'plugins { id "org.springframework.boot" version "3.2.0" }\n'
+        'dependencies { implementation "org.flywaydb:flyway-core" }',
+        encoding="utf-8",
+    )
+    (tmp_path / "profile-api" / "src/main/java/com/acme/profile/controller").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (tmp_path / "profile-api" / "src/main/java/com/acme/profile/service").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (tmp_path / "profile-api" / "src/main/resources/db/migration").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+    (tmp_path / "profile-api" / "src/main/resources/openapi.yaml").write_text(
+        "openapi: 3.0.0",
+        encoding="utf-8",
+    )
+
+    feature_request = (
+        "Update customer profile phone number API request and persist field "
+        "with database migration"
+    )
+    rows = build_inventory(tmp_path)
+    impacts = analyze_feature(feature_request, rows, scan_root=tmp_path)
+    plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
+
+    assert plan.primary_owner == "profile-api"
+    assert plan.confidence == "high"
+    assert plan.missing_evidence == []
+
+
+def test_plan_feature_low_confidence_ambiguous_owner_tie(tmp_path: Path) -> None:
+    for repo_name in ["profile-api", "account-api"]:
+        _write_manifest(
+            tmp_path,
+            repo_name=repo_name,
+            repo_type="backend-service",
+            domain="customer-profile",
+            language="java",
+            build_commands=["./gradlew build"],
+            test_commands=["./gradlew test"],
+            owns_entities=["customer_profile"],
+            owns_fields=["phone_number"],
+            owns_tables=["customer_profiles"],
+            api_keywords=["profile endpoint", "phone number"],
+        )
+
+    feature_request = "Update customer profile phone number API request"
+    rows = build_inventory(tmp_path)
+    impacts = analyze_feature(feature_request, rows, scan_root=tmp_path)
+    plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
+
+    assert plan.confidence == "low"
+    assert any(
+        "multiple repos tied on ownership" in item for item in plan.missing_evidence
+    )
+
+
+def test_plan_feature_event_missing_publisher_evidence(tmp_path: Path) -> None:
+    _write_manifest(
+        tmp_path,
+        repo_name="profile-api",
+        repo_type="backend-service",
+        domain="customer-profile",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+        owns_entities=["customer_profile"],
+        owns_fields=["phone_number"],
+        api_keywords=["profile update", "phone number"],
+    )
+    _write_manifest(
+        tmp_path,
+        repo_name="notification-sync",
+        repo_type="backend-service",
+        domain="profile-notifications",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+        api_keywords=["notification sync", "downstream integration"],
+    )
+
+    feature_request = (
+        "Publish event when customer profile phone number changes for downstream sync"
+    )
+    rows = build_inventory(tmp_path)
+    impacts = analyze_feature(feature_request, rows, scan_root=tmp_path)
+    plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
+
+    assert "event_integration" in plan.feature_intents
+    assert "no event folder or publisher pattern found" in plan.missing_evidence
+    assert plan.confidence in {"medium", "low"}
+
+
+def test_plan_feature_fix_profile_stuff_reports_weak_evidence(tmp_path: Path) -> None:
+    _seed_common_workspace(tmp_path)
+
+    feature_request = "Fix profile stuff"
+    rows = build_inventory(tmp_path)
+    impacts = analyze_feature(feature_request, rows, scan_root=tmp_path)
+    plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
+
+    assert plan.confidence == "low"
+    assert plan.primary_owner is None
+    assert plan.direct_dependents == []
+    assert plan.possible_downstreams == []
+    assert plan.likely_paths_by_repo == {}
+    assert plan.ordered_steps == []
+    assert (
+        "weak evidence for concrete repo ownership or implementation steps"
+        in plan.missing_evidence
+    )
+    assert "no primary owner identified from strong evidence" in plan.missing_evidence
+
+
+def test_plan_feature_improve_customer_settings_filters_low_signal(tmp_path: Path) -> None:
+    _seed_common_workspace(tmp_path)
+
+    feature_request = "Improve customer settings"
+    rows = build_inventory(tmp_path)
+    impacts = analyze_feature(feature_request, rows, scan_root=tmp_path)
+    plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
+
+    assert plan.feature_intents == ["ui"]
+    assert plan.confidence == "low"
+    assert plan.primary_owner is None
+    assert plan.direct_dependents == []
+    assert plan.possible_downstreams == []
+    assert (
+        "weak evidence for concrete repo ownership or implementation steps"
+        in plan.missing_evidence
+    )
+    assert all("pages/components/forms" not in step for step in plan.ordered_steps)
+
+
+def test_plan_feature_generic_api_owner_reports_inferred_owner_gap(
+    tmp_path: Path,
+) -> None:
+    _write_manifest(
+        tmp_path,
+        repo_name="orders-api",
+        repo_type="backend-service",
+        domain="orders",
+        language="java",
+        build_commands=["./gradlew build"],
+        test_commands=["./gradlew test"],
+    )
+
+    feature_request = "Update loyalty API request"
+    rows = build_inventory(tmp_path)
+    plan = create_feature_plan(feature_request, rows, scan_root=tmp_path)
+
+    assert plan.primary_owner == "orders-api"
+    assert (
+        "primary owner inferred from generic intent alignment" in plan.missing_evidence
+    )
+    assert "no API contract file found" in plan.missing_evidence
+    assert plan.confidence == "low"
+
+
+def test_plan_feature_no_owner_skips_repo_specific_missing_evidence(
+    tmp_path: Path,
+) -> None:
+    _seed_common_workspace(tmp_path)
+
+    feature_request = "Persist frobnicator database field"
+    rows = build_inventory(tmp_path)
+    plan = create_feature_plan(feature_request, rows, scan_root=tmp_path)
+
+    assert plan.primary_owner is None
+    assert plan.confidence == "low"
+    assert "no primary owner identified from strong evidence" in plan.missing_evidence
+    assert "no migration system detected" not in plan.missing_evidence
