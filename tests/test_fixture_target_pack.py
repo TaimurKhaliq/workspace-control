@@ -9,6 +9,10 @@ from workspace_control.plan import create_feature_plan
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures"
 FEATURE_REQUEST = "Allow users to update their phone number from the profile screen"
+PERSISTED_FIELD_REQUEST = (
+    "Add phone number field to the customer profile settings form and persist it to database"
+)
+EVENT_REQUEST = "Publish profile-updated event when phone number changes"
 
 
 def _register_fixture_targets(tmp_path: Path) -> DiscoveryTargetRegistry:
@@ -37,6 +41,22 @@ def _snapshot_for_target(registry: DiscoveryTargetRegistry, target_id: str):
 
 def _repo_by_name(snapshot):
     return {repo.repo_name: repo for repo in snapshot.report.repos}
+
+
+def _analyze_and_plan(snapshot, feature_request: str):
+    rows = build_inventory(snapshot.workspace.root_path)
+    impacts = analyze_feature(
+        feature_request,
+        rows,
+        discovery_snapshot=snapshot,
+    )
+    plan = create_feature_plan(
+        feature_request,
+        rows,
+        impacts=impacts,
+        discovery_snapshot=snapshot,
+    )
+    return impacts, plan
 
 
 def test_fixture_targets_compare_discover_architecture_modes(tmp_path: Path) -> None:
@@ -117,6 +137,7 @@ def test_fixture_targets_compare_analyze_feature_evidence(
     assert mixed_by_repo["web-ui"].role == "direct-dependent"
     assert "adapter_discovery:" not in metadata_by_repo["web-ui"].reason
     assert "adapter_discovery:" in mixed_by_repo["web-ui"].reason
+    assert mixed_by_repo["service-a"].score > metadata_by_repo["service-a"].score
 
 
 def test_fixture_targets_compare_plan_feature_behavior(tmp_path: Path) -> None:
@@ -154,3 +175,63 @@ def test_fixture_targets_compare_plan_feature_behavior(tmp_path: Path) -> None:
     assert "src/pages" in mixed_plan.likely_paths_by_repo["web-ui"]
     assert metadata_plan.db_change_needed is False
     assert mixed_plan.db_change_needed is False
+
+
+def test_fixture_targets_compare_persisted_ui_field_behavior(tmp_path: Path) -> None:
+    registry = _register_fixture_targets(tmp_path)
+    metadata_snapshot = _snapshot_for_target(registry, "metadata-only")
+    mixed_snapshot = _snapshot_for_target(registry, "mixed-source")
+    metadata_impacts, metadata_plan = _analyze_and_plan(
+        metadata_snapshot,
+        PERSISTED_FIELD_REQUEST,
+    )
+    mixed_impacts, mixed_plan = _analyze_and_plan(
+        mixed_snapshot,
+        PERSISTED_FIELD_REQUEST,
+    )
+    metadata_by_repo = {impact.repo_name: impact for impact in metadata_impacts}
+    mixed_by_repo = {impact.repo_name: impact for impact in mixed_impacts}
+
+    assert metadata_plan.primary_owner == "service-a"
+    assert mixed_plan.primary_owner == "service-a"
+    assert metadata_plan.domain_owner == "service-a"
+    assert mixed_plan.domain_owner == "service-a"
+    assert metadata_plan.api_change_needed is True
+    assert mixed_plan.api_change_needed is True
+    assert metadata_plan.db_change_needed is True
+    assert mixed_plan.db_change_needed is True
+    assert "no API contract file found" in metadata_plan.missing_evidence
+    assert "no migration system detected" in metadata_plan.missing_evidence
+    assert mixed_plan.missing_evidence == []
+    assert mixed_by_repo["service-a"].score > metadata_by_repo["service-a"].score
+    assert "adapter_discovery:" in mixed_by_repo["service-a"].reason
+    assert "using discovered API/service paths" in mixed_plan.ordered_steps[0]
+    assert "persistence/schema paths" in mixed_plan.ordered_steps[0]
+
+
+def test_fixture_targets_compare_event_publishing_behavior(tmp_path: Path) -> None:
+    registry = _register_fixture_targets(tmp_path)
+    metadata_snapshot = _snapshot_for_target(registry, "metadata-only")
+    mixed_snapshot = _snapshot_for_target(registry, "mixed-source")
+    metadata_impacts, metadata_plan = _analyze_and_plan(
+        metadata_snapshot,
+        EVENT_REQUEST,
+    )
+    mixed_impacts, mixed_plan = _analyze_and_plan(
+        mixed_snapshot,
+        EVENT_REQUEST,
+    )
+    metadata_by_repo = {impact.repo_name: impact for impact in metadata_impacts}
+    mixed_by_repo = {impact.repo_name: impact for impact in mixed_impacts}
+
+    assert metadata_plan.primary_owner == "service-a"
+    assert mixed_plan.primary_owner == "service-a"
+    assert "service-b" in metadata_plan.possible_downstreams
+    assert "service-b" in mixed_plan.possible_downstreams
+    assert "no event folder or publisher pattern found" in metadata_plan.missing_evidence
+    assert mixed_plan.missing_evidence == []
+    assert mixed_by_repo["service-a"].score > metadata_by_repo["service-a"].score
+    assert mixed_by_repo["service-b"].score > metadata_by_repo["service-b"].score
+    assert "adapter_discovery:" in mixed_by_repo["service-b"].reason
+    assert "using discovered API/service trigger paths" in mixed_plan.ordered_steps[0]
+    assert "using discovered consumer/integration paths" in mixed_plan.ordered_steps[1]

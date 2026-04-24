@@ -247,6 +247,11 @@ def _mutable_domain_field_update_requested(feature_request: str) -> bool:
     return True
 
 
+def _new_field_requested(feature_request: str) -> bool:
+    tokens = _tokenize(feature_request)
+    return bool("field" in tokens and tokens & {"add", "new"})
+
+
 def _row_is_frontend(row: InventoryRow) -> bool:
     row_tokens = _tokenize(row.type)
     return bool({"frontend", "web", "ui", "client"} & row_tokens)
@@ -343,6 +348,12 @@ def _frontend_implementation_owner(
         return None
     candidates.sort(key=lambda impact: (-impact.score, impact.repo_name))
     return candidates[0]
+
+
+def _has_discovered_contract_paths(discovery: RepoDiscovery | None) -> bool:
+    if discovery is None:
+        return False
+    return bool(discovery.likely_api_locations)
 
 
 def _has_real_downstream_evidence(
@@ -735,44 +746,60 @@ def _primary_owner_step(
     db_change_needed: bool,
     api_change_needed: bool,
     feature_intents: set[str],
+    discovery: RepoDiscovery | None,
 ) -> str:
     if _row_is_backend(row):
         if "event_integration" in feature_intents:
+            event_note = _path_note(
+                " using discovered event/integration paths",
+                _event_paths(discovery),
+            )
+            api_note = _path_note(
+                " using discovered API/service trigger paths",
+                _api_and_service_paths(discovery),
+            )
             step = (
                 f"In {repo_name} (primary-owner, score={score}), implement event emission/publish logic, "
                 "define payload/schema mapping, add the trigger point in service flow, and determine whether "
-                "an outbox/producer/integration path is needed."
+                f"an outbox/producer/integration path is needed{event_note}{api_note}."
             )
             if db_change_needed:
                 return (
-                    f"{step[:-1]} Also update entity/repository persistence handling and migration files."
+                    f"{step[:-1]} Also update entity/repository persistence handling and migration files"
+                    f"{_path_note(' at', _persistence_paths(discovery))}."
                 )
             return step
 
         if api_change_needed and db_change_needed:
             return (
                 f"In {repo_name} (primary-owner, score={score}), update API request/response contracts, "
-                "implement service/controller validation logic, and adjust entity/repository + migration handling."
+                "implement service/controller validation logic, and adjust entity/repository + migration handling"
+                f"{_path_note(' using discovered API/service paths', _api_and_service_paths(discovery))}"
+                f"{_path_note(' and persistence/schema paths', _persistence_paths(discovery))}."
             )
         if api_change_needed:
             return (
                 f"In {repo_name} (primary-owner, score={score}), update API request/response contracts, "
-                "implement controller/service validation flow, and verify DTO mapping compatibility."
+                "implement controller/service validation flow, and verify DTO mapping compatibility"
+                f"{_path_note(' using discovered controller/dto/service paths', _api_and_service_paths(discovery))}."
             )
         if db_change_needed:
             return (
                 f"In {repo_name} (primary-owner, score={score}), update service logic, entity/repository "
-                "persistence mappings, and add migration/changelog updates."
+                "persistence mappings, and add migration/changelog updates"
+                f"{_path_note(' using discovered persistence/schema paths', _persistence_paths(discovery))}."
             )
         return (
             f"In {repo_name} (primary-owner, score={score}), implement service-level feature logic and "
-            "review entity/repository mappings for impact."
+            "review entity/repository mappings for impact"
+            f"{_path_note(' using discovered service/data paths', _service_and_data_paths(discovery))}."
         )
 
     if _row_is_frontend(row):
         return (
             f"In {repo_name} (primary-owner, score={score}), update profile page/form state handling, "
-            "UI copy, validation messaging, and client service wiring."
+            "UI copy, validation messaging, and client service wiring"
+            f"{_path_note(' using discovered UI/client paths', _ui_and_client_paths(discovery))}."
         )
 
     return (
@@ -788,28 +815,33 @@ def _direct_dependent_step(
     score: int,
     feature_intents: set[str],
     api_change_needed: bool,
+    discovery: RepoDiscovery | None,
 ) -> str:
     if _row_is_frontend(row):
         if "ui" in feature_intents:
             return (
                 f"In {repo_name} (direct-dependent, score={score}), update pages/components/forms, "
-                "client request payload handling, and submission/error states."
+                "client request payload handling, and submission/error states"
+                f"{_path_note(' using discovered UI/client paths', _ui_and_client_paths(discovery))}."
             )
         return (
             f"In {repo_name} (direct-dependent, score={score}), verify client service wiring and "
-            "compatibility with owner repo changes."
+            "compatibility with owner repo changes"
+            f"{_path_note(' using discovered client paths', _ui_and_client_paths(discovery))}."
         )
 
     if "event_integration" in feature_intents:
         return (
             f"In {repo_name} (direct-dependent, score={score}), update integration service hooks, "
-            "request adapters, and compatibility checks with owner event payloads."
+            "request adapters, and compatibility checks with owner event payloads"
+            f"{_path_note(' using discovered event/integration paths', _event_paths(discovery))}."
         )
 
     if api_change_needed:
         return (
             f"In {repo_name} (direct-dependent, score={score}), update request/response handling and "
-            "compatibility checks with owner APIs."
+            "compatibility checks with owner APIs"
+            f"{_path_note(' using discovered API/service paths', _api_and_service_paths(discovery))}."
         )
 
     return (
@@ -823,17 +855,65 @@ def _possible_downstream_step(
     *,
     score: int,
     event_integration_mode: bool,
+    discovery: RepoDiscovery | None,
 ) -> str:
     if event_integration_mode:
         return (
             f"In {repo_name} (possible-downstream, score={score}), determine whether "
             "consumer/subscriber/integration changes are needed; if impacted, update event handlers, "
-            "payload mapping, and downstream integration coverage."
+            "payload mapping, and downstream integration coverage"
+            f"{_path_note(' using discovered consumer/integration paths', _event_paths(discovery))}."
         )
 
     return (
         f"In {repo_name} (possible-downstream, score={score}), determine whether sync/integration updates "
         "are needed; if impacted, update publish/consume payload mappings and integration coverage."
+    )
+
+
+def _path_note(prefix: str, paths: Sequence[str]) -> str:
+    if not paths:
+        return ""
+    return f"{prefix}: {', '.join(paths[:3])}"
+
+
+def _api_and_service_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return _dedupe_preserve_order(
+        [*discovery.likely_api_locations, *discovery.likely_service_locations]
+    )
+
+
+def _persistence_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return list(discovery.likely_persistence_locations)
+
+
+def _service_and_data_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return _dedupe_preserve_order(
+        [*discovery.likely_service_locations, *discovery.likely_persistence_locations]
+    )
+
+
+def _event_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return list(discovery.likely_event_locations)
+
+
+def _ui_and_client_paths(discovery: RepoDiscovery | None) -> list[str]:
+    if discovery is None:
+        return []
+    return _dedupe_preserve_order(
+        [
+            *discovery.likely_ui_locations,
+            *discovery.likely_api_locations,
+            *discovery.likely_service_locations,
+        ]
     )
 
 
@@ -862,22 +942,41 @@ def create_feature_plan(
     discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
     workspace_root = _workspace_root(scan_root, discovery_snapshot)
     mutable_domain_update = _mutable_domain_field_update_requested(feature_request)
-    domain_owner_impact = (
-        _strong_backend_domain_owner(resolved_impacts, by_repo)
-        if mutable_domain_update
-        else None
-    )
+    domain_owner_impact = _strong_backend_domain_owner(resolved_impacts, by_repo)
     implementation_owner_impact = (
         _frontend_implementation_owner(resolved_impacts, by_repo)
-        if mutable_domain_update
+        if "ui" in feature_intents
+        else None
+    )
+    domain_owner_discovery = (
+        discovery_by_repo.get(domain_owner_impact.repo_name)
+        if domain_owner_impact is not None
         else None
     )
     inferred_api_for_mutable_field = bool(
         "ui" in feature_intents
+        and mutable_domain_update
         and domain_owner_impact is not None
         and implementation_owner_impact is not None
     )
-    if inferred_api_for_mutable_field:
+    inferred_api_for_ui_persistence = bool(
+        "ui" in feature_intents
+        and "persistence" in feature_intents
+        and domain_owner_impact is not None
+        and implementation_owner_impact is not None
+    )
+    inferred_api_for_new_field_with_contract = bool(
+        "ui" in feature_intents
+        and _new_field_requested(feature_request)
+        and domain_owner_impact is not None
+        and implementation_owner_impact is not None
+        and _has_discovered_contract_paths(domain_owner_discovery)
+    )
+    if (
+        inferred_api_for_mutable_field
+        or inferred_api_for_ui_persistence
+        or inferred_api_for_new_field_with_contract
+    ):
         feature_intents = _with_feature_intent(feature_intents, "api")
 
     event_integration_mode = "event_integration" in feature_intents
@@ -910,12 +1009,20 @@ def create_feature_plan(
     ]
     implementation_owner = (
         implementation_owner_impact.repo_name
-        if inferred_api_for_mutable_field and implementation_owner_impact is not None
+        if (
+            domain_owner_impact is not None
+            and implementation_owner_impact is not None
+            and "ui" in feature_intents
+        )
         else primary_owner
     )
     domain_owner = (
         domain_owner_impact.repo_name
-        if inferred_api_for_mutable_field and domain_owner_impact is not None
+        if (
+            domain_owner_impact is not None
+            and implementation_owner_impact is not None
+            and "ui" in feature_intents
+        )
         else None
     )
 
@@ -924,6 +1031,8 @@ def create_feature_plan(
     api_change_needed = (
         _api_contract_change_requested(feature_request)
         or inferred_api_for_mutable_field
+        or inferred_api_for_ui_persistence
+        or inferred_api_for_new_field_with_contract
     )
 
     likely_paths_by_repo: dict[str, list[str]] = {}
@@ -968,6 +1077,7 @@ def create_feature_plan(
                 db_change_needed=db_change_needed,
                 api_change_needed=api_change_needed,
                 feature_intents=feature_intents_set,
+                discovery=discovery_by_repo.get(primary_owner),
             )
         )
 
@@ -983,6 +1093,7 @@ def create_feature_plan(
                 score=impact.score,
                 feature_intents=feature_intents_set,
                 api_change_needed=api_change_needed,
+                discovery=discovery_by_repo.get(repo_name),
             )
         )
 
@@ -995,6 +1106,7 @@ def create_feature_plan(
                 repo_name,
                 score=impact.score,
                 event_integration_mode=event_integration_mode,
+                discovery=discovery_by_repo.get(repo_name),
             )
         )
 
@@ -1009,6 +1121,7 @@ def create_feature_plan(
         db_change_needed
         or bool(possible_downstreams)
         or inferred_api_for_mutable_field
+        or inferred_api_for_new_field_with_contract
     )
     missing_evidence = _missing_evidence_for_plan(
         primary_owner=primary_owner,

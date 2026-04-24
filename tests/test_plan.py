@@ -114,13 +114,13 @@ def test_plan_feature_ui_and_persistence_feature(tmp_path: Path) -> None:
     impacts = analyze_feature(feature_request, rows)
     plan = create_feature_plan(feature_request, rows, impacts=impacts, scan_root=tmp_path)
 
-    assert plan.feature_intents == ["ui", "persistence"]
+    assert plan.feature_intents == ["ui", "persistence", "api"]
     assert plan.primary_owner == "profile-api"
     assert plan.direct_dependents == ["web-ui"]
     assert plan.possible_downstreams == []
     assert plan.ui_change_needed is True
     assert plan.db_change_needed is True
-    assert plan.api_change_needed is False
+    assert plan.api_change_needed is True
     assert "src/main/resources/db/migration" in plan.likely_paths_by_repo["profile-api"]
     assert "src/main/resources/db/changelog" in plan.likely_paths_by_repo["profile-api"]
     assert "src/main/resources" in plan.likely_paths_by_repo["profile-api"]

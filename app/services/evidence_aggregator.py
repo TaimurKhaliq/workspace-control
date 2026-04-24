@@ -83,6 +83,9 @@ PHRASE_WEIGHT = 6
 REPO_TYPE_WEIGHT = 5
 REPO_TOKEN_WEIGHT = 2
 DOMAIN_WEIGHT = 2
+ADAPTER_SOURCE_WEIGHT = 7
+ADAPTER_MIXED_WEIGHT = 4
+ADAPTER_OWNERSHIP_WEIGHT = 12
 OWNERSHIP_WEIGHTS = {
     "owns_entities": {"phrase": 11, "token": 5},
     "owns_fields": {"phrase": 13, "token": 6},
@@ -195,7 +198,12 @@ class EvidenceAggregator:
             if discovery is not None:
                 evidence.extend(
                     self._adapter_discovery_evidence(
-                        row, discovery, feature_signal_matches, feature_downstream_intent
+                        row,
+                        discovery,
+                        normalized_feature,
+                        feature_tokens,
+                        feature_signal_matches,
+                        feature_downstream_intent,
                     )
                 )
 
@@ -422,6 +430,8 @@ class EvidenceAggregator:
         self,
         row: InventoryRow,
         discovery: RepoDiscovery,
+        normalized_feature: str,
+        feature_tokens: set[str],
         feature_signal_matches: dict[str, dict[str, list[str]]],
         feature_downstream_intent: bool,
     ) -> list[Evidence]:
@@ -438,6 +448,7 @@ class EvidenceAggregator:
             feature_signal_matches["data"]["keywords"]
             or feature_signal_matches["data"]["phrases"]
         )
+        adapter_weight = _adapter_weight(discovery)
 
         if frontend_intent and (discovery.likely_ui_locations or "react" in discovery.detected_frameworks):
             evidence.append(
@@ -445,7 +456,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "frontend",
                     "frontend adapter discovery",
-                    0,
+                    adapter_weight,
                     discovery.detected_frameworks,
                     discovery.likely_ui_locations,
                 )
@@ -462,7 +473,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "backend",
                     "backend adapter discovery",
-                    0,
+                    adapter_weight,
                     discovery.detected_frameworks,
                     discovery.likely_api_locations or discovery.likely_service_locations,
                 )
@@ -477,7 +488,7 @@ class EvidenceAggregator:
                     row.repo_name,
                     "data",
                     "data adapter discovery",
-                    0,
+                    adapter_weight,
                     discovery.detected_frameworks,
                     discovery.likely_persistence_locations,
                 )
@@ -489,11 +500,20 @@ class EvidenceAggregator:
                     row.repo_name,
                     "downstream",
                     "event adapter discovery",
-                    0,
+                    adapter_weight,
                     discovery.detected_frameworks,
                     discovery.likely_event_locations,
                 )
             )
+
+        ownership_evidence = _source_ownership_evidence(
+            row,
+            discovery,
+            normalized_feature,
+            feature_tokens,
+        )
+        if ownership_evidence is not None:
+            evidence.append(ownership_evidence)
 
         return evidence
 
@@ -572,6 +592,93 @@ def _adapter_evidence(
             "reason": f"adapter discovery ({'; '.join(reason_bits)})",
         },
     )
+
+
+def _adapter_weight(discovery: RepoDiscovery) -> int:
+    if not _has_real_source_evidence(discovery):
+        return 0
+    if discovery.evidence_mode == "source-discovered":
+        return ADAPTER_SOURCE_WEIGHT
+    return ADAPTER_MIXED_WEIGHT
+
+
+def _has_real_source_evidence(discovery: RepoDiscovery) -> bool:
+    return bool(
+        discovery.detected_frameworks
+        or discovery.likely_api_locations
+        or discovery.likely_service_locations
+        or discovery.likely_persistence_locations
+        or discovery.likely_ui_locations
+        or discovery.likely_event_locations
+    )
+
+
+def _source_ownership_evidence(
+    row: InventoryRow,
+    discovery: RepoDiscovery,
+    normalized_feature: str,
+    feature_tokens: set[str],
+) -> Evidence | None:
+    if not _backend_source_structure_is_complete(discovery):
+        return None
+
+    matches: list[str] = []
+    for field_name in ("owns_entities", "owns_fields", "owns_tables"):
+        phrase_matches_for_field, token_matches = _ownership_matches(
+            normalized_feature,
+            feature_tokens,
+            getattr(row, field_name),
+        )
+        if phrase_matches_for_field or token_matches:
+            values = [*phrase_matches_for_field, *token_matches]
+            matches.append(f"{field_name}: {', '.join(values[:3])}")
+
+    if not matches:
+        return None
+
+    structure = _source_structure_summary(discovery)
+    return Evidence(
+        repo_name=row.repo_name,
+        source="adapter_discovery",
+        category="ownership",
+        signal="source-backed ownership",
+        weight=ADAPTER_OWNERSHIP_WEIGHT,
+        details={
+            "primary_ownership": "true",
+            "reason": (
+                "source-backed ownership "
+                f"({'; '.join(matches[:3])}; discovered {structure})"
+            ),
+        },
+    )
+
+
+def _backend_source_structure_is_complete(discovery: RepoDiscovery) -> bool:
+    return bool(
+        discovery.likely_api_locations
+        and discovery.likely_service_locations
+        and _has_entity_or_repository(discovery.likely_persistence_locations)
+    )
+
+
+def _has_entity_or_repository(paths: Sequence[str]) -> bool:
+    return any(
+        any(marker in path.lower() for marker in ("entity", "repository"))
+        for path in paths
+    )
+
+
+def _source_structure_summary(discovery: RepoDiscovery) -> str:
+    parts: list[str] = []
+    if discovery.likely_api_locations:
+        parts.append("controller/dto")
+    if discovery.likely_service_locations:
+        parts.append("service")
+    if _has_entity_or_repository(discovery.likely_persistence_locations):
+        parts.append("entity/repository")
+    if any("migration" in path.lower() for path in discovery.likely_persistence_locations):
+        parts.append("migration")
+    return ", ".join(parts)
 
 
 def _ownership_matches(
