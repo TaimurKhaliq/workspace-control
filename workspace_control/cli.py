@@ -5,10 +5,16 @@ from pathlib import Path
 import yaml
 from pydantic import ValidationError
 
-from app.models.discovery import DiscoveryTarget
+from app.models.discovery import DiscoveryTarget, DiscoveryTargetRecord
 from app.services.architecture_discovery import (
     ArchitectureDiscoveryService,
     format_discovery_snapshot,
+)
+from app.services.discovery_target_registry import (
+    DEFAULT_REGISTRY_PATH,
+    DiscoveryTargetRegistry,
+    format_target_list,
+    parse_hints,
 )
 
 from .analyze import analyze_feature, format_feature_analysis
@@ -39,6 +45,59 @@ def run(argv: list[str] | None = None) -> int:
         type=Path,
         default=default_scan_root,
         help="Directory whose child folders are scanned for repositories",
+    )
+    discover_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to scan instead of --scan-root",
+    )
+    discover_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    register_target_parser = subparsers.add_parser(
+        "register-discovery-target",
+        help="Register or update a source-agnostic discovery target",
+    )
+    register_target_parser.add_argument("target_id", help="Stable discovery target id")
+    register_target_parser.add_argument(
+        "--source-type",
+        required=True,
+        choices=["local_path", "git_url", "remote_agent"],
+        help="Discovery target source type",
+    )
+    register_target_parser.add_argument(
+        "--locator",
+        required=True,
+        help="Source locator, such as a local path or repository URL",
+    )
+    register_target_parser.add_argument(
+        "--ref",
+        default=None,
+        help="Optional source ref, branch, tag, or version",
+    )
+    register_target_parser.add_argument(
+        "--hint",
+        action="append",
+        default=[],
+        help="Optional target hint in key=value form; can be repeated",
+    )
+    register_target_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    list_targets_parser = subparsers.add_parser(
+        "list-discovery-targets",
+        help="List registered discovery targets",
+    )
+    list_targets_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
     )
     analyze_parser = subparsers.add_parser(
         "analyze-feature",
@@ -88,6 +147,8 @@ def run(argv: list[str] | None = None) -> int:
     if args.command not in {
         "inventory",
         "discover-architecture",
+        "register-discovery-target",
+        "list-discovery-targets",
         "analyze-feature",
         "plan-feature",
         "propose-changes",
@@ -95,9 +156,40 @@ def run(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 1
 
+    if args.command == "register-discovery-target":
+        try:
+            target = DiscoveryTargetRecord(
+                id=args.target_id,
+                source_type=args.source_type,
+                locator=args.locator,
+                ref=args.ref,
+                hints=parse_hints(args.hint),
+            )
+            DiscoveryTargetRegistry(args.registry_path).register(target)
+        except (OSError, ValidationError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        print(f"Registered discovery target: {target.id}")
+        return 0
+
+    if args.command == "list-discovery-targets":
+        try:
+            targets = DiscoveryTargetRegistry(args.registry_path).list_targets()
+        except (OSError, ValidationError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        print(format_target_list(targets))
+        return 0
+
     if args.command == "discover-architecture":
         try:
-            target = DiscoveryTarget.local_path(args.scan_root)
+            if args.target_id:
+                record = DiscoveryTargetRegistry(args.registry_path).get(args.target_id)
+                target = record.to_target()
+            else:
+                target = DiscoveryTarget.local_path(args.scan_root)
             snapshot = ArchitectureDiscoveryService().discover(target)
         except (
             NotImplementedError,
@@ -112,8 +204,25 @@ def run(argv: list[str] | None = None) -> int:
         print(format_discovery_snapshot(snapshot))
         return 0
 
+    discovery_snapshot = None
+    effective_scan_root = args.scan_root
+    if args.command in {"analyze-feature", "plan-feature", "propose-changes"}:
+        try:
+            target = DiscoveryTarget.local_path(args.scan_root)
+            discovery_snapshot = ArchitectureDiscoveryService().discover(target)
+            effective_scan_root = discovery_snapshot.workspace.root_path
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
     try:
-        rows = build_inventory(args.scan_root)
+        rows = build_inventory(effective_scan_root)
     except (OSError, yaml.YAMLError, ValidationError, ValueError) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return 1
@@ -122,7 +231,12 @@ def run(argv: list[str] | None = None) -> int:
         print(format_inventory_table(rows))
         return 0
 
-    impacts = analyze_feature(args.feature_description, rows, scan_root=args.scan_root)
+    impacts = analyze_feature(
+        args.feature_description,
+        rows,
+        scan_root=effective_scan_root,
+        discovery_snapshot=discovery_snapshot,
+    )
     if args.command == "analyze-feature":
         print(format_feature_analysis(args.feature_description, impacts))
         return 0
@@ -132,7 +246,8 @@ def run(argv: list[str] | None = None) -> int:
             args.feature_description,
             rows,
             impacts=impacts,
-            scan_root=args.scan_root,
+            scan_root=effective_scan_root,
+            discovery_snapshot=discovery_snapshot,
         )
         print(format_change_proposal(proposal))
         return 0
@@ -141,7 +256,8 @@ def run(argv: list[str] | None = None) -> int:
         args.feature_description,
         rows,
         impacts=impacts,
-        scan_root=args.scan_root,
+        scan_root=effective_scan_root,
+        discovery_snapshot=discovery_snapshot,
     )
     print(format_feature_plan(plan))
     return 0

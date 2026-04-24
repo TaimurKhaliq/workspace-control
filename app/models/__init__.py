@@ -5,6 +5,8 @@ from .discovery import (
     ArchitectureDiscoveryReport,
     DiscoverySnapshot,
     DiscoveryTarget,
+    DiscoveryTargetRecord,
+    DiscoveryTargetRegistryState,
     MaterializedWorkspace,
     RepoDiscovery,
 )
@@ -17,6 +19,8 @@ __all__ = [
     "AdapterDiscovery",
     "DiscoverySnapshot",
     "DiscoveryTarget",
+    "DiscoveryTargetRecord",
+    "DiscoveryTargetRegistryState",
     "Evidence",
     "FeaturePlan",
     "MaterializedWorkspace",

@@ -1,6 +1,7 @@
 from collections.abc import Sequence
 from pathlib import Path
 
+from app.models.discovery import DiscoverySnapshot
 from app.models.evidence import Evidence
 from app.services.evidence_aggregator import (
     CATEGORY_HINTS,
@@ -19,6 +20,7 @@ def analyze_feature(
     rows: Sequence[InventoryRow],
     *,
     scan_root: Path | None = None,
+    discovery_snapshot: DiscoverySnapshot | None = None,
 ) -> list[FeatureImpact]:
     """Score likely impacted repos using deterministic evidence objects."""
 
@@ -30,6 +32,7 @@ def analyze_feature(
         feature_description,
         rows,
         scan_root=scan_root,
+        discovery_snapshot=discovery_snapshot,
     )
     feature_signal_matches = {
         category: {

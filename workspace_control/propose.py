@@ -3,7 +3,11 @@ import re
 from collections.abc import Sequence
 from pathlib import Path
 
-from app.models.discovery import ArchitectureDiscoveryReport, RepoDiscovery
+from app.models.discovery import (
+    ArchitectureDiscoveryReport,
+    DiscoverySnapshot,
+    RepoDiscovery,
+)
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 
 from .analyze import analyze_feature
@@ -97,23 +101,31 @@ def create_change_proposal(
     impacts: Sequence[FeatureImpact] | None = None,
     *,
     scan_root: Path | None = None,
+    discovery_snapshot: DiscoverySnapshot | None = None,
 ) -> ChangeProposal:
     """Create deterministic read-only change proposals from a feature plan."""
 
     resolved_impacts = (
         list(impacts)
         if impacts is not None
-        else analyze_feature(feature_request, rows, scan_root=scan_root)
+        else analyze_feature(
+            feature_request,
+            rows,
+            scan_root=scan_root,
+            discovery_snapshot=discovery_snapshot,
+        )
     )
     plan = create_feature_plan(
         feature_request,
         rows,
         impacts=resolved_impacts,
         scan_root=scan_root,
+        discovery_snapshot=discovery_snapshot,
     )
     by_repo = {row.repo_name: row for row in rows}
     impact_by_repo = {impact.repo_name: impact for impact in resolved_impacts}
-    discovery_by_repo = _architecture_by_repo(scan_root)
+    discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
+    workspace_root = _workspace_root(scan_root, discovery_snapshot)
 
     proposed_changes: list[ChangeProposalItem] = []
     for repo_name in _ordered_impacted_repos(plan):
@@ -123,7 +135,11 @@ def create_change_proposal(
             continue
 
         discovery = discovery_by_repo.get(repo_name)
-        repo_dir = (scan_root / repo_name) if scan_root is not None else None
+        repo_dir = (
+            (workspace_root / repo_name)
+            if workspace_root is not None
+            else None
+        )
         inspect_paths = _likely_files_to_inspect(plan, row, role, discovery, repo_dir)
         proposed_changes.append(
             ChangeProposalItem(
@@ -166,7 +182,22 @@ def format_change_proposal(proposal: ChangeProposal) -> str:
     return json.dumps(proposal.model_dump(mode="python"), indent=2, sort_keys=False)
 
 
-def _architecture_by_repo(scan_root: Path | None) -> dict[str, RepoDiscovery]:
+def _workspace_root(
+    scan_root: Path | None,
+    discovery_snapshot: DiscoverySnapshot | None,
+) -> Path | None:
+    if discovery_snapshot is not None:
+        return discovery_snapshot.workspace.root_path
+    return scan_root
+
+
+def _architecture_by_repo(
+    scan_root: Path | None,
+    discovery_snapshot: DiscoverySnapshot | None,
+) -> dict[str, RepoDiscovery]:
+    if discovery_snapshot is not None:
+        return {repo.repo_name: repo for repo in discovery_snapshot.report.repos}
+
     if scan_root is None or not scan_root.is_dir():
         return {}
 

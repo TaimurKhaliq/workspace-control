@@ -23,6 +23,32 @@ class DiscoveryTarget(BaseModel):
         return cls(source="local_path", location=str(path))
 
 
+class DiscoveryTargetRecord(BaseModel):
+    """Registered discovery target stored by workspace-control."""
+
+    id: str
+    source_type: Literal["local_path", "git_url", "remote_agent"]
+    locator: str
+    ref: str | None = None
+    hints: dict[str, str] = Field(default_factory=dict)
+
+    def to_target(self) -> DiscoveryTarget:
+        """Convert a registry record to a provider-facing discovery target."""
+
+        return DiscoveryTarget(
+            source=self.source_type,
+            location=self.locator,
+            ref=self.ref,
+            metadata=self.hints,
+        )
+
+
+class DiscoveryTargetRegistryState(BaseModel):
+    """JSON-serializable registry state for discovery targets."""
+
+    targets: list[DiscoveryTargetRecord] = Field(default_factory=list)
+
+
 class MaterializedWorkspace(BaseModel):
     """Read-only local workspace view produced by a discovery provider."""
 

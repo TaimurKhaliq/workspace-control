@@ -5,7 +5,11 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from app.adapters.base import ArchitectureAdapter
-from app.models.discovery import ArchitectureDiscoveryReport, RepoDiscovery
+from app.models.discovery import (
+    ArchitectureDiscoveryReport,
+    DiscoverySnapshot,
+    RepoDiscovery,
+)
 from app.models.evidence import Evidence
 from app.models.repo_manifest import RepoManifest
 from app.services.architecture_discovery import ArchitectureDiscoveryService
@@ -153,6 +157,7 @@ class EvidenceAggregator:
         *,
         scan_root: Path | None = None,
         architecture_report: ArchitectureDiscoveryReport | None = None,
+        discovery_snapshot: DiscoverySnapshot | None = None,
     ) -> list[Evidence]:
         """Aggregate repo evidence for a feature request."""
 
@@ -167,8 +172,11 @@ class EvidenceAggregator:
         feature_downstream_intent = _feature_downstream_intent(
             normalized_feature, feature_tokens
         )
+        workspace_root = _workspace_root(scan_root, discovery_snapshot)
         architecture_by_repo = self._architecture_by_repo(
-            scan_root, architecture_report
+            scan_root,
+            architecture_report,
+            discovery_snapshot,
         )
 
         evidence: list[Evidence] = []
@@ -182,7 +190,7 @@ class EvidenceAggregator:
                     feature_downstream_intent,
                 )
             )
-            evidence.extend(self._agents_evidence(row, feature_tokens, scan_root))
+            evidence.extend(self._agents_evidence(row, feature_tokens, workspace_root))
             discovery = architecture_by_repo.get(row.repo_name)
             if discovery is not None:
                 evidence.extend(
@@ -493,7 +501,11 @@ class EvidenceAggregator:
         self,
         scan_root: Path | None,
         architecture_report: ArchitectureDiscoveryReport | None,
+        discovery_snapshot: DiscoverySnapshot | None,
     ) -> dict[str, RepoDiscovery]:
+        if architecture_report is None and discovery_snapshot is not None:
+            architecture_report = discovery_snapshot.report
+
         if architecture_report is None and scan_root is not None and scan_root.is_dir():
             architecture_report = ArchitectureDiscoveryService().discover_local(scan_root)
 
@@ -501,6 +513,15 @@ class EvidenceAggregator:
             return {}
 
         return {repo.repo_name: repo for repo in architecture_report.repos}
+
+
+def _workspace_root(
+    scan_root: Path | None,
+    discovery_snapshot: DiscoverySnapshot | None,
+) -> Path | None:
+    if discovery_snapshot is not None:
+        return discovery_snapshot.workspace.root_path
+    return scan_root
 
 
 def _feature_signal_matches(

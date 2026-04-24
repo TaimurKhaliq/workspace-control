@@ -3,6 +3,7 @@
 from collections.abc import Sequence
 from pathlib import Path
 
+from app.models.discovery import DiscoverySnapshot
 from app.models.feature_plan import FeaturePlan
 from workspace_control.models import FeatureImpact, InventoryRow
 from workspace_control.plan import create_feature_plan
@@ -18,6 +19,7 @@ class Planner:
         impacts: Sequence[FeatureImpact] | None = None,
         *,
         scan_root: Path | None = None,
+        discovery_snapshot: DiscoverySnapshot | None = None,
     ) -> FeaturePlan:
         """Build and return a deterministic feature plan."""
 
@@ -26,5 +28,6 @@ class Planner:
             rows,
             impacts=impacts,
             scan_root=scan_root,
+            discovery_snapshot=discovery_snapshot,
         )
         return FeaturePlan.model_validate(plan.model_dump(mode="python"))

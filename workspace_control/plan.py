@@ -3,7 +3,11 @@ import re
 from collections.abc import Sequence
 from pathlib import Path
 
-from app.models.discovery import ArchitectureDiscoveryReport, RepoDiscovery
+from app.models.discovery import (
+    ArchitectureDiscoveryReport,
+    DiscoverySnapshot,
+    RepoDiscovery,
+)
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 
 from .analyze import analyze_feature
@@ -458,7 +462,22 @@ def _promote_primary_owner_if_missing(
     return impacts
 
 
-def _architecture_by_repo(scan_root: Path | None) -> dict[str, RepoDiscovery]:
+def _workspace_root(
+    scan_root: Path | None,
+    discovery_snapshot: DiscoverySnapshot | None,
+) -> Path | None:
+    if discovery_snapshot is not None:
+        return discovery_snapshot.workspace.root_path
+    return scan_root
+
+
+def _architecture_by_repo(
+    scan_root: Path | None,
+    discovery_snapshot: DiscoverySnapshot | None,
+) -> dict[str, RepoDiscovery]:
+    if discovery_snapshot is not None:
+        return {repo.repo_name: repo for repo in discovery_snapshot.report.repos}
+
     if scan_root is None or not scan_root.is_dir():
         return {}
 
@@ -769,17 +788,24 @@ def create_feature_plan(
     impacts: Sequence[FeatureImpact] | None = None,
     *,
     scan_root: Path | None = None,
+    discovery_snapshot: DiscoverySnapshot | None = None,
 ) -> FeaturePlan:
     """Build a deterministic feature plan from impact analysis."""
 
     resolved_impacts = (
         list(impacts)
         if impacts is not None
-        else analyze_feature(feature_request, rows, scan_root=scan_root)
+        else analyze_feature(
+            feature_request,
+            rows,
+            scan_root=scan_root,
+            discovery_snapshot=discovery_snapshot,
+        )
     )
     by_repo = {row.repo_name: row for row in rows}
     feature_intents = _classify_feature_intents(feature_request)
-    discovery_by_repo = _architecture_by_repo(scan_root)
+    discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
+    workspace_root = _workspace_root(scan_root, discovery_snapshot)
     mutable_domain_update = _mutable_domain_field_update_requested(feature_request)
     domain_owner_impact = (
         _strong_backend_domain_owner(resolved_impacts, by_repo)
@@ -853,7 +879,11 @@ def create_feature_plan(
         if row is None:
             continue
 
-        repo_dir = (scan_root / impact.repo_name) if scan_root is not None else None
+        repo_dir = (
+            (workspace_root / impact.repo_name)
+            if workspace_root is not None
+            else None
+        )
         likely_paths_by_repo[impact.repo_name] = _infer_likely_paths(
             row,
             impact.role,
