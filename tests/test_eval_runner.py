@@ -15,6 +15,14 @@ def test_evaluate_expectation_supports_expected_types_and_paths() -> None:
             {
                 "repo_name": "service-a",
                 "likely_files_to_inspect": ["src/service/ProfileService.java"],
+                "files": [
+                    {
+                        "path": "src/service/ProfileService.java",
+                        "action": "modify",
+                        "confidence": "high",
+                        "reason": "Owner service update flow.",
+                    }
+                ],
                 "possible_new_files": ["new event payload class"],
             }
         ],
@@ -40,6 +48,16 @@ def test_evaluate_expectation_supports_expected_types_and_paths() -> None:
             "type": "array_contains",
             "path": "proposed_changes[].likely_files_to_inspect",
             "value": "src/service/ProfileService.java",
+        },
+        {
+            "type": "array_contains",
+            "path": "proposed_changes[].files[].path",
+            "value": "src/service/ProfileService.java",
+        },
+        {
+            "type": "array_contains",
+            "path": "proposed_changes[].files[].action",
+            "value": "modify",
         },
         {
             "type": "array_excludes_substring",

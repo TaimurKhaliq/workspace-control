@@ -16,6 +16,7 @@ from .analyze import analyze_feature
 from .models import (
     ChangeProposal,
     ChangeProposalItem,
+    FilePlan,
     FeatureImpact,
     FeaturePlan,
     InventoryRow,
@@ -234,19 +235,29 @@ def create_change_proposal(
             else None
         )
         inspect_paths = _likely_files_to_inspect(plan, row, role, discovery, repo_dir)
+        possible_new_files = _possible_new_files(
+            plan,
+            row,
+            role,
+            inspect_paths,
+            discovery,
+        )
         proposed_changes.append(
             ChangeProposalItem(
                 repo_name=repo_name,
                 role=role,
                 likely_files_to_inspect=inspect_paths,
-                likely_changes=_likely_changes(plan, row, role),
-                possible_new_files=_possible_new_files(
+                files=_build_file_plans(
                     plan,
                     row,
                     role,
                     inspect_paths,
+                    possible_new_files,
                     discovery,
+                    repo_dir,
                 ),
+                likely_changes=_likely_changes(plan, row, role),
+                possible_new_files=possible_new_files,
                 rationale=_rationale(
                     plan,
                     row,
@@ -409,6 +420,362 @@ def _likely_files_to_inspect(
         row,
         _final_inspect_paths(files, folders, discovery),
     )
+
+
+def _build_file_plans(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    role: str,
+    inspect_paths: Sequence[str],
+    possible_new_files: Sequence[str],
+    discovery: RepoDiscovery | None,
+    repo_dir: Path | None,
+) -> list[FilePlan]:
+    items: list[FilePlan] = [
+        _existing_file_plan(plan, row, path, discovery)
+        for path in inspect_paths
+    ]
+    items.extend(
+        _reference_file_plans(
+            plan,
+            row,
+            inspect_paths,
+            discovery,
+            repo_dir,
+        )
+    )
+    items.extend(
+        _new_file_plan(plan, row, role, path)
+        for path in possible_new_files
+        if _concrete_new_file_path(path)
+    )
+    return _dedupe_file_plans(items)
+
+
+def _existing_file_plan(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    path: str,
+    discovery: RepoDiscovery | None,
+) -> FilePlan:
+    grounded_tokens = _grounded_target_tokens(plan)
+    target_tokens = _grounded_target_tokens(plan)
+    tokens = _path_all_tokens(path)
+    request_tokens = _tokenize_with_camel_case(plan.feature_request)
+    direct_grounded = _path_is_grounded_source(plan, row.repo_name, path)
+    concept_match = bool(tokens & grounded_tokens) or direct_grounded
+    unrelated = _path_has_unrelated_domain(path, target_tokens)
+    path_target_match = _path_matches_target_signal(path, target_tokens)
+    group = _inspect_path_group(path)
+
+    action = "inspect"
+    confidence = "medium"
+
+    if unrelated:
+        action = "inspect-only"
+        confidence = "low"
+    elif not _path_looks_like_file(path):
+        action = "inspect"
+        confidence = "medium" if concept_match else "low"
+    elif group == "frontend":
+        if _same_domain_different_flow(path, plan, target_tokens):
+            action = "inspect"
+            confidence = "medium"
+        elif concept_match and plan.ui_change_needed:
+            action = "modify"
+            confidence = "high" if _frontend_high_confidence(path, request_tokens) else "medium"
+        else:
+            action = "inspect-only" if unrelated else "inspect"
+            confidence = "low" if unrelated else "medium"
+    elif group == "backend":
+        if _backend_modify_likely(path, plan, concept_match):
+            action = "modify"
+            confidence = "high" if direct_grounded or _backend_high_confidence(path) else "medium"
+        elif unrelated and not concept_match:
+            action = "inspect-only"
+            confidence = "low"
+        else:
+            action = "inspect"
+            confidence = "medium"
+    else:
+        if _shared_path_is_strongly_justified(path, plan):
+            action = "modify" if plan.api_change_needed else "inspect"
+            confidence = "medium"
+        elif unrelated and not concept_match:
+            action = "inspect-only"
+            confidence = "low"
+
+    if action == "modify" and confidence == "high" and not path_target_match:
+        action = "inspect"
+        confidence = "medium"
+
+    return FilePlan(
+        path=path,
+        action=action,
+        confidence=confidence,
+        reason=_existing_file_reason(
+            plan,
+            row,
+            path,
+            action=action,
+            confidence=confidence,
+            concept_match=concept_match,
+            discovery=discovery,
+        ),
+    )
+
+
+def _new_file_plan(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    role: str,
+    path: str,
+) -> FilePlan:
+    lowered = path.lower()
+    confidence = "medium"
+    if "migration" in lowered and plan.db_change_needed:
+        confidence = "high"
+    if any(token in lowered for token in ("request dto", "response dto")) and plan.api_change_needed:
+        confidence = "high"
+
+    if "request dto" in lowered:
+        reason = "API change likely needs a new request DTO to carry the updated field."
+    elif "response dto" in lowered:
+        reason = "API response shape may need a new DTO for the updated field."
+    elif "migration" in lowered:
+        reason = "Persistence change likely requires a new migration or changelog file."
+    elif "ui form component" in lowered:
+        reason = "UI update may need a new form component for the requested input flow."
+    elif "client api helper" in lowered:
+        reason = "Frontend/API integration may need a new client helper for the updated endpoint."
+    elif "event payload" in lowered:
+        reason = "Event publishing likely needs a new payload class."
+    elif "publisher" in lowered or "producer" in lowered:
+        reason = "Event flow likely needs a new publisher or producer implementation."
+    elif "consumer" in lowered or "handler" in lowered:
+        reason = "Downstream event flow may need a new consumer or handler."
+    elif _path_looks_like_file(path):
+        reason = "Strong naming evidence suggests this new file may be required."
+        confidence = "high"
+    else:
+        reason = "Planner inferred a likely new file, but the exact path remains approximate."
+
+    return FilePlan(
+        path=path,
+        action="create",
+        confidence=confidence,
+        reason=reason,
+    )
+
+
+def _concrete_new_file_path(path: str) -> bool:
+    """Only promote real path-like new-file suggestions into FilePlan objects."""
+
+    lowered = path.lower()
+    if lowered.startswith("new "):
+        return False
+    return _path_looks_like_file(path) and ("/" in path or "\\" in path)
+
+
+def _reference_file_plans(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    inspect_paths: Sequence[str],
+    discovery: RepoDiscovery | None,
+    repo_dir: Path | None,
+) -> list[FilePlan]:
+    if repo_dir is None or discovery is None or _has_ungrounded_concepts(plan):
+        return []
+
+    grounded_tokens = _grounded_target_tokens(plan)
+    if not grounded_tokens or not _has_source_grounding_for_repo(plan, row.repo_name):
+        return []
+
+    seen = set(inspect_paths)
+    categories = [
+        ("frontend", _discovery_paths(discovery, "ui")),
+        ("api", _discovery_paths(discovery, "api")),
+        ("persistence", _discovery_paths(discovery, "persistence")),
+    ]
+    candidates: list[tuple[int, str]] = []
+    for category, paths in categories:
+        for path in _existing_files_for_category(repo_dir, paths, plan, row, category):
+            if path in seen or not _path_looks_like_file(path):
+                continue
+            score = _reference_file_score(plan, path, grounded_tokens)
+            if score <= 0:
+                continue
+            candidates.append((score, path))
+
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    ordered_paths = [path for _, path in candidates]
+    ordered_paths = _cap_reference_paths(ordered_paths)
+    return [
+        _existing_file_plan(plan, row, path, discovery)
+        for path in ordered_paths
+    ]
+
+
+def _reference_file_score(
+    plan: FeaturePlan,
+    path: str,
+    grounded_tokens: set[str],
+) -> int:
+    tokens = _path_all_tokens(path)
+    if _same_domain_different_flow(path, plan, grounded_tokens):
+        return 100
+    if _same_domain_model_file(path, grounded_tokens):
+        return 90
+    if _path_has_unrelated_domain(path, grounded_tokens):
+        return 0
+    return 0
+
+
+def _cap_reference_paths(paths: Sequence[str]) -> list[str]:
+    limits = {"frontend": 1, "backend": 3, "shared": 0}
+    counts = {key: 0 for key in limits}
+    kept: list[str] = []
+    for path in paths:
+        group = _inspect_path_group(path)
+        if counts[group] >= limits[group]:
+            continue
+        counts[group] += 1
+        kept.append(path)
+    return kept
+
+
+def _same_domain_different_flow(
+    path: str,
+    plan: FeaturePlan,
+    grounded_tokens: set[str],
+) -> bool:
+    tokens = _path_all_tokens(path)
+    request_tokens = _tokenize_with_camel_case(plan.feature_request)
+    if not (tokens & grounded_tokens):
+        return False
+    return _edit_update_flow_requested(request_tokens) and bool(
+        tokens & CREATE_FLOW_FILE_TOKENS
+    )
+
+
+def _same_domain_model_file(path: str, grounded_tokens: set[str]) -> bool:
+    if _inspect_path_group(path) != "backend":
+        return False
+    tokens = _path_all_tokens(path)
+    if not (tokens & grounded_tokens):
+        return False
+    if any(
+        token in tokens
+        for token in (
+            "controller",
+            "dto",
+            "repository",
+            "request",
+            "response",
+            "rest",
+            "service",
+        )
+    ):
+        return False
+    return Path(path).suffix == ".java"
+
+
+def _path_matches_target_signal(path: str, grounded_tokens: set[str]) -> bool:
+    if not grounded_tokens:
+        return True
+    return bool(_path_all_tokens(path) & grounded_tokens)
+
+
+def _frontend_high_confidence(path: str, request_tokens: set[str]) -> bool:
+    tokens = _path_all_tokens(path)
+    if _edit_update_flow_requested(request_tokens) and tokens & EDIT_FLOW_FILE_TOKENS:
+        return True
+    if _edit_update_flow_requested(request_tokens) and tokens & CREATE_FLOW_FILE_TOKENS:
+        return False
+    if tokens & FRONTEND_SUPPORT_FILE_TOKENS:
+        return False
+    return True
+
+
+def _backend_modify_likely(path: str, plan: FeaturePlan, concept_match: bool) -> bool:
+    if not concept_match:
+        return False
+    tokens = _path_all_tokens(path)
+    if any(token in tokens for token in ("controller", "rest", "request", "response", "dto", "service")):
+        return True
+    if plan.db_change_needed and any(token in tokens for token in ("entity", "repository", "migration", "changelog")):
+        return True
+    return False
+
+
+def _backend_high_confidence(path: str) -> bool:
+    tokens = _path_all_tokens(path)
+    return any(token in tokens for token in ("controller", "rest", "request", "response", "service"))
+
+
+def _existing_file_reason(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    path: str,
+    *,
+    action: str,
+    confidence: str,
+    concept_match: bool,
+    discovery: RepoDiscovery | None,
+) -> str:
+    tokens = _path_all_tokens(path)
+    request_tokens = _tokenize_with_camel_case(plan.feature_request)
+    target_tokens = _grounded_target_tokens(plan)
+
+    if action == "inspect-only":
+        if any(token in tokens for token in ("controller", "rest")):
+            if "type" in tokens and "pet" in tokens:
+                return "Different domain REST controller; useful only as a controller pattern reference."
+            return "Different domain controller; useful only as a REST update/validation pattern reference."
+        if _inspect_path_group(path) == "frontend":
+            return "Different domain UI file; useful only as a UI pattern reference."
+        return "Useful as nearby reference context, but the requested feature points elsewhere."
+
+    if _same_domain_different_flow(path, plan, target_tokens):
+        return "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
+    if any(token in tokens for token in ("edit", "page")) and _inspect_path_group(path) == "frontend":
+        return "Feature explicitly mentions the owner edit screen, and this page likely owns the edit flow."
+    if any(token in tokens for token in ("editor", "form")) and _inspect_path_group(path) == "frontend":
+        return "Likely owner form component where telephone input and validation are handled."
+    if tokens & FRONTEND_SUPPORT_FILE_TOKENS and _inspect_path_group(path) == "frontend":
+        return "Likely shared owner client types referenced by the edit flow and API payload."
+    if any(token in tokens for token in ("controller", "rest")) and concept_match:
+        return "Owner-specific REST controller likely handles update requests for owner fields."
+    if any(token in tokens for token in ("request", "response", "dto")) and concept_match:
+        return "Likely owner API contract model carrying telephone data."
+    if "service" in tokens and concept_match:
+        return "Likely service-layer update flow for owner telephone changes."
+    if _same_domain_model_file(path, target_tokens):
+        return "Owner telephone may already exist on the domain model; inspect for validation or serialization behavior."
+    if any(token in tokens for token in ("entity", "repository")) and concept_match:
+        if plan.db_change_needed:
+            return "Likely owner domain or persistence model touched by the requested field update."
+        return "Likely owner domain model related to the update flow; inspect before changing."
+    if _shared_path_is_strongly_justified(path, plan):
+        return "Likely API contract/spec reference for the requested owner update flow."
+    if not _path_looks_like_file(path):
+        mode = "discovered" if discovery is not None else "planned"
+        return f"Likely {mode} owner-related area to inspect before editing concrete files."
+    if confidence == "high":
+        return "Strong feature, concept, and path evidence points to this file."
+    return "Likely related to the requested feature, but the exact change is not fully certain."
+
+
+def _dedupe_file_plans(items: Sequence[FilePlan]) -> list[FilePlan]:
+    seen: set[tuple[str, str]] = set()
+    ordered: list[FilePlan] = []
+    for item in items:
+        key = (item.path, item.action)
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(item)
+    return ordered
 
 
 def _likely_changes(plan: FeaturePlan, row: InventoryRow, role: str) -> list[str]:
@@ -674,7 +1041,7 @@ def _narrow_inspect_paths_for_grounded_concepts(
     row: InventoryRow,
     paths: Sequence[str],
 ) -> list[str]:
-    grounded_tokens = _grounded_concept_tokens(plan)
+    grounded_tokens = _grounded_target_tokens(plan)
     if not _should_apply_strict_grounded_filter(plan, row.repo_name, paths, grounded_tokens):
         return list(paths)
 
@@ -817,6 +1184,33 @@ def _grounded_concept_tokens(plan: FeaturePlan) -> set[str]:
             for token in _tokenize_with_camel_case(value):
                 if _useful_grounding_token(token):
                     tokens.add(token)
+    return _expand_token_variants(tokens)
+
+
+def _grounded_target_tokens(plan: FeaturePlan) -> set[str]:
+    """Return compact request-target tokens for hard path/domain guards."""
+
+    tokens: set[str] = set()
+    for grounding in getattr(plan, "concept_grounding", []):
+        if grounding.status not in {"direct_match", "alias_match"}:
+            continue
+
+        concept_tokens = {
+            token
+            for token in _tokenize_with_camel_case(grounding.concept)
+            if _useful_grounding_token(token)
+        }
+        tokens.update(concept_tokens)
+
+        for term in grounding.matched_terms:
+            for token in _tokenize_with_camel_case(term):
+                if not _useful_grounding_token(token):
+                    continue
+                if token in UNRELATED_DOMAIN_TOKENS and token not in concept_tokens:
+                    continue
+                if token in concept_tokens or grounding.status == "alias_match":
+                    tokens.add(token)
+
     return _expand_token_variants(tokens)
 
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from workspace_control.analyze import analyze_feature
 from workspace_control.cli import run
 from workspace_control.manifests import build_inventory
+from workspace_control.models import ChangeProposalItem
 from workspace_control.propose import create_change_proposal
 
 FIXTURE_ROOT = Path(__file__).parent / "fixtures" / "mixed_source_stack"
@@ -115,6 +116,10 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
         parents=True,
         exist_ok=True,
     )
+    (repo / "src/main/java/org/springframework/samples/petclinic/rest/controller").mkdir(
+        parents=True,
+        exist_ok=True,
+    )
     (repo / "src/main/java/org/springframework/samples/petclinic/pet").mkdir(
         parents=True,
         exist_ok=True,
@@ -180,13 +185,13 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
         )
 
     for relative in [
-        "pet/PetRestController.java",
-        "pet/PetTypeRestController.java",
-        "vet/VetRestController.java",
-        "visit/VisitRestController.java",
-        "specialty/SpecialtyRestController.java",
-        "root/RootRestController.java",
-        "user/UserRestController.java",
+        "rest/controller/PetRestController.java",
+        "rest/controller/PetTypeRestController.java",
+        "rest/controller/VetRestController.java",
+        "rest/controller/VisitRestController.java",
+        "rest/controller/SpecialtyRestController.java",
+        "rest/controller/RootRestController.java",
+        "rest/controller/UserRestController.java",
     ]:
         (repo / "src/main/java/org/springframework/samples/petclinic" / relative).write_text(
             "class UnrelatedController {}",
@@ -210,6 +215,7 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     for relative in [
+        "pets/NewPetPage.tsx",
         "pets/PetEditor.tsx",
         "vets/VetList.tsx",
         "visits/VisitList.tsx",
@@ -222,6 +228,10 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
 
 def _proposal_by_repo(proposal):
     return {item.repo_name: item for item in proposal.proposed_changes}
+
+
+def _file_by_path(item):
+    return {file_plan.path: file_plan for file_plan in item.files}
 
 
 def test_propose_changes_event_publishing_feature(tmp_path: Path) -> None:
@@ -403,6 +413,7 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
     proposal = create_change_proposal(feature_request, rows, scan_root=tmp_path)
     item = _proposal_by_repo(proposal)["spring-petclinic-fullstack"]
     inspect_paths = item.likely_files_to_inspect
+    files = _file_by_path(item)
     frontend_paths = [
         path for path in inspect_paths if path.startswith("client/")
     ]
@@ -420,7 +431,25 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
     assert "client/src/components/owners/EditOwnerPage.tsx" in inspect_paths
     assert "client/src/components/owners/OwnerEditor.tsx" in inspect_paths
     assert "client/src/types/index.ts" in inspect_paths
+    assert files["client/src/components/owners/EditOwnerPage.tsx"].action == "modify"
+    assert files["client/src/components/owners/EditOwnerPage.tsx"].confidence == "high"
+    assert (
+        files["client/src/components/owners/EditOwnerPage.tsx"].reason
+        == "Feature explicitly mentions the owner edit screen, and this page likely owns the edit flow."
+    )
+    assert files["client/src/components/owners/OwnerEditor.tsx"].action == "modify"
+    assert files["client/src/components/owners/OwnerEditor.tsx"].confidence == "high"
+    assert (
+        files["client/src/components/owners/OwnerEditor.tsx"].reason
+        == "Likely owner form component where telephone input and validation are handled."
+    )
     assert "client/src/components/owners/NewOwnerPage.tsx" not in inspect_paths
+    assert files["client/src/components/owners/NewOwnerPage.tsx"].action == "inspect"
+    assert files["client/src/components/owners/NewOwnerPage.tsx"].confidence == "medium"
+    assert (
+        files["client/src/components/owners/NewOwnerPage.tsx"].reason
+        == "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
+    )
     assert (
         "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java"
         in inspect_paths
@@ -433,6 +462,75 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
         "src/main/java/org/springframework/samples/petclinic/owner/OwnerRequest.java"
         in inspect_paths
     )
+    assert (
+        files[
+            "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java"
+        ].action
+        == "modify"
+    )
+    assert (
+        files[
+            "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java"
+        ].confidence
+        == "high"
+    )
+    assert (
+        files[
+            "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java"
+        ].reason
+        == "Owner-specific REST controller likely handles update requests for owner fields."
+    )
+    assert (
+        files[
+            "src/main/java/org/springframework/samples/petclinic/owner/Owner.java"
+        ].action
+        == "inspect"
+    )
+    assert (
+        files[
+            "src/main/java/org/springframework/samples/petclinic/owner/Owner.java"
+        ].confidence
+        == "medium"
+    )
+    assert (
+        files[
+            "src/main/java/org/springframework/samples/petclinic/owner/Owner.java"
+        ].reason
+        == "Owner telephone may already exist on the domain model; inspect for validation or serialization behavior."
+    )
+    mismatch_paths = [
+        "src/main/java/org/springframework/samples/petclinic/rest/controller/PetRestController.java",
+        "src/main/java/org/springframework/samples/petclinic/rest/controller/PetTypeRestController.java",
+        "client/src/components/pets/NewPetPage.tsx",
+    ]
+    for mismatch_path in mismatch_paths:
+        if mismatch_path not in files:
+            continue
+        assert files[mismatch_path].action == "inspect-only"
+        assert files[mismatch_path].confidence == "low"
+        assert "Owner-specific" not in files[mismatch_path].reason
+        assert "owner-specific" not in files[mismatch_path].reason
+    assert not any(
+        file_plan.action == "modify" and file_plan.confidence == "high"
+        for path, file_plan in files.items()
+        if (
+            "PetRestController" in path
+            or "PetTypeRestController" in path
+            or "NewPetPage" in path
+        )
+    )
+    assert not any(
+        "owner-specific" in file_plan.reason.lower()
+        for path, file_plan in files.items()
+        if "/pets/" in path.lower()
+        or "PetRestController" in Path(path).name
+        or "PetTypeRestController" in Path(path).name
+        or "NewPetPage" in Path(path).name
+    )
+    assert not any(
+        file_plan.path in {"new UI form component", "new client API helper"}
+        for file_plan in item.files
+    )
     assert len(frontend_paths) <= 4
     assert len(backend_paths) <= 5
     assert len(shared_paths) <= 2
@@ -442,6 +540,7 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
         for token in (
             "/pet/",
             "/pets/",
+            "/rest/controller/pet",
             "/root/",
             "/vet/",
             "/vets/",
@@ -459,6 +558,28 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
             "VetRestController",
             "VisitRestController",
         )
+    )
+
+
+def test_change_proposal_item_normalizes_legacy_file_strings_into_file_objects() -> None:
+    item = ChangeProposalItem.model_validate(
+        {
+            "repo_name": "service-a",
+            "role": "primary-owner",
+            "likely_files_to_inspect": ["src/service/ProfileService.java"],
+            "likely_changes": [],
+            "possible_new_files": [],
+            "rationale": "legacy",
+        }
+    )
+
+    assert len(item.files) == 1
+    assert item.files[0].path == "src/service/ProfileService.java"
+    assert item.files[0].action == "inspect"
+    assert item.files[0].confidence == "medium"
+    assert (
+        item.files[0].reason
+        == "Legacy file suggestion without detailed classification."
     )
 
 

@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class StackpilotManifest(BaseModel):
@@ -87,6 +87,15 @@ class FeaturePlan(BaseModel):
     requires_human_approval: bool = False
 
 
+class FilePlan(BaseModel):
+    """Typed file-level proposal with action and confidence classification."""
+
+    path: str
+    action: Literal["modify", "create", "inspect", "inspect-only"]
+    confidence: Literal["high", "medium", "low"]
+    reason: str
+
+
 class ChangeProposalItem(BaseModel):
     """Read-only proposed change hints for one impacted repository."""
 
@@ -98,9 +107,49 @@ class ChangeProposalItem(BaseModel):
         "weak-match",
     ]
     likely_files_to_inspect: list[str] = Field(default_factory=list)
+    files: list[FilePlan] = Field(default_factory=list)
     likely_changes: list[str] = Field(default_factory=list)
     possible_new_files: list[str] = Field(default_factory=list)
     rationale: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_legacy_file_suggestions(cls, values):
+        if not isinstance(values, dict):
+            return values
+
+        data = dict(values)
+        if not data.get("files"):
+            legacy_paths = data.get("likely_files_to_inspect", [])
+            data["files"] = [
+                {
+                    "path": path,
+                    "action": "inspect",
+                    "confidence": "medium",
+                    "reason": "Legacy file suggestion without detailed classification.",
+                }
+                for path in legacy_paths
+                if isinstance(path, str)
+            ]
+
+        if not data.get("likely_files_to_inspect"):
+            files = data.get("files", [])
+            data["likely_files_to_inspect"] = [
+                file_plan["path"] if isinstance(file_plan, dict) else file_plan.path
+                for file_plan in files
+                if (
+                    (
+                        isinstance(file_plan, dict)
+                        and file_plan.get("action") != "create"
+                    )
+                    or (
+                        not isinstance(file_plan, dict)
+                        and getattr(file_plan, "action", None) != "create"
+                    )
+                )
+            ]
+
+        return data
 
 
 class ChangeProposal(BaseModel):
