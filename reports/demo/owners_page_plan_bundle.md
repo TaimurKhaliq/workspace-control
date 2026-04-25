@@ -79,6 +79,10 @@ Inspect first:
 6. client/src/types/index.ts (inspect, medium, source=recipe)
 
 Expected change:
+- Add or update the requested page/component surface.
+- Wire it into `client/src/configureRoutes.tsx`.
+- Inspect/update frontend types only if needed in `client/src/types/index.ts`.
+- Use nearby same-domain pages like `client/src/components/owners/EditOwnerPage.tsx`, `client/src/components/owners/NewOwnerPage.tsx` as references.
 - Modify the high-confidence files that directly own the requested flow or behavior.
 - Keep frontend/UI work focused on the requested screen, page, route, or component.
 - Keep this UI-only; do not add backend/API behavior unless new code evidence requires it.

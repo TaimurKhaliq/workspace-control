@@ -156,6 +156,19 @@ def test_handoff_prompt_includes_combined_recommendation_files(tmp_path: Path) -
     assert "Keep this UI-only" in handoff.prompt
 
 
+def test_ui_page_add_handoff_prompt_uses_recipe_specific_expected_changes(tmp_path: Path) -> None:
+    bundle = _bundle_for(tmp_path, "Add OwnersPage (no actions yet)")
+    prompt = bundle.handoff_prompts[0].prompt
+
+    assert "Add or update the requested page/component surface." in prompt
+    assert "Wire it into `client/src/configureRoutes.tsx`." in prompt
+    assert "Inspect/update frontend types only if needed in `client/src/types/index.ts`." in prompt
+    assert "Use nearby same-domain pages like" in prompt
+    assert "FindOwnersPage" in prompt
+    assert "Do not overreach into unrelated domains or broad refactors." in prompt
+    assert "Keep this UI-only; do not add backend/API behavior" in prompt
+
+
 def test_recipe_fallback_caveat_appears_when_planner_native_is_empty(tmp_path: Path) -> None:
     bundle = _bundle_for(tmp_path, "Add visual feedback for invalid fields")
     messages = [risk.message for risk in bundle.risks_and_caveats]

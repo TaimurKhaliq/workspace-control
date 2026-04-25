@@ -578,7 +578,7 @@ def _handoff_prompt_text(
         f"- {recipe.recipe_id} ({recipe.recipe_type}, structural={recipe.structural_confidence:.2f}, planner={recipe.planner_effectiveness:.2f})"
         for recipe in matched_recipes[:3]
     ]
-    expected = _expected_changes(items, plan)
+    expected = _expected_changes(items, plan, matched_recipes)
     caveats = [risk.message for risk in risks if risk.severity in {"warning", "high"}][:4]
     lines = [
         f"You are working in repo: {repo_name}.",
@@ -618,8 +618,25 @@ def _handoff_prompt_text(
     return "\n".join(lines)
 
 
-def _expected_changes(items: Sequence[PlanBundleChangeItem], plan: FeaturePlan) -> list[str]:
+def _expected_changes(
+    items: Sequence[PlanBundleChangeItem],
+    plan: FeaturePlan,
+    matched_recipes: Sequence[PlanBundleRecipe],
+) -> list[str]:
     lines: list[str] = []
+    recipe_types = {recipe.recipe_type for recipe in matched_recipes}
+    if "ui_page_add" in recipe_types:
+        lines.extend(_ui_page_add_expected_changes(items))
+    if "ui_form_validation" in recipe_types:
+        lines.extend(_ui_form_validation_expected_changes(items))
+    if "ui_shell_layout" in recipe_types:
+        lines.extend(_ui_shell_expected_changes(items))
+    if "backend_search_query" in recipe_types:
+        lines.extend(_backend_search_expected_changes(items))
+    if "backend_validation_change" in recipe_types:
+        lines.extend(_backend_validation_expected_changes(items))
+    if "full_stack_ui_api" in recipe_types:
+        lines.extend(_full_stack_expected_changes(items))
     if any(item.action == "create" for item in items):
         lines.append("Add the requested new source surface only where evidence supports it.")
     if any(item.action == "modify" for item in items):
@@ -633,6 +650,94 @@ def _expected_changes(items: Sequence[PlanBundleChangeItem], plan: FeaturePlan) 
     if not lines:
         lines.append("Inspect the recommended files first and make the smallest justified change.")
     return _dedupe(lines)
+
+
+def _ui_page_add_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
+    lines = ["Add or update the requested page/component surface."]
+    route_paths = _paths_matching(items, ("route", "routes", "router", "configure"))
+    type_paths = _paths_matching(items, ("types", "type"))
+    nearby_pages = [
+        item.path
+        for item in items
+        if item.ui_section == "frontend"
+        and item.action != "create"
+        and item.node_type in {"page_component", "edit_surface", "form_component", "route_page"}
+        and "page" in item.path.lower()
+        and item.priority > 1
+    ][:3]
+    if route_paths:
+        lines.append(f"Wire it into {_join_paths(route_paths[:2])}.")
+    else:
+        lines.append("Wire it into the existing route configuration if this app uses explicit routes.")
+    if type_paths:
+        lines.append(f"Inspect/update frontend types only if needed in {_join_paths(type_paths[:2])}.")
+    if nearby_pages:
+        lines.append(f"Use nearby same-domain pages like {_join_paths(nearby_pages)} as references.")
+    return lines
+
+
+def _ui_form_validation_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
+    form_paths = _paths_by_node_type(items, {"form_component", "edit_surface", "page_component"})[:3]
+    lines = ["Update field-level validation or visual feedback on the relevant form/page surface."]
+    if form_paths:
+        lines.append(f"Start with form/page files such as {_join_paths(form_paths)}.")
+    lines.append("Avoid treating generic error or not-found pages as field-validation owners unless code evidence requires it.")
+    return lines
+
+
+def _ui_shell_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
+    shell_paths = _paths_by_node_type(items, {"app_shell", "frontend_entrypoint", "landing_page", "public_html", "static_asset"})[:5]
+    lines = ["Update the UI shell, entrypoint, landing page, and public assets only where the request calls for them."]
+    if shell_paths:
+        lines.append(f"Prioritize shell/landing surfaces such as {_join_paths(shell_paths)}.")
+    return lines
+
+
+def _backend_search_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
+    repo_paths = _paths_by_node_type(items, {"repository", "migration"})[:4]
+    service_paths = _paths_by_node_type(items, {"service_layer", "api_controller", "api_contract"})[:4]
+    lines = ["Update the search/query behavior at the repository/query surface first."]
+    if repo_paths:
+        lines.append(f"Inspect query or persistence files such as {_join_paths(repo_paths)}.")
+    if service_paths:
+        lines.append(f"Then verify service/API callers such as {_join_paths(service_paths)} only as needed.")
+    return lines
+
+
+def _backend_validation_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
+    validation_paths = _paths_by_node_type(items, {"api_dto", "domain_model", "api_controller", "api_contract"})[:4]
+    lines = ["Apply validation constraints at the narrowest request/model/API surface that owns the field."]
+    if validation_paths:
+        lines.append(f"Prioritize validation-relevant files such as {_join_paths(validation_paths)}.")
+    return lines
+
+
+def _full_stack_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
+    frontend_paths = [item.path for item in items if item.ui_section == "frontend"][:3]
+    backend_paths = [item.path for item in items if item.ui_section in {"api", "backend"}][:3]
+    lines = ["Coordinate frontend behavior with the backend/API surface, but keep each change scoped."]
+    if frontend_paths:
+        lines.append(f"Update frontend surfaces such as {_join_paths(frontend_paths)} only for the requested flow.")
+    if backend_paths:
+        lines.append(f"Update backend/API surfaces such as {_join_paths(backend_paths)} only if the contract or error handling requires it.")
+    return lines
+
+
+def _paths_matching(items: Sequence[PlanBundleChangeItem], tokens: Sequence[str]) -> list[str]:
+    lowered_tokens = tuple(token.lower() for token in tokens)
+    return [
+        item.path
+        for item in items
+        if any(token in item.path.lower() or token in item.node_type.lower() for token in lowered_tokens)
+    ]
+
+
+def _paths_by_node_type(items: Sequence[PlanBundleChangeItem], node_types: set[str]) -> list[str]:
+    return [item.path for item in items if item.node_type in node_types]
+
+
+def _join_paths(paths: Sequence[str]) -> str:
+    return ", ".join(f"`{path}`" for path in paths)
 
 
 def _validation_notes(plan: FeaturePlan) -> list[str]:

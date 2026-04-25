@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "feature_request": "Add OwnersPage (no actions yet)",
-  "generated_at": "2026-04-25T23:04:09+00:00",
+  "generated_at": "2026-04-25T23:10:13+00:00",
   "target": {
     "target_id": "petclinic-react",
     "repo_count": 1,
@@ -295,7 +295,7 @@
     {
       "repo_name": "spring-petclinic-reactjs",
       "title": "Implement: Add OwnersPage (no actions yet)",
-      "prompt": "You are working in repo: spring-petclinic-reactjs.\n\nTask:\nAdd OwnersPage (no actions yet)\n\nContext:\nThis repo has matched learned recipe evidence:\n- petclinic_react_ui_page_add (ui_page_add, structural=0.98, planner=0.05)\n\nInspect first:\n1. client/src/components/owners/OwnersPage.tsx (inspect, medium, source=recipe)\n2. client/src/configureRoutes.tsx (modify, high, source=recipe)\n3. client/src/components/owners/EditOwnerPage.tsx (inspect, medium, source=planner)\n4. client/src/components/owners/NewOwnerPage.tsx (inspect, medium, source=planner)\n5. client/src/components/owners/OwnerEditor.tsx (inspect, medium, source=planner)\n6. client/src/types/index.ts (inspect, medium, source=recipe)\n\nExpected change:\n- Modify the high-confidence files that directly own the requested flow or behavior.\n- Keep frontend/UI work focused on the requested screen, page, route, or component.\n- Keep this UI-only; do not add backend/API behavior unless new code evidence requires it.\n\nConstraints:\n- Keep the change scoped to the requested feature.\n- Do not overreach into unrelated domains or broad refactors.\n- Treat inspect-only or low-confidence files as reference material unless code evidence says otherwise.\n\nValidation:\n- ./mvnw test\n- cd client && npm test",
+      "prompt": "You are working in repo: spring-petclinic-reactjs.\n\nTask:\nAdd OwnersPage (no actions yet)\n\nContext:\nThis repo has matched learned recipe evidence:\n- petclinic_react_ui_page_add (ui_page_add, structural=0.98, planner=0.05)\n\nInspect first:\n1. client/src/components/owners/OwnersPage.tsx (inspect, medium, source=recipe)\n2. client/src/configureRoutes.tsx (modify, high, source=recipe)\n3. client/src/components/owners/EditOwnerPage.tsx (inspect, medium, source=planner)\n4. client/src/components/owners/NewOwnerPage.tsx (inspect, medium, source=planner)\n5. client/src/components/owners/OwnerEditor.tsx (inspect, medium, source=planner)\n6. client/src/types/index.ts (inspect, medium, source=recipe)\n\nExpected change:\n- Add or update the requested page/component surface.\n- Wire it into `client/src/configureRoutes.tsx`.\n- Inspect/update frontend types only if needed in `client/src/types/index.ts`.\n- Use nearby same-domain pages like `client/src/components/owners/EditOwnerPage.tsx`, `client/src/components/owners/NewOwnerPage.tsx` as references.\n- Modify the high-confidence files that directly own the requested flow or behavior.\n- Keep frontend/UI work focused on the requested screen, page, route, or component.\n- Keep this UI-only; do not add backend/API behavior unless new code evidence requires it.\n\nConstraints:\n- Keep the change scoped to the requested feature.\n- Do not overreach into unrelated domains or broad refactors.\n- Treat inspect-only or low-confidence files as reference material unless code evidence says otherwise.\n\nValidation:\n- ./mvnw test\n- cd client && npm test",
       "copy_label": "Copy prompt for Claude/Copilot/Codex",
       "recommended_files": [
         "client/src/components/owners/OwnersPage.tsx",
