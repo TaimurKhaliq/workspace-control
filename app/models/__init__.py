@@ -13,6 +13,13 @@ from .discovery import (
 from .evidence import Evidence
 from .feature_plan import FeaturePlan
 from .repo_manifest import RepoManifest
+from .repo_learning import (
+    ChangeRecipe,
+    CommitLearningObservation,
+    RecipeValidationResult,
+    RepoLearningReport,
+    RepoLearningState,
+)
 from .repo_profile import InferredRepoProfile, RepoProfileBootstrapReport
 
 __all__ = [
@@ -27,6 +34,11 @@ __all__ = [
     "MaterializedWorkspace",
     "RepoDiscovery",
     "RepoManifest",
+    "RepoLearningState",
+    "ChangeRecipe",
+    "RecipeValidationResult",
+    "CommitLearningObservation",
+    "RepoLearningReport",
     "InferredRepoProfile",
     "RepoProfileBootstrapReport",
 ]

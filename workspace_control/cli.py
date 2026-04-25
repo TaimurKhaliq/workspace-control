@@ -20,6 +20,15 @@ from app.services.repo_profile_bootstrap import (
     RepoProfileBootstrapService,
     format_repo_profile_bootstrap,
 )
+from app.services.repo_learning import (
+    DEFAULT_LEARNING_REPORT_ROOT,
+    DEFAULT_LEARNING_ROOT,
+    format_learning_status,
+    format_recipe_list,
+    print_refresh_summary,
+    RepoLearningService,
+)
+from app.services.text_normalization import tokenize_text
 
 from .analyze import analyze_feature, format_feature_analysis
 from .explain import create_feature_explanation, format_feature_explanation
@@ -309,6 +318,96 @@ def run(argv: list[str] | None = None) -> int:
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
     )
+    refresh_learning_parser = subparsers.add_parser(
+        "refresh-learning",
+        help="Refresh deterministic repo-local change recipe learning state",
+    )
+    refresh_learning_group = refresh_learning_parser.add_mutually_exclusive_group(required=True)
+    refresh_learning_group.add_argument(
+        "--target-id",
+        help="Registered discovery target id to refresh",
+    )
+    refresh_learning_group.add_argument(
+        "--all-targets",
+        action="store_true",
+        help="Refresh every registered discovery target",
+    )
+    refresh_learning_parser.add_argument("--limit", type=int, default=300)
+    refresh_learning_parser.add_argument("--max-files", type=int, default=30)
+    refresh_learning_parser.add_argument(
+        "--since-last",
+        dest="since_last",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Analyze commits since the previous learning run when possible",
+    )
+    refresh_learning_parser.add_argument("--force-full-rescan", action="store_true")
+    refresh_learning_parser.add_argument("--promote-threshold", type=int, default=2)
+    refresh_learning_parser.add_argument("--quarantine-threshold", type=int, default=3)
+    refresh_learning_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    refresh_learning_parser.add_argument(
+        "--learning-root",
+        type=Path,
+        default=DEFAULT_LEARNING_ROOT,
+        help="Path to the learning cache root",
+    )
+    refresh_learning_parser.add_argument(
+        "--report-root",
+        type=Path,
+        default=DEFAULT_LEARNING_REPORT_ROOT,
+        help="Path to the learning report root",
+    )
+    learning_status_parser = subparsers.add_parser(
+        "learning-status",
+        help="Show repo-local learning state and recipe counts",
+    )
+    learning_status_parser.add_argument("--target-id", help="Optional target id")
+    learning_status_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    learning_status_parser.add_argument(
+        "--learning-root",
+        type=Path,
+        default=DEFAULT_LEARNING_ROOT,
+        help="Path to the learning cache root",
+    )
+    learning_status_parser.add_argument(
+        "--report-root",
+        type=Path,
+        default=DEFAULT_LEARNING_REPORT_ROOT,
+        help="Path to the learning report root",
+    )
+    list_recipes_parser = subparsers.add_parser(
+        "list-change-recipes",
+        help="List learned deterministic change recipes for one target",
+    )
+    list_recipes_parser.add_argument("--target-id", required=True)
+    list_recipes_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    list_recipes_parser.add_argument(
+        "--learning-root",
+        type=Path,
+        default=DEFAULT_LEARNING_ROOT,
+        help="Path to the learning cache root",
+    )
+    list_recipes_parser.add_argument(
+        "--report-root",
+        type=Path,
+        default=DEFAULT_LEARNING_REPORT_ROOT,
+        help="Path to the learning report root",
+    )
 
     args = parser.parse_args(argv)
 
@@ -325,9 +424,56 @@ def run(argv: list[str] | None = None) -> int:
         "plan-feature",
         "propose-changes",
         "explain-feature",
+        "refresh-learning",
+        "learning-status",
+        "list-change-recipes",
     }:
         parser.print_help()
         return 1
+
+    if args.command in {"refresh-learning", "learning-status", "list-change-recipes"}:
+        service = RepoLearningService(
+            registry=DiscoveryTargetRegistry(args.registry_path),
+            learning_root=args.learning_root,
+            report_root=args.report_root,
+        )
+        try:
+            if args.command == "refresh-learning":
+                refresh_kwargs = {
+                    "limit": args.limit,
+                    "max_files": args.max_files,
+                    "since_last": args.since_last,
+                    "force_full_rescan": args.force_full_rescan,
+                    "promote_threshold": args.promote_threshold,
+                    "quarantine_threshold": args.quarantine_threshold,
+                }
+                reports = (
+                    service.refresh_all_targets(**refresh_kwargs)
+                    if args.all_targets
+                    else [service.refresh_target(args.target_id, **refresh_kwargs)]
+                )
+                print(print_refresh_summary(reports))
+                return 0 if all(report.status != "error" for report in reports) else 1
+            if args.command == "learning-status":
+                states = service.status(args.target_id)
+                recipes_by_target = {
+                    state.target_id: service.recipes_for_target(state.target_id)
+                    for state in states
+                }
+                print(format_learning_status(states, recipes_by_target))
+                return 0
+            recipes = service.recipes_for_target(args.target_id)
+            print(format_recipe_list(recipes))
+            return 0
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
 
     if args.command == "register-discovery-target":
         try:
@@ -497,6 +643,8 @@ def run(argv: list[str] | None = None) -> int:
             scan_root=effective_scan_root,
             discovery_snapshot=discovery_snapshot,
         )
+        if args.target_id:
+            explanation["recipe_evidence"] = _recipe_evidence_for_args(args)
         print(format_feature_explanation(explanation))
         return 0
 
@@ -539,3 +687,41 @@ def _discover_snapshot_for_args(args):
     else:
         target = DiscoveryTarget.local_path(args.scan_root)
     return ArchitectureDiscoveryService().discover(target)
+
+
+def _recipe_evidence_for_args(args) -> dict[str, object]:
+    """Return compact learned recipe evidence for explain-feature output."""
+
+    try:
+        service = RepoLearningService(
+            registry=DiscoveryTargetRegistry(args.registry_path),
+            learning_root=DEFAULT_LEARNING_ROOT,
+            report_root=DEFAULT_LEARNING_REPORT_ROOT,
+        )
+        recipes = service.recipes_for_target(args.target_id)
+    except Exception:
+        recipes = []
+
+    feature_tokens = tokenize_text(args.feature_description)
+    matching = [
+        recipe
+        for recipe in recipes
+        if feature_tokens & set(recipe.trigger_terms)
+    ]
+    matching.sort(key=lambda recipe: (-recipe.confidence, recipe.recipe_type, recipe.id))
+    return {
+        "available": bool(recipes),
+        "recipe_count": len(recipes),
+        "matching_recipe_count": len(matching),
+        "top_matches": [
+            {
+                "recipe_id": recipe.id,
+                "recipe_type": recipe.recipe_type,
+                "status": recipe.status,
+                "confidence": recipe.confidence,
+                "trigger_terms": recipe.trigger_terms[:6],
+                "changed_node_types": recipe.changed_node_types[:6],
+            }
+            for recipe in matching[:5]
+        ],
+    }
