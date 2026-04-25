@@ -3,11 +3,13 @@ from pathlib import Path
 
 from app.models.discovery import DiscoveryTarget, DiscoveryTargetRecord
 from app.models.repo_learning import ChangeRecipe
+from app.models.recipe_suggestion import MatchedRecipe, RecipeSuggestionReport
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.discovery_target_registry import DiscoveryTargetRegistry
 from app.services.recipe_suggester import RecipeSuggestionService
+from workspace_control.models import CombinedRecommendation, FeaturePlan, PlanRecipeMatch
 from workspace_control.plan import create_feature_plan
-from workspace_control.propose import create_change_proposal
+from workspace_control.propose import _combine_recommendations, create_change_proposal
 
 
 def _write(path: Path, text: str = "") -> None:
@@ -192,7 +194,95 @@ def test_propose_ui_page_add_includes_recipe_and_combined_recommendations(tmp_pa
     assert "client/src/components/owners/OwnersPage.tsx" in recipe_paths
     assert "client/src/configureRoutes.tsx" in recipe_paths
     assert "client/src/types/index.ts" in recipe_paths
-    assert proposal.combined_recommendations
+    combined_paths = {item.path for item in proposal.combined_recommendations}
+    assert "client/src/components/owners/OwnersPage.tsx" in combined_paths
+    assert "client/src/configureRoutes.tsx" in combined_paths
+
+
+def test_combined_recommendations_keep_direct_requested_recipe_target_with_broad_planner() -> None:
+    plan = FeaturePlan(
+        feature_request="Add OwnersPage (no actions yet)",
+        confidence="high",
+        implementation_owner="petclinic",
+        matched_recipes=[
+            PlanRecipeMatch(
+                recipe_id="petclinic_test_ui_page_add",
+                recipe_type="ui_page_add",
+                structural_confidence=0.98,
+                planner_effectiveness=0.05,
+                score=90,
+            )
+        ],
+    )
+    planner = [
+        CombinedRecommendation(
+            repo_name="petclinic",
+            path="client/src/components/owners/EditOwnerPage.tsx",
+            action="inspect",
+            confidence="medium",
+            source="planner",
+        ),
+        CombinedRecommendation(
+            repo_name="petclinic",
+            path="client/src/components/owners/NewOwnerPage.tsx",
+            action="inspect",
+            confidence="medium",
+            source="planner",
+        ),
+        CombinedRecommendation(
+            repo_name="petclinic",
+            path="client/src/components/owners/OwnerEditor.tsx",
+            action="inspect",
+            confidence="medium",
+            source="planner",
+        ),
+    ]
+    recipe = [
+        CombinedRecommendation(
+            repo_name="petclinic",
+            path="client/src/components/owners/OwnersPage.tsx",
+            action="inspect",
+            confidence="medium",
+            source="recipe",
+            evidence=[
+                "requested page/component already exists in the current source graph",
+                "file already exists in current source graph; inspect/modify rather than create",
+            ],
+            matched_recipe_id="petclinic_test_ui_page_add",
+        ),
+        CombinedRecommendation(
+            repo_name="petclinic",
+            path="client/src/configureRoutes.tsx",
+            action="modify",
+            confidence="high",
+            source="recipe",
+            evidence=["recipe commonly modifies routing/configuration when adding pages"],
+            matched_recipe_id="petclinic_test_ui_page_add",
+        ),
+    ]
+
+    recipe_report = RecipeSuggestionReport(
+        feature_request=plan.feature_request,
+        target_id="petclinic-test",
+        matched_recipes=[
+            MatchedRecipe(
+                recipe_id="petclinic_test_ui_page_add",
+                recipe_type="ui_page_add",
+                structural_confidence=0.98,
+                planner_effectiveness=0.05,
+                score=90,
+            )
+        ],
+    )
+
+    combined = _combine_recommendations(planner, recipe, plan=plan, recipe_report=recipe_report)
+    combined_paths = [item.path for item in combined]
+
+    assert "client/src/components/owners/OwnersPage.tsx" in combined_paths
+    assert "client/src/configureRoutes.tsx" in combined_paths
+    assert combined_paths.index("client/src/components/owners/OwnersPage.tsx") < combined_paths.index(
+        "client/src/components/owners/EditOwnerPage.tsx"
+    )
 
 
 def test_combined_recommendations_rank_requested_page_and_cochanges_first(tmp_path: Path) -> None:

@@ -445,6 +445,7 @@ def _combine_recommendations(
             continue
         if planner_strong and not _allow_recipe_only_addition(
             item,
+            plan=plan,
             recipe_meta=recipe_meta,
             primary_recipe_ids=primary_recipe_ids,
             recipe_only_addition_count=recipe_only_additions,
@@ -514,21 +515,50 @@ def _planner_recommendations_are_strong(
 def _allow_recipe_only_addition(
     item: CombinedRecommendation,
     *,
+    plan: FeaturePlan | None,
     recipe_meta: dict[str, dict[str, float | str]],
     primary_recipe_ids: set[str],
     recipe_only_addition_count: int,
 ) -> bool:
-    if recipe_only_addition_count >= STRONG_PLANNER_RECIPE_ADDITION_LIMIT:
-        return False
     if item.matched_recipe_id and primary_recipe_ids and item.matched_recipe_id not in primary_recipe_ids:
         return False
     meta = recipe_meta.get(item.matched_recipe_id or "", {})
     structural_confidence = float(meta.get("structural_confidence", 0.0) or 0.0)
     if structural_confidence < 0.6:
         return False
+    if _direct_requested_recipe_target(item, plan):
+        return True
+    if recipe_only_addition_count >= STRONG_PLANNER_RECIPE_ADDITION_LIMIT:
+        return False
     if item.confidence == "high":
         return True
     return item.confidence == "medium" and _recipe_supporting_recommendation(item)
+
+
+def _direct_requested_recipe_target(
+    item: CombinedRecommendation,
+    plan: FeaturePlan | None,
+) -> bool:
+    evidence_text = " | ".join(item.evidence).lower()
+    if (
+        "requested page/component already exists" in evidence_text
+        or "request explicitly names a page/component identifier" in evidence_text
+    ):
+        return True
+    if plan is None:
+        return False
+    requested = _requested_component_or_page_name(plan.feature_request)
+    if requested is None:
+        return False
+    return Path(item.path).stem.lower() == requested.lower()
+
+
+def _requested_component_or_page_name(feature_request: str) -> str | None:
+    match = re.search(
+        r"\b([A-Z][A-Za-z0-9]*(?:Page|Form|Editor|Details|Detail|List|Table|Component))\b",
+        feature_request,
+    )
+    return match.group(1) if match else None
 
 
 def _recipe_supporting_recommendation(item: CombinedRecommendation) -> bool:
@@ -539,6 +569,7 @@ def _recipe_supporting_recommendation(item: CombinedRecommendation) -> bool:
         or "frontend_type" in evidence_text
         or "frontend type" in evidence_text
         or bool(path_tokens & FRONTEND_SUPPORT_FILE_TOKENS)
+        or "requested page/component already exists" in evidence_text
         or "request explicitly names a page/component identifier" in evidence_text
     )
 
@@ -588,11 +619,17 @@ def _confidence_rank(value: str) -> int:
 def _combined_recommendation_rank(item: CombinedRecommendation) -> tuple[int, int, int, int]:
     evidence_text = " | ".join(item.evidence).lower()
     path_tokens = _path_all_tokens(item.path)
+    direct_requested = (
+        "requested page/component" in evidence_text
+        or "request explicitly names a page/component identifier" in evidence_text
+    )
     if item.source == "both":
         source_tier = 0
     elif item.source == "planner" and item.confidence == "high" and item.action in {"create", "modify"}:
         source_tier = 1
     elif item.source == "recipe" and item.confidence == "high" and item.action in {"create", "modify"}:
+        source_tier = 2
+    elif item.source == "recipe" and direct_requested:
         source_tier = 2
     elif item.source == "planner" and item.confidence == "medium":
         source_tier = 3
@@ -603,7 +640,7 @@ def _combined_recommendation_rank(item: CombinedRecommendation) -> tuple[int, in
     else:
         source_tier = 6
 
-    if "requested page/component" in evidence_text or "request explicitly names a page/component identifier" in evidence_text:
+    if direct_requested:
         purpose_tier = 0
     elif "route_config" in evidence_text:
         purpose_tier = 1
