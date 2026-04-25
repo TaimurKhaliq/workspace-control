@@ -164,6 +164,29 @@ def test_backend_search_prompt_is_not_too_vague_when_archetype_is_clear() -> Non
     assert "prompt_too_vague" not in failure["labels"]
 
 
+def test_backend_search_category_match_is_not_recipe_application_gap() -> None:
+    planner = _planner_outputs(primary_owner=None, proposed_change_count=0, feature_intents=[])
+    planner["recipe_suggestions"] = {
+        "matched_recipes": [{"recipe_id": "recipe", "recipe_type": "backend_search_query"}],
+        "predicted_files": [{"path": "repo/src/main/java/example/repository/OwnerRepository.java"}],
+        "metrics": {"exact_recall": 0.0, "category_recall": 1.0},
+    }
+    failure = debug.classify_failure(
+        _case(
+            archetype="backend_search_query",
+            prompt="owners search has been case insensitive",
+            prompt_quality="high",
+        ),
+        _replay_report(predicted_count=0),
+        _actual_diff(),
+        planner,
+        {"relevant_graph_nodes": [{"path": "src/main/java/example/OwnerRepository.java"}], "detected_frameworks": [{"repo_name": "repo"}]},
+    )
+
+    assert "recipe_application_gap" not in failure["labels"]
+    assert "exact_match_miss_but_category_match" in failure["labels"]
+
+
 def test_debug_replay_case_writes_reports_from_existing_matrix(tmp_path: Path, monkeypatch) -> None:
     report_dir = tmp_path / "case-report"
     report_dir.mkdir()

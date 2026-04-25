@@ -261,6 +261,7 @@ def collect_discovery_evidence(
         "graph_edge_count": len(graph_edges),
         "relevant_tokens": relevant_tokens[:40],
         "relevant_graph_nodes": relevant_nodes,
+        "query_surface_nodes": query_surface_nodes(graph_nodes, relevant_tokens),
         "actual_file_existence": actual_file_existence(snapshot_repo, repo_name=str(repo_name), actual_files=actual_files),
     }
 
@@ -331,9 +332,58 @@ def relevant_graph_nodes(nodes: Sequence[Any], tokens: Sequence[str]) -> list[di
                 "matched_terms": sorted(set(token_matches + path_matches))[:12],
                 "confidence": node.confidence,
                 "evidence_sources": node.evidence_sources,
+                "query_metadata": query_metadata(node),
             }
         )
     return sorted(matches, key=lambda item: (-len(item["matched_terms"]), item["node_type"], item["path"]))[:25]
+
+
+def query_surface_nodes(nodes: Sequence[Any], tokens: Sequence[str]) -> list[dict[str, Any]]:
+    """Return compact query/search graph nodes relevant to the case."""
+
+    token_set = set(tokens)
+    results: list[dict[str, Any]] = []
+    for node in nodes:
+        metadata = query_metadata(node)
+        if not metadata:
+            continue
+        node_tokens = set(getattr(node, "domain_tokens", [])) | set(compact_tokens([getattr(node, "path", "")]))
+        metadata_tokens = set(compact_tokens([value for values in metadata.values() for value in values]))
+        overlap = sorted((node_tokens | metadata_tokens) & token_set)
+        if token_set and not overlap and getattr(node, "node_type", "") != "migration":
+            continue
+        results.append(
+            {
+                "repo_name": getattr(node, "repo_name", ""),
+                "path": getattr(node, "path", ""),
+                "node_type": getattr(node, "node_type", ""),
+                "matched_terms": overlap[:12],
+                "query_metadata": metadata,
+            }
+        )
+    return sorted(
+        results,
+        key=lambda item: (
+            0 if item["node_type"] == "repository" else 1 if item["node_type"] == "migration" else 2,
+            -len(item["matched_terms"]),
+            item["path"],
+        ),
+    )[:20]
+
+
+def query_metadata(node: Any) -> dict[str, list[str]]:
+    """Extract compact query/search metadata from a graph node."""
+
+    raw_metadata = getattr(node, "metadata", {}) or {}
+    metadata: dict[str, list[str]] = {}
+    for key in ("method_names", "query_indicators", "case_insensitive_indicators", "search_terms", "table_names", "column_names"):
+        raw_value = raw_metadata.get(key)
+        if not isinstance(raw_value, str) or not raw_value:
+            continue
+        values = [value for value in raw_value.split(",") if value]
+        if values:
+            metadata[key] = values[:10]
+    return metadata
 
 
 def actual_file_existence(snapshot_repo: Path, *, repo_name: str, actual_files: Sequence[str]) -> list[dict[str, Any]]:
@@ -712,6 +762,7 @@ def format_markdown(report: dict[str, Any]) -> str:
     lines.append(f"- graph edge count: {discovery['graph_edge_count']}")
     lines.append(f"- graph node counts: `{discovery['graph_node_counts']}`")
     lines.append(f"- relevant tokens: {format_inline(discovery['relevant_tokens'][:20])}")
+    lines.extend(section_for_query_nodes(discovery.get("query_surface_nodes", [])))
     lines.extend(section_for_graph_nodes(discovery["relevant_graph_nodes"]))
     return "\n".join(lines) + "\n"
 
@@ -732,6 +783,22 @@ def section_for_graph_nodes(nodes: Sequence[dict[str, Any]]) -> list[str]:
     else:
         for node in nodes[:12]:
             lines.append(f"- `{node['path']}` ({node['node_type']}) terms={format_inline(node['matched_terms'])}")
+    return lines
+
+
+def section_for_query_nodes(nodes: Sequence[dict[str, Any]]) -> list[str]:
+    lines = ["", "## Query/Search Surface Nodes", ""]
+    if not nodes:
+        lines.append("-")
+    else:
+        for node in nodes[:12]:
+            metadata = node.get("query_metadata", {})
+            indicators = metadata.get("query_indicators", []) + metadata.get("case_insensitive_indicators", [])
+            methods = metadata.get("method_names", [])
+            lines.append(
+                f"- `{node['path']}` ({node['node_type']}) terms={format_inline(node.get('matched_terms', []))} "
+                f"methods={format_inline(methods[:4])} indicators={format_inline(indicators[:5])}"
+            )
     return lines
 
 

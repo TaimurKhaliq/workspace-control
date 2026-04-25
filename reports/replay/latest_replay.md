@@ -2,26 +2,26 @@
 
 - repo: `spring-petclinic-reactjs`
 - repo path: `eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs`
-- parent commit: `d2017b8f57050830ec8980f7b578eb272c66af67`
-- target commit: `0a36a33c0101b3aad023dbc7a6ebe440755af968`
-- prompt: Add OwnersPage (no actions yet)
+- parent commit: `df4e3a5541be895ff479c5a1e851f300cd8f8881`
+- target commit: `e7f68999bfa947cfb39601502da8c15e83285196`
+- prompt: owners search has been case insensitive
 - source repo mode: read-only; parent snapshot was materialized from `git archive` into a temporary workspace
 
 ## Summary
 
 - commands succeeded: True
-- predicted files: 5
-- actual files: 3
-- matched files: 3
-- missed files: 0
-- extra predicted files: 2
-- exact file precision: 0.60
-- exact file recall: 1.00
+- predicted files: 0
+- actual files: 1
+- matched files: 0
+- missed files: 1
+- extra predicted files: 0
+- exact file precision: 0.00
+- exact file recall: 0.00
 - folder-level matched actual files: 0
-- category precision: 1.00
-- category recall: 1.00
-- high-signal exact precision: 0.60
-- high-signal exact recall: 1.00
+- category precision: 0.00
+- category recall: 0.00
+- high-signal exact precision: 0.00
+- high-signal exact recall: 0.00
 - static asset misses: 0
 
 ## Command Results
@@ -36,86 +36,80 @@
 
 ## Planner/Propose Predictions Only
 
-- predicted files: 5
-- matched files: 3
-- missed files: 0
-- extra predicted files: 2
-- exact precision: 0.60
-- exact recall: 1.00
-- high-signal precision: 0.60
-- high-signal recall: 1.00
-- category precision: 1.00
-- category recall: 1.00
+- predicted files: 0
+- matched files: 0
+- missed files: 1
+- extra predicted files: 0
+- exact precision: 0.00
+- exact recall: 0.00
+- high-signal precision: 0.00
+- high-signal recall: 0.00
+- category precision: 0.00
+- category recall: 0.00
 - folder-level matched actual files: 0
 
 ## Recipe Suggestions Only
 
-- predicted files: 4
-- matched files: 3
+- predicted files: 7
+- matched files: 1
 - missed files: 0
-- extra predicted files: 1
-- exact precision: 0.75
+- extra predicted files: 6
+- exact precision: 0.14
 - exact recall: 1.00
-- high-signal precision: 0.75
+- high-signal precision: 0.14
 - high-signal recall: 1.00
-- category precision: 1.00
+- category precision: 0.25
 - category recall: 1.00
 - folder-level matched actual files: 0
 
 ## Combined Predictions
 
-- predicted files: 5
-- matched files: 3
+- predicted files: 7
+- matched files: 1
 - missed files: 0
-- extra predicted files: 2
-- exact precision: 0.60
+- extra predicted files: 6
+- exact precision: 0.14
 - exact recall: 1.00
-- high-signal precision: 0.60
+- high-signal precision: 0.14
 - high-signal recall: 1.00
-- category precision: 1.00
+- category precision: 0.25
 - category recall: 1.00
 - folder-level matched actual files: 0
 
 ## Recipe Suggestions
 
 - matched recipes:
-  - `petclinic_react_ui_page_add` (ui_page_add, structural=0.98, planner=0.05)
-    - why: source graph contains related domain token(s): owner, owners; request verb includes add; identifier normalization exposes page-style term(s): owner, owners, page
+  - `petclinic_react_backend_search_query` (backend_search_query, structural=0.71, planner=0.00)
+    - why: matched recipe trigger terms: case, insensitive, owners, query, search; source graph contains related domain token(s): owner, owners, query, search; request mentions search/query behavior
 
 - suggested actions:
-  - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx` (create, high, node=page_component, exists_in_parent=False, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/configureRoutes.tsx` (modify, high, node=route_config, exists_in_parent=True, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java` (modify, high, node=repository, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java` (modify, high, node=repository, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jpa/JpaOwnerRepositoryImpl.java` (modify, high, node=repository, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql` (modify, high, node=migration, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 
-- `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
-- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
-- `spring-petclinic-reactjs/client/src/components/owners/types.ts`
-- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
-- `spring-petclinic-reactjs/client/src/types/index.ts`
+-
 
 ## Actual Files
 
-- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
-- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
-- `spring-petclinic-reactjs/client/src/types/index.ts`
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
 ## Matched Files
 
-- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
-- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
-- `spring-petclinic-reactjs/client/src/types/index.ts`
+-
 
 ## Missed Files
 
--
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
 ## Extra Predicted Files
 
-- `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
-- `spring-petclinic-reactjs/client/src/components/owners/types.ts`
+-
 
 ## Folder-Level Matches
 
@@ -123,41 +117,39 @@
 
 ## Category-Level Matches
 
-- precision: 1.00
-- recall: 1.00
-- matched: `frontend_component`, `frontend_type`
-- missed: -
+- precision: 0.00
+- recall: 0.00
+- matched: -
+- missed: `migration`
 - extra predicted: -
 
 ## Exact File Scoring
 
-- precision: 0.60
-- recall: 1.00
-- predicted count: 5
-- actual count: 3
-- matched count: 3
-- missed count: 0
-- extra predicted count: 2
+- precision: 0.00
+- recall: 0.00
+- predicted count: 0
+- actual count: 1
+- matched count: 0
+- missed count: 1
+- extra predicted count: 0
 
 ## High-Signal File Scoring
 
-- precision: 0.60
-- recall: 1.00
-- predicted count: 5
-- actual count: 3
-- matched count: 3
-- missed count: 0
-- extra predicted count: 2
+- precision: 0.00
+- recall: 0.00
+- predicted count: 0
+- actual count: 1
+- matched count: 0
+- missed count: 1
+- extra predicted count: 0
 
 ## High-Signal Matched Files
 
-- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
-- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
-- `spring-petclinic-reactjs/client/src/types/index.ts`
+-
 
 ## High-Signal Missed Files
 
--
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
 ## Static Asset Misses
 

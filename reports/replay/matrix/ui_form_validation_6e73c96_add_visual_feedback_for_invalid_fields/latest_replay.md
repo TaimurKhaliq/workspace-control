@@ -83,9 +83,9 @@
     - why: matched recipe trigger terms: feedback, fields, invalid, visual; source graph contains related domain token(s): invalid; request mentions form validation or invalid-field feedback
 
 - suggested actions:
-  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 

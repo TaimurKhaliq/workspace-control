@@ -50,51 +50,46 @@
 
 ## Recipe Suggestions Only
 
-- predicted files: 6
-- matched files: 0
-- missed files: 1
+- predicted files: 7
+- matched files: 1
+- missed files: 0
 - extra predicted files: 6
-- exact precision: 0.00
-- exact recall: 0.00
-- high-signal precision: 0.00
-- high-signal recall: 0.00
-- category precision: 0.00
-- category recall: 0.00
+- exact precision: 0.14
+- exact recall: 1.00
+- high-signal precision: 0.14
+- high-signal recall: 1.00
+- category precision: 0.25
+- category recall: 1.00
 - folder-level matched actual files: 0
 
 ## Combined Predictions
 
-- predicted files: 6
-- matched files: 0
-- missed files: 1
+- predicted files: 7
+- matched files: 1
+- missed files: 0
 - extra predicted files: 6
-- exact precision: 0.00
-- exact recall: 0.00
-- high-signal precision: 0.00
-- high-signal recall: 0.00
-- category precision: 0.00
-- category recall: 0.00
+- exact precision: 0.14
+- exact recall: 1.00
+- high-signal precision: 0.14
+- high-signal recall: 1.00
+- category precision: 0.25
+- category recall: 1.00
 - folder-level matched actual files: 0
 
 ## Recipe Suggestions
 
 - matched recipes:
-  - `petclinic_react_backend_search_query` (backend_search_query, structural=0.71, planner=0.00)
-    - why: matched recipe trigger terms: been, case, has, insensitive, owners; source graph contains related domain token(s): has, owner, search; request mentions search/query behavior
-  - `petclinic_react_backend_api_change` (backend_api_change, structural=0.83, planner=0.12)
-    - why: source graph contains related domain token(s): has, owner, search; request mentions backend API surface terms; structural confidence 0.83
+  - `petclinic_react_backend_search_query` (backend_search_query, structural=0.48, planner=0.00)
+    - why: matched recipe trigger terms: case, insensitive, owners, search; source graph contains related domain token(s): owner, owners, query, search; request mentions search/query behavior
 
 - suggested actions:
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java` (modify, high, node=repository, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java` (modify, high, node=repository, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jpa/JpaOwnerRepositoryImpl.java` (modify, high, node=repository, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql` (modify, high, node=migration, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 

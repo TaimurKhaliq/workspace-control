@@ -87,20 +87,20 @@
     - why: matched recipe trigger terms: error, handling; source graph contains related domain token(s): owner; request combines UI surface terms with error/API-style change hints
 
 - suggested actions:
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/configureRoutes.tsx` (modify, high, node=route_config, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 

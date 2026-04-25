@@ -79,8 +79,8 @@
 ## Recipe Suggestions
 
 - matched recipes:
-  - `petclinic_react_backend_validation_change` (backend_validation_change, structural=0.72, planner=0.08)
-    - why: matched recipe trigger terms: validation; source graph contains related domain token(s): not, pet; request mentions backend validation or constraint terms
+  - `petclinic_react_backend_validation_change` (backend_validation_change, structural=0.72, planner=0.10)
+    - why: matched recipe trigger terms: pet; source graph contains related domain token(s): not, pet; request mentions backend validation or constraint terms
   - `petclinic_react_ui_form_validation` (ui_form_validation, structural=0.96, planner=0.00)
     - why: matched recipe trigger terms: validation; source graph contains related domain token(s): not, pet; request mentions form validation or invalid-field feedback
   - `petclinic_react_full_stack_ui_api` (full_stack_ui_api, structural=0.92, planner=0.32)
@@ -89,19 +89,19 @@
 - suggested actions:
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java` (modify, high, node=api_dto, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetResource.java` (modify, high, node=api_dto, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java` (modify, medium, node=domain_model, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Pet.java` (modify, medium, node=domain_model, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/form/Constraints.ts` (modify, medium, node=form_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/form/Constraints.ts` (modify, medium, node=form_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/form/Constraints.ts` (modify, medium, node=form_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 

@@ -84,8 +84,8 @@
 
 - suggested actions:
   - `spring-petclinic-reactjs/client/src/components/App.tsx` (modify, high, node=app_shell, exists_in_parent=True, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx` (modify, high, node=landing_page, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/main.tsx` (inspect, medium, node=frontend_entrypoint, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx` (modify, high, node=landing_page, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/public/index.html` (inspect, medium, node=public_html, exists_in_parent=True, matched_actual=exact)
 
 ## Predicted Files

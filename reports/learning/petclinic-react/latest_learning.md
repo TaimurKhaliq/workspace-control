@@ -6,13 +6,14 @@
 - previous last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - commits considered: 300
-- commits analyzed: 70
+- commits analyzed: 66
 - recipes discovered/updated: 8
-- validation results: 72
+- validation results: 67
 
 ## Recipe Counts
 
-- active: 8
+- active: 7
+- weak: 1
 
 ## Recipes
 
@@ -24,20 +25,19 @@
   - examples: 5cfd482: removed default profile and replaced with "jpa", 67ae72f: Remove public to methods from the ClinicService, 3f2d3ba: fix typo
   - promotion blocker: -
   - planner note: low planner effectiveness highlights a useful future planner improvement target
-- `petclinic_react_backend_search_query` (backend_search_query, active, structural=0.71, planner=0.00, support=3, validations=2)
-  - variants: unknown, modified:migration
+- `petclinic_react_backend_search_query` (backend_search_query, weak, structural=0.48, planner=0.00, support=1, validations=0)
+  - variants: modified:migration
   - created node types: -
-  - modified node types: unknown, migration
+  - modified node types: migration
   - cochanges: -
-  - examples: cb6bd87: Putting encoding filter first per #80, e7f6899: owners search has been case insensitive, 87d025f: fixed url for jquery-ui. There was typo "query" instaed of "jquery" and file cannot be loaded
-  - promotion blocker: -
-  - planner note: low planner effectiveness highlights a useful future planner improvement target
-- `petclinic_react_backend_validation_change` (backend_validation_change, active, structural=0.72, planner=0.08, support=12, validations=12)
-  - variants: unknown, modified:domain_model, modified:domain_model+service_layer
+  - examples: e7f6899: owners search has been case insensitive
+  - promotion blocker: needs more historical support before promotion
+- `petclinic_react_backend_validation_change` (backend_validation_change, active, structural=0.72, planner=0.10, support=10, validations=10)
+  - variants: modified:domain_model, modified:domain_model+service_layer, modified:repository+service_layer
   - created node types: frontend_component, unknown
-  - modified node types: unknown, domain_model, service_layer, api_controller, repository
+  - modified node types: domain_model, service_layer, unknown, repository, api_controller
   - cochanges: domain_model + service_layer, domain_model + unknown, service_layer + unknown
-  - examples: 34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors, 076a124: Fixes #37 with other default locale than english, 35a179f: latest versions and imports cleanup
+  - examples: 076a124: Fixes #37 with other default locale than english, 35a179f: latest versions and imports cleanup, 694390d: migrated assertion to assertJ
   - promotion blocker: -
   - planner note: low planner effectiveness highlights a useful future planner improvement target
 - `petclinic_react_full_stack_ui_api` (full_stack_ui_api, active, structural=0.92, planner=0.32, support=11, validations=11)
@@ -48,7 +48,7 @@
   - examples: 7e3cd50: Add ErrorPage, d2017b8: Add FindOwnersPage, 3f55127: Add VetsPage
   - promotion blocker: -
   - planner note: low planner effectiveness highlights a useful future planner improvement target
-- `petclinic_react_persistence_data_change` (persistence_data_change, active, structural=0.95, planner=0.10, support=19, validations=21)
+- `petclinic_react_persistence_data_change` (persistence_data_change, active, structural=0.95, planner=0.10, support=19, validations=20)
   - variants: modified:domain_model, modified:repository, created:repository; modified:repository
   - created node types: repository
   - modified node types: domain_model, repository, unknown, service_layer, migration

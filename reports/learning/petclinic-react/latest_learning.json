@@ -7,17 +7,14 @@
   "previous_last_analyzed_commit": "4a6c26d99f48d8bfac97352130b9fae4feab2509",
   "last_analyzed_commit": "4a6c26d99f48d8bfac97352130b9fae4feab2509",
   "commits_considered": 300,
-  "commits_analyzed": 70,
+  "commits_analyzed": 66,
   "recipes_discovered_or_updated": 8,
-  "validation_results": 72,
+  "validation_results": 67,
   "recipe_counts": {
-    "active": 8
+    "active": 7,
+    "weak": 1
   },
   "analyzed_commit_ids": [
-    "4c01d60b36de22110cf03f4026428d7b0bfb6b42",
-    "5cfd482edc474587cf2965750b936ee2ce871b4e",
-    "076a124e0a643e2f471f873a1b4954a12e3b08ae",
-    "67ae72f3246e4d7ee2525189555eb0c769a7a3e9",
     "74f683aaa94e8f3dd27bbcb1e9da0c62d02d3fd3",
     "35a179f88b4ba301612957f953121c85a1cdfd83",
     "cc4ae966c63610344313e6c7bf81ae7219ab8370",
@@ -252,45 +249,24 @@
       "id": "petclinic_react_backend_search_query",
       "target_id": "petclinic-react",
       "recipe_type": "backend_search_query",
-      "status": "active",
+      "status": "weak",
       "source_commits": [
-        "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
-        "e7f68999bfa947cfb39601502da8c15e83285196",
-        "87d025f854e38a27ce8046add1a5cc140a584eaa"
+        "e7f68999bfa947cfb39601502da8c15e83285196"
       ],
       "trigger_terms": [
-        "putting",
-        "encoding",
-        "filter",
-        "first",
-        "per",
-        "80",
         "owners",
         "search",
         "has",
         "been",
         "case",
-        "insensitive",
-        "fixed",
-        "url",
-        "jquery",
-        "ui",
-        "there",
-        "was",
-        "typo",
-        "query"
+        "insensitive"
       ],
       "changed_node_types": [
-        "unknown",
         "migration"
       ],
       "changed_path_patterns": [
-        "src/main/webapp/WEB-INF",
-        "*.xml",
         "src/main/resources/db/hsqldb",
-        "*.sql",
-        "src/main/webapp/WEB-INF/jsp/fragments",
-        "*.jsp"
+        "*.sql"
       ],
       "new_file_patterns": [],
       "cochange_patterns": [],
@@ -299,59 +275,40 @@
       ],
       "optional_existing_node_types": [],
       "observed_variants": [
-        "unknown",
         "modified:migration"
       ],
       "changed_node_type_counts": {
-        "unknown": 2,
         "migration": 1
       },
       "changed_path_pattern_counts": {
-        "*.jsp": 1,
         "*.sql": 1,
-        "*.xml": 1,
-        "src/main/resources/db/hsqldb": 1,
-        "src/main/webapp/WEB-INF": 1,
-        "src/main/webapp/WEB-INF/jsp/fragments": 1
+        "src/main/resources/db/hsqldb": 1
       },
       "created_file_pattern_counts": {},
       "cochange_counts": {},
       "created_node_types": [],
       "modified_node_types": [
-        "unknown",
         "migration"
       ],
       "deleted_node_types": [],
-      "unknown_changed_file_count": 2,
-      "unknown_path_patterns": [
-        "src/main/webapp/WEB-INF",
-        "*.xml",
-        "src/main/webapp/WEB-INF/jsp/fragments",
-        "*.jsp"
-      ],
-      "unclassified_examples": [
-        "src/main/webapp/WEB-INF/web.xml",
-        "src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
-      ],
+      "unknown_changed_file_count": 0,
+      "unknown_path_patterns": [],
+      "unclassified_examples": [],
       "example_commits": [
-        "cb6bd87: Putting encoding filter first per #80",
-        "e7f6899: owners search has been case insensitive",
-        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+        "e7f6899: owners search has been case insensitive"
       ],
-      "confidence": 0.71,
-      "structural_confidence": 0.71,
+      "confidence": 0.48,
+      "structural_confidence": 0.48,
       "planner_effectiveness": 0.0,
-      "support_count": 3,
-      "validation_count": 2,
+      "support_count": 1,
+      "validation_count": 0,
       "success_count": 0,
       "partial_count": 0,
-      "failure_count": 2,
-      "last_seen_commit": "87d025f854e38a27ce8046add1a5cc140a584eaa",
-      "promotion_blocker": null,
+      "failure_count": 0,
+      "last_seen_commit": "e7f68999bfa947cfb39601502da8c15e83285196",
+      "promotion_blocker": "needs more historical support before promotion",
       "evidence": [
-        "cb6bd87: Putting encoding filter first per #80",
-        "e7f6899: owners search has been case insensitive",
-        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+        "e7f6899: owners search has been case insensitive"
       ]
     },
     {
@@ -360,11 +317,9 @@
       "recipe_type": "backend_validation_change",
       "status": "active",
       "source_commits": [
-        "34d8ca46ac9add81362532e41461ceb52aa67fbc",
         "076a124e0a643e2f471f873a1b4954a12e3b08ae",
         "35a179f88b4ba301612957f953121c85a1cdfd83",
         "694390d0c2d80624f499ba4feea3ab1d598f009d",
-        "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
         "4bb829cbd1026ec10dc685277467d30523c90b95",
         "ad3d322fc69061d5009460689edfda09af0b53ce",
         "eb6f9343ad05d014e30b39f17f88d28ec7cecba6",
@@ -374,18 +329,6 @@
         "1a85b44f8162bcdb8ff3908957f0c659a389bbac"
       ],
       "trigger_terms": [
-        "chaining",
-        "validation",
-        "so",
-        "we",
-        "can",
-        "see",
-        "multiple",
-        "error",
-        "messages",
-        "when",
-        "there",
-        "are",
         "fixes",
         "37",
         "other",
@@ -393,26 +336,38 @@
         "locale",
         "than",
         "english",
-        "latest"
+        "latest",
+        "versions",
+        "imports",
+        "cleanup",
+        "migrated",
+        "assertion",
+        "assertj",
+        "fix",
+        "101",
+        "display",
+        "pet",
+        "type",
+        "when"
       ],
       "changed_node_types": [
-        "unknown",
         "domain_model",
         "service_layer",
-        "api_controller",
+        "unknown",
         "repository",
+        "api_controller",
         "frontend_component",
         "static_asset",
         "api_dto"
       ],
       "changed_path_patterns": [
-        "src/main/java/org/springframework/samples/petclinic/web",
-        "*.java",
         "src/test/java/org/springframework/samples/petclinic/model",
+        "*.java",
         "*.xml",
         "src/main/java/org/springframework/samples/petclinic/model",
         "src/test/java/org/springframework/samples/petclinic/service",
         "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
+        "src/main/java/org/springframework/samples/petclinic/web",
         "*.json",
         "src/main/webapp/WEB-INF/tags",
         "*.tag",
@@ -442,11 +397,11 @@
         "domain_model + service_layer",
         "domain_model + unknown",
         "service_layer + unknown",
-        "api_controller + unknown",
         "repository + service_layer",
         "repository + unknown",
         "api_controller + domain_model",
         "api_controller + service_layer",
+        "api_controller + unknown",
         "frontend_component + static_asset",
         "frontend_component + unknown",
         "static_asset + unknown"
@@ -456,17 +411,15 @@
         "service_layer"
       ],
       "optional_existing_node_types": [
-        "api_controller",
         "api_dto",
+        "api_controller",
         "frontend_component",
         "repository",
         "static_asset"
       ],
       "observed_variants": [
-        "unknown",
         "modified:domain_model",
         "modified:domain_model+service_layer",
-        "modified:api_controller",
         "modified:repository+service_layer",
         "modified:api_controller+domain_model+service_layer",
         "created:frontend_component; deleted:static_asset",
@@ -474,21 +427,21 @@
       ],
       "changed_node_type_counts": {
         "domain_model": 6,
-        "unknown": 6,
+        "unknown": 4,
         "service_layer": 3,
-        "api_controller": 2,
         "api_dto": 2,
+        "api_controller": 1,
         "frontend_component": 1,
         "repository": 1,
         "static_asset": 1
       },
       "changed_path_pattern_counts": {
-        "*.java": 11,
+        "*.java": 9,
         "src/main/java/org/springframework/samples/petclinic/model": 4,
-        "src/main/java/org/springframework/samples/petclinic/web": 4,
         "src/test/java/org/springframework/samples/petclinic/model": 3,
         "src/test/java/org/springframework/samples/petclinic/service": 3,
         "*.xml": 2,
+        "src/main/java/org/springframework/samples/petclinic/web": 2,
         "src/main/java/org/springframework/samples/petclinic/web/api": 2,
         "*.css": 1,
         "*.eot": 1,
@@ -532,11 +485,11 @@
       },
       "cochange_counts": {
         "service_layer + unknown": 3,
-        "api_controller + unknown": 2,
         "domain_model + service_layer": 2,
         "domain_model + unknown": 2,
         "api_controller + domain_model": 1,
         "api_controller + service_layer": 1,
+        "api_controller + unknown": 1,
         "frontend_component + static_asset": 1,
         "frontend_component + unknown": 1,
         "repository + service_layer": 1,
@@ -548,22 +501,22 @@
         "unknown"
       ],
       "modified_node_types": [
-        "unknown",
         "domain_model",
         "service_layer",
-        "api_controller",
+        "unknown",
         "repository",
+        "api_controller",
         "api_dto"
       ],
       "deleted_node_types": [
         "static_asset",
         "unknown"
       ],
-      "unknown_changed_file_count": 352,
+      "unknown_changed_file_count": 350,
       "unknown_path_patterns": [
+        "*.xml",
         "src/main/java/org/springframework/samples/petclinic/web",
         "*.java",
-        "*.xml",
         "*.json",
         "src/main/webapp/WEB-INF/tags",
         "*.tag",
@@ -583,8 +536,8 @@
         "src/main/webapp/vendors/bootstrap/less/mixins"
       ],
       "unclassified_examples": [
-        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
         "pom.xml",
+        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
         ".bowerrc",
         "bower.json",
         "src/main/webapp/WEB-INF/tags/footer.tag",
@@ -605,11 +558,9 @@
         "src/main/webapp/vendors/bootstrap/less/alerts.less"
       ],
       "example_commits": [
-        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
         "076a124: Fixes #37 with other default locale than english",
         "35a179f: latest versions and imports cleanup",
         "694390d: migrated assertion to assertJ",
-        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
         "4bb829c: Fix #101 display the pet type when using the JDBC profile",
         "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
         "eb6f934: migrate to webjars for frontend resource management",
@@ -618,22 +569,20 @@
         "c758321: add regex validation for string input",
         "1a85b44: fix regex validation issue for string input"
       ],
-      "confidence": 0.723,
-      "structural_confidence": 0.723,
-      "planner_effectiveness": 0.0833,
-      "support_count": 12,
-      "validation_count": 12,
+      "confidence": 0.7223,
+      "structural_confidence": 0.7223,
+      "planner_effectiveness": 0.1,
+      "support_count": 10,
+      "validation_count": 10,
       "success_count": 0,
       "partial_count": 2,
-      "failure_count": 10,
+      "failure_count": 8,
       "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
       "promotion_blocker": null,
       "evidence": [
-        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
         "076a124: Fixes #37 with other default locale than english",
         "35a179f: latest versions and imports cleanup",
         "694390d: migrated assertion to assertJ",
-        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
         "4bb829c: Fix #101 display the pet type when using the JDBC profile",
         "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
         "eb6f934: migrate to webjars for frontend resource management",
@@ -1114,12 +1063,12 @@
       ],
       "confidence": 0.95,
       "structural_confidence": 0.95,
-      "planner_effectiveness": 0.0952,
+      "planner_effectiveness": 0.1,
       "support_count": 19,
-      "validation_count": 21,
+      "validation_count": 20,
       "success_count": 0,
       "partial_count": 4,
-      "failure_count": 17,
+      "failure_count": 16,
       "last_seen_commit": "da38a764b83fcf7f28c2a934c49ab9447f66365c",
       "promotion_blocker": null,
       "evidence": [
@@ -1759,45 +1708,24 @@
       "id": "petclinic_react_backend_search_query",
       "target_id": "petclinic-react",
       "recipe_type": "backend_search_query",
-      "status": "active",
+      "status": "weak",
       "source_commits": [
-        "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
-        "e7f68999bfa947cfb39601502da8c15e83285196",
-        "87d025f854e38a27ce8046add1a5cc140a584eaa"
+        "e7f68999bfa947cfb39601502da8c15e83285196"
       ],
       "trigger_terms": [
-        "putting",
-        "encoding",
-        "filter",
-        "first",
-        "per",
-        "80",
         "owners",
         "search",
         "has",
         "been",
         "case",
-        "insensitive",
-        "fixed",
-        "url",
-        "jquery",
-        "ui",
-        "there",
-        "was",
-        "typo",
-        "query"
+        "insensitive"
       ],
       "changed_node_types": [
-        "unknown",
         "migration"
       ],
       "changed_path_patterns": [
-        "src/main/webapp/WEB-INF",
-        "*.xml",
         "src/main/resources/db/hsqldb",
-        "*.sql",
-        "src/main/webapp/WEB-INF/jsp/fragments",
-        "*.jsp"
+        "*.sql"
       ],
       "new_file_patterns": [],
       "cochange_patterns": [],
@@ -1806,59 +1734,40 @@
       ],
       "optional_existing_node_types": [],
       "observed_variants": [
-        "unknown",
         "modified:migration"
       ],
       "changed_node_type_counts": {
-        "unknown": 2,
         "migration": 1
       },
       "changed_path_pattern_counts": {
-        "*.jsp": 1,
         "*.sql": 1,
-        "*.xml": 1,
-        "src/main/resources/db/hsqldb": 1,
-        "src/main/webapp/WEB-INF": 1,
-        "src/main/webapp/WEB-INF/jsp/fragments": 1
+        "src/main/resources/db/hsqldb": 1
       },
       "created_file_pattern_counts": {},
       "cochange_counts": {},
       "created_node_types": [],
       "modified_node_types": [
-        "unknown",
         "migration"
       ],
       "deleted_node_types": [],
-      "unknown_changed_file_count": 2,
-      "unknown_path_patterns": [
-        "src/main/webapp/WEB-INF",
-        "*.xml",
-        "src/main/webapp/WEB-INF/jsp/fragments",
-        "*.jsp"
-      ],
-      "unclassified_examples": [
-        "src/main/webapp/WEB-INF/web.xml",
-        "src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
-      ],
+      "unknown_changed_file_count": 0,
+      "unknown_path_patterns": [],
+      "unclassified_examples": [],
       "example_commits": [
-        "cb6bd87: Putting encoding filter first per #80",
-        "e7f6899: owners search has been case insensitive",
-        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+        "e7f6899: owners search has been case insensitive"
       ],
-      "confidence": 0.71,
-      "structural_confidence": 0.71,
+      "confidence": 0.48,
+      "structural_confidence": 0.48,
       "planner_effectiveness": 0.0,
-      "support_count": 3,
-      "validation_count": 2,
+      "support_count": 1,
+      "validation_count": 0,
       "success_count": 0,
       "partial_count": 0,
-      "failure_count": 2,
-      "last_seen_commit": "87d025f854e38a27ce8046add1a5cc140a584eaa",
-      "promotion_blocker": null,
+      "failure_count": 0,
+      "last_seen_commit": "e7f68999bfa947cfb39601502da8c15e83285196",
+      "promotion_blocker": "needs more historical support before promotion",
       "evidence": [
-        "cb6bd87: Putting encoding filter first per #80",
-        "e7f6899: owners search has been case insensitive",
-        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+        "e7f6899: owners search has been case insensitive"
       ]
     },
     {
@@ -1867,11 +1776,9 @@
       "recipe_type": "backend_validation_change",
       "status": "active",
       "source_commits": [
-        "34d8ca46ac9add81362532e41461ceb52aa67fbc",
         "076a124e0a643e2f471f873a1b4954a12e3b08ae",
         "35a179f88b4ba301612957f953121c85a1cdfd83",
         "694390d0c2d80624f499ba4feea3ab1d598f009d",
-        "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
         "4bb829cbd1026ec10dc685277467d30523c90b95",
         "ad3d322fc69061d5009460689edfda09af0b53ce",
         "eb6f9343ad05d014e30b39f17f88d28ec7cecba6",
@@ -1881,18 +1788,6 @@
         "1a85b44f8162bcdb8ff3908957f0c659a389bbac"
       ],
       "trigger_terms": [
-        "chaining",
-        "validation",
-        "so",
-        "we",
-        "can",
-        "see",
-        "multiple",
-        "error",
-        "messages",
-        "when",
-        "there",
-        "are",
         "fixes",
         "37",
         "other",
@@ -1900,26 +1795,38 @@
         "locale",
         "than",
         "english",
-        "latest"
+        "latest",
+        "versions",
+        "imports",
+        "cleanup",
+        "migrated",
+        "assertion",
+        "assertj",
+        "fix",
+        "101",
+        "display",
+        "pet",
+        "type",
+        "when"
       ],
       "changed_node_types": [
-        "unknown",
         "domain_model",
         "service_layer",
-        "api_controller",
+        "unknown",
         "repository",
+        "api_controller",
         "frontend_component",
         "static_asset",
         "api_dto"
       ],
       "changed_path_patterns": [
-        "src/main/java/org/springframework/samples/petclinic/web",
-        "*.java",
         "src/test/java/org/springframework/samples/petclinic/model",
+        "*.java",
         "*.xml",
         "src/main/java/org/springframework/samples/petclinic/model",
         "src/test/java/org/springframework/samples/petclinic/service",
         "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
+        "src/main/java/org/springframework/samples/petclinic/web",
         "*.json",
         "src/main/webapp/WEB-INF/tags",
         "*.tag",
@@ -1949,11 +1856,11 @@
         "domain_model + service_layer",
         "domain_model + unknown",
         "service_layer + unknown",
-        "api_controller + unknown",
         "repository + service_layer",
         "repository + unknown",
         "api_controller + domain_model",
         "api_controller + service_layer",
+        "api_controller + unknown",
         "frontend_component + static_asset",
         "frontend_component + unknown",
         "static_asset + unknown"
@@ -1963,17 +1870,15 @@
         "service_layer"
       ],
       "optional_existing_node_types": [
-        "api_controller",
         "api_dto",
+        "api_controller",
         "frontend_component",
         "repository",
         "static_asset"
       ],
       "observed_variants": [
-        "unknown",
         "modified:domain_model",
         "modified:domain_model+service_layer",
-        "modified:api_controller",
         "modified:repository+service_layer",
         "modified:api_controller+domain_model+service_layer",
         "created:frontend_component; deleted:static_asset",
@@ -1981,21 +1886,21 @@
       ],
       "changed_node_type_counts": {
         "domain_model": 6,
-        "unknown": 6,
+        "unknown": 4,
         "service_layer": 3,
-        "api_controller": 2,
         "api_dto": 2,
+        "api_controller": 1,
         "frontend_component": 1,
         "repository": 1,
         "static_asset": 1
       },
       "changed_path_pattern_counts": {
-        "*.java": 11,
+        "*.java": 9,
         "src/main/java/org/springframework/samples/petclinic/model": 4,
-        "src/main/java/org/springframework/samples/petclinic/web": 4,
         "src/test/java/org/springframework/samples/petclinic/model": 3,
         "src/test/java/org/springframework/samples/petclinic/service": 3,
         "*.xml": 2,
+        "src/main/java/org/springframework/samples/petclinic/web": 2,
         "src/main/java/org/springframework/samples/petclinic/web/api": 2,
         "*.css": 1,
         "*.eot": 1,
@@ -2039,11 +1944,11 @@
       },
       "cochange_counts": {
         "service_layer + unknown": 3,
-        "api_controller + unknown": 2,
         "domain_model + service_layer": 2,
         "domain_model + unknown": 2,
         "api_controller + domain_model": 1,
         "api_controller + service_layer": 1,
+        "api_controller + unknown": 1,
         "frontend_component + static_asset": 1,
         "frontend_component + unknown": 1,
         "repository + service_layer": 1,
@@ -2055,22 +1960,22 @@
         "unknown"
       ],
       "modified_node_types": [
-        "unknown",
         "domain_model",
         "service_layer",
-        "api_controller",
+        "unknown",
         "repository",
+        "api_controller",
         "api_dto"
       ],
       "deleted_node_types": [
         "static_asset",
         "unknown"
       ],
-      "unknown_changed_file_count": 352,
+      "unknown_changed_file_count": 350,
       "unknown_path_patterns": [
+        "*.xml",
         "src/main/java/org/springframework/samples/petclinic/web",
         "*.java",
-        "*.xml",
         "*.json",
         "src/main/webapp/WEB-INF/tags",
         "*.tag",
@@ -2090,8 +1995,8 @@
         "src/main/webapp/vendors/bootstrap/less/mixins"
       ],
       "unclassified_examples": [
-        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
         "pom.xml",
+        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
         ".bowerrc",
         "bower.json",
         "src/main/webapp/WEB-INF/tags/footer.tag",
@@ -2112,11 +2017,9 @@
         "src/main/webapp/vendors/bootstrap/less/alerts.less"
       ],
       "example_commits": [
-        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
         "076a124: Fixes #37 with other default locale than english",
         "35a179f: latest versions and imports cleanup",
         "694390d: migrated assertion to assertJ",
-        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
         "4bb829c: Fix #101 display the pet type when using the JDBC profile",
         "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
         "eb6f934: migrate to webjars for frontend resource management",
@@ -2125,22 +2028,20 @@
         "c758321: add regex validation for string input",
         "1a85b44: fix regex validation issue for string input"
       ],
-      "confidence": 0.723,
-      "structural_confidence": 0.723,
-      "planner_effectiveness": 0.0833,
-      "support_count": 12,
-      "validation_count": 12,
+      "confidence": 0.7223,
+      "structural_confidence": 0.7223,
+      "planner_effectiveness": 0.1,
+      "support_count": 10,
+      "validation_count": 10,
       "success_count": 0,
       "partial_count": 2,
-      "failure_count": 10,
+      "failure_count": 8,
       "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
       "promotion_blocker": null,
       "evidence": [
-        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
         "076a124: Fixes #37 with other default locale than english",
         "35a179f: latest versions and imports cleanup",
         "694390d: migrated assertion to assertJ",
-        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
         "4bb829c: Fix #101 display the pet type when using the JDBC profile",
         "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
         "eb6f934: migrate to webjars for frontend resource management",
@@ -2621,12 +2522,12 @@
       ],
       "confidence": 0.95,
       "structural_confidence": 0.95,
-      "planner_effectiveness": 0.0952,
+      "planner_effectiveness": 0.1,
       "support_count": 19,
-      "validation_count": 21,
+      "validation_count": 20,
       "success_count": 0,
       "partial_count": 4,
-      "failure_count": 17,
+      "failure_count": 16,
       "last_seen_commit": "da38a764b83fcf7f28c2a934c49ab9447f66365c",
       "promotion_blocker": null,
       "evidence": [
@@ -2645,7 +2546,74 @@
       ]
     }
   ],
-  "stale_or_quarantined_recipes": [],
+  "stale_or_quarantined_recipes": [
+    {
+      "id": "petclinic_react_backend_search_query",
+      "target_id": "petclinic-react",
+      "recipe_type": "backend_search_query",
+      "status": "weak",
+      "source_commits": [
+        "e7f68999bfa947cfb39601502da8c15e83285196"
+      ],
+      "trigger_terms": [
+        "owners",
+        "search",
+        "has",
+        "been",
+        "case",
+        "insensitive"
+      ],
+      "changed_node_types": [
+        "migration"
+      ],
+      "changed_path_patterns": [
+        "src/main/resources/db/hsqldb",
+        "*.sql"
+      ],
+      "new_file_patterns": [],
+      "cochange_patterns": [],
+      "required_existing_node_types": [
+        "migration"
+      ],
+      "optional_existing_node_types": [],
+      "observed_variants": [
+        "modified:migration"
+      ],
+      "changed_node_type_counts": {
+        "migration": 1
+      },
+      "changed_path_pattern_counts": {
+        "*.sql": 1,
+        "src/main/resources/db/hsqldb": 1
+      },
+      "created_file_pattern_counts": {},
+      "cochange_counts": {},
+      "created_node_types": [],
+      "modified_node_types": [
+        "migration"
+      ],
+      "deleted_node_types": [],
+      "unknown_changed_file_count": 0,
+      "unknown_path_patterns": [],
+      "unclassified_examples": [],
+      "example_commits": [
+        "e7f6899: owners search has been case insensitive"
+      ],
+      "confidence": 0.48,
+      "structural_confidence": 0.48,
+      "planner_effectiveness": 0.0,
+      "support_count": 1,
+      "validation_count": 0,
+      "success_count": 0,
+      "partial_count": 0,
+      "failure_count": 0,
+      "last_seen_commit": "e7f68999bfa947cfb39601502da8c15e83285196",
+      "promotion_blocker": "needs more historical support before promotion",
+      "evidence": [
+        "e7f6899: owners search has been case insensitive"
+      ]
+    }
+  ],
   "reports": {
     "json": "reports/learning/petclinic-react/latest_learning.json",
     "markdown": "reports/learning/petclinic-react/latest_learning.md"

@@ -78,6 +78,56 @@ def test_source_graph_spring_pack_classifies_backend_surfaces(tmp_path: Path) ->
     assert "repository" in node_types
 
 
+def test_source_graph_extracts_repository_query_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "clinic-service"
+    _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")
+    _write(
+        repo / "src/main/java/com/example/clinic/OwnerRepository.java",
+        """
+        interface OwnerRepository {
+            @Query("select owner from Owner owner where lower(owner.lastName) like lower(:lastName)")
+            java.util.Collection<Owner> findByLastName(String lastName);
+        }
+        """,
+    )
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    assert snapshot.source_graph is not None
+    node = next(
+        node
+        for node in snapshot.source_graph.nodes
+        if node.path == "src/main/java/com/example/clinic/OwnerRepository.java"
+    )
+
+    assert node.node_type == "repository"
+    assert "findByLastName" in node.metadata["method_names"]
+    assert "findby" in node.metadata["query_indicators"]
+    assert "lower" in node.metadata["case_insensitive_indicators"]
+    assert "owner" in node.metadata["search_terms"]
+
+
+def test_source_graph_extracts_sql_case_insensitive_migration_metadata(tmp_path: Path) -> None:
+    repo = tmp_path / "clinic-service"
+    _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")
+    _write(
+        repo / "src/main/resources/db/hsqldb/initDB.sql",
+        "CREATE TABLE owners (id INTEGER, last_name VARCHAR_IGNORECASE(30));\n",
+    )
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    assert snapshot.source_graph is not None
+    node = next(
+        node
+        for node in snapshot.source_graph.nodes
+        if node.path == "src/main/resources/db/hsqldb/initDB.sql"
+    )
+
+    assert node.node_type == "migration"
+    assert "owners" in node.metadata["table_names"]
+    assert "last_name" in node.metadata["column_names"]
+    assert "varchar_ignorecase" in node.metadata["case_insensitive_indicators"]
+
+
 def test_source_graph_spring_pack_does_not_classify_mappers_as_domain_models(tmp_path: Path) -> None:
     repo = tmp_path / "clinic-service"
     _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")

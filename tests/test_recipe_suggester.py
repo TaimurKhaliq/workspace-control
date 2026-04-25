@@ -30,10 +30,27 @@ def _seed_workspace(tmp_path: Path, *, include_owners_page: bool = False) -> tup
     _write(repo / "client/src/types/index.ts", "export interface Owner { id: string }\n")
     if include_owners_page:
         _write(repo / "client/src/components/owners/OwnersPage.tsx", "export function OwnersPage() { return null; }\n")
-    _write(repo / "src/main/java/example/rest/OwnerRestController.java", "class OwnerRestController {}\n")
+    _write(
+        repo / "src/main/java/example/rest/OwnerRestController.java",
+        "class OwnerRestController { void searchOwners(String lastName) {} }\n",
+    )
     _write(repo / "src/main/java/example/web/api/OwnerRequest.java", "class OwnerRequest {}\n")
-    _write(repo / "src/main/java/example/service/ClinicService.java", "class ClinicService {}\n")
-    _write(repo / "src/main/java/example/repository/OwnerRepository.java", "class OwnerRepository {}\n")
+    _write(
+        repo / "src/main/java/example/service/ClinicService.java",
+        "class ClinicService { java.util.Collection<Owner> findOwnersByLastName(String lastName) { return null; } }\n",
+    )
+    _write(
+        repo / "src/main/java/example/repository/OwnerRepository.java",
+        "interface OwnerRepository { @Query(\"select owner from Owner owner where lower(owner.lastName) like lower(:lastName)\") java.util.Collection<Owner> findByLastName(String lastName); }\n",
+    )
+    _write(
+        repo / "src/main/java/example/repository/PetRepository.java",
+        "interface PetRepository { java.util.Collection<Pet> findByName(String name); }\n",
+    )
+    _write(
+        repo / "src/main/resources/db/hsqldb/initDB.sql",
+        "CREATE TABLE owners (id INTEGER, last_name VARCHAR_IGNORECASE(30));\n",
+    )
     _write(repo / "src/main/java/example/model/Owner.java", "class Owner {}\n")
     return workspace, repo
 
@@ -209,6 +226,26 @@ def test_backend_search_query_suggests_repository_service_controller_nodes(tmp_p
     assert "repository" in node_types
     assert "service_layer" in node_types
     assert "api_controller" in node_types
+
+
+def test_backend_search_query_ranks_owner_repository_and_migration_surface(tmp_path: Path) -> None:
+    report = _service(tmp_path).suggest("petclinic-test", "Owners search has been case insensitive")
+
+    suggested_paths = [action.suggested_path for action in report.suggestions]
+    assert "src/main/java/example/repository/OwnerRepository.java" in suggested_paths
+    assert "src/main/resources/db/hsqldb/initDB.sql" in suggested_paths
+    if "src/main/java/example/repository/PetRepository.java" in suggested_paths:
+        assert suggested_paths.index("src/main/java/example/repository/OwnerRepository.java") < suggested_paths.index(
+            "src/main/java/example/repository/PetRepository.java"
+        )
+    owner_action = next(
+        action
+        for action in report.suggestions
+        if action.suggested_path == "src/main/java/example/repository/OwnerRepository.java"
+    )
+    evidence = " | ".join(owner_action.evidence)
+    assert "query indicator" in evidence
+    assert "case-insensitive indicator" in evidence
 
 
 def test_backend_validation_change_suggests_validation_backend_nodes(tmp_path: Path) -> None:

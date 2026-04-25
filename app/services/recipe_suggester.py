@@ -21,15 +21,17 @@ from app.services.feature_intent_classifier import FeatureIntentClassifier
 from app.services.repo_learning import DEFAULT_LEARNING_REPORT_ROOT, DEFAULT_LEARNING_ROOT, RepoLearningService
 from app.services.text_normalization import normalize_text, split_identifiers, tokenize_text
 
-ACTIVE_RECIPE_STATUSES = {"active", "candidate"}
+ACTIVE_RECIPE_STATUSES = {"active", "candidate", "weak"}
 REQUEST_STOPWORDS = {
     "a",
     "action",
     "actions",
     "allow",
     "and",
+    "been",
     "for",
     "from",
+    "has",
     "in",
     "new",
     "no",
@@ -39,7 +41,7 @@ REQUEST_STOPWORDS = {
     "to",
     "yet",
 }
-NOISY_TRIGGER_TERMS = {"action", "actions", "yet"}
+NOISY_TRIGGER_TERMS = {"action", "actions", "been", "has", "yet"}
 PAGE_SUFFIXES = ("Page", "Form", "Editor", "Details", "Detail", "List", "Table")
 UI_PAGE_TERMS = {"page", "screen", "view"}
 UI_CREATE_TERMS = {"add", "create", "new"}
@@ -59,6 +61,7 @@ BACKEND_VALIDATION_TERMS = {
     "validation",
 }
 SEARCH_QUERY_TERMS = {"case", "caseinsensitive", "filter", "find", "insensitive", "lookup", "query", "search"}
+CASE_INSENSITIVE_TERMS = {"caseinsensitive", "ignorecase", "insensitive", "lower", "upper"}
 PERSISTENCE_TERMS = {"database", "entity", "field", "migration", "model", "persist", "repository", "store"}
 PERSISTENCE_STRONG_TERMS = {"database", "entity", "migration", "model", "persist", "repository", "store"}
 FULL_STACK_TERMS = {"error", "handling", "missing", "page", "validation"}
@@ -77,6 +80,7 @@ DOMAIN_SUFFIX_TOKENS = {
     "table",
     "view",
 }
+DOMAIN_ENTITY_TOKENS = {"customer", "owner", "pet", "specialty", "user", "vet", "visit"}
 
 
 class RecipeSuggestionService:
@@ -185,10 +189,13 @@ def match_recipes(
                 why_matched=reasons,
             )
         )
-    return sorted(
+    matches = sorted(
         matches,
         key=lambda item: (-item.score, -item.structural_confidence, item.recipe_type, item.recipe_id),
-    )[:3]
+    )
+    if any(match.recipe_type == "backend_search_query" for match in matches):
+        matches = [match for match in matches if match.recipe_type != "backend_api_change"]
+    return matches[:3]
 
 
 def recipe_match_score(
@@ -507,24 +514,41 @@ def _backend_search_actions(
 ) -> list[RecipeLikelyAction]:
     focus_tokens = domain_tokens | (request_tokens & SEARCH_QUERY_TERMS)
     actions: list[RecipeLikelyAction] = []
+    case_sensitive_change = bool(request_tokens & CASE_INSENSITIVE_TERMS) or {"case", "insensitive"} <= request_tokens
     actions.extend(
-        _node_actions(
+        _search_node_actions(
             match,
             graph,
             ("repository",),
             focus_tokens,
+            request_tokens,
             action="modify",
             confidence="high",
-            limit=2,
-            evidence="search/query recipes often update repository query behavior",
+            limit=3,
+            evidence="repository query/search metadata is the strongest match for backend search behavior",
         )
     )
+    if case_sensitive_change or "migration" in recipe.modified_node_types or "migration" in recipe.changed_node_types:
+        actions.extend(
+            _search_node_actions(
+                match,
+                graph,
+                ("migration",),
+                focus_tokens,
+                request_tokens,
+                action="modify",
+                confidence="high" if case_sensitive_change else "medium",
+                limit=2,
+                evidence="case-insensitive search can be backed by schema, seed, or DB collation changes",
+            )
+        )
     actions.extend(
-        _node_actions(
+        _search_node_actions(
             match,
             graph,
             ("service_layer",),
             focus_tokens,
+            request_tokens,
             action="modify",
             confidence="medium",
             limit=2,
@@ -532,11 +556,12 @@ def _backend_search_actions(
         )
     )
     actions.extend(
-        _node_actions(
+        _search_node_actions(
             match,
             graph,
             ("api_controller", "api_dto"),
             focus_tokens,
+            request_tokens,
             action="inspect",
             confidence="medium",
             limit=2,
@@ -544,17 +569,44 @@ def _backend_search_actions(
         )
     )
     actions.extend(
-        _node_actions(
+        _search_node_actions(
             match,
             graph,
             ("api_contract",),
             focus_tokens,
+            request_tokens,
             action="inspect",
             confidence="low",
             limit=1,
             evidence="API contract may document query parameters",
         )
     )
+    return actions
+
+
+def _search_node_actions(
+    match: MatchedRecipe,
+    graph: SourceGraph,
+    node_types: Sequence[str],
+    domain_tokens: set[str],
+    request_tokens: set[str],
+    *,
+    action: str,
+    confidence: str,
+    limit: int,
+    evidence: str,
+) -> list[RecipeLikelyAction]:
+    actions: list[RecipeLikelyAction] = []
+    for node in _ranked_search_nodes(graph, node_types, domain_tokens, request_tokens)[:limit]:
+        actions.append(
+            _action_for_node(
+                match,
+                node,
+                action,
+                confidence,
+                [evidence, *_query_metadata_evidence(node)],
+            )
+        )
     return actions
 
 
@@ -623,6 +675,68 @@ def _ranked_nodes(
     )
 
 
+def _ranked_search_nodes(
+    graph: SourceGraph,
+    node_types: Sequence[str],
+    domain_tokens: set[str],
+    request_tokens: set[str],
+) -> list[GraphNode]:
+    candidates = [node for node in graph.nodes if node.node_type in node_types]
+    scored = [
+        (search_node_relevance(node, domain_tokens, request_tokens), node)
+        for node in candidates
+    ]
+    scored = [(score, node) for score, node in scored if score > 0]
+    return [
+        node
+        for _score, node in sorted(
+            scored,
+            key=lambda item: (
+                -item[0],
+                item[1].repo_name,
+                item[1].path,
+                item[1].node_type,
+            ),
+        )
+    ]
+
+
+def search_node_relevance(node: GraphNode, domain_tokens: set[str], request_tokens: set[str]) -> int:
+    path_tokens = path_token_set(node.path)
+    metadata_tokens = _metadata_token_set(node, "search_terms") | _metadata_token_set(node, "method_names")
+    node_tokens = set(node.domain_tokens) | path_tokens | metadata_tokens
+    requested_entities = domain_tokens & DOMAIN_ENTITY_TOKENS
+    path_entities = path_tokens & DOMAIN_ENTITY_TOKENS
+    if requested_entities and path_entities and not (requested_entities & path_entities):
+        return 0
+    domain_overlap = node_tokens & domain_tokens
+    score = node_relevance(node, domain_tokens)
+    if domain_overlap:
+        score += len(domain_overlap) * 25
+    elif domain_tokens:
+        score -= 30
+    query_indicators = _metadata_values(node, "query_indicators")
+    method_names = _metadata_values(node, "method_names")
+    case_indicators = _metadata_values(node, "case_insensitive_indicators")
+    if method_names:
+        score += 20
+    if query_indicators:
+        score += 20
+    if _metadata_token_set(node, "search_terms") & (domain_tokens | request_tokens):
+        score += 20
+    if case_indicators and (request_tokens & CASE_INSENSITIVE_TERMS or {"case", "insensitive"} <= request_tokens):
+        score += 35
+    if node.node_type == "repository":
+        score += 15
+    elif node.node_type == "migration" and case_indicators:
+        score += 25
+    elif node.node_type == "migration" and not case_indicators:
+        score -= 20
+    if node.node_type in {"api_controller", "api_dto", "service_layer"} and not (method_names or query_indicators or domain_overlap):
+        score -= 20
+    return score
+
+
 def node_relevance(node: GraphNode, domain_tokens: set[str]) -> int:
     path_tokens = path_token_set(node.path)
     node_tokens = set(node.domain_tokens) | path_tokens
@@ -689,6 +803,11 @@ def component_identifier_from_request(feature_request: str) -> str | None:
 
 def request_token_set(feature_request: str) -> set[str]:
     tokens = tokenize_text(feature_request)
+    lowered = normalize_text(feature_request)
+    if "case insensitive" in lowered:
+        tokens.update({"caseinsensitive", "ignorecase", "query"})
+    if "has been case insensitive" in lowered:
+        tokens.update({"query", "search"})
     return tokens | singular_tokens(tokens)
 
 
@@ -740,11 +859,13 @@ def path_token_set(path: str) -> set[str]:
 
 def _dedupe_actions(actions: Sequence[RecipeLikelyAction]) -> list[RecipeLikelyAction]:
     by_key: dict[tuple[str, str, str | None, str | None], RecipeLikelyAction] = {}
+    ordered_keys: list[tuple[str, str, str | None, str | None]] = []
     for action in actions:
         key = (action.matched_recipe_id, action.node_type, action.suggested_path, action.suggested_folder)
         existing = by_key.get(key)
         if existing is None:
             by_key[key] = action
+            ordered_keys.append(key)
             continue
         by_key[key] = existing.model_copy(
             update={
@@ -752,15 +873,37 @@ def _dedupe_actions(actions: Sequence[RecipeLikelyAction]) -> list[RecipeLikelyA
                 "evidence": _dedupe([*existing.evidence, *action.evidence]),
             }
         )
-    return sorted(
-        by_key.values(),
-        key=lambda item: (
-            item.matched_recipe_id,
-            _confidence_rank(item.confidence),
-            item.node_type,
-            item.suggested_path or item.suggested_folder or "",
-        ),
-    )
+    return [by_key[key] for key in ordered_keys]
+
+
+def _metadata_values(node: GraphNode, key: str) -> set[str]:
+    return {
+        value.strip().lower()
+        for value in node.metadata.get(key, "").split(",")
+        if value.strip()
+    }
+
+
+def _metadata_token_set(node: GraphNode, key: str) -> set[str]:
+    values = _metadata_values(node, key)
+    tokens: set[str] = set()
+    for value in values:
+        tokens.update(path_token_set(value))
+    return tokens | values
+
+
+def _query_metadata_evidence(node: GraphNode) -> list[str]:
+    evidence: list[str] = []
+    for label, key in (
+        ("method(s)", "method_names"),
+        ("query indicator(s)", "query_indicators"),
+        ("case-insensitive indicator(s)", "case_insensitive_indicators"),
+        ("search term(s)", "search_terms"),
+    ):
+        values = sorted(_metadata_values(node, key))
+        if values:
+            evidence.append(f"{label}: {', '.join(values[:5])}")
+    return evidence
 
 
 def _max_confidence(left: str, right: str) -> str:
