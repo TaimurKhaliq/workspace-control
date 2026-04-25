@@ -81,6 +81,16 @@ DOMAIN_SUFFIX_TOKENS = {
     "view",
 }
 DOMAIN_ENTITY_TOKENS = {"customer", "owner", "pet", "specialty", "user", "vet", "visit"}
+RECIPE_SPECIFICITY = {
+    "backend_search_query": 90,
+    "backend_validation_change": 85,
+    "ui_form_validation": 85,
+    "ui_shell_layout": 80,
+    "ui_page_add": 75,
+    "full_stack_ui_api": 70,
+    "persistence_data_change": 60,
+    "backend_api_change": 40,
+}
 
 
 class RecipeSuggestionService:
@@ -198,13 +208,34 @@ def match_recipes(
                 why_matched=reasons,
             )
         )
+    matches = _prefer_specific_matches(matches)
     matches = sorted(
         matches,
-        key=lambda item: (-item.score, -item.structural_confidence, item.recipe_type, item.recipe_id),
+        key=lambda item: (
+            -RECIPE_SPECIFICITY.get(item.recipe_type, 0),
+            -item.score,
+            -item.structural_confidence,
+            item.recipe_type,
+            item.recipe_id,
+        ),
     )
-    if any(match.recipe_type == "backend_search_query" for match in matches):
-        matches = [match for match in matches if match.recipe_type != "backend_api_change"]
     return matches[:3]
+
+
+def _prefer_specific_matches(matches: Sequence[MatchedRecipe]) -> list[MatchedRecipe]:
+    """Drop generic recipe matches when a more specific archetype matched."""
+
+    recipe_types = {match.recipe_type for match in matches}
+    suppressed: set[str] = set()
+    if "backend_search_query" in recipe_types:
+        suppressed.update({"backend_api_change", "persistence_data_change"})
+    if "backend_validation_change" in recipe_types:
+        suppressed.add("backend_api_change")
+    if "ui_form_validation" in recipe_types:
+        suppressed.update({"ui_page_add"})
+    if "ui_shell_layout" in recipe_types:
+        suppressed.update({"ui_page_add"})
+    return [match for match in matches if match.recipe_type not in suppressed]
 
 
 def recipe_match_score(

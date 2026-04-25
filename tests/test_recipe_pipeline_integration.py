@@ -34,7 +34,21 @@ def _seed_workspace(tmp_path: Path, *, include_owners_page: bool = False) -> tup
     _write(repo / "client/src/types/index.ts", "export interface Owner { id: string }\n")
     if include_owners_page:
         _write(repo / "client/src/components/owners/OwnersPage.tsx", "export function OwnersPage() { return null; }\n")
-    _write(repo / "src/main/java/example/rest/OwnerRestController.java", "class OwnerRestController {}\n")
+    _write(repo / "src/main/java/example/rest/OwnerRestController.java", "class OwnerRestController { void searchOwners(String lastName) {} }\n")
+    _write(
+        repo / "src/main/java/example/service/ClinicService.java",
+        "class ClinicService { java.util.Collection<Owner> findOwnersByLastName(String lastName) { return null; } }\n",
+    )
+    _write(
+        repo / "src/main/java/example/repository/OwnerRepository.java",
+        "interface OwnerRepository { @Query(\"select owner from Owner owner where lower(owner.lastName) like lower(:lastName)\") java.util.Collection<Owner> findByLastName(String lastName); }\n",
+    )
+    _write(repo / "src/main/java/example/model/Owner.java", "class Owner {}\n")
+    _write(repo / "src/main/java/example/web/api/OwnerRequest.java", "class OwnerRequest {}\n")
+    _write(
+        repo / "src/main/resources/db/hsqldb/initDB.sql",
+        "CREATE TABLE owners (id INTEGER, last_name VARCHAR_IGNORECASE(30));\n",
+    )
     return workspace, repo
 
 
@@ -77,6 +91,42 @@ def _write_recipes(learning_root: Path) -> None:
             planner_effectiveness=0.0,
             support_count=2,
         ),
+        ChangeRecipe(
+            id="petclinic_test_backend_api_change",
+            target_id="petclinic-test",
+            recipe_type="backend_api_change",
+            status="active",
+            trigger_terms=["api", "search"],
+            changed_node_types=["api_controller", "service_layer"],
+            modified_node_types=["api_controller", "service_layer"],
+            structural_confidence=0.83,
+            planner_effectiveness=0.2,
+            support_count=2,
+        ),
+        ChangeRecipe(
+            id="petclinic_test_backend_search_query",
+            target_id="petclinic-test",
+            recipe_type="backend_search_query",
+            status="weak",
+            trigger_terms=["search", "query", "lookup"],
+            changed_node_types=["repository", "service_layer", "api_controller"],
+            modified_node_types=["repository", "service_layer"],
+            structural_confidence=0.48,
+            planner_effectiveness=0.0,
+            support_count=1,
+        ),
+        ChangeRecipe(
+            id="petclinic_test_backend_validation_change",
+            target_id="petclinic-test",
+            recipe_type="backend_validation_change",
+            status="active",
+            trigger_terms=["validation", "range", "null"],
+            changed_node_types=["api_dto", "domain_model", "api_controller"],
+            modified_node_types=["api_dto", "domain_model"],
+            structural_confidence=0.9,
+            planner_effectiveness=0.1,
+            support_count=2,
+        ),
     ]
     path = learning_root / "petclinic-test/change_recipes.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -93,12 +143,7 @@ def _recipe_report(tmp_path: Path, prompt: str, *, include_owners_page: bool = F
         registry=registry,
         learning_root=learning_root,
         report_root=tmp_path / "reports",
-    ).suggest(
-        "petclinic-test",
-        prompt,
-        allowed_statuses={"active"},
-        min_structural_confidence=0.6,
-    )
+    ).suggest("petclinic-test", prompt)
     return workspace, snapshot, report
 
 
@@ -192,3 +237,39 @@ def test_no_recipe_match_keeps_native_proposal_behavior(tmp_path: Path) -> None:
     assert with_recipe.recipe_suggestions == []
     assert with_recipe.combined_recommendations == []
     assert with_recipe.proposed_changes == native.proposed_changes
+
+
+def test_propose_backend_search_prefers_specific_recipe_over_generic_api(tmp_path: Path) -> None:
+    prompt = "Owners search has been case insensitive"
+    workspace, snapshot, report = _recipe_report(tmp_path, prompt)
+    proposal = create_change_proposal(prompt, [], scan_root=workspace, discovery_snapshot=snapshot, recipe_report=report)
+
+    assert report.matched_recipes[0].recipe_type == "backend_search_query"
+    recipe_ids = {item.matched_recipe_id for item in proposal.recipe_suggestions}
+    assert "petclinic_test_backend_search_query" in recipe_ids
+    assert "petclinic_test_backend_api_change" not in recipe_ids
+    paths = {item.path for item in proposal.recipe_suggestions}
+    assert "src/main/java/example/repository/OwnerRepository.java" in paths
+    assert "src/main/resources/db/hsqldb/initDB.sql" in paths
+
+
+def test_validation_recipe_precedes_generic_backend_api(tmp_path: Path) -> None:
+    prompt = "Add max range and not null validation for adding new owner"
+    workspace, snapshot, report = _recipe_report(tmp_path, prompt)
+    proposal = create_change_proposal(prompt, [], scan_root=workspace, discovery_snapshot=snapshot, recipe_report=report)
+
+    assert report.matched_recipes[0].recipe_type == "backend_validation_change"
+    recipe_ids = {item.matched_recipe_id for item in proposal.recipe_suggestions}
+    assert "petclinic_test_backend_validation_change" in recipe_ids
+    assert "petclinic_test_backend_api_change" not in recipe_ids
+
+
+def test_suggest_and_propose_use_consistent_recipe_matches(tmp_path: Path) -> None:
+    prompt = "Owners search has been case insensitive"
+    workspace, snapshot, report = _recipe_report(tmp_path, prompt)
+    proposal = create_change_proposal(prompt, [], scan_root=workspace, discovery_snapshot=snapshot, recipe_report=report)
+
+    suggest_recipe_ids = [item.recipe_id for item in report.matched_recipes]
+    propose_recipe_ids = sorted({item.matched_recipe_id for item in proposal.recipe_suggestions if item.matched_recipe_id})
+    assert suggest_recipe_ids == ["petclinic_test_backend_search_query"]
+    assert propose_recipe_ids == ["petclinic_test_backend_search_query"]

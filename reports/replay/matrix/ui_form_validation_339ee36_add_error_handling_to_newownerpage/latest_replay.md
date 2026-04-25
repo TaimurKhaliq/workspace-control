@@ -20,8 +20,8 @@
 | mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
 |---|---:|---:|---|---|---|
 | planner/propose only | 3 | 2 | 0.67/0.67 | 1.00/0.50 | 0.67/0.67 |
-| recipe suggestions only | 10 | 3 | 0.30/1.00 | 0.50/1.00 | 0.30/1.00 |
-| combined | 10 | 3 | 0.30/1.00 | 0.50/1.00 | 0.30/1.00 |
+| recipe suggestions only | 8 | 3 | 0.38/1.00 | 0.50/1.00 | 0.38/1.00 |
+| combined | 8 | 3 | 0.38/1.00 | 0.50/1.00 | 0.38/1.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -51,13 +51,13 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Recipe Suggestions Only
 
-- predicted files: 10
+- predicted files: 8
 - matched files: 3
 - missed files: 0
-- extra predicted files: 7
-- exact precision: 0.30
+- extra predicted files: 5
+- exact precision: 0.38
 - exact recall: 1.00
-- high-signal precision: 0.30
+- high-signal precision: 0.38
 - high-signal recall: 1.00
 - category precision: 0.50
 - category recall: 1.00
@@ -65,13 +65,13 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Combined Predictions
 
-- predicted files: 10
+- predicted files: 8
 - matched files: 3
 - missed files: 0
-- extra predicted files: 7
-- exact precision: 0.30
+- extra predicted files: 5
+- exact precision: 0.38
 - exact recall: 1.00
-- high-signal precision: 0.30
+- high-signal precision: 0.38
 - high-signal recall: 1.00
 - category precision: 0.50
 - category recall: 1.00
@@ -82,8 +82,6 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - matched recipes:
   - `petclinic_react_ui_form_validation` (ui_form_validation, structural=0.96, planner=0.00)
     - why: matched recipe trigger terms: error, handling; source graph contains related domain token(s): owner; request mentions form validation or invalid-field feedback
-  - `petclinic_react_ui_page_add` (ui_page_add, structural=0.98, planner=0.05)
-    - why: source graph contains related domain token(s): owner; request verb includes add; identifier normalization exposes page-style term(s): owner, page
   - `petclinic_react_full_stack_ui_api` (full_stack_ui_api, structural=0.92, planner=0.32)
     - why: matched recipe trigger terms: error, handling; source graph contains related domain token(s): owner; request combines UI surface terms with error/API-style change hints
 
@@ -92,10 +90,6 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
   - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/configureRoutes.tsx` (modify, high, node=route_config, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
-  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)

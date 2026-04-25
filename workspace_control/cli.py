@@ -745,8 +745,6 @@ def _integrated_recipe_report_for_args(args):
         ).suggest(
             args.target_id,
             args.feature_description,
-            allowed_statuses={"active"},
-            min_structural_confidence=0.6,
         )
     except Exception:
         return None
