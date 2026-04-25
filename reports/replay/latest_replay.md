@@ -82,8 +82,28 @@
 - precision: 1.00
 - recall: 0.80
 - matched: `app_shell`, `frontend_entrypoint`, `landing_page`, `public_html`
-- missed: `static_assets`
+- missed: `static_asset`
 - extra predicted: -
+
+## Exact File Scoring
+
+- precision: 1.00
+- recall: 0.40
+- predicted count: 4
+- actual count: 10
+- matched count: 4
+- missed count: 6
+- extra predicted count: 0
+
+## High-Signal File Scoring
+
+- precision: 1.00
+- recall: 1.00
+- predicted count: 4
+- actual count: 4
+- matched count: 4
+- missed count: 0
+- extra predicted count: 0
 
 ## High-Signal Matched Files
 

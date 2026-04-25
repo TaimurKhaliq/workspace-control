@@ -178,13 +178,44 @@ def test_compare_predictions_counts_folder_level_static_asset_matches() -> None:
     ]
     assert comparison["category_level"]["matched_categories"] == [
         "app_shell",
-        "static_assets",
+        "static_asset",
     ]
+    assert comparison["folder_level"]["matched_actual_count"] == 1
     assert comparison["high_signal"]["recall"] == 1.0
     assert comparison["static_assets"]["folder_level_matched_files"] == [
         "repo/client/public/images/foo.png"
     ]
     assert comparison["static_assets"]["missed_files"] == []
+
+
+def test_high_signal_recall_excludes_static_asset_misses() -> None:
+    comparison = replay.compare_predictions(
+        predicted_files=[
+            {"path": "repo/client/src/components/WelcomePage.tsx"},
+            {"path": "repo/client/src/components/App.tsx"},
+        ],
+        actual_files=[
+            "repo/client/src/components/WelcomePage.tsx",
+            "repo/client/src/components/App.tsx",
+            "repo/client/public/images/hero.png",
+        ],
+    )
+
+    assert comparison["exact_file"]["recall"] == 0.6667
+    assert comparison["high_signal"]["recall"] == 1.0
+    assert comparison["high_signal"]["actual_count"] == 2
+    assert comparison["static_assets"]["missed_files"] == [
+        "repo/client/public/images/hero.png"
+    ]
+
+
+def test_surface_category_classification_uses_replay_schema_names() -> None:
+    assert replay.classify_surface("repo/client/src/main.tsx") == "frontend_entrypoint"
+    assert replay.classify_surface("repo/client/src/components/App.tsx") == "app_shell"
+    assert replay.classify_surface("repo/client/src/components/WelcomePage.tsx") == "landing_page"
+    assert replay.classify_surface("repo/client/public/index.html") == "public_html"
+    assert replay.classify_surface("repo/client/public/images/hero.png") == "static_asset"
+    assert replay.classify_surface("repo/client/src/types/index.ts") == "frontend_type"
 
 
 def test_replay_snapshot_scan_root_and_target_id_are_semantically_equivalent(

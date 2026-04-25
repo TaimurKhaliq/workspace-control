@@ -38,9 +38,9 @@ SURFACE_CATEGORIES = (
     "app_shell",
     "landing_page",
     "public_html",
-    "static_assets",
+    "static_asset",
     "frontend_component",
-    "frontend_types",
+    "frontend_type",
     "api_contract",
     "api_controller",
     "service_layer",
@@ -503,6 +503,8 @@ def folder_level_matches(
         "matched_actual_files": matched_actual_files,
         "precision": ratio(len(matched_predicted), len(set(predicted_paths))),
         "recall": ratio(len(matched_actual_files), len(set(actual_paths))),
+        "matched_predicted_count": len(matched_predicted),
+        "matched_actual_count": len(matched_actual_files),
     }
 
 
@@ -533,6 +535,11 @@ def category_level_matches(
         "extra_predicted_categories": extra,
         "precision": ratio(len(matched), len(predicted_categories)),
         "recall": ratio(len(matched), len(actual_categories)),
+        "predicted_count": len(predicted_categories),
+        "actual_count": len(actual_categories),
+        "matched_count": len(matched),
+        "missed_count": len(missed),
+        "extra_predicted_count": len(extra),
         "predicted_by_category": predicted_by_category,
         "actual_by_category": actual_by_category,
     }
@@ -545,10 +552,10 @@ def high_signal_exact_matches(
     """Compute exact-file overlap excluding low-level static assets."""
 
     predicted_high_signal = sorted(
-        path for path in set(predicted_paths) if classify_surface(path) != "static_assets"
+        path for path in set(predicted_paths) if classify_surface(path) != "static_asset"
     )
     actual_high_signal = sorted(
-        path for path in set(actual_paths) if classify_surface(path) != "static_assets"
+        path for path in set(actual_paths) if classify_surface(path) != "static_asset"
     )
     predicted_set = set(predicted_high_signal)
     actual_set = set(actual_high_signal)
@@ -563,6 +570,11 @@ def high_signal_exact_matches(
         "extra_predicted_files": extra,
         "precision": ratio(len(matched), len(predicted_high_signal)),
         "recall": ratio(len(matched), len(actual_high_signal)),
+        "predicted_count": len(predicted_high_signal),
+        "actual_count": len(actual_high_signal),
+        "matched_count": len(matched),
+        "missed_count": len(missed),
+        "extra_predicted_count": len(extra),
     }
 
 
@@ -576,10 +588,10 @@ def static_asset_summary(
     """Summarize static asset exact/folder matches separately from high-signal files."""
 
     predicted_static = sorted(
-        path for path in set(predicted_paths) if classify_surface(path) == "static_assets"
+        path for path in set(predicted_paths) if classify_surface(path) == "static_asset"
     )
     actual_static = sorted(
-        path for path in set(actual_paths) if classify_surface(path) == "static_assets"
+        path for path in set(actual_paths) if classify_surface(path) == "static_asset"
     )
     exact_matched_static = sorted(set(predicted_static) & set(actual_static) & set(exact_matched))
     folder_matched_static = sorted(set(actual_static) & set(folder_matched))
@@ -590,6 +602,11 @@ def static_asset_summary(
         "exact_matched_files": exact_matched_static,
         "folder_level_matched_files": folder_matched_static,
         "missed_files": sorted(set(actual_static) - covered_static),
+        "predicted_count": len(predicted_static),
+        "actual_count": len(actual_static),
+        "exact_matched_count": len(exact_matched_static),
+        "folder_level_matched_count": len(folder_matched_static),
+        "missed_count": len(set(actual_static) - covered_static),
     }
 
 
@@ -612,7 +629,7 @@ def classify_surface(path: str) -> str:
     parts = set(re.findall(r"[a-z0-9]+", lowered))
 
     if is_static_asset_path(path):
-        return "static_assets"
+        return "static_asset"
     if lowered.endswith("/public/index.html") or lowered.endswith("public/index.html"):
         return "public_html"
     if name in {"main.tsx", "main.jsx", "index.tsx", "index.jsx"} and "/src/" in lowered:
@@ -639,7 +656,7 @@ def classify_surface(path: str) -> str:
     if name.endswith("entity.java") or "entity" in parts or "entities" in parts or "model" in parts:
         return "domain_model"
     if "types" in parts or name.endswith(".d.ts"):
-        return "frontend_types"
+        return "frontend_type"
     if suffix in {".tsx", ".jsx"} or "components" in parts or "pages" in parts:
         return "frontend_component"
     return "unknown"
@@ -749,6 +766,8 @@ def format_markdown_report(report: dict[str, Any]) -> str:
     lines.extend(section_for_paths("Extra Predicted Files", comparison["extra_predicted_files"]))
     lines.extend(section_for_folder_matches(comparison["folder_level"]["matches"]))
     lines.extend(section_for_category_matches(comparison["category_level"]))
+    lines.extend(section_for_scoring_block("Exact File Scoring", comparison["exact_file"]))
+    lines.extend(section_for_scoring_block("High-Signal File Scoring", comparison["high_signal"]))
     lines.extend(section_for_paths("High-Signal Matched Files", comparison["high_signal"]["matched_files"]))
     lines.extend(section_for_paths("High-Signal Missed Files", comparison["high_signal"]["missed_files"]))
     lines.extend(section_for_paths("Static Asset Misses", comparison["static_assets"]["missed_files"]))
@@ -793,6 +812,23 @@ def section_for_category_matches(category: dict[str, Any]) -> list[str]:
         f"- extra predicted: {format_inline_values(category['extra_predicted_categories'])}",
     ]
     return lines
+
+
+def section_for_scoring_block(title: str, scoring: dict[str, Any]) -> list[str]:
+    """Render a compact scoring block for exact or high-signal metrics."""
+
+    return [
+        "",
+        f"## {title}",
+        "",
+        f"- precision: {scoring['precision']:.2f}",
+        f"- recall: {scoring['recall']:.2f}",
+        f"- predicted count: {scoring['predicted_count']}",
+        f"- actual count: {scoring['actual_count']}",
+        f"- matched count: {scoring['matched_count']}",
+        f"- missed count: {scoring['missed_count']}",
+        f"- extra predicted count: {scoring['extra_predicted_count']}",
+    ]
 
 
 def section_for_paths(title: str, paths: Sequence[str]) -> list[str]:
