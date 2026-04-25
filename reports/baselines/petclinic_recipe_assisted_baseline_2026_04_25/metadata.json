@@ -1,0 +1,88 @@
+{
+  "baseline_name": "petclinic_recipe_assisted_baseline_2026_04_25",
+  "created_at": "2026-04-25T22:54:40+00:00",
+  "target_id": "petclinic-react",
+  "git_commit": "a9402c29f3a9224d05884a343900896a82e15d82",
+  "copied_files": [
+    {
+      "label": "replay_matrix_markdown",
+      "source": "reports/replay/matrix/latest_matrix.md",
+      "destination": "reports/baselines/petclinic_recipe_assisted_baseline_2026_04_25/latest_matrix.md"
+    },
+    {
+      "label": "replay_matrix_json",
+      "source": "reports/replay/matrix/latest_matrix.json",
+      "destination": "reports/baselines/petclinic_recipe_assisted_baseline_2026_04_25/latest_matrix.json"
+    },
+    {
+      "label": "learning_markdown",
+      "source": "reports/learning/petclinic-react/latest_learning.md",
+      "destination": "reports/baselines/petclinic_recipe_assisted_baseline_2026_04_25/latest_learning.md"
+    },
+    {
+      "label": "learning_json",
+      "source": "reports/learning/petclinic-react/latest_learning.json",
+      "destination": "reports/baselines/petclinic_recipe_assisted_baseline_2026_04_25/latest_learning.json"
+    },
+    {
+      "label": "eval_markdown",
+      "source": "reports/latest_eval.md",
+      "destination": "reports/baselines/petclinic_recipe_assisted_baseline_2026_04_25/latest_eval.md"
+    },
+    {
+      "label": "eval_json",
+      "source": "reports/latest_eval.json",
+      "destination": "reports/baselines/petclinic_recipe_assisted_baseline_2026_04_25/latest_eval.json"
+    },
+    {
+      "label": "replay_cases",
+      "source": "tests/replay_cases/petclinic_auto_replay_cases.json",
+      "destination": "reports/baselines/petclinic_recipe_assisted_baseline_2026_04_25/petclinic_auto_replay_cases.json"
+    }
+  ],
+  "missing_optional_files": [],
+  "eval_summary": {
+    "total_cases": 14,
+    "passed": 14,
+    "failed": 0,
+    "failed_case_ids": []
+  },
+  "replay_matrix_summary": {
+    "total_cases": 8,
+    "succeeded": 8,
+    "failed": 0,
+    "recipe_helped_cases": 5,
+    "combined_worse_than_planner_cases": 0,
+    "average_planner_exact_precision": 0.3771,
+    "average_planner_exact_recall": 0.2924,
+    "average_recipe_exact_precision": 0.366,
+    "average_recipe_exact_recall": 0.6352,
+    "average_combined_exact_precision": 0.4649,
+    "average_combined_exact_recall": 0.6466,
+    "average_planner_category_precision": 0.5,
+    "average_planner_category_recall": 0.3375,
+    "average_recipe_category_precision": 0.5104,
+    "average_recipe_category_recall": 0.8375,
+    "average_combined_category_precision": 0.625,
+    "average_combined_category_recall": 0.7125,
+    "average_planner_high_signal_precision": 0.3771,
+    "average_planner_high_signal_recall": 0.3674,
+    "average_recipe_high_signal_precision": 0.366,
+    "average_recipe_high_signal_recall": 0.7102,
+    "average_combined_high_signal_precision": 0.4649,
+    "average_combined_high_signal_recall": 0.7216
+  },
+  "learning_summary": {
+    "target_id": "petclinic-react",
+    "repo_name": "spring-petclinic-reactjs",
+    "status": "fresh",
+    "current_head": "4a6c26d99f48d8bfac97352130b9fae4feab2509",
+    "last_analyzed_commit": "4a6c26d99f48d8bfac97352130b9fae4feab2509",
+    "commits_analyzed": 66,
+    "recipes_discovered_or_updated": 8,
+    "recipe_counts": {
+      "active": 7,
+      "weak": 1
+    }
+  }
+}
