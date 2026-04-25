@@ -12,7 +12,7 @@
 - commands succeeded: True
 - actual files: 3
 - recipe helped: True (improved_recall)
-- recipe matched files: `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`, `spring-petclinic-reactjs/client/src/types/index.ts`
+- recipe matched files: `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`, `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`, `spring-petclinic-reactjs/client/src/types/index.ts`
 - static asset misses: 0
 
 ### Prediction Mode Summary
@@ -20,7 +20,7 @@
 | mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
 |---|---:|---:|---|---|---|
 | planner/propose only | 3 | 2 | 0.67/0.67 | 1.00/0.50 | 0.67/0.67 |
-| recipe suggestions only | 9 | 2 | 0.22/0.67 | 0.50/1.00 | 0.22/0.67 |
+| recipe suggestions only | 10 | 3 | 0.30/1.00 | 0.50/1.00 | 0.30/1.00 |
 | combined | 10 | 3 | 0.30/1.00 | 0.50/1.00 | 0.30/1.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
@@ -51,14 +51,14 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Recipe Suggestions Only
 
-- predicted files: 9
-- matched files: 2
-- missed files: 1
+- predicted files: 10
+- matched files: 3
+- missed files: 0
 - extra predicted files: 7
-- exact precision: 0.22
-- exact recall: 0.67
-- high-signal precision: 0.22
-- high-signal recall: 0.67
+- exact precision: 0.30
+- exact recall: 1.00
+- high-signal precision: 0.30
+- high-signal recall: 1.00
 - category precision: 0.50
 - category recall: 1.00
 - folder-level matched actual files: 0
@@ -88,22 +88,24 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
     - why: matched recipe trigger terms: error, handling; source graph contains related domain token(s): owner; request combines UI surface terms with error/API-style change hints
 
 - suggested actions:
-  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/configureRoutes.tsx` (modify, high, node=route_config, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
 
-## Predicted Files
+## Planner/Propose Predicted Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
@@ -115,24 +117,36 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
 - `spring-petclinic-reactjs/client/src/types/index.ts`
 
-## Matched Files
+## Planner/Propose Matched Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
 
-## Missed Files
+## Recipe Suggestions Matched Files
+
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
+
+## Combined Matched Files
+
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
+
+## Planner/Propose Missed Files
 
 - `spring-petclinic-reactjs/client/src/types/index.ts`
 
-## Extra Predicted Files
+## Planner/Propose Extra Predicted Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
 
-## Folder-Level Matches
+## Planner/Propose Folder-Level Matches
 
 -
 
-## Category-Level Matches
+## Planner/Propose Category-Level Matches
 
 - precision: 1.00
 - recall: 0.50
@@ -140,7 +154,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed: `frontend_type`
 - extra predicted: -
 
-## Exact File Scoring
+## Planner/Propose Exact File Scoring
 
 - precision: 0.67
 - recall: 0.67
@@ -150,7 +164,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 1
 - extra predicted count: 1
 
-## High-Signal File Scoring
+## Planner/Propose High-Signal File Scoring
 
 - precision: 0.67
 - recall: 0.67
@@ -160,12 +174,12 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 1
 - extra predicted count: 1
 
-## High-Signal Matched Files
+## Planner/Propose High-Signal Matched Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
 
-## High-Signal Missed Files
+## Planner/Propose High-Signal Missed Files
 
 - `spring-petclinic-reactjs/client/src/types/index.ts`
 

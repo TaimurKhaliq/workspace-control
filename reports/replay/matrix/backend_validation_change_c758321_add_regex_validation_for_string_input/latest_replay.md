@@ -20,8 +20,8 @@
 | mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
 |---|---:|---:|---|---|---|
 | planner/propose only | 4 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| recipe suggestions only | 11 | 0 | 0.00/0.00 | 0.17/1.00 | 0.00/0.00 |
-| combined | 15 | 0 | 0.00/0.00 | 0.12/1.00 | 0.00/0.00 |
+| recipe suggestions only | 13 | 0 | 0.00/0.00 | 0.17/1.00 | 0.00/0.00 |
+| combined | 17 | 0 | 0.00/0.00 | 0.12/1.00 | 0.00/0.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -51,10 +51,10 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Recipe Suggestions Only
 
-- predicted files: 11
+- predicted files: 13
 - matched files: 0
 - missed files: 1
-- extra predicted files: 11
+- extra predicted files: 13
 - exact precision: 0.00
 - exact recall: 0.00
 - high-signal precision: 0.00
@@ -65,10 +65,10 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Combined Predictions
 
-- predicted files: 15
+- predicted files: 17
 - matched files: 0
 - missed files: 1
-- extra predicted files: 15
+- extra predicted files: 17
 - exact precision: 0.00
 - exact recall: 0.00
 - high-signal precision: 0.00
@@ -93,18 +93,20 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java` (modify, medium, node=domain_model, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java` (modify, medium, node=domain_model, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/form/DateInput.tsx` (modify, medium, node=form_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/form/Input.tsx` (modify, medium, node=form_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/form/SelectInput.tsx` (modify, high, node=form_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/form/DateInput.tsx` (modify, high, node=form_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/form/Input.tsx` (modify, high, node=form_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/form/DateInput.tsx` (modify, medium, node=form_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/form/Input.tsx` (modify, medium, node=form_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/visits/VisitsPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/form/DateInput.tsx` (modify, high, node=form_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/form/Input.tsx` (modify, high, node=form_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
 
-## Predicted Files
+## Planner/Propose Predicted Files
 
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
@@ -115,26 +117,34 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java`
 
-## Matched Files
+## Planner/Propose Matched Files
 
 -
 
-## Missed Files
+## Recipe Suggestions Matched Files
+
+-
+
+## Combined Matched Files
+
+-
+
+## Planner/Propose Missed Files
 
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java`
 
-## Extra Predicted Files
+## Planner/Propose Extra Predicted Files
 
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api`
 
-## Folder-Level Matches
+## Planner/Propose Folder-Level Matches
 
 -
 
-## Category-Level Matches
+## Planner/Propose Category-Level Matches
 
 - precision: 0.00
 - recall: 0.00
@@ -142,7 +152,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed: `domain_model`
 - extra predicted: `repository`, `service_layer`, `unknown`
 
-## Exact File Scoring
+## Planner/Propose Exact File Scoring
 
 - precision: 0.00
 - recall: 0.00
@@ -152,7 +162,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 1
 - extra predicted count: 4
 
-## High-Signal File Scoring
+## Planner/Propose High-Signal File Scoring
 
 - precision: 0.00
 - recall: 0.00
@@ -162,11 +172,11 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 1
 - extra predicted count: 4
 
-## High-Signal Matched Files
+## Planner/Propose High-Signal Matched Files
 
 -
 
-## High-Signal Missed Files
+## Planner/Propose High-Signal Missed Files
 
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java`
 

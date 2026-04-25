@@ -183,6 +183,16 @@ def test_run_replay_eval_writes_overlap_reports(tmp_path: Path, monkeypatch) -> 
     markdown = latest_md.read_text(encoding="utf-8")
     assert "# Git History Replay Eval" in markdown
     assert "sample-repo/app.py" in markdown
+    assert "## Planner/Propose Predicted Files" in markdown
+    assert "## Planner/Propose Matched Files" in markdown
+    assert "## Planner/Propose Missed Files" in markdown
+    assert "## Planner/Propose Exact File Scoring" in markdown
+    assert "## Planner/Propose Category-Level Matches" in markdown
+    assert "## Recipe Suggestions Matched Files" in markdown
+    assert "## Combined Matched Files" in markdown
+    assert "\n## Predicted Files\n" not in markdown
+    assert "\n## Matched Files\n" not in markdown
+    assert "\n## Exact File Scoring\n" not in markdown
 
 
 def test_compare_predictions_is_deterministic() -> None:

@@ -89,7 +89,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
   - `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx` (modify, high, node=landing_page, exists_in_parent=True, matched_actual=exact)
   - `spring-petclinic-reactjs/client/public/index.html` (inspect, medium, node=public_html, exists_in_parent=True, matched_actual=exact)
 
-## Predicted Files
+## Planner/Propose Predicted Files
 
 - `spring-petclinic-reactjs/client/public/index.html`
 - `spring-petclinic-reactjs/client/src/components/App.tsx`
@@ -109,14 +109,28 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
 - `spring-petclinic-reactjs/client/src/main.tsx`
 
-## Matched Files
+## Planner/Propose Matched Files
 
 - `spring-petclinic-reactjs/client/public/index.html`
 - `spring-petclinic-reactjs/client/src/components/App.tsx`
 - `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
 - `spring-petclinic-reactjs/client/src/main.tsx`
 
-## Missed Files
+## Recipe Suggestions Matched Files
+
+- `spring-petclinic-reactjs/client/public/index.html`
+- `spring-petclinic-reactjs/client/src/components/App.tsx`
+- `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
+- `spring-petclinic-reactjs/client/src/main.tsx`
+
+## Combined Matched Files
+
+- `spring-petclinic-reactjs/client/public/index.html`
+- `spring-petclinic-reactjs/client/src/components/App.tsx`
+- `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
+- `spring-petclinic-reactjs/client/src/main.tsx`
+
+## Planner/Propose Missed Files
 
 - `spring-petclinic-reactjs/client/public/images/favicon.png`
 - `spring-petclinic-reactjs/client/public/images/pets.png`
@@ -125,15 +139,15 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - `spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png`
 - `spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png`
 
-## Extra Predicted Files
+## Planner/Propose Extra Predicted Files
 
 -
 
-## Folder-Level Matches
+## Planner/Propose Folder-Level Matches
 
 -
 
-## Category-Level Matches
+## Planner/Propose Category-Level Matches
 
 - precision: 1.00
 - recall: 0.80
@@ -141,7 +155,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed: `static_asset`
 - extra predicted: -
 
-## Exact File Scoring
+## Planner/Propose Exact File Scoring
 
 - precision: 1.00
 - recall: 0.40
@@ -151,7 +165,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 6
 - extra predicted count: 0
 
-## High-Signal File Scoring
+## Planner/Propose High-Signal File Scoring
 
 - precision: 1.00
 - recall: 1.00
@@ -161,14 +175,14 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 0
 - extra predicted count: 0
 
-## High-Signal Matched Files
+## Planner/Propose High-Signal Matched Files
 
 - `spring-petclinic-reactjs/client/public/index.html`
 - `spring-petclinic-reactjs/client/src/components/App.tsx`
 - `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
 - `spring-petclinic-reactjs/client/src/main.tsx`
 
-## High-Signal Missed Files
+## Planner/Propose High-Signal Missed Files
 
 -
 

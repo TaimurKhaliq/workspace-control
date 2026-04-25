@@ -128,6 +128,34 @@ def test_visual_feedback_prompt_is_domain_light_not_too_vague() -> None:
     assert "domain_light_but_archetype_clear" in failure["labels"]
 
 
+def test_visual_feedback_debug_labels_error_page_confusion() -> None:
+    planner = _planner_outputs(primary_owner=None, proposed_change_count=0, feature_intents=[])
+    planner["recipe_suggestions"] = {
+        "matched_recipes": [{"recipe_id": "recipe", "recipe_type": "ui_form_validation"}],
+        "predicted_files": [{"path": "repo/client/src/components/ErrorPage.tsx"}],
+        "suggested_actions": [
+            {"qualified_path": "repo/client/src/components/ErrorPage.tsx"},
+            {"qualified_path": "repo/client/src/components/NotFoundPage.tsx"},
+        ],
+        "metrics": {"exact_recall": 0.0, "category_recall": 0.0},
+    }
+    failure = debug.classify_failure(
+        _case(
+            archetype="ui_form_validation",
+            prompt="Add visual feedback for invalid fields",
+            prompt_quality="high",
+        ),
+        _replay_report(predicted_count=0),
+        _actual_diff(),
+        planner,
+        {"relevant_graph_nodes": [{"path": "client/src/components/owners/NewOwnerPage.tsx", "node_type": "page_component"}], "detected_frameworks": [{"repo_name": "repo"}]},
+    )
+
+    assert "prompt_too_vague" not in failure["labels"]
+    assert "page_error_surface_confusion" in failure["labels"]
+    assert "validation_surface_ranking_gap" in failure["labels"]
+
+
 def test_debug_labels_backend_search_and_validation_gaps() -> None:
     search_failure = debug.classify_failure(
         _case(archetype="persistence_data", prompt="owners search has been case insensitive"),

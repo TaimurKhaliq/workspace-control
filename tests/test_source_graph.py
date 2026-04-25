@@ -61,6 +61,28 @@ def test_source_graph_react_pack_classifies_frontend_surfaces(tmp_path: Path) ->
     assert nodes["client/src/types/index.ts"] == "frontend_type"
 
 
+def test_source_graph_react_pack_marks_validation_surfaces(tmp_path: Path) -> None:
+    repo = tmp_path / "web-ui"
+    _write(repo / "client/package.json", json.dumps({"dependencies": {"react": "18.2.0"}}))
+    _write(
+        repo / "client/src/components/owners/NewOwnerPage.tsx",
+        "export function NewOwnerPage() { return <form><label>Owner</label><input name=\"lastName\" required aria-invalid=\"true\" /></form>; }\n",
+    )
+    _write(repo / "client/src/components/ErrorPage.tsx", "export function ErrorPage() { return <h1>Error</h1>; }\n")
+    _write(repo / "client/src/components/NotFoundPage.tsx", "export function NotFoundPage() { return <h1>Not found</h1>; }\n")
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    assert snapshot.source_graph is not None
+    by_path = {node.path: node for node in snapshot.source_graph.nodes}
+
+    new_owner = by_path["client/src/components/owners/NewOwnerPage.tsx"]
+    assert new_owner.metadata["has_form_inputs"] == "true"
+    assert new_owner.metadata["has_validation_terms"] == "true"
+    assert new_owner.metadata["has_field_terms"] == "true"
+    assert by_path["client/src/components/ErrorPage.tsx"].metadata["is_error_route_page"] == "true"
+    assert by_path["client/src/components/NotFoundPage.tsx"].metadata["is_not_found_page"] == "true"
+
+
 def test_source_graph_spring_pack_classifies_backend_surfaces(tmp_path: Path) -> None:
     repo = tmp_path / "clinic-service"
     _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")

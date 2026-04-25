@@ -92,7 +92,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (inspect, medium, node=api_controller, exists_in_parent=True, matched_actual=no)
 
-## Predicted Files
+## Planner/Propose Predicted Files
 
 -
 
@@ -100,23 +100,31 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 - `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
-## Matched Files
+## Planner/Propose Matched Files
 
 -
 
-## Missed Files
+## Recipe Suggestions Matched Files
 
 - `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
-## Extra Predicted Files
+## Combined Matched Files
+
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
+
+## Planner/Propose Missed Files
+
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
+
+## Planner/Propose Extra Predicted Files
 
 -
 
-## Folder-Level Matches
+## Planner/Propose Folder-Level Matches
 
 -
 
-## Category-Level Matches
+## Planner/Propose Category-Level Matches
 
 - precision: 0.00
 - recall: 0.00
@@ -124,7 +132,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed: `migration`
 - extra predicted: -
 
-## Exact File Scoring
+## Planner/Propose Exact File Scoring
 
 - precision: 0.00
 - recall: 0.00
@@ -134,7 +142,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 1
 - extra predicted count: 0
 
-## High-Signal File Scoring
+## Planner/Propose High-Signal File Scoring
 
 - precision: 0.00
 - recall: 0.00
@@ -144,11 +152,11 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 1
 - extra predicted count: 0
 
-## High-Signal Matched Files
+## Planner/Propose High-Signal Matched Files
 
 -
 
-## High-Signal Missed Files
+## Planner/Propose High-Signal Missed Files
 
 - `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 

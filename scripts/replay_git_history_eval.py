@@ -1073,11 +1073,11 @@ def format_markdown_report(report: dict[str, Any]) -> str:
             "",
             "The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.",
             "",
-        "## Command Results",
-        "",
-        "| command | exit code |",
-        "|---|---:|",
-    ]
+            "## Command Results",
+            "",
+            "| command | exit code |",
+            "|---|---:|",
+        ]
     )
     for key, result in report["commands"].items():
         lines.append(f"| `{key}` | {result['exit_code']} |")
@@ -1089,17 +1089,19 @@ def format_markdown_report(report: dict[str, Any]) -> str:
         lines.extend(section_for_prediction_comparison("Combined Predictions", sections["combined"]))
     lines.extend(section_for_recipe_diagnostics(report.get("recipe_suggestions", {})))
 
-    lines.extend(section_for_paths("Predicted Files", comparison["predicted_files"]))
+    lines.extend(section_for_paths("Planner/Propose Predicted Files", comparison["predicted_files"]))
     lines.extend(section_for_paths("Actual Files", comparison["actual_files"]))
-    lines.extend(section_for_paths("Matched Files", comparison["matched_files"]))
-    lines.extend(section_for_paths("Missed Files", comparison["missed_files"]))
-    lines.extend(section_for_paths("Extra Predicted Files", comparison["extra_predicted_files"]))
-    lines.extend(section_for_folder_matches(comparison["folder_level"]["matches"]))
-    lines.extend(section_for_category_matches(comparison["category_level"]))
-    lines.extend(section_for_scoring_block("Exact File Scoring", comparison["exact_file"]))
-    lines.extend(section_for_scoring_block("High-Signal File Scoring", comparison["high_signal"]))
-    lines.extend(section_for_paths("High-Signal Matched Files", comparison["high_signal"]["matched_files"]))
-    lines.extend(section_for_paths("High-Signal Missed Files", comparison["high_signal"]["missed_files"]))
+    lines.extend(section_for_paths("Planner/Propose Matched Files", comparison["matched_files"]))
+    lines.extend(section_for_paths("Recipe Suggestions Matched Files", sections.get("recipe_suggestions", {}).get("matched_files", [])))
+    lines.extend(section_for_paths("Combined Matched Files", sections.get("combined", {}).get("matched_files", [])))
+    lines.extend(section_for_paths("Planner/Propose Missed Files", comparison["missed_files"]))
+    lines.extend(section_for_paths("Planner/Propose Extra Predicted Files", comparison["extra_predicted_files"]))
+    lines.extend(section_for_folder_matches("Planner/Propose Folder-Level Matches", comparison["folder_level"]["matches"]))
+    lines.extend(section_for_category_matches("Planner/Propose Category-Level Matches", comparison["category_level"]))
+    lines.extend(section_for_scoring_block("Planner/Propose Exact File Scoring", comparison["exact_file"]))
+    lines.extend(section_for_scoring_block("Planner/Propose High-Signal File Scoring", comparison["high_signal"]))
+    lines.extend(section_for_paths("Planner/Propose High-Signal Matched Files", comparison["high_signal"]["matched_files"]))
+    lines.extend(section_for_paths("Planner/Propose High-Signal Missed Files", comparison["high_signal"]["missed_files"]))
     lines.extend(section_for_paths("Static Asset Misses", comparison["static_assets"]["missed_files"]))
     lines.extend(
         [
@@ -1168,10 +1170,10 @@ def section_for_recipe_diagnostics(recipe_suggestions: dict[str, Any]) -> list[s
     return lines
 
 
-def section_for_folder_matches(matches: Sequence[dict[str, Any]]) -> list[str]:
+def section_for_folder_matches(title: str, matches: Sequence[dict[str, Any]]) -> list[str]:
     """Render folder-level replay matches."""
 
-    lines = ["", "## Folder-Level Matches", ""]
+    lines = ["", f"## {title}", ""]
     if not matches:
         lines.append("-")
         return lines
@@ -1183,12 +1185,12 @@ def section_for_folder_matches(matches: Sequence[dict[str, Any]]) -> list[str]:
     return lines
 
 
-def section_for_category_matches(category: dict[str, Any]) -> list[str]:
+def section_for_category_matches(title: str, category: dict[str, Any]) -> list[str]:
     """Render category-level replay overlap."""
 
     lines = [
         "",
-        "## Category-Level Matches",
+        f"## {title}",
         "",
         f"- precision: {category['precision']:.2f}",
         f"- recall: {category['recall']:.2f}",

@@ -11,8 +11,8 @@
 
 - commands succeeded: True
 - actual files: 2
-- recipe helped: False (same)
-- recipe matched files: -
+- recipe helped: True (improved_recall)
+- recipe matched files: `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - static asset misses: 0
 
 ### Prediction Mode Summary
@@ -20,8 +20,8 @@
 | mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
 |---|---:|---:|---|---|---|
 | planner/propose only | 0 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| recipe suggestions only | 3 | 0 | 0.00/0.00 | 0.50/0.50 | 0.00/0.00 |
-| combined | 3 | 0 | 0.00/0.00 | 0.50/0.50 | 0.00/0.00 |
+| recipe suggestions only | 3 | 1 | 0.33/0.50 | 0.50/0.50 | 0.33/0.50 |
+| combined | 3 | 1 | 0.33/0.50 | 0.50/0.50 | 0.33/0.50 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -52,13 +52,13 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 ## Recipe Suggestions Only
 
 - predicted files: 3
-- matched files: 0
-- missed files: 2
-- extra predicted files: 3
-- exact precision: 0.00
-- exact recall: 0.00
-- high-signal precision: 0.00
-- high-signal recall: 0.00
+- matched files: 1
+- missed files: 1
+- extra predicted files: 2
+- exact precision: 0.33
+- exact recall: 0.50
+- high-signal precision: 0.33
+- high-signal recall: 0.50
 - category precision: 0.50
 - category recall: 0.50
 - folder-level matched actual files: 0
@@ -66,13 +66,13 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 ## Combined Predictions
 
 - predicted files: 3
-- matched files: 0
-- missed files: 2
-- extra predicted files: 3
-- exact precision: 0.00
-- exact recall: 0.00
-- high-signal precision: 0.00
-- high-signal recall: 0.00
+- matched files: 1
+- missed files: 1
+- extra predicted files: 2
+- exact precision: 0.33
+- exact recall: 0.50
+- high-signal precision: 0.33
+- high-signal recall: 0.50
 - category precision: 0.50
 - category recall: 0.50
 - folder-level matched actual files: 0
@@ -84,11 +84,11 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
     - why: matched recipe trigger terms: feedback, fields, invalid, visual; source graph contains related domain token(s): invalid; request mentions form validation or invalid-field feedback
 
 - suggested actions:
-  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
-  - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
   - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=no)
 
-## Predicted Files
+## Planner/Propose Predicted Files
 
 -
 
@@ -97,24 +97,32 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - `spring-petclinic-reactjs/client/TODO.md`
 - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 
-## Matched Files
+## Planner/Propose Matched Files
 
 -
 
-## Missed Files
+## Recipe Suggestions Matched Files
+
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
+
+## Combined Matched Files
+
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
+
+## Planner/Propose Missed Files
 
 - `spring-petclinic-reactjs/client/TODO.md`
 - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 
-## Extra Predicted Files
+## Planner/Propose Extra Predicted Files
 
 -
 
-## Folder-Level Matches
+## Planner/Propose Folder-Level Matches
 
 -
 
-## Category-Level Matches
+## Planner/Propose Category-Level Matches
 
 - precision: 0.00
 - recall: 0.00
@@ -122,7 +130,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed: `frontend_component`, `unknown`
 - extra predicted: -
 
-## Exact File Scoring
+## Planner/Propose Exact File Scoring
 
 - precision: 0.00
 - recall: 0.00
@@ -132,7 +140,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 2
 - extra predicted count: 0
 
-## High-Signal File Scoring
+## Planner/Propose High-Signal File Scoring
 
 - precision: 0.00
 - recall: 0.00
@@ -142,11 +150,11 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - missed count: 2
 - extra predicted count: 0
 
-## High-Signal Matched Files
+## Planner/Propose High-Signal Matched Files
 
 -
 
-## High-Signal Missed Files
+## Planner/Propose High-Signal Missed Files
 
 - `spring-petclinic-reactjs/client/TODO.md`
 - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`

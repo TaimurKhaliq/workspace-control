@@ -424,6 +424,7 @@ def classify_failure(
     recipe_outputs = planner_outputs.get("recipe_suggestions", {})
     recipe_metrics = recipe_outputs.get("metrics", {})
     matched_recipes = recipe_outputs.get("matched_recipes", [])
+    recipe_suggested_paths = recipe_action_paths(recipe_outputs.get("suggested_actions", []) or [])
     recipe_predicted_count = len(recipe_outputs.get("predicted_files", []) or [])
     recipe_exact_recall = float(recipe_metrics.get("exact_recall") or 0.0)
     recipe_category_recall = float(recipe_metrics.get("category_recall") or 0.0)
@@ -462,6 +463,18 @@ def classify_failure(
     if case.get("archetype") in {"backend_api", "persistence_data"} and backend_validation_prompt(str(case.get("prompt", ""))):
         labels.add("backend_validation_ranking_gap")
         reasons.append("Backend validation prompt was not classified as backend_validation_change.")
+    if case.get("archetype") == "ui_form_validation" and strong_validation_prompt(str(case.get("prompt", ""))):
+        if any(is_route_error_surface_path(path) for path in recipe_suggested_paths):
+            labels.add("page_error_surface_confusion")
+            reasons.append("Recipe suggestions chose route-level error pages for field-validation work.")
+        if (
+            matched_recipes
+            and recipe_exact_recall == 0.0
+            and validation_surface_exists(discovery_evidence)
+            and not any(is_form_validation_surface_path(path) for path in recipe_suggested_paths)
+        ):
+            labels.add("validation_surface_ranking_gap")
+            reasons.append("Form-field validation surfaces existed, but recipe suggestions did not rank them.")
     if case.get("archetype") in {"config_build", "docs_comments", "refactor_move", "infra_deployment", "reject"}:
         labels.add("unsupported_change_type")
         reasons.append("Archetype is not a product-feature planning case.")
@@ -557,6 +570,9 @@ def build_diagnosis_summary(
     elif "backend_validation_ranking_gap" in labels:
         fix_area = "candidate classification"
         cause = "Backend validation behavior was not classified or ranked as backend validation."
+    elif "page_error_surface_confusion" in labels or "validation_surface_ranking_gap" in labels:
+        fix_area = "recipe application"
+        cause = "Field-validation recipe ranking confused generic route error pages with form/input validation surfaces."
     elif "domain_light_but_archetype_clear" in labels and "recipe_application_gap" in labels:
         fix_area = "recipe application"
         cause = "The prompt is domain-light but has clear validation intent; recipe application needs better generic validation surfaces."
@@ -634,6 +650,40 @@ def search_query_prompt(prompt: str) -> bool:
 
 def domain_light_but_archetype_clear(prompt: str, archetype: str) -> bool:
     return archetype == "ui_form_validation" and strong_validation_prompt(prompt)
+
+
+def recipe_action_paths(actions: Sequence[Any]) -> list[str]:
+    """Return normalized suggested paths from recipe action records."""
+
+    paths: list[str] = []
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        path = action.get("qualified_path") or action.get("suggested_path") or action.get("suggested_folder")
+        if isinstance(path, str) and path:
+            paths.append(path)
+    return paths
+
+
+def is_route_error_surface_path(path: str) -> bool:
+    lowered = path.lower()
+    return "errorpage" in lowered or "notfoundpage" in lowered or "/404" in lowered
+
+
+def is_form_validation_surface_path(path: str) -> bool:
+    lowered = path.lower()
+    return any(term in lowered for term in ("form", "editor", "edit", "newowner", "ownereditor", "/owners/"))
+
+
+def validation_surface_exists(discovery_evidence: dict[str, Any]) -> bool:
+    for node in discovery_evidence.get("relevant_graph_nodes", []) or []:
+        if not isinstance(node, dict):
+            continue
+        path = str(node.get("path", ""))
+        node_type = str(node.get("node_type", ""))
+        if node_type in {"form_component", "edit_surface"} or is_form_validation_surface_path(path):
+            return True
+    return False
 
 
 def extract_proposed_files(propose_output: dict[str, Any]) -> list[dict[str, Any]]:

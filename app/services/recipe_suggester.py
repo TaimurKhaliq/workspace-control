@@ -287,7 +287,7 @@ def actions_for_recipe(
     if recipe.recipe_type == "ui_page_add":
         actions.extend(_ui_page_add_actions(recipe, match, graph, component_identifier, domain_tokens))
     elif recipe.recipe_type == "ui_form_validation":
-        actions.extend(_ui_form_validation_actions(recipe, match, graph, domain_tokens))
+        actions.extend(_ui_form_validation_actions(recipe, match, graph, domain_tokens, request_tokens, feature_request))
     elif recipe.recipe_type == "ui_shell_layout":
         actions.extend(_ui_shell_actions(recipe, match, graph, request_tokens))
     elif recipe.recipe_type == "backend_api_change":
@@ -297,7 +297,7 @@ def actions_for_recipe(
     elif recipe.recipe_type == "backend_search_query":
         actions.extend(_backend_search_actions(recipe, match, graph, domain_tokens, request_tokens))
     elif recipe.recipe_type == "full_stack_ui_api":
-        actions.extend(_ui_form_validation_actions(recipe, match, graph, domain_tokens))
+        actions.extend(_ui_form_validation_actions(recipe, match, graph, domain_tokens, request_tokens, feature_request))
         actions.extend(_backend_api_actions(recipe, match, graph, domain_tokens))
     elif recipe.recipe_type == "persistence_data_change":
         actions.extend(_node_actions(match, graph, ("domain_model", "repository", "migration"), domain_tokens, action="modify"))
@@ -384,8 +384,32 @@ def _ui_form_validation_actions(
     match: MatchedRecipe,
     graph: SourceGraph,
     domain_tokens: set[str],
+    request_tokens: set[str],
+    feature_request: str,
 ) -> list[RecipeLikelyAction]:
-    actions = _node_actions(match, graph, ("form_component", "edit_surface", "page_component"), domain_tokens, action="modify")
+    actions: list[RecipeLikelyAction] = []
+    for node in _ranked_validation_nodes(
+        graph,
+        ("form_component", "edit_surface", "page_component"),
+        domain_tokens,
+        request_tokens,
+        feature_request,
+        recipe,
+    )[:3]:
+        action = "modify" if _has_validation_surface_signal(node) else "inspect"
+        confidence = "high" if action == "modify" and node.node_type in {"form_component", "edit_surface"} else "medium"
+        actions.append(
+            _action_for_node(
+                match,
+                node,
+                action,
+                confidence,
+                [
+                    "field-validation recipe prefers components with form/input/field feedback evidence",
+                    *_validation_metadata_evidence(node),
+                ],
+            )
+        )
     if "frontend_type" in recipe.modified_node_types or "frontend_type" in recipe.changed_node_types:
         actions.extend(_node_actions(match, graph, ("frontend_type",), domain_tokens, action="inspect", confidence="medium", limit=1))
     return actions
@@ -701,6 +725,88 @@ def _ranked_search_nodes(
     ]
 
 
+def _ranked_validation_nodes(
+    graph: SourceGraph,
+    node_types: Sequence[str],
+    domain_tokens: set[str],
+    request_tokens: set[str],
+    feature_request: str,
+    recipe: ChangeRecipe,
+) -> list[GraphNode]:
+    candidates = [node for node in graph.nodes if node.node_type in node_types]
+    scored = [
+        (validation_node_relevance(node, domain_tokens, request_tokens, feature_request, recipe), node)
+        for node in candidates
+    ]
+    scored = [(score, node) for score, node in scored if score > 0]
+    return [
+        node
+        for _score, node in sorted(
+            scored,
+            key=lambda item: (
+                -item[0],
+                item[1].repo_name,
+                item[1].path,
+                item[1].node_type,
+            ),
+        )
+    ]
+
+
+def validation_node_relevance(
+    node: GraphNode,
+    domain_tokens: set[str],
+    request_tokens: set[str],
+    feature_request: str,
+    recipe: ChangeRecipe,
+) -> int:
+    path_tokens = path_token_set(node.path)
+    node_tokens = set(node.domain_tokens) | path_tokens
+    requested_entities = domain_tokens & DOMAIN_ENTITY_TOKENS
+    path_entities = path_tokens & DOMAIN_ENTITY_TOKENS
+    if requested_entities and path_entities and not (requested_entities & path_entities):
+        return 0
+    if _is_route_error_page(node) and not _explicit_error_route_request(feature_request):
+        return 0
+
+    score = 0
+    if requested_entities and node_tokens & requested_entities:
+        score += 45
+    elif requested_entities:
+        score -= 20
+
+    if node.node_type == "form_component":
+        score += 40
+    elif node.node_type == "edit_surface":
+        score += 35
+    elif node.node_type == "page_component":
+        score += 15
+
+    if _metadata_true(node, "has_form_inputs"):
+        score += 60
+    if _metadata_true(node, "has_validation_terms"):
+        score += 45
+    if _metadata_true(node, "has_field_terms"):
+        score += 35
+    if _metadata_true(node, "has_error_feedback_terms") and request_tokens & UI_FORM_VALIDATION_TERMS:
+        score += 30
+
+    surface_tokens = path_tokens | set(node.domain_tokens)
+    if surface_tokens & {"form", "editor", "edit", "new"}:
+        score += 20
+    if surface_tokens & {"find", "list", "search"} and not (request_tokens & SEARCH_QUERY_TERMS):
+        score -= 50
+    compact_path = re.sub(r"[^a-z0-9]+", "", node.path.lower())
+    trigger_terms = {term for term in recipe.trigger_terms if len(term) > 4}
+    if any(term in compact_path for term in trigger_terms):
+        score += 55
+    if surface_tokens & {"error", "notfound", "404"} and not _explicit_error_route_request(feature_request):
+        score -= 30
+    if not _has_validation_surface_signal(node) and node.node_type == "page_component":
+        score -= 20
+    return score
+
+
 def search_node_relevance(node: GraphNode, domain_tokens: set[str], request_tokens: set[str]) -> int:
     path_tokens = path_token_set(node.path)
     metadata_tokens = _metadata_token_set(node, "search_terms") | _metadata_token_set(node, "method_names")
@@ -884,6 +990,10 @@ def _metadata_values(node: GraphNode, key: str) -> set[str]:
     }
 
 
+def _metadata_true(node: GraphNode, key: str) -> bool:
+    return node.metadata.get(key) == "true"
+
+
 def _metadata_token_set(node: GraphNode, key: str) -> set[str]:
     values = _metadata_values(node, key)
     tokens: set[str] = set()
@@ -904,6 +1014,46 @@ def _query_metadata_evidence(node: GraphNode) -> list[str]:
         if values:
             evidence.append(f"{label}: {', '.join(values[:5])}")
     return evidence
+
+
+def _has_validation_surface_signal(node: GraphNode) -> bool:
+    return any(
+        _metadata_true(node, key)
+        for key in (
+            "has_form_inputs",
+            "has_validation_terms",
+            "has_field_terms",
+            "has_error_feedback_terms",
+        )
+    ) or bool(path_token_set(node.path) & {"form", "editor", "edit", "new"})
+
+
+def _validation_metadata_evidence(node: GraphNode) -> list[str]:
+    labels = {
+        "has_form_inputs": "form/input evidence",
+        "has_validation_terms": "validation terms",
+        "has_error_feedback_terms": "error/feedback terms",
+        "has_field_terms": "field terms",
+    }
+    evidence = [label for key, label in labels.items() if _metadata_true(node, key)]
+    if _is_route_error_page(node):
+        evidence.append("route-level error page; use only when prompt targets error routing")
+    return evidence
+
+
+def _is_route_error_page(node: GraphNode) -> bool:
+    return _metadata_true(node, "is_error_route_page") or _metadata_true(node, "is_not_found_page")
+
+
+def _explicit_error_route_request(feature_request: str) -> bool:
+    normalized = normalize_text(feature_request)
+    compact = normalized.replace(" ", "")
+    return (
+        "error page" in normalized
+        or "not found" in normalized
+        or "notfound" in compact
+        or "404" in compact
+    )
 
 
 def _max_confidence(left: str, right: str) -> str:

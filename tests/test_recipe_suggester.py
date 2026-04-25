@@ -23,11 +23,18 @@ def _seed_workspace(tmp_path: Path, *, include_owners_page: bool = False) -> tup
     _write(repo / "client/src/main.tsx", "import './components/App';\n")
     _write(repo / "client/src/components/App.tsx", "export function App() { return null; }\n")
     _write(repo / "client/src/components/WelcomePage.tsx", "export function WelcomePage() { return null; }\n")
+    _write(repo / "client/src/components/ErrorPage.tsx", "export function ErrorPage() { return <h1>Error</h1>; }\n")
+    _write(repo / "client/src/components/NotFoundPage.tsx", "export function NotFoundPage() { return <h1>Not found</h1>; }\n")
     _write(repo / "client/src/components/owners/FindOwnersPage.tsx", "export function FindOwnersPage() { return null; }\n")
-    _write(repo / "client/src/components/owners/OwnerEditor.tsx", "export function OwnerEditor() { return null; }\n")
+    _write(
+        repo / "client/src/components/owners/NewOwnerPage.tsx",
+        "export function NewOwnerPage() { return <form><label>Owner</label><input name=\"lastName\" required aria-invalid=\"true\" /></form>; }\n",
+    )
+    _write(repo / "client/src/components/owners/OwnerEditor.tsx", "export function OwnerEditor() { return <input name=\"telephone\" />; }\n")
     _write(repo / "client/src/components/pets/PetsPage.tsx", "export function PetsPage() { return null; }\n")
     _write(repo / "client/src/configureRoutes.tsx", "export const routes = [];\n")
     _write(repo / "client/src/types/index.ts", "export interface Owner { id: string }\n")
+    _write(repo / "client/TODO.md", "- later\n")
     if include_owners_page:
         _write(repo / "client/src/components/owners/OwnersPage.tsx", "export function OwnersPage() { return null; }\n")
     _write(
@@ -188,6 +195,11 @@ def test_recipe_matching_for_ui_form_validation(tmp_path: Path) -> None:
 
     assert report.matched_recipes[0].recipe_type == "ui_form_validation"
     assert any(action.node_type in {"form_component", "page_component"} for action in report.suggestions)
+    suggested_paths = [action.suggested_path for action in report.suggestions]
+    assert "client/src/components/owners/NewOwnerPage.tsx" in suggested_paths
+    assert "client/src/components/ErrorPage.tsx" not in suggested_paths
+    assert "client/src/components/NotFoundPage.tsx" not in suggested_paths
+    assert "client/TODO.md" not in suggested_paths
 
 
 def test_ui_form_validation_matches_without_domain_tokens(tmp_path: Path) -> None:
@@ -197,6 +209,15 @@ def test_ui_form_validation_matches_without_domain_tokens(tmp_path: Path) -> Non
     reasons = " | ".join(report.matched_recipes[0].why_matched)
     assert "form validation" in reasons
     assert report.matched_recipes[0].score >= 25
+    assert report.suggestions[0].suggested_path == "client/src/components/owners/NewOwnerPage.tsx"
+
+
+def test_ui_form_validation_deprioritizes_route_error_pages(tmp_path: Path) -> None:
+    report = _service(tmp_path).suggest("petclinic-test", "Add visual feedback for invalid fields")
+
+    paths = [action.suggested_path for action in report.suggestions]
+    assert "client/src/components/owners/NewOwnerPage.tsx" in paths
+    assert all("ErrorPage" not in str(path) and "NotFoundPage" not in str(path) for path in paths)
 
 
 def test_recipe_matching_for_ui_shell_layout(tmp_path: Path) -> None:
