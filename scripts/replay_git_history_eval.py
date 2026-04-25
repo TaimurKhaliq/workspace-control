@@ -23,6 +23,32 @@ from typing import Any
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_REPORT_DIR = REPO_ROOT / "reports" / "replay"
+STATIC_ASSET_EXTENSIONS = {
+    ".avif",
+    ".gif",
+    ".ico",
+    ".jpeg",
+    ".jpg",
+    ".png",
+    ".svg",
+    ".webp",
+}
+SURFACE_CATEGORIES = (
+    "frontend_entrypoint",
+    "app_shell",
+    "landing_page",
+    "public_html",
+    "static_assets",
+    "frontend_component",
+    "frontend_types",
+    "api_contract",
+    "api_controller",
+    "service_layer",
+    "domain_model",
+    "repository",
+    "migration",
+    "unknown",
+)
 
 CANDIDATE_HELP = """How to find candidate commits for replay evals
 
@@ -174,6 +200,16 @@ def run_replay_eval(
             "matched_file_count": len(comparison["matched_files"]),
             "missed_file_count": len(comparison["missed_files"]),
             "extra_predicted_file_count": len(comparison["extra_predicted_files"]),
+            "exact_file_precision": comparison["precision"],
+            "exact_file_recall": comparison["recall"],
+            "folder_level_matched_file_count": len(
+                comparison["folder_level"]["matched_actual_files"]
+            ),
+            "category_precision": comparison["category_level"]["precision"],
+            "category_recall": comparison["category_level"]["recall"],
+            "high_signal_precision": comparison["high_signal"]["precision"],
+            "high_signal_recall": comparison["high_signal"]["recall"],
+            "static_asset_miss_count": len(comparison["static_assets"]["missed_files"]),
         },
         "predicted_repos": predicted["predicted_repos"],
         "predicted_files": predicted["predicted_files"],
@@ -389,7 +425,7 @@ def compare_predictions(
     predicted_files: Sequence[dict[str, Any]],
     actual_files: Sequence[str],
 ) -> dict[str, Any]:
-    """Compare predicted files against actual changed files with exact path matching."""
+    """Compare predictions using exact, folder, category, and signal-aware scoring."""
 
     predicted_paths = sorted({item["path"] for item in predicted_files})
     actual_paths = sorted(set(actual_files))
@@ -398,6 +434,15 @@ def compare_predictions(
     matched = sorted(predicted_set & actual_set)
     missed = sorted(actual_set - predicted_set)
     extra = sorted(predicted_set - actual_set)
+    folder_level = folder_level_matches(predicted_paths, actual_paths)
+    category_level = category_level_matches(predicted_paths, actual_paths)
+    high_signal = high_signal_exact_matches(predicted_paths, actual_paths)
+    static_assets = static_asset_summary(
+        predicted_paths,
+        actual_paths,
+        exact_matched=matched,
+        folder_matched=folder_level["matched_actual_files"],
+    )
     return {
         "predicted_files": predicted_paths,
         "actual_files": actual_paths,
@@ -406,7 +451,239 @@ def compare_predictions(
         "extra_predicted_files": extra,
         "precision": ratio(len(matched), len(predicted_paths)),
         "recall": ratio(len(matched), len(actual_paths)),
+        "exact_file": {
+            "precision": ratio(len(matched), len(predicted_paths)),
+            "recall": ratio(len(matched), len(actual_paths)),
+            "predicted_count": len(predicted_paths),
+            "actual_count": len(actual_paths),
+            "matched_count": len(matched),
+            "missed_count": len(missed),
+            "extra_predicted_count": len(extra),
+        },
+        "folder_level": folder_level,
+        "category_level": category_level,
+        "high_signal": high_signal,
+        "static_assets": static_assets,
     }
+
+
+def folder_level_matches(
+    predicted_paths: Sequence[str],
+    actual_paths: Sequence[str],
+) -> dict[str, Any]:
+    """Match actual files under predicted folder-like paths."""
+
+    matches: list[dict[str, Any]] = []
+    matched_actual: set[str] = set()
+    matched_predicted: set[str] = set()
+    for predicted_path in sorted(set(predicted_paths)):
+        if not path_is_folder_like(predicted_path):
+            continue
+        prefix = predicted_path.rstrip("/") + "/"
+        actual_under_folder = [
+            actual_path
+            for actual_path in sorted(set(actual_paths))
+            if actual_path.startswith(prefix)
+        ]
+        if not actual_under_folder:
+            continue
+        matches.append(
+            {
+                "predicted_path": predicted_path,
+                "actual_files": actual_under_folder,
+            }
+        )
+        matched_predicted.add(predicted_path)
+        matched_actual.update(actual_under_folder)
+
+    matched_actual_files = sorted(matched_actual)
+    return {
+        "matches": matches,
+        "matched_predicted_paths": sorted(matched_predicted),
+        "matched_actual_files": matched_actual_files,
+        "precision": ratio(len(matched_predicted), len(set(predicted_paths))),
+        "recall": ratio(len(matched_actual_files), len(set(actual_paths))),
+    }
+
+
+def category_level_matches(
+    predicted_paths: Sequence[str],
+    actual_paths: Sequence[str],
+) -> dict[str, Any]:
+    """Compare predicted and actual surface categories."""
+
+    predicted_by_category = paths_by_category(predicted_paths)
+    actual_by_category = paths_by_category(actual_paths)
+    predicted_categories = sorted(
+        category for category, paths in predicted_by_category.items() if paths
+    )
+    actual_categories = sorted(
+        category for category, paths in actual_by_category.items() if paths
+    )
+    predicted_set = set(predicted_categories)
+    actual_set = set(actual_categories)
+    matched = sorted(predicted_set & actual_set)
+    missed = sorted(actual_set - predicted_set)
+    extra = sorted(predicted_set - actual_set)
+    return {
+        "predicted_categories": predicted_categories,
+        "actual_categories": actual_categories,
+        "matched_categories": matched,
+        "missed_categories": missed,
+        "extra_predicted_categories": extra,
+        "precision": ratio(len(matched), len(predicted_categories)),
+        "recall": ratio(len(matched), len(actual_categories)),
+        "predicted_by_category": predicted_by_category,
+        "actual_by_category": actual_by_category,
+    }
+
+
+def high_signal_exact_matches(
+    predicted_paths: Sequence[str],
+    actual_paths: Sequence[str],
+) -> dict[str, Any]:
+    """Compute exact-file overlap excluding low-level static assets."""
+
+    predicted_high_signal = sorted(
+        path for path in set(predicted_paths) if classify_surface(path) != "static_assets"
+    )
+    actual_high_signal = sorted(
+        path for path in set(actual_paths) if classify_surface(path) != "static_assets"
+    )
+    predicted_set = set(predicted_high_signal)
+    actual_set = set(actual_high_signal)
+    matched = sorted(predicted_set & actual_set)
+    missed = sorted(actual_set - predicted_set)
+    extra = sorted(predicted_set - actual_set)
+    return {
+        "predicted_files": predicted_high_signal,
+        "actual_files": actual_high_signal,
+        "matched_files": matched,
+        "missed_files": missed,
+        "extra_predicted_files": extra,
+        "precision": ratio(len(matched), len(predicted_high_signal)),
+        "recall": ratio(len(matched), len(actual_high_signal)),
+    }
+
+
+def static_asset_summary(
+    predicted_paths: Sequence[str],
+    actual_paths: Sequence[str],
+    *,
+    exact_matched: Sequence[str],
+    folder_matched: Sequence[str],
+) -> dict[str, Any]:
+    """Summarize static asset exact/folder matches separately from high-signal files."""
+
+    predicted_static = sorted(
+        path for path in set(predicted_paths) if classify_surface(path) == "static_assets"
+    )
+    actual_static = sorted(
+        path for path in set(actual_paths) if classify_surface(path) == "static_assets"
+    )
+    exact_matched_static = sorted(set(predicted_static) & set(actual_static) & set(exact_matched))
+    folder_matched_static = sorted(set(actual_static) & set(folder_matched))
+    covered_static = set(exact_matched_static) | set(folder_matched_static)
+    return {
+        "predicted_files": predicted_static,
+        "actual_files": actual_static,
+        "exact_matched_files": exact_matched_static,
+        "folder_level_matched_files": folder_matched_static,
+        "missed_files": sorted(set(actual_static) - covered_static),
+    }
+
+
+def paths_by_category(paths: Sequence[str]) -> dict[str, list[str]]:
+    """Group paths by deterministic surface category."""
+
+    grouped = {category: [] for category in SURFACE_CATEGORIES}
+    for path in sorted(set(paths)):
+        grouped[classify_surface(path)].append(path)
+    return grouped
+
+
+def classify_surface(path: str) -> str:
+    """Classify one repo-qualified path into a replay surface category."""
+
+    lowered = path.lower()
+    name = Path(path).name.lower()
+    stem = Path(path).stem.lower()
+    suffix = Path(path).suffix.lower()
+    parts = set(re.findall(r"[a-z0-9]+", lowered))
+
+    if is_static_asset_path(path):
+        return "static_assets"
+    if lowered.endswith("/public/index.html") or lowered.endswith("public/index.html"):
+        return "public_html"
+    if name in {"main.tsx", "main.jsx", "index.tsx", "index.jsx"} and "/src/" in lowered:
+        return "frontend_entrypoint"
+    if name in {"app.tsx", "app.jsx"}:
+        return "app_shell"
+    if stem in {"welcome", "welcomepage", "home", "homepage", "landing", "landingpage"}:
+        return "landing_page"
+    if "openapi" in lowered or "swagger" in lowered:
+        return "api_contract"
+    if name.endswith(("controller.java", "resource.java")) or "controller" in parts:
+        return "api_controller"
+    if name.endswith("service.java") or "service" in parts or "services" in parts:
+        return "service_layer"
+    if name.endswith("repository.java") or "repository" in parts or "repositories" in parts:
+        return "repository"
+    if (
+        "migration" in parts
+        or "migrations" in parts
+        or "changelog" in parts
+        or suffix == ".sql"
+    ):
+        return "migration"
+    if name.endswith("entity.java") or "entity" in parts or "entities" in parts or "model" in parts:
+        return "domain_model"
+    if "types" in parts or name.endswith(".d.ts"):
+        return "frontend_types"
+    if suffix in {".tsx", ".jsx"} or "components" in parts or "pages" in parts:
+        return "frontend_component"
+    return "unknown"
+
+
+def is_static_asset_path(path: str) -> bool:
+    """Return whether a path is a public/static asset file or folder."""
+
+    lowered = path.lower()
+    suffix = Path(path).suffix.lower()
+    if suffix in STATIC_ASSET_EXTENSIONS:
+        return True
+    return any(
+        marker in lowered
+        for marker in (
+            "/public/images",
+            "/public/assets",
+            "/public/img",
+            "/public/static",
+            "/src/assets",
+            "/src/images",
+        )
+    )
+
+
+def path_is_folder_like(path: str) -> bool:
+    """Return whether a predicted path can reasonably stand for a folder."""
+
+    lowered = path.lower().rstrip("/")
+    if not Path(lowered).suffix:
+        return True
+    return any(
+        lowered.endswith(marker)
+        for marker in (
+            "/public/images",
+            "/public/assets",
+            "/public/static",
+            "/src/components",
+            "/src/types",
+            "/src/pages",
+            "/src/services",
+            "/src/api",
+        )
+    )
 
 
 def write_reports(report: dict[str, Any], report_dir: Path) -> None:
@@ -448,8 +725,14 @@ def format_markdown_report(report: dict[str, Any]) -> str:
         f"- matched files: {summary['matched_file_count']}",
         f"- missed files: {summary['missed_file_count']}",
         f"- extra predicted files: {summary['extra_predicted_file_count']}",
-        f"- precision: {comparison['precision']:.2f}",
-        f"- recall: {comparison['recall']:.2f}",
+        f"- exact file precision: {comparison['precision']:.2f}",
+        f"- exact file recall: {comparison['recall']:.2f}",
+        f"- folder-level matched actual files: {len(comparison['folder_level']['matched_actual_files'])}",
+        f"- category precision: {comparison['category_level']['precision']:.2f}",
+        f"- category recall: {comparison['category_level']['recall']:.2f}",
+        f"- high-signal exact precision: {comparison['high_signal']['precision']:.2f}",
+        f"- high-signal exact recall: {comparison['high_signal']['recall']:.2f}",
+        f"- static asset misses: {len(comparison['static_assets']['missed_files'])}",
         "",
         "## Command Results",
         "",
@@ -464,6 +747,11 @@ def format_markdown_report(report: dict[str, Any]) -> str:
     lines.extend(section_for_paths("Matched Files", comparison["matched_files"]))
     lines.extend(section_for_paths("Missed Files", comparison["missed_files"]))
     lines.extend(section_for_paths("Extra Predicted Files", comparison["extra_predicted_files"]))
+    lines.extend(section_for_folder_matches(comparison["folder_level"]["matches"]))
+    lines.extend(section_for_category_matches(comparison["category_level"]))
+    lines.extend(section_for_paths("High-Signal Matched Files", comparison["high_signal"]["matched_files"]))
+    lines.extend(section_for_paths("High-Signal Missed Files", comparison["high_signal"]["missed_files"]))
+    lines.extend(section_for_paths("Static Asset Misses", comparison["static_assets"]["missed_files"]))
     lines.extend(
         [
             "",
@@ -476,6 +764,37 @@ def format_markdown_report(report: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def section_for_folder_matches(matches: Sequence[dict[str, Any]]) -> list[str]:
+    """Render folder-level replay matches."""
+
+    lines = ["", "## Folder-Level Matches", ""]
+    if not matches:
+        lines.append("-")
+        return lines
+
+    for match in matches:
+        lines.append(f"- `{match['predicted_path']}`")
+        for actual_file in match["actual_files"]:
+            lines.append(f"  - `{actual_file}`")
+    return lines
+
+
+def section_for_category_matches(category: dict[str, Any]) -> list[str]:
+    """Render category-level replay overlap."""
+
+    lines = [
+        "",
+        "## Category-Level Matches",
+        "",
+        f"- precision: {category['precision']:.2f}",
+        f"- recall: {category['recall']:.2f}",
+        f"- matched: {format_inline_values(category['matched_categories'])}",
+        f"- missed: {format_inline_values(category['missed_categories'])}",
+        f"- extra predicted: {format_inline_values(category['extra_predicted_categories'])}",
+    ]
+    return lines
+
+
 def section_for_paths(title: str, paths: Sequence[str]) -> list[str]:
     """Render a deterministic Markdown section for file paths."""
 
@@ -485,6 +804,14 @@ def section_for_paths(title: str, paths: Sequence[str]) -> list[str]:
     else:
         lines.extend(f"- `{path}`" for path in paths)
     return lines
+
+
+def format_inline_values(values: Sequence[str]) -> str:
+    """Render short values for Markdown summaries."""
+
+    if not values:
+        return "-"
+    return ", ".join(f"`{value}`" for value in values)
 
 
 def print_replay_summary(report: dict[str, Any]) -> None:
@@ -500,6 +827,14 @@ def print_replay_summary(report: dict[str, Any]) -> None:
     print(f"matched files: {summary['matched_file_count']}")
     print(f"missed files: {summary['missed_file_count']}")
     print(f"extra predicted files: {summary['extra_predicted_file_count']}")
+    print(f"exact file precision: {summary['exact_file_precision']:.2f}")
+    print(f"exact file recall: {summary['exact_file_recall']:.2f}")
+    print(f"folder-level matched files: {summary['folder_level_matched_file_count']}")
+    print(f"category precision: {summary['category_precision']:.2f}")
+    print(f"category recall: {summary['category_recall']:.2f}")
+    print(f"high-signal precision: {summary['high_signal_precision']:.2f}")
+    print(f"high-signal recall: {summary['high_signal_recall']:.2f}")
+    print(f"static asset misses: {summary['static_asset_miss_count']}")
     print(f"report json: {report['reports']['json']}")
     print(f"report md: {report['reports']['markdown']}")
 

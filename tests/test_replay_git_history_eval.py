@@ -113,6 +113,8 @@ def test_run_replay_eval_writes_overlap_reports(tmp_path: Path, monkeypatch) -> 
     assert report["comparison"]["extra_predicted_files"] == [
         "sample-repo/missing.py"
     ]
+    assert report["comparison"]["exact_file"]["precision"] == 0.5
+    assert report["comparison"]["high_signal"]["matched_files"] == ["sample-repo/app.py"]
     assert report["predicted_reference_files"][0]["path"] == "sample-repo/README.md"
     assert _git(repo, ["rev-parse", "HEAD"]) == target
     assert calls
@@ -140,15 +142,49 @@ def test_compare_predictions_is_deterministic() -> None:
         actual_files=["repo/a.py", "repo/c.py"],
     )
 
-    assert comparison == {
-        "predicted_files": ["repo/a.py", "repo/b.py"],
-        "actual_files": ["repo/a.py", "repo/c.py"],
-        "matched_files": ["repo/a.py"],
-        "missed_files": ["repo/c.py"],
-        "extra_predicted_files": ["repo/b.py"],
-        "precision": 0.5,
-        "recall": 0.5,
-    }
+    assert comparison["predicted_files"] == ["repo/a.py", "repo/b.py"]
+    assert comparison["actual_files"] == ["repo/a.py", "repo/c.py"]
+    assert comparison["matched_files"] == ["repo/a.py"]
+    assert comparison["missed_files"] == ["repo/c.py"]
+    assert comparison["extra_predicted_files"] == ["repo/b.py"]
+    assert comparison["precision"] == 0.5
+    assert comparison["recall"] == 0.5
+    assert comparison["exact_file"]["precision"] == 0.5
+    assert comparison["category_level"]["predicted_categories"] == ["unknown"]
+
+
+def test_compare_predictions_counts_folder_level_static_asset_matches() -> None:
+    comparison = replay.compare_predictions(
+        predicted_files=[
+            {"path": "repo/client/public/images"},
+            {"path": "repo/client/src/components/App.tsx"},
+        ],
+        actual_files=[
+            "repo/client/public/images/foo.png",
+            "repo/client/src/components/App.tsx",
+        ],
+    )
+
+    assert comparison["matched_files"] == ["repo/client/src/components/App.tsx"]
+    assert comparison["missed_files"] == ["repo/client/public/images/foo.png"]
+    assert comparison["folder_level"]["matches"] == [
+        {
+            "predicted_path": "repo/client/public/images",
+            "actual_files": ["repo/client/public/images/foo.png"],
+        }
+    ]
+    assert comparison["folder_level"]["matched_actual_files"] == [
+        "repo/client/public/images/foo.png"
+    ]
+    assert comparison["category_level"]["matched_categories"] == [
+        "app_shell",
+        "static_assets",
+    ]
+    assert comparison["high_signal"]["recall"] == 1.0
+    assert comparison["static_assets"]["folder_level_matched_files"] == [
+        "repo/client/public/images/foo.png"
+    ]
+    assert comparison["static_assets"]["missed_files"] == []
 
 
 def test_replay_snapshot_scan_root_and_target_id_are_semantically_equivalent(
