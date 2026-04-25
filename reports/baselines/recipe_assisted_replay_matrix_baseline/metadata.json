@@ -1,0 +1,8 @@
+{
+  "baseline_name": "recipe_assisted_replay_matrix_baseline",
+  "timestamp": "2026-04-25T20:07:30+00:00",
+  "total_cases": 14,
+  "passed": 14,
+  "failed": 0,
+  "git_commit_sha": "31eeae5d69a39af3f12aab5d6ae68dd790b210b6"
+}

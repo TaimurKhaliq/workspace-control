@@ -1,8 +1,8 @@
 {
   "baseline_name": "green_14_case_baseline",
-  "timestamp": "2026-04-24T15:10:55+00:00",
+  "timestamp": "2026-04-24T15:21:28+00:00",
   "total_cases": 14,
   "passed": 14,
   "failed": 0,
-  "git_commit_sha": "e94b651e72540b4d030d5db2aaf9101a90995bf3"
+  "git_commit_sha": "0ca0be581e23a12b6649aa1a9303034c3eeffe87"
 }
