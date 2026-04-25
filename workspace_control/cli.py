@@ -28,6 +28,7 @@ from app.services.repo_learning import (
     print_refresh_summary,
     RepoLearningService,
 )
+from app.services.recipe_suggester import RecipeSuggestionService, format_recipe_suggestion_report
 from app.services.text_normalization import tokenize_text
 
 from .analyze import analyze_feature, format_feature_analysis
@@ -408,6 +409,33 @@ def run(argv: list[str] | None = None) -> int:
         default=DEFAULT_LEARNING_REPORT_ROOT,
         help="Path to the learning report root",
     )
+    suggest_recipes_parser = subparsers.add_parser(
+        "suggest-from-recipes",
+        help="Suggest likely change patterns from repo-local learned recipes",
+    )
+    suggest_recipes_parser.add_argument(
+        "feature_description",
+        help='Feature description, for example: "Add OwnersPage (no actions yet)"',
+    )
+    suggest_recipes_parser.add_argument("--target-id", required=True)
+    suggest_recipes_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    suggest_recipes_parser.add_argument(
+        "--learning-root",
+        type=Path,
+        default=DEFAULT_LEARNING_ROOT,
+        help="Path to the learning cache root",
+    )
+    suggest_recipes_parser.add_argument(
+        "--report-root",
+        type=Path,
+        default=DEFAULT_LEARNING_REPORT_ROOT,
+        help="Path to the learning report root",
+    )
 
     args = parser.parse_args(argv)
 
@@ -427,11 +455,12 @@ def run(argv: list[str] | None = None) -> int:
         "refresh-learning",
         "learning-status",
         "list-change-recipes",
+        "suggest-from-recipes",
     }:
         parser.print_help()
         return 1
 
-    if args.command in {"refresh-learning", "learning-status", "list-change-recipes"}:
+    if args.command in {"refresh-learning", "learning-status", "list-change-recipes", "suggest-from-recipes"}:
         service = RepoLearningService(
             registry=DiscoveryTargetRegistry(args.registry_path),
             learning_root=args.learning_root,
@@ -461,6 +490,14 @@ def run(argv: list[str] | None = None) -> int:
                     for state in states
                 }
                 print(format_learning_status(states, recipes_by_target))
+                return 0
+            if args.command == "suggest-from-recipes":
+                report = RecipeSuggestionService(
+                    registry=DiscoveryTargetRegistry(args.registry_path),
+                    learning_root=args.learning_root,
+                    report_root=args.report_root,
+                ).suggest(args.target_id, args.feature_description)
+                print(format_recipe_suggestion_report(report))
                 return 0
             recipes = service.recipes_for_target(args.target_id)
             print(format_recipe_list(recipes))

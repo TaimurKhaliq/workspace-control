@@ -21,6 +21,7 @@ from .repo_learning import (
     RepoLearningState,
 )
 from .repo_profile import InferredRepoProfile, RepoProfileBootstrapReport
+from .recipe_suggestion import MatchedRecipe, RecipeLikelyAction, RecipeSuggestionReport
 
 __all__ = [
     "ArchitectureDiscoveryReport",
@@ -41,4 +42,7 @@ __all__ = [
     "RepoLearningReport",
     "InferredRepoProfile",
     "RepoProfileBootstrapReport",
+    "MatchedRecipe",
+    "RecipeLikelyAction",
+    "RecipeSuggestionReport",
 ]
