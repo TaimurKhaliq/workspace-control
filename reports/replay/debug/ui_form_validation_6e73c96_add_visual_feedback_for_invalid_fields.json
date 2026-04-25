@@ -51,6 +51,7 @@
         "repo_relative_path": "client/TODO.md",
         "exists_in_parent": true,
         "is_new_file": false,
+        "change_kind": "modified",
         "category": "unknown",
         "parent_folder_exists": true
       },
@@ -59,11 +60,16 @@
         "repo_relative_path": "client/src/components/owners/NewOwnerPage.tsx",
         "exists_in_parent": true,
         "is_new_file": false,
+        "change_kind": "modified",
         "category": "frontend_component",
         "parent_folder_exists": true
       }
     ],
     "new_files": [],
+    "modified_files": [
+      "spring-petclinic-reactjs/client/TODO.md",
+      "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx"
+    ],
     "existing_files": [
       "spring-petclinic-reactjs/client/TODO.md",
       "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx"
@@ -97,6 +103,165 @@
       "category_recall": 0.0,
       "high_signal_precision": 0.0,
       "high_signal_recall": 0.0
+    },
+    "recipe_suggestions": {
+      "matched_recipes": [
+        {
+          "recipe_id": "petclinic_react_ui_form_validation",
+          "recipe_type": "ui_form_validation",
+          "structural_confidence": 0.9555,
+          "planner_effectiveness": 0.0,
+          "score": 87,
+          "why_matched": [
+            "matched recipe trigger terms: feedback, fields, invalid, visual",
+            "source graph contains related domain token(s): invalid",
+            "request mentions form validation or invalid-field feedback",
+            "structural confidence 0.96",
+            "planner effectiveness is low, so this recipe is useful as future-improvement evidence"
+          ]
+        }
+      ],
+      "suggested_actions": [
+        {
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "frontend_type",
+          "action": "inspect",
+          "suggested_path": "client/src/types/index.ts",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "current source graph has a frontend_type surface matching the learned recipe",
+            "source graph node: frontend_type",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/client/src/types/index.ts",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "page_component",
+          "action": "modify",
+          "suggested_path": "client/src/components/ErrorPage.tsx",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "current source graph has a page_component surface matching the learned recipe",
+            "source graph node: page_component",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "page_component",
+          "action": "modify",
+          "suggested_path": "client/src/components/NotFoundPage.tsx",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "current source graph has a page_component surface matching the learned recipe",
+            "source graph node: page_component",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        }
+      ],
+      "predicted_files": [
+        {
+          "path": "spring-petclinic-reactjs/client/src/types/index.ts",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "inspect",
+          "confidence": "medium",
+          "reason": "current source graph has a frontend_type surface matching the learned recipe; source graph node: frontend_type; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "frontend_type",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a page_component surface matching the learned recipe; source graph node: page_component; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "page_component",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a page_component surface matching the learned recipe; source graph node: page_component; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "page_component",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        }
+      ],
+      "metrics": {
+        "exact_precision": 0.0,
+        "exact_recall": 0.0,
+        "category_precision": 0.5,
+        "category_recall": 0.5,
+        "high_signal_precision": 0.0,
+        "high_signal_recall": 0.0
+      }
+    },
+    "combined_predictions": {
+      "predicted_files": [
+        {
+          "path": "spring-petclinic-reactjs/client/src/types/index.ts",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "inspect",
+          "confidence": "medium",
+          "reason": "current source graph has a frontend_type surface matching the learned recipe; source graph node: frontend_type; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "frontend_type",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a page_component surface matching the learned recipe; source graph node: page_component; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "page_component",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a page_component surface matching the learned recipe; source graph node: page_component; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_ui_form_validation",
+          "node_type": "page_component",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        }
+      ],
+      "metrics": {
+        "exact_precision": 0.0,
+        "exact_recall": 0.0,
+        "category_precision": 0.5,
+        "category_recall": 0.5,
+        "high_signal_precision": 0.0,
+        "high_signal_recall": 0.0
+      }
     },
     "plan": {
       "primary_owner": null,
@@ -469,6 +634,7 @@
         "repo_relative_path": "client/TODO.md",
         "exists_in_parent": true,
         "is_new_file": false,
+        "change_kind": "modified",
         "category": "unknown",
         "parent_folder_exists": true
       },
@@ -477,6 +643,7 @@
         "repo_relative_path": "client/src/components/owners/NewOwnerPage.tsx",
         "exists_in_parent": true,
         "is_new_file": false,
+        "change_kind": "modified",
         "category": "frontend_component",
         "parent_folder_exists": true
       }
@@ -484,6 +651,7 @@
   },
   "failure_classification": {
     "labels": [
+      "exact_match_miss_but_category_match",
       "graph_found_surface_but_proposal_missed",
       "planner_underpredicted",
       "prompt_too_vague"
@@ -493,13 +661,14 @@
       "No predicted files were emitted.",
       "Plan produced null primary and implementation owners.",
       "propose-changes emitted no proposed changes.",
+      "Recipe suggestions matched categories but missed exact files.",
       "Source graph found relevant surfaces, but propose-changes emitted no files."
     ]
   },
   "diagnosis_summary": {
     "likely_cause": "The prompt did not provide enough actionable product/surface intent.",
     "recommended_fix_area": "prompt generation",
-    "why": "Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Source graph found relevant surfaces, but propose-changes emitted no files."
+    "why": "Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe suggestions matched categories but missed exact files. Source graph found relevant surfaces, but propose-changes emitted no files."
   },
   "reports": {
     "json": "reports/replay/debug/ui_form_validation_6e73c96_add_visual_feedback_for_invalid_fields.json",

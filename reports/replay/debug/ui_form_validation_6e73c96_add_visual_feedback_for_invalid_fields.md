@@ -9,10 +9,10 @@
 
 ## Diagnosis
 
-- labels: `graph_found_surface_but_proposal_missed`, `planner_underpredicted`, `prompt_too_vague`
+- labels: `exact_match_miss_but_category_match`, `graph_found_surface_but_proposal_missed`, `planner_underpredicted`, `prompt_too_vague`
 - likely cause: The prompt did not provide enough actionable product/surface intent.
 - recommended fix area: `prompt generation`
-- why: Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Source graph found relevant surfaces, but propose-changes emitted no files.
+- why: Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe suggestions matched categories but missed exact files. Source graph found relevant surfaces, but propose-changes emitted no files.
 
 ## Metrics
 
@@ -22,6 +22,30 @@
 - category_recall: 0.0
 - high_signal_precision: 0.0
 - high_signal_recall: 0.0
+
+## Recipe Sidecar
+
+- recipe exact_precision: 0.0
+- recipe exact_recall: 0.0
+- recipe category_precision: 0.5
+- recipe category_recall: 0.5
+- recipe high_signal_precision: 0.0
+- recipe high_signal_recall: 0.0
+- matched recipes:
+  - `petclinic_react_ui_form_validation` (ui_form_validation, structural=0.9555, planner=0.0)
+- suggested actions:
+  - `spring-petclinic-reactjs/client/src/types/index.ts` action=inspect node=frontend_type exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` action=modify node=page_component exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` action=modify node=page_component exists_in_parent=True matched_actual=False
+
+## Combined Prediction Metrics
+
+- combined exact_precision: 0.0
+- combined exact_recall: 0.0
+- combined category_precision: 0.5
+- combined category_recall: 0.5
+- combined high_signal_precision: 0.0
+- combined high_signal_recall: 0.0
 
 ## Predicted Files
 
@@ -40,6 +64,11 @@
 ## New Actual Files
 
 -
+
+## Modified Actual Files
+
+- `spring-petclinic-reactjs/client/TODO.md`
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 
 ## Plan/Proposal
 

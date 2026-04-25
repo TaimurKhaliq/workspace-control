@@ -154,6 +154,7 @@ def build_actual_diff(replay_report: dict[str, Any], actual_file_existence: Sequ
         "separated_files": grouped_special,
         "file_existence": list(actual_file_existence),
         "new_files": sorted(new_files),
+        "modified_files": sorted(existing_files),
         "existing_files": sorted(existing_files),
     }
 
@@ -167,6 +168,10 @@ def build_planner_outputs(
     """Build planner/proposal output diagnostics."""
 
     comparison = replay_report.get("comparison", {})
+    comparison_sections = replay_report.get("comparison_sections", {})
+    recipe_section = comparison_sections.get("recipe_suggestions", {}) if isinstance(comparison_sections, dict) else {}
+    combined_section = comparison_sections.get("combined", {}) if isinstance(comparison_sections, dict) else {}
+    recipe_suggestions = replay_report.get("recipe_suggestions", {})
     predicted_files = replay_report.get("predicted_files", [])
     proposed_files = extract_proposed_files(propose_output)
     return {
@@ -182,6 +187,30 @@ def build_planner_outputs(
             "category_recall": comparison.get("category_level", {}).get("recall"),
             "high_signal_precision": comparison.get("high_signal", {}).get("precision"),
             "high_signal_recall": comparison.get("high_signal", {}).get("recall"),
+        },
+        "recipe_suggestions": {
+            "matched_recipes": recipe_suggestions.get("matched_recipes", []) if isinstance(recipe_suggestions, dict) else [],
+            "suggested_actions": recipe_suggestions.get("suggested_actions", []) if isinstance(recipe_suggestions, dict) else [],
+            "predicted_files": recipe_suggestions.get("predicted_files", []) if isinstance(recipe_suggestions, dict) else [],
+            "metrics": {
+                "exact_precision": recipe_section.get("exact_file", {}).get("precision"),
+                "exact_recall": recipe_section.get("exact_file", {}).get("recall"),
+                "category_precision": recipe_section.get("category_level", {}).get("precision"),
+                "category_recall": recipe_section.get("category_level", {}).get("recall"),
+                "high_signal_precision": recipe_section.get("high_signal", {}).get("precision"),
+                "high_signal_recall": recipe_section.get("high_signal", {}).get("recall"),
+            },
+        },
+        "combined_predictions": {
+            "predicted_files": replay_report.get("combined_predictions", {}).get("predicted_files", []),
+            "metrics": {
+                "exact_precision": combined_section.get("exact_file", {}).get("precision"),
+                "exact_recall": combined_section.get("exact_file", {}).get("recall"),
+                "category_precision": combined_section.get("category_level", {}).get("precision"),
+                "category_recall": combined_section.get("category_level", {}).get("recall"),
+                "high_signal_precision": combined_section.get("high_signal", {}).get("precision"),
+                "high_signal_recall": combined_section.get("high_signal", {}).get("recall"),
+            },
         },
         "plan": {
             "primary_owner": plan_output.get("primary_owner"),
@@ -314,12 +343,14 @@ def actual_file_existence(snapshot_repo: Path, *, repo_name: str, actual_files: 
     for qualified_path in actual_files:
         repo_relative = strip_repo_prefix(str(qualified_path), repo_name)
         exists = (snapshot_repo / repo_relative).exists()
+        change_kind = "modified" if exists else "created"
         records.append(
             {
                 "path": qualified_path,
                 "repo_relative_path": repo_relative,
                 "exists_in_parent": exists,
                 "is_new_file": not exists,
+                "change_kind": change_kind,
                 "category": replay.classify_surface(str(qualified_path)),
                 "parent_folder_exists": (snapshot_repo / repo_relative).parent.exists(),
             }
@@ -340,6 +371,12 @@ def classify_failure(
     reasons: list[str] = []
     summary = replay_report.get("summary", {})
     metrics = planner_outputs["metrics"]
+    recipe_outputs = planner_outputs.get("recipe_suggestions", {})
+    recipe_metrics = recipe_outputs.get("metrics", {})
+    matched_recipes = recipe_outputs.get("matched_recipes", [])
+    recipe_predicted_count = len(recipe_outputs.get("predicted_files", []) or [])
+    recipe_exact_recall = float(recipe_metrics.get("exact_recall") or 0.0)
+    recipe_category_recall = float(recipe_metrics.get("category_recall") or 0.0)
     predicted_count = int(summary.get("predicted_file_count", 0) or 0)
     actual_count = int(summary.get("actual_file_count", 0) or 0)
     exact_recall = float(metrics.get("exact_recall") or 0.0)
@@ -390,6 +427,25 @@ def classify_failure(
     if category_recall > 0 and exact_recall == 0:
         labels.add("exact_match_miss_but_category_match")
         reasons.append("Predictions matched at least one surface category but missed exact files.")
+    if not matched_recipes and case.get("archetype") in {
+        "backend_api",
+        "full_stack_ui_api",
+        "persistence_data",
+        "ui_form_validation",
+        "ui_page_add",
+        "ui_shell",
+    }:
+        labels.add("recipe_matching_gap")
+        reasons.append("Recipe sidecar did not match a learned recipe for this archetype.")
+    elif matched_recipes and recipe_predicted_count == 0:
+        labels.add("recipe_application_gap")
+        reasons.append("Recipe sidecar matched a recipe but emitted no predicted files.")
+    elif matched_recipes and recipe_exact_recall == 0.0 and recipe_category_recall == 0.0:
+        labels.add("recipe_application_gap")
+        reasons.append("Recipe sidecar emitted suggestions, but they did not match actual files or categories.")
+    elif matched_recipes and recipe_exact_recall == 0.0 and recipe_category_recall > 0.0:
+        labels.add("exact_match_miss_but_category_match")
+        reasons.append("Recipe suggestions matched categories but missed exact files.")
     if actual_diff["new_files"]:
         labels.add("new_file_hard_to_predict")
         reasons.append("At least one actual changed file did not exist in the parent snapshot.")
@@ -437,6 +493,12 @@ def build_diagnosis_summary(
     elif "source_discovery_gap" in labels or "graph_missing_surface" in labels:
         fix_area = "source graph"
         cause = "Discovery or source graph evidence did not expose the expected surfaces."
+    elif "recipe_matching_gap" in labels:
+        fix_area = "recipe matching"
+        cause = "Learned recipes exist, but the request did not match the right recipe family."
+    elif "recipe_application_gap" in labels:
+        fix_area = "recipe application"
+        cause = "A learned recipe matched, but its node/path pattern application missed the actual changed surfaces."
     elif "graph_found_surface_but_proposal_missed" in labels:
         fix_area = "propose-changes"
         cause = "Relevant graph surfaces were found, but proposal emitted no useful file predictions."
@@ -558,10 +620,40 @@ def format_markdown(report: dict[str, Any]) -> str:
     ]
     for key, value in planner["metrics"].items():
         lines.append(f"- {key}: {value}")
+    lines.extend(["", "## Recipe Sidecar", ""])
+    recipe = planner.get("recipe_suggestions", {})
+    for key, value in recipe.get("metrics", {}).items():
+        lines.append(f"- recipe {key}: {value}")
+    matched_recipes = recipe.get("matched_recipes", [])
+    if matched_recipes:
+        lines.append("- matched recipes:")
+        for matched in matched_recipes:
+            lines.append(
+                f"  - `{matched.get('recipe_id')}` ({matched.get('recipe_type')}, "
+                f"structural={matched.get('structural_confidence')}, planner={matched.get('planner_effectiveness')})"
+            )
+    else:
+        lines.append("- matched recipes: -")
+    suggested_actions = recipe.get("suggested_actions", [])
+    lines.append("- suggested actions:")
+    if suggested_actions:
+        for action in suggested_actions[:12]:
+            lines.append(
+                f"  - `{action.get('qualified_path')}` action={action.get('action')} "
+                f"node={action.get('node_type')} exists_in_parent={action.get('exists_in_parent')} "
+                f"matched_actual={action.get('matched_actual_diff')}"
+            )
+    else:
+        lines.append("  -")
+    combined = planner.get("combined_predictions", {})
+    lines.extend(["", "## Combined Prediction Metrics", ""])
+    for key, value in combined.get("metrics", {}).items():
+        lines.append(f"- combined {key}: {value}")
     lines.extend(section_for_paths("Predicted Files", planner["predicted_file_paths"]))
     lines.extend(section_for_paths("Actual Files", actual["actual_changed_files"]))
     lines.extend(section_for_paths("High-Signal Actual Files", actual["high_signal_actual_files"]))
     lines.extend(section_for_paths("New Actual Files", actual["new_files"]))
+    lines.extend(section_for_paths("Modified Actual Files", actual["modified_files"]))
     lines.extend(["", "## Plan/Proposal", ""])
     for key, value in planner["plan"].items():
         if key in {"ordered_steps", "likely_paths_by_repo"}:

@@ -9,10 +9,10 @@
 
 ## Diagnosis
 
-- labels: `graph_found_surface_but_proposal_missed`, `planner_underpredicted`, `prompt_too_vague`
+- labels: `graph_found_surface_but_proposal_missed`, `planner_underpredicted`, `prompt_too_vague`, `recipe_application_gap`
 - likely cause: The prompt did not provide enough actionable product/surface intent.
 - recommended fix area: `prompt generation`
-- why: Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Source graph found relevant surfaces, but propose-changes emitted no files.
+- why: Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe sidecar emitted suggestions, but they did not match actual files or categories. Source graph found relevant surfaces, but propose-changes emitted no files.
 
 ## Metrics
 
@@ -22,6 +22,31 @@
 - category_recall: 0.0
 - high_signal_precision: 0.0
 - high_signal_recall: 0.0
+
+## Recipe Sidecar
+
+- recipe exact_precision: 0.0
+- recipe exact_recall: 0.0
+- recipe category_precision: 0.0
+- recipe category_recall: 0.0
+- recipe high_signal_precision: 0.0
+- recipe high_signal_recall: 0.0
+- matched recipes:
+  - `petclinic_react_backend_api_change` (backend_api_change, structural=0.83, planner=0.2)
+- suggested actions:
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java` action=modify node=api_controller exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` action=modify node=api_controller exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` action=modify node=service_layer exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` action=modify node=service_layer exists_in_parent=True matched_actual=False
+
+## Combined Prediction Metrics
+
+- combined exact_precision: 0.0
+- combined exact_recall: 0.0
+- combined category_precision: 0.0
+- combined category_recall: 0.0
+- combined high_signal_precision: 0.0
+- combined high_signal_recall: 0.0
 
 ## Predicted Files
 
@@ -38,6 +63,10 @@
 ## New Actual Files
 
 -
+
+## Modified Actual Files
+
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
 ## Plan/Proposal
 

@@ -9,22 +9,61 @@
 
 ## Diagnosis
 
-- labels: `exact_match_miss_but_category_match`, `planner_overpredicted`, `planner_underpredicted`
-- likely cause: Planner/proposal underpredicted exact files for an otherwise supported change.
-- recommended fix area: `planner`
-- why: Predicted files did not exactly match actual changed files. Predicted more files than actually changed. Predictions matched at least one surface category but missed exact files.
+- labels: `exact_match_miss_but_category_match`, `planner_overpredicted`, `planner_underpredicted`, `recipe_application_gap`
+- likely cause: A learned recipe matched, but its node/path pattern application missed the actual changed surfaces.
+- recommended fix area: `recipe application`
+- why: Predicted files did not exactly match actual changed files. Predicted more files than actually changed. Predictions matched at least one surface category but missed exact files. Recipe sidecar emitted suggestions, but they did not match actual files or categories.
 
 ## Metrics
 
 - exact_precision: 0.0
 - exact_recall: 0.0
-- category_precision: 0.3333
+- category_precision: 0.25
 - category_recall: 1.0
 - high_signal_precision: 0.0
 - high_signal_recall: 0.0
 
+## Recipe Sidecar
+
+- recipe exact_precision: 0.0
+- recipe exact_recall: 0.0
+- recipe category_precision: 0.0
+- recipe category_recall: 0.0
+- recipe high_signal_precision: 0.0
+- recipe high_signal_recall: 0.0
+- matched recipes:
+  - `petclinic_react_ui_form_validation` (ui_form_validation, structural=0.9555, planner=0.0)
+  - `petclinic_react_full_stack_ui_api` (full_stack_ui_api, structural=0.9118, planner=0.3182)
+- suggested actions:
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java` action=modify node=api_controller exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetResource.java` action=modify node=api_controller exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/components/form/Constraints.ts` action=modify node=form_component exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/types/index.ts` action=inspect node=frontend_type exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` action=modify node=page_component exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` action=modify node=service_layer exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` action=modify node=service_layer exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/components/form/Constraints.ts` action=modify node=form_component exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/types/index.ts` action=inspect node=frontend_type exists_in_parent=True matched_actual=False
+  - `spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx` action=modify node=page_component exists_in_parent=True matched_actual=False
+
+## Combined Prediction Metrics
+
+- combined exact_precision: 0.0
+- combined exact_recall: 0.0
+- combined category_precision: 0.1667
+- combined category_recall: 1.0
+- combined high_signal_precision: 0.0
+- combined high_signal_recall: 0.0
+
 ## Predicted Files
 
+- `spring-petclinic-reactjs/Run PetClinicApplication.launch`
+- `spring-petclinic-reactjs/client/src/components/owners/PetsTable.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/NewPetPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/PetEditor.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/createPetEditorModel.ts`
+- `spring-petclinic-reactjs/client/src/components/visits/PetDetails.tsx`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
@@ -41,6 +80,10 @@
 ## New Actual Files
 
 -
+
+## Modified Actual Files
+
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java`
 
 ## Plan/Proposal
 
