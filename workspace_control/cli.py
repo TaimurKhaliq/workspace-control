@@ -46,6 +46,12 @@ from .graph import (
 from .inventory import format_inventory_table
 from .manifests import build_inventory
 from .plan import create_feature_plan, format_feature_plan
+from .plan_bundle import (
+    create_plan_bundle,
+    format_plan_bundle_json,
+    format_plan_bundle_markdown,
+    load_recipe_catalog_for_bundle,
+)
 from .propose import create_change_proposal, format_change_proposal
 
 
@@ -319,6 +325,41 @@ def run(argv: list[str] | None = None) -> int:
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
     )
+    bundle_parser = subparsers.add_parser(
+        "generate-plan-bundle",
+        help="Generate a structured plan bundle and repo handoff prompts",
+    )
+    bundle_parser.add_argument(
+        "feature_description",
+        help='Feature description, for example: "Add OwnersPage (no actions yet)"',
+    )
+    bundle_parser.add_argument(
+        "--target-id",
+        required=True,
+        help="Registered discovery target id to generate the bundle against",
+    )
+    bundle_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    bundle_parser.add_argument(
+        "--format",
+        choices=["json", "markdown"],
+        default="json",
+        help="Plan Bundle output format",
+    )
+    bundle_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path to write the generated bundle",
+    )
+    bundle_parser.add_argument(
+        "--include-debug",
+        action="store_true",
+        help="Include compact raw pipeline excerpts under debug",
+    )
     refresh_learning_parser = subparsers.add_parser(
         "refresh-learning",
         help="Refresh deterministic repo-local change recipe learning state",
@@ -452,6 +493,7 @@ def run(argv: list[str] | None = None) -> int:
         "plan-feature",
         "propose-changes",
         "explain-feature",
+        "generate-plan-bundle",
         "refresh-learning",
         "learning-status",
         "list-change-recipes",
@@ -643,12 +685,13 @@ def run(argv: list[str] | None = None) -> int:
         return 0
 
     discovery_snapshot = None
-    effective_scan_root = args.scan_root
+    effective_scan_root = getattr(args, "scan_root", default_scan_root)
     if args.command in {
         "analyze-feature",
         "plan-feature",
         "propose-changes",
         "explain-feature",
+        "generate-plan-bundle",
     }:
         try:
             discovery_snapshot = _discover_snapshot_for_args(args)
@@ -719,6 +762,41 @@ def run(argv: list[str] | None = None) -> int:
         discovery_snapshot=discovery_snapshot,
         recipe_report=recipe_report,
     )
+    if args.command == "generate-plan-bundle":
+        proposal = create_change_proposal(
+            args.feature_description,
+            rows,
+            impacts=impacts,
+            scan_root=effective_scan_root,
+            discovery_snapshot=discovery_snapshot,
+            recipe_report=recipe_report,
+        )
+        registry = DiscoveryTargetRegistry(args.registry_path)
+        recipe_catalog = load_recipe_catalog_for_bundle(args.target_id, registry)
+        bundle = create_plan_bundle(
+            feature_request=args.feature_description,
+            target_id=args.target_id,
+            rows=rows,
+            impacts=impacts,
+            plan=plan,
+            proposal=proposal,
+            discovery_snapshot=discovery_snapshot,
+            recipe_report=recipe_report,
+            include_debug=args.include_debug,
+            recipe_catalog=recipe_catalog,
+        )
+        output = (
+            format_plan_bundle_json(bundle)
+            if args.format == "json"
+            else format_plan_bundle_markdown(bundle)
+        )
+        if args.output:
+            args.output.parent.mkdir(parents=True, exist_ok=True)
+            args.output.write_text(output + "\n", encoding="utf-8")
+        else:
+            print(output)
+        return 0
+
     print(format_feature_plan(plan))
     return 0
 

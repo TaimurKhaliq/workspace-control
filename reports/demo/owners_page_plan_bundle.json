@@ -1,0 +1,318 @@
+{
+  "schema_version": "1.0",
+  "feature_request": "Add OwnersPage (no actions yet)",
+  "generated_at": "2026-04-25T23:04:09+00:00",
+  "target": {
+    "target_id": "petclinic-react",
+    "repo_count": 1,
+    "repos": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "metadata_mode": "source-discovered",
+        "evidence_mode": "source-discovered",
+        "detected_frameworks": [
+          "openapi",
+          "react",
+          "spring_boot"
+        ],
+        "framework_packs": [
+          "openapi",
+          "react",
+          "spring_boot"
+        ]
+      }
+    ]
+  },
+  "summary": {
+    "title": "Add OwnersPage (no actions yet)",
+    "short_description": "Plan bundle for: Add OwnersPage (no actions yet)",
+    "detected_intents": [
+      "ui"
+    ],
+    "confidence": "high",
+    "planning_mode": "planner+recipe",
+    "planner_native_available": true,
+    "recipe_assisted": true
+  },
+  "ownership": {
+    "primary_owner": "spring-petclinic-reactjs",
+    "implementation_owner": "spring-petclinic-reactjs",
+    "domain_owner": null,
+    "direct_dependents": [],
+    "possible_downstreams": []
+  },
+  "recommended_change_set": [
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/OwnersPage.tsx",
+      "action": "inspect",
+      "priority": 1,
+      "confidence": "medium",
+      "source": "recipe",
+      "node_type": "page_component",
+      "reason": "requested page/component already exists in the current source graph",
+      "evidence": [
+        "requested page/component already exists in the current source graph",
+        "file already exists in current source graph; inspect/modify rather than create",
+        "source graph node: page_component",
+        "repo: spring-petclinic-reactjs"
+      ],
+      "matched_recipe_id": "petclinic_react_ui_page_add",
+      "exists_in_current_source": true,
+      "ui_section": "frontend"
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/configureRoutes.tsx",
+      "action": "modify",
+      "priority": 2,
+      "confidence": "high",
+      "source": "recipe",
+      "node_type": "shared_component",
+      "reason": "recipe commonly modifies routing/configuration when adding pages",
+      "evidence": [
+        "recipe commonly modifies routing/configuration when adding pages",
+        "source graph node: shared_component",
+        "repo: spring-petclinic-reactjs"
+      ],
+      "matched_recipe_id": "petclinic_react_ui_page_add",
+      "exists_in_current_source": true,
+      "ui_section": "config"
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/EditOwnerPage.tsx",
+      "action": "inspect",
+      "priority": 3,
+      "confidence": "medium",
+      "source": "planner",
+      "node_type": "edit_surface",
+      "reason": "Nearby same-domain frontend file can provide the page and routing pattern.",
+      "evidence": [
+        "Nearby same-domain frontend file can provide the page and routing pattern."
+      ],
+      "matched_recipe_id": null,
+      "exists_in_current_source": true,
+      "ui_section": "frontend"
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/NewOwnerPage.tsx",
+      "action": "inspect",
+      "priority": 4,
+      "confidence": "medium",
+      "source": "planner",
+      "node_type": "page_component",
+      "reason": "Nearby same-domain frontend file can provide the page and routing pattern.",
+      "evidence": [
+        "Nearby same-domain frontend file can provide the page and routing pattern."
+      ],
+      "matched_recipe_id": null,
+      "exists_in_current_source": true,
+      "ui_section": "frontend"
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/OwnerEditor.tsx",
+      "action": "inspect",
+      "priority": 5,
+      "confidence": "medium",
+      "source": "planner",
+      "node_type": "form_component",
+      "reason": "Nearby same-domain frontend file can provide the page and routing pattern.",
+      "evidence": [
+        "Nearby same-domain frontend file can provide the page and routing pattern."
+      ],
+      "matched_recipe_id": null,
+      "exists_in_current_source": true,
+      "ui_section": "frontend"
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/types/index.ts",
+      "action": "inspect",
+      "priority": 6,
+      "confidence": "medium",
+      "source": "recipe",
+      "node_type": "frontend_type",
+      "reason": "recipe often updates frontend types for page additions",
+      "evidence": [
+        "recipe often updates frontend types for page additions",
+        "source graph node: frontend_type",
+        "repo: spring-petclinic-reactjs"
+      ],
+      "matched_recipe_id": "petclinic_react_ui_page_add",
+      "exists_in_current_source": true,
+      "ui_section": "frontend"
+    }
+  ],
+  "matched_recipes": [
+    {
+      "recipe_id": "petclinic_react_ui_page_add",
+      "recipe_type": "ui_page_add",
+      "structural_confidence": 0.98,
+      "planner_effectiveness": 0.05,
+      "why_matched": [
+        "source graph contains related domain token(s): add, owner, owners",
+        "request verb includes add",
+        "identifier normalization exposes page-style term(s): add, owner, owners, page",
+        "request looks like UI page creation",
+        "feature intent includes ui",
+        "structural confidence 0.98"
+      ],
+      "learned_patterns": {
+        "created_node_types": [
+          "page_component"
+        ],
+        "modified_node_types": [
+          "frontend_type",
+          "route_config",
+          "frontend_component",
+          "unknown",
+          "page_component"
+        ],
+        "cochange_patterns": [
+          "frontend_type + page_component",
+          "frontend_type + route_config",
+          "page_component + route_config",
+          "frontend_component + unknown"
+        ]
+      }
+    }
+  ],
+  "source_graph_evidence": [
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/OwnersPage.tsx",
+      "node_type": "page_component",
+      "domain_tokens": [
+        "owners",
+        "owner",
+        "props",
+        "prop",
+        "state",
+        "params",
+        "param"
+      ],
+      "confidence": "high",
+      "reason": "Recommended change-set item 1 maps to source graph node `page_component`."
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/configureRoutes.tsx",
+      "node_type": "shared_component",
+      "domain_tokens": [
+        "configure",
+        "routes",
+        "route"
+      ],
+      "confidence": "medium",
+      "reason": "Recommended change-set item 2 maps to source graph node `shared_component`."
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/EditOwnerPage.tsx",
+      "node_type": "edit_surface",
+      "domain_tokens": [
+        "owners",
+        "owner",
+        "props",
+        "prop",
+        "state",
+        "params",
+        "param"
+      ],
+      "confidence": "high",
+      "reason": "Recommended change-set item 3 maps to source graph node `edit_surface`."
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/NewOwnerPage.tsx",
+      "node_type": "page_component",
+      "domain_tokens": [
+        "owners",
+        "owner",
+        "new",
+        "first",
+        "last",
+        "address",
+        "city",
+        "telephone"
+      ],
+      "confidence": "high",
+      "reason": "Recommended change-set item 4 maps to source graph node `page_component`."
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/components/owners/OwnerEditor.tsx",
+      "node_type": "form_component",
+      "domain_tokens": [
+        "owners",
+        "owner",
+        "props",
+        "prop",
+        "state",
+        "initial",
+        "context",
+        "router"
+      ],
+      "confidence": "high",
+      "reason": "Recommended change-set item 5 maps to source graph node `form_component`."
+    },
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "path": "client/src/types/index.ts",
+      "node_type": "frontend_type",
+      "domain_tokens": [
+        "router",
+        "context",
+        "constraint",
+        "select",
+        "option",
+        "person",
+        "visit",
+        "pet"
+      ],
+      "confidence": "high",
+      "reason": "Recommended change-set item 6 maps to source graph node `frontend_type`."
+    }
+  ],
+  "validation": {
+    "commands": [
+      "./mvnw test",
+      "cd client && npm test"
+    ],
+    "notes": []
+  },
+  "risks_and_caveats": [
+    {
+      "severity": "info",
+      "message": "Recipe suggestions are deterministic repo-local guidance; planner-native output remains visible separately.",
+      "source": "recipe"
+    }
+  ],
+  "handoff_prompts": [
+    {
+      "repo_name": "spring-petclinic-reactjs",
+      "title": "Implement: Add OwnersPage (no actions yet)",
+      "prompt": "You are working in repo: spring-petclinic-reactjs.\n\nTask:\nAdd OwnersPage (no actions yet)\n\nContext:\nThis repo has matched learned recipe evidence:\n- petclinic_react_ui_page_add (ui_page_add, structural=0.98, planner=0.05)\n\nInspect first:\n1. client/src/components/owners/OwnersPage.tsx (inspect, medium, source=recipe)\n2. client/src/configureRoutes.tsx (modify, high, source=recipe)\n3. client/src/components/owners/EditOwnerPage.tsx (inspect, medium, source=planner)\n4. client/src/components/owners/NewOwnerPage.tsx (inspect, medium, source=planner)\n5. client/src/components/owners/OwnerEditor.tsx (inspect, medium, source=planner)\n6. client/src/types/index.ts (inspect, medium, source=recipe)\n\nExpected change:\n- Modify the high-confidence files that directly own the requested flow or behavior.\n- Keep frontend/UI work focused on the requested screen, page, route, or component.\n- Keep this UI-only; do not add backend/API behavior unless new code evidence requires it.\n\nConstraints:\n- Keep the change scoped to the requested feature.\n- Do not overreach into unrelated domains or broad refactors.\n- Treat inspect-only or low-confidence files as reference material unless code evidence says otherwise.\n\nValidation:\n- ./mvnw test\n- cd client && npm test",
+      "copy_label": "Copy prompt for Claude/Copilot/Codex",
+      "recommended_files": [
+        "client/src/components/owners/OwnersPage.tsx",
+        "client/src/configureRoutes.tsx",
+        "client/src/components/owners/EditOwnerPage.tsx",
+        "client/src/components/owners/NewOwnerPage.tsx",
+        "client/src/components/owners/OwnerEditor.tsx",
+        "client/src/types/index.ts"
+      ],
+      "validation_commands": [
+        "./mvnw test",
+        "cd client && npm test"
+      ]
+    }
+  ],
+  "debug": {
+    "included": false,
+    "pipeline": {}
+  }
+}
