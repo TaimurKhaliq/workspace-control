@@ -1,0 +1,747 @@
+{
+  "case": {
+    "id": "backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet",
+    "archetype": "backend_api",
+    "commit": "af31104",
+    "prompt": "add max range and not null validation for adding new pet",
+    "candidate_quality": "good",
+    "prompt_quality": "high",
+    "report_dir": "reports/replay/matrix/backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet"
+  },
+  "actual_diff": {
+    "actual_changed_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
+    ],
+    "actual_file_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [],
+      "frontend_type": [],
+      "api_contract": [],
+      "api_controller": [],
+      "service_layer": [],
+      "domain_model": [],
+      "repository": [],
+      "migration": [],
+      "unknown": [
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
+      ]
+    },
+    "high_signal_actual_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
+    ],
+    "separated_files": {
+      "static_asset": [],
+      "config_build": [],
+      "docs": [],
+      "tests": []
+    },
+    "file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java",
+        "repo_relative_path": "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "unknown",
+        "parent_folder_exists": true
+      }
+    ],
+    "new_files": [],
+    "existing_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
+    ]
+  },
+  "planner_outputs": {
+    "predicted_files": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      }
+    ],
+    "predicted_file_paths": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+    ],
+    "predicted_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [],
+      "frontend_type": [],
+      "api_contract": [],
+      "api_controller": [],
+      "service_layer": [
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service"
+      ],
+      "domain_model": [],
+      "repository": [
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
+      ],
+      "migration": [],
+      "unknown": [
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+      ]
+    },
+    "proposed_files": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/service",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository",
+        "action": "inspect",
+        "confidence": "low",
+        "reason": "Likely discovered area to inspect before editing concrete files."
+      }
+    ],
+    "predicted_reference_files": [],
+    "metrics": {
+      "exact_precision": 0.0,
+      "exact_recall": 0.0,
+      "category_precision": 0.3333,
+      "category_recall": 1.0,
+      "high_signal_precision": 0.0,
+      "high_signal_recall": 0.0
+    },
+    "plan": {
+      "primary_owner": "spring-petclinic-reactjs",
+      "implementation_owner": "spring-petclinic-reactjs",
+      "domain_owner": "spring-petclinic-reactjs",
+      "feature_intents": [
+        "api"
+      ],
+      "unsupported_intents": [],
+      "missing_evidence": [],
+      "likely_paths_by_repo": {
+        "spring-petclinic-reactjs": [
+          "src/main/java/org/springframework/samples/petclinic/web",
+          "src/main/java/org/springframework/samples/petclinic/web/api",
+          "src/main/java/org/springframework/samples/petclinic/service",
+          "src/main/java/org/springframework/samples/petclinic/repository"
+        ]
+      },
+      "ordered_steps": [
+        "In spring-petclinic-reactjs (primary-owner, score=100), implement service-level feature logic and review entity/repository mappings for impact using discovered service/data paths: src/main/java/org/springframework/samples/petclinic/service, src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model.",
+        "Run validation commands in impacted repos: ./mvnw test ; cd client && npm test."
+      ]
+    },
+    "propose": {
+      "implementation_owner": "spring-petclinic-reactjs",
+      "domain_owner": "spring-petclinic-reactjs",
+      "feature_intents": [
+        "api"
+      ],
+      "unsupported_intents": [],
+      "proposed_change_count": 1
+    },
+    "analyze_output_excerpt": "Feature: \"add max range and not null validation for adding new pet\"\nrepo                     | role          | score | reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  \n-------------------------+---------------+-------+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nspring-petclinic-reactjs | primary-owner | 100   | deterministic_intent: backend signals (keywords: validation; repo type; manifest: api, backend, service); adapter_discovery: adapter discovery (react, spring_boot; paths: src/main/java/org/springframework/samples/petclinic/web, src/main/java/org/springframework/samples/petclinic/web/api); backend ownership (inferred_metadata: owns_entities: pet; tokens: pet type | inferred_metadata: owns_fields: pet; tokens: pet type formatter | inferred_metadata: owns_tables: pet; tokens: pet type | inferred_metadata: api_keywords: pet; tokens: pet type formatter, pet validator | adapter_discovery: source-backed ownership (owns_entities: pet, pet type; owns_fields: pet, pet type formatter; owns_tables: pet, pet type; discovered controller/dto, service, entity/repository)); inferred_metadata: keyword overlap (pet)\n"
+  },
+  "discovery_source_graph_evidence": {
+    "detected_frameworks": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "detected_frameworks": [
+          "react",
+          "spring_boot"
+        ],
+        "hinted_frameworks": [],
+        "loaded_framework_packs": [
+          "react",
+          "spring_boot"
+        ],
+        "evidence_mode": "source-discovered",
+        "confidence": "high"
+      }
+    ],
+    "framework_packs": [
+      "react",
+      "spring_boot"
+    ],
+    "frontend_backend_paths": {
+      "spring-petclinic-reactjs": {
+        "ui_locations": [
+          "client/src/components",
+          "client/src/types",
+          "client/src/components/form",
+          "client/src/components/owners",
+          "client/src/components/pets",
+          "client/src/components/vets",
+          "client/src/components/visits"
+        ],
+        "api_locations": [
+          "src/main/java/org/springframework/samples/petclinic/web",
+          "src/main/java/org/springframework/samples/petclinic/web/api"
+        ],
+        "service_locations": [
+          "src/main/java/org/springframework/samples/petclinic/service"
+        ],
+        "persistence_locations": [
+          "src/main/java/org/springframework/samples/petclinic/repository",
+          "src/main/java/org/springframework/samples/petclinic/model"
+        ],
+        "event_locations": []
+      }
+    },
+    "graph_node_counts": {
+      "api_controller": 15,
+      "app_shell": 1,
+      "detail_component": 1,
+      "domain_model": 18,
+      "edit_surface": 2,
+      "event_consumer": 1,
+      "form_component": 9,
+      "frontend_entrypoint": 1,
+      "frontend_type": 1,
+      "landing_page": 1,
+      "list_component": 2,
+      "page_component": 8,
+      "public_html": 1,
+      "repository": 4,
+      "service_layer": 2,
+      "shared_component": 8,
+      "static_asset": 1
+    },
+    "graph_edge_count": 128,
+    "relevant_tokens": [
+      "add",
+      "adding",
+      "and",
+      "for",
+      "max",
+      "new",
+      "not",
+      "null",
+      "pet",
+      "range",
+      "reactj",
+      "reactjs",
+      "validation"
+    ],
+    "relevant_graph_nodes": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/PetTypeFormatter.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "pet",
+          "formatter",
+          "details",
+          "detail",
+          "doc",
+          "dickens",
+          "dicken",
+          "found"
+        ],
+        "matched_terms": [
+          "for",
+          "pet"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+        "node_type": "event_consumer",
+        "domain_tokens": [
+          "exception",
+          "handler",
+          "logger"
+        ],
+        "matched_terms": [
+          "and",
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/form/Constraints.ts",
+        "node_type": "form_component",
+        "domain_tokens": [
+          "constraints",
+          "constraint",
+          "digits",
+          "digit",
+          "not",
+          "empty",
+          "validate"
+        ],
+        "matched_terms": [
+          "for",
+          "not"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/pets/NewPetPage.tsx",
+        "node_type": "page_component",
+        "domain_tokens": [
+          "pets",
+          "new",
+          "pet",
+          "props",
+          "prop",
+          "state",
+          "params",
+          "param",
+          "owner",
+          "pettypes",
+          "pettype",
+          "birth"
+        ],
+        "matched_terms": [
+          "new",
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/visits/VisitsPage.tsx",
+        "node_type": "page_component",
+        "domain_tokens": [
+          "visits",
+          "visit",
+          "props",
+          "prop",
+          "state",
+          "params",
+          "param",
+          "owner",
+          "pet",
+          "context",
+          "router",
+          "new"
+        ],
+        "matched_terms": [
+          "new",
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "crash",
+          "expected"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "custom"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "owner",
+          "redirect"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/PetController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "pet",
+          "redirect"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/VetController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "vet"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/VisitController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "visit",
+          "goals",
+          "goal",
+          "redirect"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/WelcomeController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "welcome"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/AbstractResourceController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "abstract",
+          "resource"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "resource",
+          "code",
+          "global"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "failing",
+          "expected"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "resource",
+          "code"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "owner",
+          "resource"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/PetResource.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "pet",
+          "resource",
+          "details",
+          "detail",
+          "logger"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/VetResource.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "vet",
+          "resource"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/VisitResource.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "visit",
+          "resource"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/visits/PetDetails.tsx",
+        "node_type": "detail_component",
+        "domain_tokens": [
+          "visits",
+          "visit",
+          "pet",
+          "details",
+          "detail",
+          "owner"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
+        "node_type": "domain_model",
+        "domain_tokens": [],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java",
+        "node_type": "domain_model",
+        "domain_tokens": [],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Owner.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "owner",
+          "address",
+          "city",
+          "telephone",
+          "pets",
+          "pet"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Person.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "person",
+          "first",
+          "last"
+        ],
+        "matched_terms": [
+          "pet"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      }
+    ],
+    "actual_file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java",
+        "repo_relative_path": "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "unknown",
+        "parent_folder_exists": true
+      }
+    ]
+  },
+  "failure_classification": {
+    "labels": [
+      "exact_match_miss_but_category_match",
+      "planner_overpredicted",
+      "planner_underpredicted"
+    ],
+    "reasons": [
+      "Predicted files did not exactly match actual changed files.",
+      "Predicted more files than actually changed.",
+      "Predictions matched at least one surface category but missed exact files."
+    ]
+  },
+  "diagnosis_summary": {
+    "likely_cause": "Planner/proposal underpredicted exact files for an otherwise supported change.",
+    "recommended_fix_area": "planner",
+    "why": "Predicted files did not exactly match actual changed files. Predicted more files than actually changed. Predictions matched at least one surface category but missed exact files."
+  },
+  "reports": {
+    "json": "reports/replay/debug/backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet.json",
+    "markdown": "reports/replay/debug/backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet.md"
+  }
+}

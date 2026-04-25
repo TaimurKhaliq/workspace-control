@@ -1,0 +1,590 @@
+{
+  "case": {
+    "id": "persistence_data_e7f6899_owners_search_has_been_case_insensitive",
+    "archetype": "persistence_data",
+    "commit": "e7f6899",
+    "prompt": "owners search has been case insensitive",
+    "candidate_quality": "good",
+    "prompt_quality": "high",
+    "report_dir": "reports/replay/matrix/persistence_data_e7f6899_owners_search_has_been_case_insensitive"
+  },
+  "actual_diff": {
+    "actual_changed_files": [
+      "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+    ],
+    "actual_file_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [],
+      "frontend_type": [],
+      "api_contract": [],
+      "api_controller": [],
+      "service_layer": [],
+      "domain_model": [],
+      "repository": [],
+      "migration": [
+        "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+      ],
+      "unknown": []
+    },
+    "high_signal_actual_files": [
+      "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+    ],
+    "separated_files": {
+      "static_asset": [],
+      "config_build": [],
+      "docs": [],
+      "tests": []
+    },
+    "file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql",
+        "repo_relative_path": "src/main/resources/db/hsqldb/initDB.sql",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "migration",
+        "parent_folder_exists": true
+      }
+    ],
+    "new_files": [],
+    "existing_files": [
+      "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+    ]
+  },
+  "planner_outputs": {
+    "predicted_files": [],
+    "predicted_file_paths": [],
+    "predicted_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [],
+      "frontend_type": [],
+      "api_contract": [],
+      "api_controller": [],
+      "service_layer": [],
+      "domain_model": [],
+      "repository": [],
+      "migration": [],
+      "unknown": []
+    },
+    "proposed_files": [],
+    "predicted_reference_files": [],
+    "metrics": {
+      "exact_precision": 0.0,
+      "exact_recall": 0.0,
+      "category_precision": 0.0,
+      "category_recall": 0.0,
+      "high_signal_precision": 0.0,
+      "high_signal_recall": 0.0
+    },
+    "plan": {
+      "primary_owner": null,
+      "implementation_owner": null,
+      "domain_owner": null,
+      "feature_intents": [],
+      "unsupported_intents": [],
+      "missing_evidence": [
+        "no primary owner identified from strong evidence"
+      ],
+      "likely_paths_by_repo": {},
+      "ordered_steps": []
+    },
+    "propose": {
+      "implementation_owner": null,
+      "domain_owner": null,
+      "feature_intents": [],
+      "unsupported_intents": [],
+      "proposed_change_count": 0
+    },
+    "analyze_output_excerpt": "Feature: \"owners search has been case insensitive\"\nNo likely impacted repos found from current stackpilot.yml metadata.\n"
+  },
+  "discovery_source_graph_evidence": {
+    "detected_frameworks": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "detected_frameworks": [
+          "spring_boot"
+        ],
+        "hinted_frameworks": [
+          "react"
+        ],
+        "loaded_framework_packs": [
+          "spring_boot"
+        ],
+        "evidence_mode": "source-discovered",
+        "confidence": "high"
+      }
+    ],
+    "framework_packs": [
+      "spring_boot"
+    ],
+    "frontend_backend_paths": {
+      "spring-petclinic-reactjs": {
+        "ui_locations": [],
+        "api_locations": [
+          "src/main/java/org/springframework/samples/petclinic/web"
+        ],
+        "service_locations": [
+          "src/main/java/org/springframework/samples/petclinic/service"
+        ],
+        "persistence_locations": [
+          "src/main/java/org/springframework/samples/petclinic/repository",
+          "src/main/java/org/springframework/samples/petclinic/repository/springdatajpa",
+          "src/main/java/org/springframework/samples/petclinic/model"
+        ],
+        "event_locations": []
+      }
+    },
+    "graph_node_counts": {
+      "api_controller": 5,
+      "domain_model": 15,
+      "mapper": 2,
+      "repository": 20,
+      "service_layer": 2,
+      "shared_component": 151
+    },
+    "graph_edge_count": 72,
+    "relevant_tokens": [
+      "been",
+      "case",
+      "has",
+      "hsqldb",
+      "init",
+      "insensitive",
+      "owner",
+      "owners",
+      "reactj",
+      "reactjs",
+      "search",
+      "sql"
+    ],
+    "relevant_graph_nodes": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "owner",
+          "redirect"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Owner.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "owner",
+          "address",
+          "city",
+          "telephone",
+          "pets",
+          "pet"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Pet.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "pet",
+          "birth",
+          "owner",
+          "visits",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "here"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "parameter",
+          "template",
+          "insert",
+          "like",
+          "pet"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPet.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "pet",
+          "owner"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPetRepositoryImpl.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "pet",
+          "parameter",
+          "template",
+          "insert",
+          "owner",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jpa/JpaOwnerRepositoryImpl.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "important",
+          "here",
+          "like"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/springdatajpa/SpringDataOwnerRepository.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "like"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "node_type": "service_layer",
+        "domain_tokens": [
+          "pet",
+          "vet",
+          "owner",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/docs/assets/js/bootstrap-popover.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "docs",
+          "popover",
+          "note",
+          "constructor",
+          "set",
+          "content",
+          "has",
+          "get"
+        ],
+        "matched_terms": [
+          "has"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/docs/assets/js/bootstrap-tooltip.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "docs",
+          "tooltip",
+          "constructor",
+          "init",
+          "trigger",
+          "selector",
+          "get",
+          "options"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/docs/assets/js/jquery.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "docs",
+          "jquery",
+          "constructor",
+          "init",
+          "selector",
+          "length",
+          "size",
+          "array"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/bootstrap-popover.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "popover",
+          "note",
+          "constructor",
+          "set",
+          "content",
+          "has",
+          "get",
+          "tip"
+        ],
+        "matched_terms": [
+          "has"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/bootstrap-tooltip.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "tooltip",
+          "constructor",
+          "init",
+          "trigger",
+          "selector",
+          "get",
+          "options",
+          "option"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/tests/vendor/jquery.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "tests",
+          "test",
+          "jquery",
+          "constructor",
+          "init",
+          "selector",
+          "length",
+          "size"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/tests/vendor/qunit.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "tests",
+          "test",
+          "qunit",
+          "set",
+          "timeout",
+          "session",
+          "storage",
+          "init"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/jquery-ui/ui/jquery.ui.autocomplete.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "jquery",
+          "autocomplete",
+          "depends",
+          "depend",
+          "default",
+          "element",
+          "options",
+          "option",
+          "append"
+        ],
+        "matched_terms": [
+          "search"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      }
+    ],
+    "actual_file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql",
+        "repo_relative_path": "src/main/resources/db/hsqldb/initDB.sql",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "migration",
+        "parent_folder_exists": true
+      }
+    ]
+  },
+  "failure_classification": {
+    "labels": [
+      "graph_found_surface_but_proposal_missed",
+      "planner_underpredicted",
+      "prompt_too_vague"
+    ],
+    "reasons": [
+      "Prompt did not produce clear feature intents or ownership.",
+      "No predicted files were emitted.",
+      "Plan produced null primary and implementation owners.",
+      "propose-changes emitted no proposed changes.",
+      "Source graph found relevant surfaces, but propose-changes emitted no files."
+    ]
+  },
+  "diagnosis_summary": {
+    "likely_cause": "The prompt did not provide enough actionable product/surface intent.",
+    "recommended_fix_area": "prompt generation",
+    "why": "Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Source graph found relevant surfaces, but propose-changes emitted no files."
+  },
+  "reports": {
+    "json": "reports/replay/debug/persistence_data_e7f6899_owners_search_has_been_case_insensitive.json",
+    "markdown": "reports/replay/debug/persistence_data_e7f6899_owners_search_has_been_case_insensitive.md"
+  }
+}

@@ -1,0 +1,482 @@
+{
+  "case": {
+    "id": "ui_page_add_0a36a33_add_ownerspage_no_actions_yet",
+    "archetype": "ui_page_add",
+    "commit": "0a36a33",
+    "prompt": "Add OwnersPage (no actions yet)",
+    "candidate_quality": "good",
+    "prompt_quality": "high",
+    "report_dir": "reports/replay/matrix/ui_page_add_0a36a33_add_ownerspage_no_actions_yet"
+  },
+  "actual_diff": {
+    "actual_changed_files": [
+      "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+      "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+      "spring-petclinic-reactjs/client/src/types/index.ts"
+    ],
+    "actual_file_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [
+        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+      ],
+      "frontend_type": [
+        "spring-petclinic-reactjs/client/src/types/index.ts"
+      ],
+      "api_contract": [],
+      "api_controller": [],
+      "service_layer": [],
+      "domain_model": [],
+      "repository": [],
+      "migration": [],
+      "unknown": []
+    },
+    "high_signal_actual_files": [
+      "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+      "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+      "spring-petclinic-reactjs/client/src/types/index.ts"
+    ],
+    "separated_files": {
+      "static_asset": [],
+      "config_build": [
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+      ],
+      "docs": [],
+      "tests": []
+    },
+    "file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "repo_relative_path": "client/src/components/owners/OwnersPage.tsx",
+        "exists_in_parent": false,
+        "is_new_file": true,
+        "category": "frontend_component",
+        "parent_folder_exists": true
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "repo_relative_path": "client/src/configureRoutes.tsx",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "frontend_component",
+        "parent_folder_exists": true
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "repo_relative_path": "client/src/types/index.ts",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "frontend_type",
+        "parent_folder_exists": true
+      }
+    ],
+    "new_files": [
+      "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx"
+    ],
+    "existing_files": [
+      "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+      "spring-petclinic-reactjs/client/src/types/index.ts"
+    ]
+  },
+  "planner_outputs": {
+    "predicted_files": [],
+    "predicted_file_paths": [],
+    "predicted_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [],
+      "frontend_type": [],
+      "api_contract": [],
+      "api_controller": [],
+      "service_layer": [],
+      "domain_model": [],
+      "repository": [],
+      "migration": [],
+      "unknown": []
+    },
+    "proposed_files": [],
+    "predicted_reference_files": [],
+    "metrics": {
+      "exact_precision": 0.0,
+      "exact_recall": 0.0,
+      "category_precision": 0.0,
+      "category_recall": 0.0,
+      "high_signal_precision": 0.0,
+      "high_signal_recall": 0.0
+    },
+    "plan": {
+      "primary_owner": null,
+      "implementation_owner": null,
+      "domain_owner": null,
+      "feature_intents": [],
+      "unsupported_intents": [],
+      "missing_evidence": [
+        "no primary owner identified from strong evidence"
+      ],
+      "likely_paths_by_repo": {},
+      "ordered_steps": []
+    },
+    "propose": {
+      "implementation_owner": null,
+      "domain_owner": null,
+      "feature_intents": [],
+      "unsupported_intents": [],
+      "proposed_change_count": 0
+    },
+    "analyze_output_excerpt": "Feature: \"Add OwnersPage (no actions yet)\"\nNo likely impacted repos found from current stackpilot.yml metadata.\n"
+  },
+  "discovery_source_graph_evidence": {
+    "detected_frameworks": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "detected_frameworks": [
+          "react",
+          "spring_boot"
+        ],
+        "hinted_frameworks": [],
+        "loaded_framework_packs": [
+          "react",
+          "spring_boot"
+        ],
+        "evidence_mode": "source-discovered",
+        "confidence": "high"
+      }
+    ],
+    "framework_packs": [
+      "react",
+      "spring_boot"
+    ],
+    "frontend_backend_paths": {
+      "spring-petclinic-reactjs": {
+        "ui_locations": [
+          "client/src/components",
+          "client/src/types",
+          "client/src/components/owners"
+        ],
+        "api_locations": [
+          "src/main/java/org/springframework/samples/petclinic/web",
+          "src/main/java/org/springframework/samples/petclinic/web/api"
+        ],
+        "service_locations": [
+          "src/main/java/org/springframework/samples/petclinic/service"
+        ],
+        "persistence_locations": [
+          "src/main/java/org/springframework/samples/petclinic/repository",
+          "src/main/java/org/springframework/samples/petclinic/model"
+        ],
+        "event_locations": []
+      }
+    },
+    "graph_node_counts": {
+      "api_controller": 12,
+      "app_shell": 1,
+      "domain_model": 15,
+      "event_consumer": 1,
+      "frontend_entrypoint": 1,
+      "frontend_type": 1,
+      "landing_page": 1,
+      "page_component": 3,
+      "public_html": 1,
+      "repository": 4,
+      "service_layer": 2,
+      "shared_component": 6,
+      "static_asset": 1
+    },
+    "graph_edge_count": 45,
+    "relevant_tokens": [
+      "action",
+      "actions",
+      "add",
+      "configure",
+      "owner",
+      "owners",
+      "reactj",
+      "reactjs",
+      "route",
+      "routes",
+      "yet"
+    ],
+    "relevant_graph_nodes": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/configureRoutes.tsx",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "configure",
+          "routes",
+          "route"
+        ],
+        "matched_terms": [
+          "configure",
+          "route",
+          "routes"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/owners/FindOwnersPage.tsx",
+        "node_type": "page_component",
+        "domain_tokens": [
+          "owners",
+          "owner",
+          "find",
+          "props",
+          "prop",
+          "state",
+          "router",
+          "context",
+          "location",
+          "filter",
+          "last",
+          "next"
+        ],
+        "matched_terms": [
+          "owner",
+          "owners"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/owners/types.ts",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "owners",
+          "owner"
+        ],
+        "matched_terms": [
+          "owner",
+          "owners"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "owner",
+          "redirect"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "owner",
+          "resource",
+          "todo"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Owner.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "owner",
+          "address",
+          "city",
+          "telephone",
+          "pets",
+          "pet"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Pet.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "pet",
+          "birth",
+          "owner",
+          "visits",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/types/index.ts",
+        "node_type": "frontend_type",
+        "domain_tokens": [
+          "person",
+          "visit",
+          "pet",
+          "owner",
+          "first",
+          "last",
+          "birth",
+          "visits",
+          "address",
+          "city",
+          "telephone",
+          "pets"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "here",
+          "like"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "node_type": "service_layer",
+        "domain_tokens": [
+          "pet",
+          "vet",
+          "owner",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/middleware/api.ts",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "middleware",
+          "call",
+          "action",
+          "endpoint",
+          "method",
+          "body",
+          "success",
+          "params",
+          "param",
+          "headers",
+          "header",
+          "payload"
+        ],
+        "matched_terms": [
+          "action"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      }
+    ],
+    "actual_file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "repo_relative_path": "client/src/components/owners/OwnersPage.tsx",
+        "exists_in_parent": false,
+        "is_new_file": true,
+        "category": "frontend_component",
+        "parent_folder_exists": true
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "repo_relative_path": "client/src/configureRoutes.tsx",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "frontend_component",
+        "parent_folder_exists": true
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "repo_relative_path": "client/src/types/index.ts",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "category": "frontend_type",
+        "parent_folder_exists": true
+      }
+    ]
+  },
+  "failure_classification": {
+    "labels": [
+      "graph_found_surface_but_proposal_missed",
+      "new_file_hard_to_predict",
+      "planner_underpredicted",
+      "prompt_too_vague"
+    ],
+    "reasons": [
+      "Prompt did not produce clear feature intents or ownership.",
+      "No predicted files were emitted.",
+      "Plan produced null primary and implementation owners.",
+      "propose-changes emitted no proposed changes.",
+      "At least one actual changed file did not exist in the parent snapshot.",
+      "Source graph found relevant surfaces, but propose-changes emitted no files."
+    ]
+  },
+  "diagnosis_summary": {
+    "likely_cause": "The prompt did not provide enough actionable product/surface intent.",
+    "recommended_fix_area": "prompt generation",
+    "why": "Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. At least one actual changed file did not exist in the parent snapshot. Source graph found relevant surfaces, but propose-changes emitted no files."
+  },
+  "reports": {
+    "json": "reports/replay/debug/ui_page_add_0a36a33_add_ownerspage_no_actions_yet.json",
+    "markdown": "reports/replay/debug/ui_page_add_0a36a33_add_ownerspage_no_actions_yet.md"
+  }
+}
