@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.graph.pattern_packs.base import compact_tokens, dedupe
+from app.graph.pattern_packs.base import compact_tokens, dedupe, singularize_token
 from app.graph.pattern_packs.openapi_contracts import OpenApiContractPack
 from app.graph.pattern_packs.react_components import ReactComponentPack
 from app.graph.pattern_packs.spring_mvc import SpringMvcPack
@@ -77,6 +77,8 @@ EDGE_STOP_TOKENS = {
     "mappers",
     "message",
     "messages",
+    "named",
+    "nameds",
     "petclinic",
     "petclinics",
     "root",
@@ -326,11 +328,7 @@ def _semantic_root_count(tokens: Sequence[str]) -> int:
 
 
 def _semantic_root(token: str) -> str:
-    if token.endswith("ies") and len(token) > 3:
-        return f"{token[:-3]}y"
-    if token.endswith("s") and len(token) > 3:
-        return token[:-1]
-    return token
+    return singularize_token(token)
 
 
 def _edge(

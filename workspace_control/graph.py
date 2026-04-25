@@ -13,11 +13,13 @@ from app.models.source_graph import GraphEdge, GraphNode, SourceGraph
 LIKELY_NOISY_TOKENS = {
     "app",
     "base",
+    "clinic",
     "data",
     "id",
     "index",
     "info",
     "main",
+    "named",
     "type",
 }
 

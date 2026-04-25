@@ -61,6 +61,7 @@ TECHNICAL_TOKENS = {
     "message",
     "messages",
     "name",
+    "named",
     "names",
     "object",
     "objects",
@@ -215,9 +216,8 @@ def compact_tokens(values: Sequence[str]) -> list[str]:
     tokens: list[str] = []
     for value in values:
         for token in split_tokens(value):
-            if useful_token(token):
-                tokens.append(token)
-    return dedupe(expand_token_variants(tokens))[:24]
+            tokens.extend(normalize_token(token))
+    return dedupe(tokens)[:24]
 
 
 def split_tokens(value: str) -> list[str]:
@@ -231,22 +231,32 @@ def split_tokens(value: str) -> list[str]:
 def useful_token(token: str) -> bool:
     """Return whether a token is useful for graph domain matching."""
 
-    return len(token) > 1 and not token.isdigit() and token not in TECHNICAL_TOKENS
+    return len(token) > 2 and not token.isdigit() and token not in TECHNICAL_TOKENS
 
 
-def expand_token_variants(tokens: Sequence[str]) -> list[str]:
-    """Add simple singular/plural variants deterministically."""
+def normalize_token(token: str) -> list[str]:
+    """Return safe deterministic normalized forms for one token."""
 
-    expanded: list[str] = []
-    for token in tokens:
-        expanded.append(token)
-        if token.endswith("ies") and len(token) > 3:
-            expanded.append(f"{token[:-3]}y")
-        elif token.endswith("s") and len(token) > 3:
-            expanded.append(token[:-1])
-        else:
-            expanded.append(f"{token}s")
-    return expanded
+    if not useful_token(token):
+        return []
+
+    normalized = [token]
+    singular = singularize_token(token)
+    if singular != token and useful_token(singular):
+        normalized.append(singular)
+    return normalized
+
+
+def singularize_token(token: str) -> str:
+    """Conservatively singularize tokens that already look plural."""
+
+    if token.endswith("ies") and len(token) > 4:
+        return f"{token[:-3]}y"
+    if token.endswith(("ches", "shes", "sses", "xes", "zes")) and len(token) > 5:
+        return token[:-2]
+    if token.endswith("s") and not token.endswith(("ss", "us", "is")) and len(token) > 4:
+        return token[:-1]
+    return token
 
 
 def dedupe(values: Sequence[str]) -> list[str]:

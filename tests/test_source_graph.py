@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 
+from app.graph.pattern_packs.base import compact_tokens
 from app.models.discovery import DiscoveryTarget, DiscoveryTargetRecord
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.discovery_target_registry import DiscoveryTargetRegistry
@@ -25,6 +26,18 @@ def _nodes_by_path(snapshot, repo_name: str) -> dict[str, str]:
         for node in snapshot.source_graph.nodes
         if node.repo_name == repo_name
     }
+
+
+def test_source_graph_token_normalization_avoids_broken_variants() -> None:
+    tokens = compact_tokens([
+        "Owner address specialty named specialties addresses",
+    ])
+
+    assert "address" in tokens
+    assert "specialty" in tokens
+    assert "addres" not in tokens
+    assert "specialtys" not in tokens
+    assert "nameds" not in tokens
 
 
 def test_source_graph_react_pack_classifies_frontend_surfaces(tmp_path: Path) -> None:
@@ -114,6 +127,56 @@ def test_source_graph_petclinic_like_full_stack_edges(tmp_path: Path) -> None:
     )
 
 
+def test_source_graph_preserves_strong_owner_pet_visit_links(tmp_path: Path) -> None:
+    repo = tmp_path / "petclinic"
+    _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")
+    _write(repo / "client/package.json", json.dumps({"dependencies": {"react": "18.2.0"}}))
+    _write(repo / "client/src/components/owners/EditOwnerPage.tsx", "export function EditOwnerPage() { return null; }\n")
+    _write(repo / "client/src/components/pets/EditPetPage.tsx", "export function EditPetPage() { return null; }\n")
+    _write(repo / "client/src/components/visits/VisitsPage.tsx", "export function VisitsPage() { return null; }\n")
+    _write(repo / "src/main/java/com/example/petclinic/owner/OwnerRestController.java", "class OwnerRestController {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/model/Owner.java", "class Owner {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/pet/PetRestController.java", "class PetRestController {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/model/Pet.java", "class Pet {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/visit/VisitRestController.java", "class VisitRestController {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/model/Visit.java", "class Visit {}\n")
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    assert snapshot.source_graph is not None
+    edge_pairs = {
+        (edge.source_id, edge.target_id, edge.edge_type)
+        for edge in snapshot.source_graph.edges
+    }
+
+    assert ("petclinic:client/src/components/owners/EditOwnerPage.tsx:edit_surface", "petclinic:src/main/java/com/example/petclinic/owner/OwnerRestController.java:api_controller", "likely_frontend_backend_link") in edge_pairs
+    assert ("petclinic:client/src/components/pets/EditPetPage.tsx:edit_surface", "petclinic:src/main/java/com/example/petclinic/pet/PetRestController.java:api_controller", "likely_frontend_backend_link") in edge_pairs
+    assert ("petclinic:client/src/components/visits/VisitsPage.tsx:page_component", "petclinic:src/main/java/com/example/petclinic/visit/VisitRestController.java:api_controller", "likely_frontend_backend_link") in edge_pairs
+
+
+def test_source_graph_skips_loose_cross_domain_links(tmp_path: Path) -> None:
+    repo = tmp_path / "petclinic"
+    _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")
+    _write(repo / "client/package.json", json.dumps({"dependencies": {"react": "18.2.0"}}))
+    _write(repo / "client/src/components/visits/PetDetails.tsx", "export function PetDetails() { const owner = null; return null; }\n")
+    _write(repo / "src/main/java/com/example/petclinic/owner/OwnerRestController.java", "class OwnerRestController {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/pet/PetRestController.java", "class PetRestController {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/visit/VisitRestController.java", "class VisitRestController {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/model/Owner.java", "class Owner {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/model/Pet.java", "class Pet {}\n")
+    _write(repo / "src/main/java/com/example/petclinic/model/Visit.java", "class Visit {}\n")
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    assert snapshot.source_graph is not None
+    edge_pairs = {
+        (edge.source_id, edge.target_id, edge.edge_type)
+        for edge in snapshot.source_graph.edges
+    }
+
+    assert ("petclinic:client/src/components/visits/PetDetails.tsx:detail_component", "petclinic:src/main/java/com/example/petclinic/owner/OwnerRestController.java:api_controller", "likely_frontend_backend_link") not in edge_pairs
+    assert ("petclinic:src/main/java/com/example/petclinic/pet/PetRestController.java:api_controller", "petclinic:src/main/java/com/example/petclinic/model/Owner.java:domain_model", "api_handles_domain") not in edge_pairs
+    assert ("petclinic:src/main/java/com/example/petclinic/visit/VisitRestController.java:api_controller", "petclinic:src/main/java/com/example/petclinic/model/Pet.java:domain_model", "api_handles_domain") not in edge_pairs
+
+
 def test_source_graph_preserves_frontend_structural_edges(tmp_path: Path) -> None:
     repo = tmp_path / "web-ui"
     _write(repo / "client/package.json", json.dumps({"dependencies": {"react": "18.2.0"}}))
@@ -143,8 +206,7 @@ def test_source_graph_generic_tokens_do_not_create_shares_domain_token_edges(tmp
     noisy_medium_or_high_edges = [
         edge
         for edge in snapshot.source_graph.edges
-        if edge.edge_type == "shares_domain_token"
-        and edge.confidence in {"medium", "high"}
+        if edge.confidence in {"medium", "high"}
         and set(edge.metadata.get("tokens", "").split(",")) & {"info", "infos", "base", "bases"}
     ]
     assert noisy_medium_or_high_edges == []
