@@ -348,7 +348,10 @@ def _ui_page_add_actions(
                     existing,
                     "inspect",
                     "medium",
-                    ["requested page/component already exists in the current source graph"],
+                    [
+                        "requested page/component already exists in the current source graph",
+                        "file already exists in current source graph; inspect/modify rather than create",
+                    ],
                 )
             )
 

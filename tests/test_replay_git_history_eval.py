@@ -467,6 +467,35 @@ def test_replay_snapshot_scan_root_and_target_id_are_semantically_equivalent(
     )
 
 
+def test_recipe_prediction_marks_absent_requested_page_as_create(tmp_path: Path) -> None:
+    snapshot_repo = tmp_path / "repo"
+    _write(snapshot_repo / "client/src/components/owners/FindOwnersPage.tsx", "")
+    payload = {
+        "suggestions": [
+            {
+                "matched_recipe_id": "recipe",
+                "node_type": "page_component",
+                "action": "inspect",
+                "suggested_path": "client/src/components/owners/OwnersPage.tsx",
+                "confidence": "medium",
+                "evidence": [
+                    "requested page/component already exists in the current source graph",
+                    "file already exists in current source graph; inspect/modify rather than create",
+                ],
+            }
+        ]
+    }
+
+    predicted = replay.predicted_files_from_recipe_suggestions(
+        payload,
+        default_repo_name="petclinic",
+        snapshot_repo=snapshot_repo,
+    )
+
+    assert predicted["predicted_files"][0]["action"] == "create"
+    assert predicted["predicted_files"][0]["exists_in_parent"] is False
+
+
 def _run_cli_json_or_text(args: list[str], capsys) -> str:
     exit_code = run(args)
     captured = capsys.readouterr()

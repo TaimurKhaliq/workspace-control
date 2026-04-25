@@ -427,7 +427,16 @@ def _combine_recommendations(
                 "matched_recipe_id": existing.matched_recipe_id or item.matched_recipe_id,
             }
         )
-    return [by_key[key] for key in ordered_keys]
+    combined = [by_key[key] for key in ordered_keys]
+    return sorted(
+        combined,
+        key=lambda item: (
+            _combined_recommendation_rank(item),
+            item.repo_name,
+            item.path,
+            item.action,
+        ),
+    )
 
 
 def _dedupe_recommendations(
@@ -453,6 +462,31 @@ def _boost_confidence(left: str, right: str) -> str:
 
 def _confidence_rank(value: str) -> int:
     return {"high": 0, "medium": 1, "low": 2}.get(value, 2)
+
+
+def _combined_recommendation_rank(item: CombinedRecommendation) -> tuple[int, int, int, int]:
+    evidence_text = " | ".join(item.evidence).lower()
+    path_tokens = _path_all_tokens(item.path)
+    if "requested page/component" in evidence_text or "request explicitly names a page/component identifier" in evidence_text:
+        tier = 0
+    elif item.source in {"recipe", "both"} and (item.action == "modify" or "route_config" in evidence_text):
+        tier = 1
+    elif item.source in {"recipe", "both"} and (
+        "frontend_type" in evidence_text
+        or "frontend type" in evidence_text
+        or path_tokens & FRONTEND_SUPPORT_FILE_TOKENS
+    ):
+        tier = 2
+    elif item.source in {"recipe", "both"}:
+        tier = 3
+    else:
+        tier = 4
+    return (
+        tier,
+        _confidence_rank(item.confidence),
+        0 if item.action in {"create", "modify"} else 1,
+        0 if item.source == "both" else 1 if item.source == "recipe" else 2,
+    )
 
 
 def _workspace_root(

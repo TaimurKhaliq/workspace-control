@@ -138,6 +138,39 @@ def test_propose_ui_page_add_includes_recipe_and_combined_recommendations(tmp_pa
     assert proposal.combined_recommendations
 
 
+def test_combined_recommendations_rank_requested_page_and_cochanges_first(tmp_path: Path) -> None:
+    prompt = "Add OwnersPage (no actions yet)"
+    workspace, snapshot, report = _recipe_report(tmp_path, prompt, include_owners_page=True)
+    proposal = create_change_proposal(prompt, [], scan_root=workspace, discovery_snapshot=snapshot, recipe_report=report)
+
+    ranked_paths = [item.path for item in proposal.combined_recommendations]
+    assert ranked_paths[0] == "client/src/components/owners/OwnersPage.tsx"
+    assert ranked_paths.index("client/src/configureRoutes.tsx") < ranked_paths.index(
+        "client/src/components/owners/FindOwnersPage.tsx"
+    )
+    assert ranked_paths.index("client/src/types/index.ts") < ranked_paths.index(
+        "client/src/components/owners/FindOwnersPage.tsx"
+    )
+    assert ranked_paths.index("client/src/components/owners/OwnersPage.tsx") < ranked_paths.index(
+        "client/src/components/owners/NewOwnerPage.tsx"
+    )
+
+
+def test_existing_requested_page_semantics_are_explicit(tmp_path: Path) -> None:
+    prompt = "Add OwnersPage (no actions yet)"
+    workspace, snapshot, report = _recipe_report(tmp_path, prompt, include_owners_page=True)
+    proposal = create_change_proposal(prompt, [], scan_root=workspace, discovery_snapshot=snapshot, recipe_report=report)
+
+    owners_page = next(
+        item
+        for item in proposal.recipe_suggestions
+        if item.path == "client/src/components/owners/OwnersPage.tsx"
+    )
+    assert owners_page.action == "inspect"
+    evidence = " | ".join(owners_page.evidence)
+    assert "file already exists in current source graph; inspect/modify rather than create" in evidence
+
+
 def test_propose_ui_form_validation_uses_recipe_fallback_surfaces(tmp_path: Path) -> None:
     prompt = "Add visual feedback for invalid fields"
     workspace, snapshot, report = _recipe_report(tmp_path, prompt)
