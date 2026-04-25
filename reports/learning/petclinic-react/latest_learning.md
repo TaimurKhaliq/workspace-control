@@ -3,31 +3,64 @@
 - repo: `spring-petclinic-reactjs`
 - status: fresh
 - current head: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
-- previous last analyzed: `-`
+- previous last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - commits considered: 300
 - commits analyzed: 65
-- recipes discovered/updated: 32
-- validation results: 118
+- recipes discovered/updated: 6
+- validation results: 65
 
 ## Recipe Counts
 
-- candidate: 5
-- quarantined: 26
-- stale: 1
+- active: 6
 
-## Active/Candidate Examples
+## Recipes
 
-- `petclinic_react_backend_api_change_unknown` (backend_api_change, candidate, confidence=0.15, support=2)
-- `petclinic_react_persistence_data_change_domain_model_unknown` (persistence_data_change, candidate, confidence=0.00, support=1)
-- `petclinic_react_ui_shell_layout_app_shell_frontend_component` (ui_shell_layout, candidate, confidence=0.00, support=1)
-- `petclinic_react_ui_shell_layout_app_shell_frontend_component_unknown` (ui_shell_layout, candidate, confidence=0.15, support=1)
-- `petclinic_react_ui_shell_layout_app_shell_frontend_entrypoint_landing_page` (ui_shell_layout, candidate, confidence=0.00, support=1)
-
-## Stale/Quarantined
-
-- `petclinic_react_backend_api_change_api_controller` (stale, failures=2, confidence=0.20)
-- `petclinic_react_backend_api_change_service_layer` (quarantined, failures=3, confidence=0.00)
-- `petclinic_react_backend_api_change_service_layer_unknown` (quarantined, failures=3, confidence=0.00)
-- `petclinic_react_full_stack_ui_api_api_controller_app_shell_domain_model` (quarantined, failures=3, confidence=0.00)
-- `petclinic_react_full_stack_ui_api_api_controller_app_shell_frontend_component` (quarantined, failures=3, confidence=0.00)
+- `petclinic_react_backend_api_change` (backend_api_change, active, structural=0.83, planner=0.20, support=10, validations=10)
+  - variants: modified:service_layer, modified:service_layer; deleted:service_layer, modified:api_controller
+  - created node types: -
+  - modified node types: service_layer, unknown, api_controller
+  - cochanges: service_layer + unknown
+  - examples: 5cfd482: removed default profile and replaced with "jpa", 67ae72f: Remove public to methods from the ClinicService, 3f2d3ba: fix typo
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target
+- `petclinic_react_full_stack_ui_api` (full_stack_ui_api, active, structural=0.91, planner=0.32, support=11, validations=11)
+  - variants: created:api_controller+page_component; modified:frontend_component+route_config, created:frontend_component+frontend_type+page_component; modified:api_controller+frontend_component+frontend_type+route_config, created:page_component; modified:api_controller+domain_model+frontend_component+frontend_type+route_config
+  - created node types: api_controller, page_component, unknown, frontend_component, frontend_type
+  - modified node types: frontend_component, route_config, api_controller, frontend_type, unknown
+  - cochanges: api_controller + frontend_component, api_controller + page_component, api_controller + route_config
+  - examples: 7e3cd50: Add ErrorPage, d2017b8: Add FindOwnersPage, 3f55127: Add VetsPage
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target
+- `petclinic_react_persistence_data_change` (persistence_data_change, active, structural=0.95, planner=0.08, support=27, validations=26)
+  - variants: modified:domain_model, modified:repository, modified:domain_model+service_layer
+  - created node types: repository
+  - modified node types: domain_model, repository, service_layer, unknown, migration
+  - cochanges: domain_model + service_layer, domain_model + unknown, service_layer + unknown
+  - examples: 4c01d60: removing Serializable because it creates a lot of warnings, 076a124: Fixes #37 with other default locale than english, 74f683a: Fixed typo
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target
+- `petclinic_react_ui_form_validation` (ui_form_validation, active, structural=0.96, planner=0.00, support=7, validations=6)
+  - variants: modified:frontend_type+page_component, modified:page_component, created:frontend_component; modified:frontend_component
+  - created node types: frontend_component
+  - modified node types: frontend_type, page_component, unknown, frontend_component, list_component
+  - cochanges: frontend_type + page_component, page_component + unknown, frontend_component + unknown
+  - examples: 339ee36: Add error handling to NewOwnerPage, 6e73c96: Add visual feedback for invalid fields, 4f42902: Add FieldFeedbackPanel to show status indication on Fields
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target
+- `petclinic_react_ui_page_add` (ui_page_add, active, structural=0.98, planner=0.05, support=7, validations=10)
+  - variants: created:page_component; modified:frontend_type+route_config, modified:frontend_component, modified:page_component
+  - created node types: page_component
+  - modified node types: frontend_type, route_config, frontend_component, unknown, page_component
+  - cochanges: frontend_type + page_component, frontend_type + route_config, page_component + route_config
+  - examples: 0a36a33: Add OwnersPage (no actions yet), 42c0bd2: Add createPetEditorModel, f188ea9: Eliminando código desnecessário
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target
+- `petclinic_react_ui_shell_layout` (ui_shell_layout, active, structural=0.98, planner=0.00, support=3, validations=2)
+  - variants: modified:frontend_component+page_component+public_html+static_asset, created:frontend_component; modified:frontend_component, created:form_component+list_component; modified:frontend_component+list_component+page_component
+  - created node types: frontend_component, form_component, list_component
+  - modified node types: frontend_component, page_component, public_html, static_asset, list_component
+  - cochanges: frontend_component + page_component, frontend_component + public_html, frontend_component + static_asset
+  - examples: f710ba8: Add Layout and Welcome page, ac27330: Fix Menu, 2bebdd0: Split larger components and clean up styling
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target

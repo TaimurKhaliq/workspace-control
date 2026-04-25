@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 
 
 LearningStatus = Literal["fresh", "stale", "missing", "error"]
-RecipeStatus = Literal["candidate", "active", "stale", "quarantined"]
+RecipeStatus = Literal["candidate", "active", "weak", "stale", "quarantined"]
 ValidationOutcome = Literal["confirmed", "partial", "missed", "not_applicable"]
 
 
@@ -42,12 +42,28 @@ class ChangeRecipe(BaseModel):
     cochange_patterns: list[str] = Field(default_factory=list)
     required_existing_node_types: list[str] = Field(default_factory=list)
     optional_existing_node_types: list[str] = Field(default_factory=list)
+    observed_variants: list[str] = Field(default_factory=list)
+    changed_node_type_counts: dict[str, int] = Field(default_factory=dict)
+    changed_path_pattern_counts: dict[str, int] = Field(default_factory=dict)
+    created_file_pattern_counts: dict[str, int] = Field(default_factory=dict)
+    cochange_counts: dict[str, int] = Field(default_factory=dict)
+    created_node_types: list[str] = Field(default_factory=list)
+    modified_node_types: list[str] = Field(default_factory=list)
+    deleted_node_types: list[str] = Field(default_factory=list)
+    unknown_changed_file_count: int = 0
+    unknown_path_patterns: list[str] = Field(default_factory=list)
+    unclassified_examples: list[str] = Field(default_factory=list)
+    example_commits: list[str] = Field(default_factory=list)
     confidence: float = 0.0
+    structural_confidence: float = 0.0
+    planner_effectiveness: float = 0.0
     support_count: int = 0
     validation_count: int = 0
     success_count: int = 0
+    partial_count: int = 0
     failure_count: int = 0
     last_seen_commit: str | None = None
+    promotion_blocker: str | None = None
     evidence: list[str] = Field(default_factory=list)
 
 
@@ -83,6 +99,11 @@ class CommitLearningObservation(BaseModel):
     deleted_files: list[str] = Field(default_factory=list)
     changed_categories: list[str] = Field(default_factory=list)
     changed_node_types: list[str] = Field(default_factory=list)
+    created_node_types: list[str] = Field(default_factory=list)
+    modified_node_types: list[str] = Field(default_factory=list)
+    deleted_node_types: list[str] = Field(default_factory=list)
+    unknown_changed_file_count: int = 0
+    unknown_path_patterns: list[str] = Field(default_factory=list)
     inferred_archetype: str
     candidate_quality: str
     prompt_quality: str
@@ -104,6 +125,7 @@ class RepoLearningReport(BaseModel):
     validation_results: int = 0
     recipe_counts: dict[str, int] = Field(default_factory=dict)
     analyzed_commit_ids: list[str] = Field(default_factory=list)
+    recipes: list[ChangeRecipe] = Field(default_factory=list)
     active_or_candidate_examples: list[ChangeRecipe] = Field(default_factory=list)
     stale_or_quarantined_recipes: list[ChangeRecipe] = Field(default_factory=list)
     reports: dict[str, str] = Field(default_factory=dict)

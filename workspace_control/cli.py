@@ -708,7 +708,7 @@ def _recipe_evidence_for_args(args) -> dict[str, object]:
         for recipe in recipes
         if feature_tokens & set(recipe.trigger_terms)
     ]
-    matching.sort(key=lambda recipe: (-recipe.confidence, recipe.recipe_type, recipe.id))
+    matching.sort(key=lambda recipe: (-recipe.structural_confidence, -recipe.planner_effectiveness, recipe.recipe_type, recipe.id))
     return {
         "available": bool(recipes),
         "recipe_count": len(recipes),
@@ -718,7 +718,8 @@ def _recipe_evidence_for_args(args) -> dict[str, object]:
                 "recipe_id": recipe.id,
                 "recipe_type": recipe.recipe_type,
                 "status": recipe.status,
-                "confidence": recipe.confidence,
+                "structural_confidence": recipe.structural_confidence,
+                "planner_effectiveness": recipe.planner_effectiveness,
                 "trigger_terms": recipe.trigger_terms[:6],
                 "changed_node_types": recipe.changed_node_types[:6],
             }

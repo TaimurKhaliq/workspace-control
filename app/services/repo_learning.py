@@ -53,10 +53,22 @@ RECIPE_TYPE_BY_ARCHETYPE = {
     "ui_page_add": "ui_page_add",
     "ui_form_validation": "ui_form_validation",
     "backend_api": "backend_api_change",
+    "backend_validation": "backend_validation_change",
     "persistence_data": "persistence_data_change",
     "full_stack_ui_api": "full_stack_ui_api",
     "config_build": "config_build_change",
 }
+PRODUCT_RECIPE_TYPES = {
+    "ui_shell_layout",
+    "ui_page_add",
+    "ui_form_validation",
+    "backend_api_change",
+    "backend_validation_change",
+    "persistence_data_change",
+    "full_stack_ui_api",
+}
+NON_PRODUCT_RECIPE_TYPES = {"config_build_change"}
+UNKNOWN_NODE_TYPE = "unknown"
 
 
 class RepoLearningService:
@@ -106,8 +118,15 @@ class RepoLearningService:
                 commit_meta,
                 max_files=max_files,
             )
-            recipes = self.load_recipes(target_id)
-            validations = self.load_validation_history(target_id)
+            if force_full_rescan:
+                recipes = []
+                validations = []
+            else:
+                recipes = canonicalize_recipe_catalog(
+                    self.load_recipes(target_id),
+                    promote_threshold=promote_threshold,
+                )
+                validations = self.load_validation_history(target_id)
             analyzed_ids: list[str] = []
             updated_recipe_ids: set[str] = set()
 
@@ -229,7 +248,13 @@ class RepoLearningService:
 
         return sorted(
             self.load_recipes(target_id),
-            key=lambda item: (item.status, -item.confidence, item.recipe_type, item.id),
+            key=lambda item: (
+                _status_sort_key(item.status),
+                -item.structural_confidence,
+                -item.planner_effectiveness,
+                item.recipe_type,
+                item.id,
+            ),
         )
 
     def state_path(self, target_id: str) -> Path:
@@ -367,12 +392,12 @@ class RepoLearningService:
         examples = [
             recipe
             for recipe in recipes
-            if recipe.status in {"active", "candidate"}
+            if recipe.status in {"active", "candidate", "weak"}
         ][:5]
         stale = [
             recipe
             for recipe in recipes
-            if recipe.status in {"stale", "quarantined"}
+            if recipe.status in {"weak", "stale", "quarantined"}
         ][:5]
         return RepoLearningReport(
             target_id=state.target_id,
@@ -388,6 +413,7 @@ class RepoLearningService:
             validation_results=len(validations),
             recipe_counts=dict(sorted(counts.items())),
             analyzed_commit_ids=state.analyzed_commits[-commits_analyzed:] if commits_analyzed else [],
+            recipes=list(recipes),
             active_or_candidate_examples=examples,
             stale_or_quarantined_recipes=stale,
             reports=_report_paths(state.target_id, self.report_root),
@@ -447,7 +473,11 @@ def build_observation(repo_path: Path, candidate: dict[str, Any]) -> CommitLearn
             for category in candidates.classify_file_categories(path)
         }
     )
-    node_types = sorted({replay.classify_surface(path) for path in changed_files})
+    created_node_types = sorted({classify_learning_node_type(path) for path in status["created_files"]})
+    modified_node_types = sorted({classify_learning_node_type(path) for path in status["modified_files"]})
+    deleted_node_types = sorted({classify_learning_node_type(path) for path in status["deleted_files"]})
+    node_types = sorted(set(created_node_types) | set(modified_node_types) | set(deleted_node_types))
+    unknown_files = [path for path in changed_files if classify_learning_node_type(path) == UNKNOWN_NODE_TYPE]
     return CommitLearningObservation(
         commit=candidate["sha"],
         subject=candidate["subject"],
@@ -458,6 +488,11 @@ def build_observation(repo_path: Path, candidate: dict[str, Any]) -> CommitLearn
         deleted_files=status["deleted_files"],
         changed_categories=categories,
         changed_node_types=node_types,
+        created_node_types=created_node_types,
+        modified_node_types=modified_node_types,
+        deleted_node_types=deleted_node_types,
+        unknown_changed_file_count=len(unknown_files),
+        unknown_path_patterns=path_patterns(unknown_files),
         inferred_archetype=candidate["archetype"],
         candidate_quality=candidate["candidate_quality"],
         prompt_quality=candidate["prompt_quality"],
@@ -474,11 +509,7 @@ def upsert_recipe_from_observation(
     """Create or update a recipe using mined commit evidence."""
 
     recipe_type = recipe_type_for_archetype(observation.inferred_archetype)
-    recipe_id = recipe_id_for(
-        target_id,
-        recipe_type,
-        observation.changed_node_types,
-    )
+    recipe_id = recipe_id_for(target_id, recipe_type)
     recipe = next((item for item in recipes if item.id == recipe_id), None)
     if recipe is None:
         recipe = ChangeRecipe(id=recipe_id, target_id=target_id, recipe_type=recipe_type)
@@ -490,25 +521,52 @@ def upsert_recipe_from_observation(
     recipe.changed_path_patterns = _dedupe([*recipe.changed_path_patterns, *path_patterns(observation.changed_files)])[:24]
     recipe.new_file_patterns = _dedupe([*recipe.new_file_patterns, *path_patterns(observation.created_files)])[:20]
     recipe.cochange_patterns = _dedupe([*recipe.cochange_patterns, *cochange_patterns(observation.changed_node_types)])[:20]
-    recipe.required_existing_node_types = recipe.changed_node_types[:3]
-    recipe.optional_existing_node_types = recipe.changed_node_types[3:8]
+    recipe.observed_variants = _dedupe([*recipe.observed_variants, observation_variant(observation)])[:20]
+    recipe.created_node_types = _dedupe([*recipe.created_node_types, *observation.created_node_types])[:20]
+    recipe.modified_node_types = _dedupe([*recipe.modified_node_types, *observation.modified_node_types])[:20]
+    recipe.deleted_node_types = _dedupe([*recipe.deleted_node_types, *observation.deleted_node_types])[:20]
+    recipe.unknown_changed_file_count += observation.unknown_changed_file_count
+    recipe.unknown_path_patterns = _dedupe([*recipe.unknown_path_patterns, *observation.unknown_path_patterns])[:20]
+    recipe.unclassified_examples = _dedupe(
+        [
+            *recipe.unclassified_examples,
+            *[
+                path
+                for path in observation.changed_files
+                if classify_learning_node_type(path) == UNKNOWN_NODE_TYPE
+            ],
+        ]
+    )[:20]
+    recipe.example_commits = _dedupe(
+        [*recipe.example_commits, f"{observation.commit[:7]}: {observation.subject}"]
+    )[:12]
+    _increment_counts(recipe.changed_node_type_counts, observation.changed_node_types)
+    _increment_counts(recipe.changed_path_pattern_counts, path_patterns(observation.changed_files))
+    _increment_counts(recipe.created_file_pattern_counts, path_patterns(observation.created_files))
+    _increment_counts(recipe.cochange_counts, cochange_patterns(observation.changed_node_types))
+    recipe.changed_node_type_counts = _sorted_count_dict(recipe.changed_node_type_counts)
+    recipe.changed_path_pattern_counts = _sorted_count_dict(recipe.changed_path_pattern_counts)
+    recipe.created_file_pattern_counts = _sorted_count_dict(recipe.created_file_pattern_counts)
+    recipe.cochange_counts = _sorted_count_dict(recipe.cochange_counts)
+    recipe.required_existing_node_types = [
+        node_type
+        for node_type in _top_count_keys(recipe.changed_node_type_counts, limit=3)
+        if node_type != UNKNOWN_NODE_TYPE
+    ]
+    recipe.optional_existing_node_types = [
+        node_type
+        for node_type in _top_count_keys(recipe.changed_node_type_counts, limit=8)
+        if node_type not in recipe.required_existing_node_types and node_type != UNKNOWN_NODE_TYPE
+    ][:5]
     recipe.support_count = len(recipe.source_commits)
     recipe.last_seen_commit = observation.commit
-    if recipe.status != "quarantined":
-        recipe.confidence = min(1.0, round(recipe.confidence + 0.15, 4))
     recipe.evidence = _dedupe(
         [
             *recipe.evidence,
             f"{observation.commit[:7]}: {observation.subject}",
         ]
     )[:12]
-    if (
-        recipe.support_count >= promote_threshold
-        and recipe.status == "candidate"
-        and recipe.failure_count == 0
-        and recipe.confidence >= 0.3
-    ):
-        recipe.status = "active"
+    update_recipe_structural_status(recipe, promote_threshold=promote_threshold)
     return recipe
 
 
@@ -571,33 +629,278 @@ def update_recipe_from_validation(
     recipe.validation_count += 1
     if result.outcome == "confirmed":
         recipe.success_count += 1
-        recipe.confidence = min(1.0, round(recipe.confidence + 0.2, 4))
     elif result.outcome == "partial":
-        recipe.confidence = min(1.0, round(recipe.confidence + 0.05, 4))
+        recipe.partial_count += 1
     elif result.outcome == "missed":
         recipe.failure_count += 1
-        recipe.confidence = max(0.0, round(recipe.confidence - 0.2, 4))
-
-    if recipe.failure_count >= quarantine_threshold:
-        recipe.status = "quarantined"
-        recipe.confidence = min(recipe.confidence, 0.2)
-    elif recipe.failure_count > recipe.success_count and recipe.validation_count >= quarantine_threshold:
-        recipe.status = "stale"
-    elif (
-        recipe.failure_count == 0
-        and recipe.confidence >= 0.3
-        and (recipe.support_count >= promote_threshold or recipe.success_count >= promote_threshold)
-    ):
-        recipe.status = "active"
+    recipe.planner_effectiveness = planner_effectiveness(recipe)
+    # Planner misses are useful learning signals, but they do not invalidate a
+    # structurally consistent historical recipe.
+    if recipe.status != "quarantined":
+        update_recipe_structural_status(recipe, promote_threshold=promote_threshold)
 
 
 def recipe_type_for_archetype(archetype: str) -> str:
     return RECIPE_TYPE_BY_ARCHETYPE.get(archetype, "unknown")
 
 
-def recipe_id_for(target_id: str, recipe_type: str, node_types: Sequence[str]) -> str:
-    key = "_".join(sorted(node_types)[:3]) or "unknown"
-    return f"{_slug(target_id)}_{recipe_type}_{_slug(key)}"
+def recipe_id_for(target_id: str, recipe_type: str, node_types: Sequence[str] | None = None) -> str:
+    """Return the canonical recipe id for a target and recipe type.
+
+    node_types is accepted for legacy callers, but intentionally ignored so
+    unknown or variant node mixes do not fragment the recipe catalog.
+    """
+
+    return f"{_slug(target_id)}_{_slug(recipe_type)}"
+
+
+def canonicalize_recipe_catalog(
+    recipes: Sequence[ChangeRecipe],
+    *,
+    promote_threshold: int,
+) -> list[ChangeRecipe]:
+    """Merge legacy fragmented recipes into canonical recipe-type buckets."""
+
+    merged: dict[str, ChangeRecipe] = {}
+    for recipe in recipes:
+        canonical_id = recipe_id_for(recipe.target_id, recipe.recipe_type)
+        target = merged.get(canonical_id)
+        if target is None:
+            target = recipe.model_copy(update={"id": canonical_id})
+            merged[canonical_id] = target
+        elif target is not recipe:
+            merge_recipe(target, recipe)
+
+        hydrate_recipe_counts(target)
+        update_recipe_structural_status(target, promote_threshold=promote_threshold)
+
+    return sorted(
+        merged.values(),
+        key=lambda item: (_status_sort_key(item.status), item.recipe_type, item.id),
+    )
+
+
+def merge_recipe(target: ChangeRecipe, source: ChangeRecipe) -> None:
+    """Merge source recipe evidence into target in-place."""
+
+    target.source_commits = _dedupe([*target.source_commits, *source.source_commits])
+    target.trigger_terms = _dedupe([*target.trigger_terms, *source.trigger_terms])[:20]
+    target.changed_node_types = _dedupe([*target.changed_node_types, *source.changed_node_types])[:20]
+    target.changed_path_patterns = _dedupe([*target.changed_path_patterns, *source.changed_path_patterns])[:24]
+    target.new_file_patterns = _dedupe([*target.new_file_patterns, *source.new_file_patterns])[:20]
+    target.cochange_patterns = _dedupe([*target.cochange_patterns, *source.cochange_patterns])[:20]
+    target.observed_variants = _dedupe([*target.observed_variants, *source.observed_variants])[:20]
+    target.created_node_types = _dedupe([*target.created_node_types, *source.created_node_types])[:20]
+    target.modified_node_types = _dedupe([*target.modified_node_types, *source.modified_node_types])[:20]
+    target.deleted_node_types = _dedupe([*target.deleted_node_types, *source.deleted_node_types])[:20]
+    target.unknown_changed_file_count += source.unknown_changed_file_count
+    target.unknown_path_patterns = _dedupe([*target.unknown_path_patterns, *source.unknown_path_patterns])[:20]
+    target.unclassified_examples = _dedupe([*target.unclassified_examples, *source.unclassified_examples])[:20]
+    target.example_commits = _dedupe([*target.example_commits, *source.example_commits])[:12]
+    target.evidence = _dedupe([*target.evidence, *source.evidence])[:12]
+    target.validation_count += source.validation_count
+    target.success_count += source.success_count
+    target.partial_count += source.partial_count
+    target.failure_count += source.failure_count
+    target.last_seen_commit = source.last_seen_commit or target.last_seen_commit
+    _merge_counts(target.changed_node_type_counts, source.changed_node_type_counts)
+    _merge_counts(target.changed_path_pattern_counts, source.changed_path_pattern_counts)
+    _merge_counts(target.created_file_pattern_counts, source.created_file_pattern_counts)
+    _merge_counts(target.cochange_counts, source.cochange_counts)
+    target.planner_effectiveness = planner_effectiveness(target)
+
+
+def hydrate_recipe_counts(recipe: ChangeRecipe) -> None:
+    """Backfill aggregate count fields for older recipe records."""
+
+    if not recipe.changed_node_type_counts and recipe.changed_node_types:
+        _increment_counts(recipe.changed_node_type_counts, recipe.changed_node_types)
+    if not recipe.changed_path_pattern_counts and recipe.changed_path_patterns:
+        _increment_counts(recipe.changed_path_pattern_counts, recipe.changed_path_patterns)
+    if not recipe.created_file_pattern_counts and recipe.new_file_patterns:
+        _increment_counts(recipe.created_file_pattern_counts, recipe.new_file_patterns)
+    if not recipe.cochange_counts and recipe.cochange_patterns:
+        _increment_counts(recipe.cochange_counts, recipe.cochange_patterns)
+    if not recipe.observed_variants:
+        meaningful = [node for node in recipe.changed_node_types if node != UNKNOWN_NODE_TYPE]
+        if meaningful:
+            recipe.observed_variants = ["changed:" + "+".join(sorted(meaningful))]
+    if not recipe.example_commits and recipe.evidence:
+        recipe.example_commits = recipe.evidence[:12]
+    if recipe.partial_count == 0 and recipe.validation_count:
+        recipe.partial_count = max(
+            0,
+            recipe.validation_count - recipe.success_count - recipe.failure_count,
+        )
+    if recipe.structural_confidence == 0 and recipe.confidence:
+        recipe.structural_confidence = recipe.confidence
+    recipe.planner_effectiveness = planner_effectiveness(recipe)
+
+
+def update_recipe_structural_status(recipe: ChangeRecipe, *, promote_threshold: int) -> None:
+    """Update structural confidence and status without using planner misses."""
+
+    recipe.support_count = len(recipe.source_commits)
+    recipe.structural_confidence = structural_confidence(recipe)
+    recipe.confidence = recipe.structural_confidence
+    recipe.planner_effectiveness = planner_effectiveness(recipe)
+    blocker = structural_blocker(recipe)
+    recipe.promotion_blocker = blocker
+    if blocker and blocker.startswith("quarantine:"):
+        recipe.status = "quarantined"
+        recipe.structural_confidence = min(recipe.structural_confidence, 0.2)
+        recipe.confidence = recipe.structural_confidence
+        return
+    if recipe.status == "stale":
+        return
+    if recipe.support_count >= promote_threshold and recipe.structural_confidence >= 0.5 and blocker is None:
+        recipe.status = "active"
+    elif recipe.structural_confidence < 0.25 or blocker:
+        recipe.status = "weak"
+    else:
+        recipe.status = "candidate"
+
+
+def structural_confidence(recipe: ChangeRecipe) -> float:
+    """Score whether history shows a consistent structural change pattern."""
+
+    meaningful_node_types = [
+        node_type
+        for node_type in recipe.changed_node_type_counts
+        if node_type != UNKNOWN_NODE_TYPE
+    ]
+    known_count = sum(
+        count
+        for node_type, count in recipe.changed_node_type_counts.items()
+        if node_type != UNKNOWN_NODE_TYPE
+    )
+    total_count = known_count + recipe.unknown_changed_file_count
+    support_score = min(0.65, recipe.support_count * 0.22)
+    node_score = 0.18 if meaningful_node_types else 0.0
+    cochange_score = 0.1 if recipe.support_count > 1 and recipe.cochange_counts else 0.0
+    product_score = 0.08 if recipe.recipe_type in PRODUCT_RECIPE_TYPES else 0.0
+    unknown_penalty = 0.0
+    if total_count:
+        unknown_penalty = min(0.3, (recipe.unknown_changed_file_count / total_count) * 0.3)
+    variant_penalty = 0.0
+    if recipe.support_count and len(recipe.observed_variants) > max(2, recipe.support_count * 2):
+        variant_penalty = 0.1
+    return round(max(0.0, min(1.0, support_score + node_score + cochange_score + product_score - unknown_penalty - variant_penalty)), 4)
+
+
+def planner_effectiveness(recipe: ChangeRecipe) -> float:
+    """Score how well the current planner/proposer predicts this recipe."""
+
+    if recipe.validation_count == 0:
+        return 0.0
+    return round(
+        max(0.0, min(1.0, (recipe.success_count + (recipe.partial_count * 0.5)) / recipe.validation_count)),
+        4,
+    )
+
+
+def structural_blocker(recipe: ChangeRecipe) -> str | None:
+    """Return a deterministic structural blocker or quarantine reason."""
+
+    meaningful_node_types = [
+        node_type
+        for node_type in recipe.changed_node_type_counts
+        if node_type != UNKNOWN_NODE_TYPE
+    ]
+    if recipe.recipe_type in NON_PRODUCT_RECIPE_TYPES:
+        return "quarantine: config/build-only recipes are not product-feature recipes"
+    if recipe.recipe_type == "unknown" and not meaningful_node_types:
+        return "quarantine: pattern is mostly unknown or unclassified"
+    if not meaningful_node_types and not recipe.changed_path_patterns:
+        return "quarantine: no meaningful changed node types or path patterns"
+    known_count = sum(recipe.changed_node_type_counts.get(node, 0) for node in meaningful_node_types)
+    if recipe.unknown_changed_file_count > known_count and recipe.support_count <= 1:
+        return "mostly unknown paths; needs more structural support"
+    if recipe.support_count <= 1:
+        return "needs more historical support before promotion"
+    if len(recipe.observed_variants) > max(3, recipe.support_count * 2):
+        return "mixed observations; needs a more consistent pattern"
+    return None
+
+
+def classify_learning_node_type(path: str) -> str:
+    """Classify historical diff paths, including files absent from the parent graph."""
+
+    lowered = path.replace("\\", "/").lower()
+    name = Path(lowered).name
+    stem = Path(lowered).stem
+    suffix = Path(lowered).suffix
+    parts = set(re.findall(r"[a-z0-9]+", lowered))
+
+    if name == "configureroutes.tsx" or "routes" in parts:
+        return "route_config"
+    if "types" in parts or name.endswith(".d.ts"):
+        return "frontend_type"
+    if suffix in {".tsx", ".jsx"}:
+        if stem.endswith("page") or "page" in stem:
+            return "page_component"
+        if "form" in stem or "editor" in stem:
+            return "form_component"
+        if "detail" in stem or "information" in stem:
+            return "detail_component"
+        if "list" in stem or "table" in stem:
+            return "list_component"
+        return "frontend_component"
+    if name.endswith(("controller.java", "resource.java")) or "controller" in parts:
+        return "api_controller"
+    if name.endswith("service.java") or "service" in parts or "services" in parts:
+        return "service_layer"
+    if name.endswith("repository.java") or "repository" in parts or "repositories" in parts:
+        return "repository"
+    if "openapi" in lowered or "swagger" in lowered:
+        return "api_contract"
+    if "migration" in parts or "migrations" in parts or "changelog" in parts or suffix == ".sql":
+        return "migration"
+    if name.endswith(("entity.java", "model.java")) or "entity" in parts or "entities" in parts or "model" in parts:
+        return "domain_model"
+
+    surface = replay.classify_surface(path)
+    return surface if surface else UNKNOWN_NODE_TYPE
+
+
+def observation_variant(observation: CommitLearningObservation) -> str:
+    """Return a compact structural variant signature for one observation."""
+
+    segments: list[str] = []
+    for label, node_types in (
+        ("created", observation.created_node_types),
+        ("modified", observation.modified_node_types),
+        ("deleted", observation.deleted_node_types),
+    ):
+        meaningful = sorted(node for node in node_types if node != UNKNOWN_NODE_TYPE)
+        if meaningful:
+            segments.append(f"{label}:{'+'.join(meaningful[:5])}")
+    if not segments and observation.unknown_changed_file_count:
+        segments.append("unknown")
+    return "; ".join(segments) or "unclassified"
+
+
+def _increment_counts(counts: dict[str, int], values: Iterable[str]) -> None:
+    for value in values:
+        counts[value] = counts.get(value, 0) + 1
+
+
+def _merge_counts(target: dict[str, int], source: dict[str, int]) -> None:
+    for key, value in source.items():
+        target[key] = target.get(key, 0) + value
+
+
+def _sorted_count_dict(counts: dict[str, int]) -> dict[str, int]:
+    return dict(sorted(counts.items(), key=lambda item: (-item[1], item[0])))
+
+
+def _top_count_keys(counts: dict[str, int], *, limit: int) -> list[str]:
+    return [key for key, _value in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]]
+
+
+def _status_sort_key(status: str) -> int:
+    order = {"active": 0, "candidate": 1, "weak": 2, "stale": 3, "quarantined": 4}
+    return order.get(status, 9)
 
 
 def recent_non_merge_commits_since(
@@ -689,21 +992,22 @@ def format_learning_report(report: RepoLearningReport) -> str:
     else:
         lines.append("- none")
 
-    lines.extend(["", "## Active/Candidate Examples", ""])
-    if report.active_or_candidate_examples:
-        for recipe in report.active_or_candidate_examples:
+    lines.extend(["", "## Recipes", ""])
+    if report.recipes:
+        for recipe in report.recipes:
             lines.append(
-                f"- `{recipe.id}` ({recipe.recipe_type}, {recipe.status}, confidence={recipe.confidence:.2f}, support={recipe.support_count})"
+                f"- `{recipe.id}` ({recipe.recipe_type}, {recipe.status}, "
+                f"structural={recipe.structural_confidence:.2f}, planner={recipe.planner_effectiveness:.2f}, "
+                f"support={recipe.support_count}, validations={recipe.validation_count})"
             )
-    else:
-        lines.append("- none")
-
-    lines.extend(["", "## Stale/Quarantined", ""])
-    if report.stale_or_quarantined_recipes:
-        for recipe in report.stale_or_quarantined_recipes:
-            lines.append(
-                f"- `{recipe.id}` ({recipe.status}, failures={recipe.failure_count}, confidence={recipe.confidence:.2f})"
-            )
+            lines.append(f"  - variants: {', '.join(recipe.observed_variants[:3]) or '-'}")
+            lines.append(f"  - created node types: {', '.join(recipe.created_node_types[:5]) or '-'}")
+            lines.append(f"  - modified node types: {', '.join(recipe.modified_node_types[:5]) or '-'}")
+            lines.append(f"  - cochanges: {', '.join(recipe.cochange_patterns[:3]) or '-'}")
+            lines.append(f"  - examples: {', '.join(recipe.example_commits[:3]) or '-'}")
+            lines.append(f"  - promotion blocker: {recipe.promotion_blocker or '-'}")
+            if recipe.validation_count and recipe.planner_effectiveness < 0.5:
+                lines.append("  - planner note: low planner effectiveness highlights a useful future planner improvement target")
     else:
         lines.append("- none")
     lines.append("")
@@ -725,6 +1029,7 @@ def format_learning_status(states: Sequence[RepoLearningState], recipes_by_targe
         "recipes",
         "active",
         "candidate",
+        "weak",
         "stale",
         "quarantined",
         "commits",
@@ -744,6 +1049,7 @@ def format_learning_status(states: Sequence[RepoLearningState], recipes_by_targe
                 str(len(recipes)),
                 str(counts.get("active", 0)),
                 str(counts.get("candidate", 0)),
+                str(counts.get("weak", 0)),
                 str(counts.get("stale", 0)),
                 str(counts.get("quarantined", 0)),
                 str(len(state.analyzed_commits)),
@@ -763,28 +1069,36 @@ def format_recipe_list(recipes: Sequence[ChangeRecipe]) -> str:
         "recipe_id",
         "type",
         "status",
-        "confidence",
+        "structural",
+        "planner",
         "support",
         "validations",
         "success",
+        "partial",
         "failure",
-        "examples",
-        "node_types",
+        "variants",
+        "created",
+        "modified",
         "cochanges",
+        "blocker",
     ]
     rows = [
         [
             recipe.id,
             recipe.recipe_type,
             recipe.status,
-            f"{recipe.confidence:.2f}",
+            f"{recipe.structural_confidence:.2f}",
+            f"{recipe.planner_effectiveness:.2f}",
             str(recipe.support_count),
             str(recipe.validation_count),
             str(recipe.success_count),
+            str(recipe.partial_count),
             str(recipe.failure_count),
-            ", ".join(commit[:7] for commit in recipe.source_commits[:3]) or "-",
-            ", ".join(recipe.changed_node_types[:4]) or "-",
+            ", ".join(recipe.observed_variants[:2]) or "-",
+            ", ".join(recipe.created_node_types[:4]) or "-",
+            ", ".join(recipe.modified_node_types[:4]) or "-",
             ", ".join(recipe.cochange_patterns[:3]) or "-",
+            recipe.promotion_blocker or "-",
         ]
         for recipe in recipes
     ]

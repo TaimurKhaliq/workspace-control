@@ -4,13 +4,16 @@ import subprocess
 from pathlib import Path
 
 from app.models.discovery import DiscoveryTargetRecord
-from app.models.repo_learning import ChangeRecipe, RecipeValidationResult
+from app.models.repo_learning import ChangeRecipe, CommitLearningObservation, RecipeValidationResult
 from app.services.discovery_target_registry import DiscoveryTargetRegistry
 from app.services.repo_learning import (
     RepoLearningService,
+    classify_learning_node_type,
     format_learning_status,
     format_recipe_list,
+    recipe_id_for,
     update_recipe_from_validation,
+    upsert_recipe_from_observation,
 )
 from workspace_control.cli import run
 
@@ -111,6 +114,42 @@ def _fake_replay_report(commit: str) -> dict:
     }
 
 
+def _observation(
+    commit: str,
+    *,
+    subject: str = "Add OwnersPage (no actions yet)",
+    archetype: str = "ui_page_add",
+    created_files: list[str] | None = None,
+    modified_files: list[str] | None = None,
+) -> CommitLearningObservation:
+    created = created_files or ["client/src/components/owners/OwnersPage.tsx"]
+    modified = modified_files or ["client/src/configureRoutes.tsx", "client/src/types/index.ts"]
+    created_types = sorted({classify_learning_node_type(path) for path in created})
+    modified_types = sorted({classify_learning_node_type(path) for path in modified})
+    changed = sorted(set(created) | set(modified))
+    changed_types = sorted(set(created_types) | set(modified_types))
+    unknown_files = [path for path in changed if classify_learning_node_type(path) == "unknown"]
+    return CommitLearningObservation(
+        commit=commit,
+        subject=subject,
+        parent="parent",
+        changed_files=changed,
+        created_files=created,
+        modified_files=modified,
+        deleted_files=[],
+        changed_categories=["frontend_ui"],
+        changed_node_types=changed_types,
+        created_node_types=created_types,
+        modified_node_types=modified_types,
+        deleted_node_types=[],
+        unknown_changed_file_count=len(unknown_files),
+        unknown_path_patterns=sorted({str(Path(path).parent) for path in unknown_files}),
+        inferred_archetype=archetype,
+        candidate_quality="good",
+        prompt_quality="high",
+    )
+
+
 def test_refresh_learning_creates_state_and_recipes(tmp_path: Path, monkeypatch) -> None:
     workspace, _repo = _seed_learning_workspace(tmp_path)
     registry = _register_target(tmp_path / "registry.json", workspace)
@@ -132,6 +171,7 @@ def test_refresh_learning_creates_state_and_recipes(tmp_path: Path, monkeypatch)
     recipes = service.recipes_for_target("petclinic-test")
     assert recipes
     assert any(recipe.status == "active" for recipe in recipes)
+    assert any(recipe.id == "petclinic_test_ui_page_add" for recipe in recipes)
 
 
 def test_detects_new_commits_and_stale_status(tmp_path: Path, monkeypatch) -> None:
@@ -159,35 +199,108 @@ def test_detects_new_commits_and_stale_status(tmp_path: Path, monkeypatch) -> No
     assert report.current_head == new_head
 
 
-def test_recipe_confidence_update_confirmed_partial_and_missed() -> None:
-    recipe = ChangeRecipe(id="r", target_id="t", recipe_type="ui_page_add", confidence=0.5, support_count=1)
+def test_recipe_metrics_separate_structural_confidence_from_planner_effectiveness() -> None:
+    recipes: list[ChangeRecipe] = []
+    recipe = upsert_recipe_from_observation(
+        recipes,
+        target_id="petclinic-test",
+        observation=_observation("a" * 40),
+        promote_threshold=2,
+    )
+    structural_before = recipe.structural_confidence
 
     update_recipe_from_validation(
         recipe,
-        RecipeValidationResult(commit="a", recipe_id="r", prompt="Add page", outcome="confirmed"),
+        RecipeValidationResult(commit="a", recipe_id=recipe.id, prompt="Add page", outcome="confirmed"),
         promote_threshold=2,
         quarantine_threshold=3,
     )
-    assert recipe.confidence > 0.5
+    assert recipe.structural_confidence == structural_before
+    assert recipe.planner_effectiveness == 1.0
     assert recipe.success_count == 1
 
-    before_partial = recipe.confidence
     update_recipe_from_validation(
         recipe,
-        RecipeValidationResult(commit="b", recipe_id="r", prompt="Add page", outcome="partial"),
+        RecipeValidationResult(commit="b", recipe_id=recipe.id, prompt="Add page", outcome="partial"),
         promote_threshold=2,
         quarantine_threshold=3,
     )
-    assert recipe.confidence >= before_partial
+    assert recipe.partial_count == 1
+    assert recipe.structural_confidence == structural_before
 
     for idx in range(3):
         update_recipe_from_validation(
             recipe,
-            RecipeValidationResult(commit=f"m{idx}", recipe_id="r", prompt="Add page", outcome="missed"),
+            RecipeValidationResult(commit=f"m{idx}", recipe_id=recipe.id, prompt="Add page", outcome="missed"),
             promote_threshold=2,
             quarantine_threshold=3,
         )
-    assert recipe.status == "quarantined"
+    assert recipe.failure_count == 3
+    assert recipe.status != "quarantined"
+    assert recipe.planner_effectiveness < 1.0
+
+
+def test_canonical_recipe_ids_ignore_node_type_variants_and_unknown() -> None:
+    assert recipe_id_for("petclinic-test", "ui_page_add", ["unknown", "page_component"]) == "petclinic_test_ui_page_add"
+    assert recipe_id_for("petclinic-test", "ui_page_add", ["route_config"]) == "petclinic_test_ui_page_add"
+
+    recipes: list[ChangeRecipe] = []
+    first = upsert_recipe_from_observation(
+        recipes,
+        target_id="petclinic-test",
+        observation=_observation("a" * 40),
+        promote_threshold=2,
+    )
+    second = upsert_recipe_from_observation(
+        recipes,
+        target_id="petclinic-test",
+        observation=_observation(
+            "b" * 40,
+            created_files=["client/src/components/pets/PetsPage.tsx"],
+            modified_files=["client/src/configureRoutes.tsx", "unclassified/generated.snapshot"],
+        ),
+        promote_threshold=2,
+    )
+
+    assert first is second
+    assert len(recipes) == 1
+    assert recipes[0].id == "petclinic_test_ui_page_add"
+    assert recipes[0].unknown_changed_file_count == 1
+    assert "unclassified" in ",".join(recipes[0].unknown_path_patterns)
+    assert recipes[0].status == "active"
+
+
+def test_new_file_classification_from_path_and_name() -> None:
+    assert classify_learning_node_type("client/src/components/owners/OwnersPage.tsx") == "page_component"
+    assert classify_learning_node_type("client/src/components/owners/OwnerEditor.tsx") == "form_component"
+    assert classify_learning_node_type("client/src/configureRoutes.tsx") == "route_config"
+    assert classify_learning_node_type("client/src/types/index.ts") == "frontend_type"
+    assert classify_learning_node_type("src/main/java/example/OwnerRestController.java") == "api_controller"
+    assert classify_learning_node_type("src/main/java/example/model/Owner.java") == "domain_model"
+    assert classify_learning_node_type("src/main/java/example/OwnerRepository.java") == "repository"
+
+
+def test_ui_page_add_recipe_aggregates_multiple_variants() -> None:
+    recipes: list[ChangeRecipe] = []
+    upsert_recipe_from_observation(
+        recipes,
+        target_id="petclinic-test",
+        observation=_observation("a" * 40, created_files=["client/src/components/owners/OwnersPage.tsx"]),
+        promote_threshold=2,
+    )
+    recipe = upsert_recipe_from_observation(
+        recipes,
+        target_id="petclinic-test",
+        observation=_observation("b" * 40, created_files=["client/src/components/pets/PetsPage.tsx"]),
+        promote_threshold=2,
+    )
+
+    assert len(recipes) == 1
+    assert recipe.support_count == 2
+    assert recipe.status == "active"
+    assert recipe.structural_confidence >= 0.5
+    assert recipe.changed_node_type_counts["page_component"] == 2
+    assert recipe.created_node_types == ["page_component"]
 
 
 def test_learning_status_and_recipe_list_formatters(tmp_path: Path, monkeypatch) -> None:
@@ -209,6 +322,8 @@ def test_learning_status_and_recipe_list_formatters(tmp_path: Path, monkeypatch)
 
     assert "petclinic-test" in status_text
     assert "recipe_id" in recipe_text
+    assert "structural" in recipe_text
+    assert "planner" in recipe_text
     assert "ui_page_add" in recipe_text
 
 

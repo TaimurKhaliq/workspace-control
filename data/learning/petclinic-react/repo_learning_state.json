@@ -73,6 +73,6 @@
   ],
   "recipe_catalog_path": "data/learning/petclinic-react/change_recipes.json",
   "validation_history_path": "data/learning/petclinic-react/validation_history.json",
-  "last_learning_run_at": "2026-04-25T16:11:00+00:00",
+  "last_learning_run_at": "2026-04-25T18:09:57+00:00",
   "status": "fresh"
 }

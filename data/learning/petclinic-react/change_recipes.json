@@ -1,119 +1,20 @@
 [
   {
-    "id": "petclinic_react_backend_api_change_api_controller",
+    "id": "petclinic_react_backend_api_change",
     "target_id": "petclinic-react",
     "recipe_type": "backend_api_change",
-    "status": "stale",
-    "source_commits": [
-      "72afd1a032c6abba950b937c40c57a8647727dc7",
-      "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
-      "e4ca17206f816c9791a11c006eccc47e8c95385b"
-    ],
-    "trigger_terms": [
-      "enable",
-      "cors",
-      "include",
-      "petid",
-      "error",
-      "message",
-      "instead",
-      "null",
-      "value",
-      "handle",
-      "non",
-      "existing",
-      "owner",
-      "from",
-      "get",
-      "request"
-    ],
-    "changed_node_types": [
-      "api_controller"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.java"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "api_controller"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.2,
-    "support_count": 3,
-    "validation_count": 4,
-    "success_count": 0,
-    "failure_count": 2,
-    "last_seen_commit": "e4ca17206f816c9791a11c006eccc47e8c95385b",
-    "evidence": [
-      "72afd1a: Enable CORS",
-      "4c40375: Include petId in error message instead of null value",
-      "e4ca172: handle non existing owner  from get request"
-    ]
-  },
-  {
-    "id": "petclinic_react_backend_api_change_service_layer",
-    "target_id": "petclinic-react",
-    "recipe_type": "backend_api_change",
-    "status": "quarantined",
-    "source_commits": [
-      "67ae72f3246e4d7ee2525189555eb0c769a7a3e9",
-      "3f2d3ba72a855fc0f10fcb49607065a414a9e8b2",
-      "1080006218bfeea427937ca334ed7908bde3d62c"
-    ],
-    "trigger_terms": [
-      "remove",
-      "public",
-      "methods",
-      "from",
-      "clinicservice",
-      "fix",
-      "typo",
-      "merging",
-      "abstractclinicservicetests",
-      "clinicservicespringdatajpatests",
-      "then",
-      "using",
-      "spring",
-      "boot",
-      "datajpatest",
-      "annotation"
-    ],
-    "changed_node_types": [
-      "service_layer"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/service",
-      "*.java",
-      "src/test/java/org/springframework/samples/petclinic/service"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "service_layer"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 3,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "1080006218bfeea427937ca334ed7908bde3d62c",
-    "evidence": [
-      "67ae72f: Remove public to methods from the ClinicService",
-      "3f2d3ba: fix typo",
-      "1080006: Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation"
-    ]
-  },
-  {
-    "id": "petclinic_react_backend_api_change_service_layer_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "backend_api_change",
-    "status": "quarantined",
+    "status": "active",
     "source_commits": [
       "5cfd482edc474587cf2965750b936ee2ce871b4e",
-      "2637f65b90cf90bb45093e2e902e4ce716abae67"
+      "67ae72f3246e4d7ee2525189555eb0c769a7a3e9",
+      "3f2d3ba72a855fc0f10fcb49607065a414a9e8b2",
+      "2637f65b90cf90bb45093e2e902e4ce716abae67",
+      "1080006218bfeea427937ca334ed7908bde3d62c",
+      "72afd1a032c6abba950b937c40c57a8647727dc7",
+      "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
+      "af3110436e24ef13d68382e060a7250638625301",
+      "e4ca17206f816c9791a11c006eccc47e8c95385b",
+      "55359a491a02c88b296764e673fb10e9b27974fb"
     ],
     "trigger_terms": [
       "removed",
@@ -121,13 +22,26 @@
       "profile",
       "replaced",
       "jpa",
+      "remove",
+      "public",
+      "methods",
+      "from",
+      "clinicservice",
+      "fix",
+      "typo",
       "upgrade",
       "spring",
-      "boot"
+      "boot",
+      "merging",
+      "abstractclinicservicetests",
+      "clinicservicespringdatajpatests",
+      "then",
+      "using"
     ],
     "changed_node_types": [
       "service_layer",
-      "unknown"
+      "unknown",
+      "api_controller"
     ],
     "changed_path_patterns": [
       "src/main/resources/spring",
@@ -135,9 +49,12 @@
       "src/main/webapp/WEB-INF",
       "src/test/java/org/springframework/samples/petclinic/service",
       "*.java",
+      "src/main/java/org/springframework/samples/petclinic/service",
       "src/main/java/org/springframework/samples/petclinic",
       "src/main/java/org/springframework/samples/petclinic/config",
-      "src/test/java/org/springframework/samples/petclinic/web"
+      "src/test/java/org/springframework/samples/petclinic/web",
+      "src/main/java/org/springframework/samples/petclinic/web/api",
+      "src/test/java/org/springframework/samples/petclinic/web/api"
     ],
     "new_file_patterns": [],
     "cochange_patterns": [
@@ -145,465 +62,391 @@
     ],
     "required_existing_node_types": [
       "service_layer",
-      "unknown"
+      "api_controller"
     ],
     "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 2,
-    "validation_count": 4,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "2637f65b90cf90bb45093e2e902e4ce716abae67",
-    "evidence": [
-      "5cfd482: removed default profile and replaced with \"jpa\"",
-      "2637f65: Upgrade to Spring Boot 1.4.0"
-    ]
-  },
-  {
-    "id": "petclinic_react_backend_api_change_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "backend_api_change",
-    "status": "candidate",
-    "source_commits": [
-      "af3110436e24ef13d68382e060a7250638625301",
-      "55359a491a02c88b296764e673fb10e9b27974fb"
-    ],
-    "trigger_terms": [
-      "max",
-      "range",
-      "not",
-      "null",
-      "validation",
-      "adding",
-      "pet",
-      "remove",
-      "unnecessary",
-      "code"
-    ],
-    "changed_node_types": [
+    "observed_variants": [
+      "modified:service_layer",
+      "modified:service_layer; deleted:service_layer",
+      "modified:api_controller",
       "unknown"
     ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/web/api",
+    "changed_node_type_counts": {
+      "service_layer": 5,
+      "unknown": 4,
+      "api_controller": 3
+    },
+    "changed_path_pattern_counts": {
+      "*.java": 10,
+      "src/main/java/org/springframework/samples/petclinic/web/api": 4,
+      "src/test/java/org/springframework/samples/petclinic/service": 4,
+      "*.xml": 2,
+      "src/main/java/org/springframework/samples/petclinic": 1,
+      "src/main/java/org/springframework/samples/petclinic/config": 1,
+      "src/main/java/org/springframework/samples/petclinic/service": 1,
+      "src/main/resources/spring": 1,
+      "src/main/webapp/WEB-INF": 1,
+      "src/test/java/org/springframework/samples/petclinic/web": 1,
+      "src/test/java/org/springframework/samples/petclinic/web/api": 1
+    },
+    "created_file_pattern_counts": {},
+    "cochange_counts": {
+      "service_layer + unknown": 2
+    },
+    "created_node_types": [],
+    "modified_node_types": [
+      "service_layer",
+      "unknown",
+      "api_controller"
+    ],
+    "deleted_node_types": [
+      "service_layer"
+    ],
+    "unknown_changed_file_count": 12,
+    "unknown_path_patterns": [
+      "src/main/resources/spring",
+      "*.xml",
+      "src/main/webapp/WEB-INF",
+      "src/main/java/org/springframework/samples/petclinic",
       "*.java",
+      "src/main/java/org/springframework/samples/petclinic/config",
+      "src/test/java/org/springframework/samples/petclinic/web",
+      "src/main/java/org/springframework/samples/petclinic/web/api",
       "src/test/java/org/springframework/samples/petclinic/web/api"
     ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "unknown"
+    "unclassified_examples": [
+      "src/main/resources/spring/business-config.xml",
+      "src/main/webapp/WEB-INF/web.xml",
+      "pom.xml",
+      "src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java",
+      "src/main/java/org/springframework/samples/petclinic/config/DandelionConfig.java",
+      "src/test/java/org/springframework/samples/petclinic/web/CrashControllerTests.java",
+      "src/test/java/org/springframework/samples/petclinic/web/OwnerControllerTests.java",
+      "src/test/java/org/springframework/samples/petclinic/web/PetControllerTests.java",
+      "src/test/java/org/springframework/samples/petclinic/web/VetControllerTests.java",
+      "src/test/java/org/springframework/samples/petclinic/web/VisitControllerTests.java",
+      "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java",
+      "src/test/java/org/springframework/samples/petclinic/web/api/OwnerResourceTests.java"
     ],
-    "optional_existing_node_types": [],
-    "confidence": 0.15,
-    "support_count": 2,
-    "validation_count": 2,
-    "success_count": 0,
-    "failure_count": 1,
-    "last_seen_commit": "55359a491a02c88b296764e673fb10e9b27974fb",
-    "evidence": [
+    "example_commits": [
+      "5cfd482: removed default profile and replaced with \"jpa\"",
+      "67ae72f: Remove public to methods from the ClinicService",
+      "3f2d3ba: fix typo",
+      "2637f65: Upgrade to Spring Boot 1.4.0",
+      "1080006: Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation",
+      "72afd1a: Enable CORS",
+      "4c40375: Include petId in error message instead of null value",
       "af31104: add max range and not null validation for adding new pet",
+      "e4ca172: handle non existing owner  from get request",
+      "55359a4: remove unnecessary code"
+    ],
+    "confidence": 0.83,
+    "structural_confidence": 0.83,
+    "planner_effectiveness": 0.2,
+    "support_count": 10,
+    "validation_count": 10,
+    "success_count": 0,
+    "partial_count": 4,
+    "failure_count": 6,
+    "last_seen_commit": "55359a491a02c88b296764e673fb10e9b27974fb",
+    "promotion_blocker": null,
+    "evidence": [
+      "5cfd482: removed default profile and replaced with \"jpa\"",
+      "67ae72f: Remove public to methods from the ClinicService",
+      "3f2d3ba: fix typo",
+      "2637f65: Upgrade to Spring Boot 1.4.0",
+      "1080006: Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation",
+      "72afd1a: Enable CORS",
+      "4c40375: Include petId in error message instead of null value",
+      "af31104: add max range and not null validation for adding new pet",
+      "e4ca172: handle non existing owner  from get request",
       "55359a4: remove unnecessary code"
     ]
   },
   {
-    "id": "petclinic_react_full_stack_ui_api_api_controller_app_shell_domain_model",
+    "id": "petclinic_react_full_stack_ui_api",
     "target_id": "petclinic-react",
     "recipe_type": "full_stack_ui_api",
-    "status": "quarantined",
-    "source_commits": [
-      "3f55127f558f5a55799652c058d4938772f8ea1a"
-    ],
-    "trigger_terms": [
-      "vetspage"
-    ],
-    "changed_node_types": [
-      "api_controller",
-      "app_shell",
-      "domain_model",
-      "frontend_component",
-      "frontend_type",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "client/src/components",
-      "*.tsx",
-      "client/src/components/vets",
-      "client/src",
-      "client/src/types",
-      "*.ts",
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.less",
-      "src/test/java/org/springframework/samples/petclinic/web/api"
-    ],
-    "new_file_patterns": [
-      "client/src/components/vets",
-      "*.tsx"
-    ],
-    "cochange_patterns": [
-      "api_controller + app_shell",
-      "api_controller + domain_model",
-      "api_controller + frontend_component",
-      "api_controller + frontend_type",
-      "api_controller + unknown",
-      "app_shell + domain_model",
-      "app_shell + frontend_component",
-      "app_shell + frontend_type",
-      "app_shell + unknown",
-      "domain_model + frontend_component",
-      "domain_model + frontend_type",
-      "domain_model + unknown",
-      "frontend_component + frontend_type",
-      "frontend_component + unknown",
-      "frontend_type + unknown"
-    ],
-    "required_existing_node_types": [
-      "api_controller",
-      "app_shell",
-      "domain_model"
-    ],
-    "optional_existing_node_types": [
-      "frontend_component",
-      "frontend_type",
-      "unknown"
-    ],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 7,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "3f55127f558f5a55799652c058d4938772f8ea1a",
-    "evidence": [
-      "3f55127: Add VetsPage"
-    ]
-  },
-  {
-    "id": "petclinic_react_full_stack_ui_api_api_controller_app_shell_frontend_component",
-    "target_id": "petclinic-react",
-    "recipe_type": "full_stack_ui_api",
-    "status": "quarantined",
+    "status": "active",
     "source_commits": [
       "7e3cd50f320dffed93b4ebc5fcf9af92d7ec6c9c",
-      "d2017b8f57050830ec8980f7b578eb272c66af67"
-    ],
-    "trigger_terms": [
-      "errorpage",
-      "findownerspage"
-    ],
-    "changed_node_types": [
-      "api_controller",
-      "app_shell",
-      "frontend_component",
-      "unknown",
-      "frontend_entrypoint",
-      "frontend_type"
-    ],
-    "changed_path_patterns": [
-      "client/src/components",
-      "*.tsx",
-      "client/src",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.java",
-      "client",
-      "*.md",
-      "client/src/components/owners",
-      "*.ts",
-      "client/src/middleware",
-      "client/src/types",
-      "client/src/util",
-      "*.json"
-    ],
-    "new_file_patterns": [
-      "client/src/components",
-      "*.tsx",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.java",
-      "client",
-      "*.md",
-      "client/src/components/owners",
-      "*.ts",
-      "client/src/util"
-    ],
-    "cochange_patterns": [
-      "api_controller + app_shell",
-      "api_controller + frontend_component",
-      "api_controller + unknown",
-      "app_shell + frontend_component",
-      "app_shell + unknown",
-      "frontend_component + unknown",
-      "api_controller + frontend_entrypoint",
-      "api_controller + frontend_type",
-      "app_shell + frontend_entrypoint",
-      "app_shell + frontend_type",
-      "frontend_component + frontend_entrypoint",
-      "frontend_component + frontend_type",
-      "frontend_entrypoint + frontend_type",
-      "frontend_entrypoint + unknown",
-      "frontend_type + unknown"
-    ],
-    "required_existing_node_types": [
-      "api_controller",
-      "app_shell",
-      "frontend_component"
-    ],
-    "optional_existing_node_types": [
-      "unknown",
-      "frontend_entrypoint",
-      "frontend_type"
-    ],
-    "confidence": 0.0,
-    "support_count": 2,
-    "validation_count": 9,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "d2017b8f57050830ec8980f7b578eb272c66af67",
-    "evidence": [
-      "7e3cd50: Add ErrorPage",
-      "d2017b8: Add FindOwnersPage"
-    ]
-  },
-  {
-    "id": "petclinic_react_full_stack_ui_api_api_controller_domain_model_frontend_component",
-    "target_id": "petclinic-react",
-    "recipe_type": "full_stack_ui_api",
-    "status": "quarantined",
-    "source_commits": [
+      "d2017b8f57050830ec8980f7b578eb272c66af67",
+      "3f55127f558f5a55799652c058d4938772f8ea1a",
+      "49ca65bd235ce802df7a92dc167f4873f0d2786b",
       "4a7188521c3f57f139c7a580109bcb7caa1c76e3",
-      "ab702ea61f64122f3818e4f45d275d510b32a75b"
-    ],
-    "trigger_terms": [
-      "editownerpage",
-      "visitspage"
-    ],
-    "changed_node_types": [
-      "api_controller",
-      "domain_model",
-      "frontend_component",
-      "frontend_entrypoint",
-      "frontend_type",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "client",
-      "*.md",
-      "client/src/components/form",
-      "*.tsx",
-      "client/src/components/owners",
-      "*.ts",
-      "client/src",
-      "client/src/types",
-      "client/src/util",
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "client/src/components/visits"
-    ],
-    "new_file_patterns": [
-      "client/src/components/form",
-      "*.tsx",
-      "client/src/components/owners",
-      "client/src/components/visits",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.java"
-    ],
-    "cochange_patterns": [
-      "api_controller + domain_model",
-      "api_controller + frontend_component",
-      "api_controller + frontend_entrypoint",
-      "api_controller + frontend_type",
-      "api_controller + unknown",
-      "domain_model + frontend_component",
-      "domain_model + frontend_entrypoint",
-      "domain_model + frontend_type",
-      "domain_model + unknown",
-      "frontend_component + frontend_entrypoint",
-      "frontend_component + frontend_type",
-      "frontend_component + unknown",
-      "frontend_entrypoint + frontend_type",
-      "frontend_entrypoint + unknown",
-      "frontend_type + unknown"
-    ],
-    "required_existing_node_types": [
-      "api_controller",
-      "domain_model",
-      "frontend_component"
-    ],
-    "optional_existing_node_types": [
-      "frontend_entrypoint",
-      "frontend_type",
-      "unknown"
-    ],
-    "confidence": 0.0,
-    "support_count": 2,
-    "validation_count": 5,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "ab702ea61f64122f3818e4f45d275d510b32a75b",
-    "evidence": [
-      "4a71885: Add EditOwnerPage",
-      "ab702ea: Add VisitsPage"
-    ]
-  },
-  {
-    "id": "petclinic_react_full_stack_ui_api_api_controller_frontend_component_frontend_entrypoint",
-    "target_id": "petclinic-react",
-    "recipe_type": "full_stack_ui_api",
-    "status": "quarantined",
-    "source_commits": [
-      "49ca65bd235ce802df7a92dc167f4873f0d2786b"
-    ],
-    "trigger_terms": [
-      "newownerpage",
-      "missing",
-      "error",
-      "handling"
-    ],
-    "changed_node_types": [
-      "api_controller",
-      "frontend_component",
-      "frontend_entrypoint",
-      "frontend_type",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "client",
-      "*.md",
-      "client/src/components/owners",
-      "*.tsx",
-      "client/src",
-      "client/src/types",
-      "*.ts",
-      "client/src/util",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.java"
-    ],
-    "new_file_patterns": [
-      "client/src/components/owners",
-      "*.tsx",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.java"
-    ],
-    "cochange_patterns": [
-      "api_controller + frontend_component",
-      "api_controller + frontend_entrypoint",
-      "api_controller + frontend_type",
-      "api_controller + unknown",
-      "frontend_component + frontend_entrypoint",
-      "frontend_component + frontend_type",
-      "frontend_component + unknown",
-      "frontend_entrypoint + frontend_type",
-      "frontend_entrypoint + unknown",
-      "frontend_type + unknown"
-    ],
-    "required_existing_node_types": [
-      "api_controller",
-      "frontend_component",
-      "frontend_entrypoint"
-    ],
-    "optional_existing_node_types": [
-      "frontend_type",
-      "unknown"
-    ],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 7,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "49ca65bd235ce802df7a92dc167f4873f0d2786b",
-    "evidence": [
-      "49ca65b: Add NewOwnerPage (missing error handling)"
-    ]
-  },
-  {
-    "id": "petclinic_react_full_stack_ui_api_api_controller_frontend_component_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "full_stack_ui_api",
-    "status": "quarantined",
-    "source_commits": [
-      "497fe046c51874c1f10afbf189535f27ad03ac03"
-    ],
-    "trigger_terms": [
-      "newpetpage",
-      "editpetpage"
-    ],
-    "changed_node_types": [
-      "api_controller",
-      "frontend_component",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "client",
-      "*.md",
-      "client/src/components/owners",
-      "*.tsx",
-      "client/src/components/pets",
-      "client/src",
-      "src/main/java/org/springframework/samples/petclinic/web/api",
-      "*.java"
-    ],
-    "new_file_patterns": [
-      "client/src/components/pets",
-      "*.tsx"
-    ],
-    "cochange_patterns": [
-      "api_controller + frontend_component",
-      "api_controller + unknown",
-      "frontend_component + unknown"
-    ],
-    "required_existing_node_types": [
-      "api_controller",
-      "frontend_component",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 4,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "497fe046c51874c1f10afbf189535f27ad03ac03",
-    "evidence": [
-      "497fe04: NewPetPage EditPetPage"
-    ]
-  },
-  {
-    "id": "petclinic_react_full_stack_ui_api_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "full_stack_ui_api",
-    "status": "quarantined",
-    "source_commits": [
+      "497fe046c51874c1f10afbf189535f27ad03ac03",
+      "ab702ea61f64122f3818e4f45d275d510b32a75b",
       "ef10999f0fee1f0d41b89648f60e406669e35c96",
       "d57fb2b95236f32862a600ba4d4042d61bd9c1ba",
       "1d96669323c44baa45e3e212df43361ebee7d632",
       "bbd83e07fcded7ca5f7e76b1b2a1003ab5acb94f"
     ],
     "trigger_terms": [
+      "errorpage",
+      "findownerspage",
+      "vetspage",
+      "newownerpage",
+      "missing",
+      "error",
+      "handling",
+      "editownerpage",
+      "newpetpage",
+      "editpetpage",
+      "visitspage",
       "eliminando",
       "digo",
       "desnecess",
       "rio"
     ],
     "changed_node_types": [
-      "unknown"
+      "api_controller",
+      "frontend_component",
+      "page_component",
+      "route_config",
+      "unknown",
+      "frontend_type",
+      "domain_model",
+      "form_component",
+      "detail_component"
     ],
     "changed_path_patterns": [
+      "client/src/components",
+      "*.tsx",
+      "client/src",
+      "src/main/java/org/springframework/samples/petclinic/web/api",
+      "*.java",
+      "client",
+      "*.md",
+      "client/src/components/owners",
+      "*.ts",
       "client/src/middleware",
-      "*.ts"
+      "client/src/types",
+      "client/src/util",
+      "*.json",
+      "client/src/components/vets",
+      "src/main/java/org/springframework/samples/petclinic/model",
+      "*.less",
+      "src/test/java/org/springframework/samples/petclinic/web/api",
+      "client/src/components/form",
+      "client/src/components/pets",
+      "client/src/components/visits"
     ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
+    "new_file_patterns": [
+      "client/src/components",
+      "*.tsx",
+      "src/main/java/org/springframework/samples/petclinic/web/api",
+      "*.java",
+      "client",
+      "*.md",
+      "client/src/components/owners",
+      "*.ts",
+      "client/src/util",
+      "client/src/components/vets",
+      "client/src/components/form",
+      "client/src/components/pets",
+      "client/src/components/visits"
+    ],
+    "cochange_patterns": [
+      "api_controller + frontend_component",
+      "api_controller + page_component",
+      "api_controller + route_config",
+      "api_controller + unknown",
+      "frontend_component + page_component",
+      "frontend_component + route_config",
+      "frontend_component + unknown",
+      "page_component + route_config",
+      "page_component + unknown",
+      "route_config + unknown",
+      "api_controller + frontend_type",
+      "frontend_component + frontend_type",
+      "frontend_type + page_component",
+      "frontend_type + route_config",
+      "frontend_type + unknown",
+      "api_controller + domain_model",
+      "domain_model + frontend_component",
+      "domain_model + frontend_type",
+      "domain_model + page_component",
+      "domain_model + route_config"
+    ],
     "required_existing_node_types": [
+      "api_controller",
+      "page_component"
+    ],
+    "optional_existing_node_types": [
+      "route_config",
+      "frontend_component",
+      "frontend_type",
+      "domain_model",
+      "form_component"
+    ],
+    "observed_variants": [
+      "created:api_controller+page_component; modified:frontend_component+route_config",
+      "created:frontend_component+frontend_type+page_component; modified:api_controller+frontend_component+frontend_type+route_config",
+      "created:page_component; modified:api_controller+domain_model+frontend_component+frontend_type+route_config",
+      "created:api_controller+page_component; modified:api_controller+frontend_component+frontend_type+page_component+route_config",
+      "created:form_component+frontend_component+page_component; modified:api_controller+domain_model+frontend_component+frontend_type+page_component; deleted:frontend_type",
+      "created:form_component+frontend_component+page_component; modified:api_controller+page_component+route_config",
+      "created:api_controller+detail_component+page_component; modified:domain_model+route_config",
       "unknown"
     ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 4,
-    "validation_count": 3,
+    "changed_node_type_counts": {
+      "unknown": 10,
+      "api_controller": 7,
+      "page_component": 7,
+      "route_config": 7,
+      "frontend_component": 6,
+      "frontend_type": 4,
+      "domain_model": 3,
+      "form_component": 2,
+      "detail_component": 1
+    },
+    "changed_path_pattern_counts": {
+      "*.ts": 8,
+      "*.java": 7,
+      "*.tsx": 7,
+      "client/src": 7,
+      "src/main/java/org/springframework/samples/petclinic/web/api": 7,
+      "client/src/middleware": 5,
+      "*.md": 4,
+      "client": 4,
+      "client/src/components/owners": 4,
+      "client/src/types": 4,
+      "client/src/components": 3,
+      "client/src/util": 3,
+      "src/main/java/org/springframework/samples/petclinic/model": 3,
+      "*.json": 1,
+      "*.less": 1,
+      "client/src/components/form": 1,
+      "client/src/components/pets": 1,
+      "client/src/components/vets": 1,
+      "client/src/components/visits": 1,
+      "src/test/java/org/springframework/samples/petclinic/web/api": 1
+    },
+    "created_file_pattern_counts": {
+      "*.tsx": 7,
+      "*.java": 3,
+      "client/src/components/owners": 3,
+      "src/main/java/org/springframework/samples/petclinic/web/api": 3,
+      "*.md": 1,
+      "*.ts": 1,
+      "client": 1,
+      "client/src/components": 1,
+      "client/src/components/form": 1,
+      "client/src/components/pets": 1,
+      "client/src/components/vets": 1,
+      "client/src/components/visits": 1,
+      "client/src/util": 1
+    },
+    "cochange_counts": {
+      "api_controller + page_component": 7,
+      "api_controller + route_config": 7,
+      "api_controller + frontend_component": 6,
+      "api_controller + unknown": 6,
+      "frontend_component + page_component": 6,
+      "page_component + route_config": 6,
+      "frontend_component + route_config": 5,
+      "frontend_component + unknown": 5,
+      "page_component + unknown": 5,
+      "api_controller + frontend_type": 4,
+      "frontend_component + frontend_type": 4,
+      "route_config + unknown": 4,
+      "api_controller + domain_model": 3,
+      "domain_model + page_component": 3,
+      "domain_model + route_config": 3,
+      "frontend_type + page_component": 3,
+      "frontend_type + route_config": 3,
+      "frontend_type + unknown": 3,
+      "api_controller + form_component": 2,
+      "domain_model + frontend_component": 2,
+      "domain_model + frontend_type": 2,
+      "domain_model + unknown": 2,
+      "form_component + frontend_component": 2,
+      "form_component + page_component": 2,
+      "form_component + route_config": 2,
+      "form_component + unknown": 2,
+      "api_controller + detail_component": 1,
+      "detail_component + domain_model": 1,
+      "detail_component + page_component": 1,
+      "detail_component + route_config": 1,
+      "domain_model + form_component": 1,
+      "form_component + frontend_type": 1
+    },
+    "created_node_types": [
+      "api_controller",
+      "page_component",
+      "unknown",
+      "frontend_component",
+      "frontend_type",
+      "form_component",
+      "detail_component"
+    ],
+    "modified_node_types": [
+      "frontend_component",
+      "route_config",
+      "api_controller",
+      "frontend_type",
+      "unknown",
+      "domain_model",
+      "page_component"
+    ],
+    "deleted_node_types": [
+      "frontend_type"
+    ],
+    "unknown_changed_file_count": 18,
+    "unknown_path_patterns": [
+      "src/main/java/org/springframework/samples/petclinic/web/api",
+      "*.java",
+      "client",
+      "*.md",
+      "client/src/middleware",
+      "*.ts",
+      "*.json",
+      "*.less",
+      "src/test/java/org/springframework/samples/petclinic/web/api"
+    ],
+    "unclassified_examples": [
+      "src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+      "src/main/java/org/springframework/samples/petclinic/web/api/SuperFatalErrorException.java",
+      "client/README.md",
+      "client/TODO.md",
+      "client/src/middleware/api.ts",
+      "client/typings.json",
+      "src/main/java/org/springframework/samples/petclinic/web/api/petclinic.less",
+      "src/test/java/org/springframework/samples/petclinic/web/api/VetResourceTests.java",
+      "src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+      "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
+    ],
+    "example_commits": [
+      "7e3cd50: Add ErrorPage",
+      "d2017b8: Add FindOwnersPage",
+      "3f55127: Add VetsPage",
+      "49ca65b: Add NewOwnerPage (missing error handling)",
+      "4a71885: Add EditOwnerPage",
+      "497fe04: NewPetPage EditPetPage",
+      "ab702ea: Add VisitsPage",
+      "ef10999: Eliminando c\u00f3digo desnecess\u00e1rio",
+      "d57fb2b: Eliminando c\u00f3digo desnecess\u00e1rio",
+      "1d96669: Eliminando c\u00f3digo desnecess\u00e1rio",
+      "bbd83e0: Eliminando c\u00f3digo desnecess\u00e1rio"
+    ],
+    "confidence": 0.9118,
+    "structural_confidence": 0.9118,
+    "planner_effectiveness": 0.3182,
+    "support_count": 11,
+    "validation_count": 11,
     "success_count": 0,
-    "failure_count": 3,
+    "partial_count": 7,
+    "failure_count": 4,
     "last_seen_commit": "bbd83e07fcded7ca5f7e76b1b2a1003ab5acb94f",
+    "promotion_blocker": null,
     "evidence": [
+      "7e3cd50: Add ErrorPage",
+      "d2017b8: Add FindOwnersPage",
+      "3f55127: Add VetsPage",
+      "49ca65b: Add NewOwnerPage (missing error handling)",
+      "4a71885: Add EditOwnerPage",
+      "497fe04: NewPetPage EditPetPage",
+      "ab702ea: Add VisitsPage",
       "ef10999: Eliminando c\u00f3digo desnecess\u00e1rio",
       "d57fb2b: Eliminando c\u00f3digo desnecess\u00e1rio",
       "1d96669: Eliminando c\u00f3digo desnecess\u00e1rio",
@@ -611,69 +454,36 @@
     ]
   },
   {
-    "id": "petclinic_react_persistence_data_change_api_controller_domain_model_service_layer",
+    "id": "petclinic_react_persistence_data_change",
     "target_id": "petclinic-react",
     "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "ad3d322fc69061d5009460689edfda09af0b53ce"
-    ],
-    "trigger_terms": [
-      "fising",
-      "squid",
-      "s2970",
-      "s1192",
-      "s1488",
-      "uselessparenthesescheck"
-    ],
-    "changed_node_types": [
-      "api_controller",
-      "domain_model",
-      "service_layer",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/web",
-      "src/test/java/org/springframework/samples/petclinic/service"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "api_controller + domain_model",
-      "api_controller + service_layer",
-      "api_controller + unknown",
-      "domain_model + service_layer",
-      "domain_model + unknown",
-      "service_layer + unknown"
-    ],
-    "required_existing_node_types": [
-      "api_controller",
-      "domain_model",
-      "service_layer"
-    ],
-    "optional_existing_node_types": [
-      "unknown"
-    ],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 5,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "ad3d322fc69061d5009460689edfda09af0b53ce",
-    "evidence": [
-      "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_domain_model",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
+    "status": "active",
     "source_commits": [
       "4c01d60b36de22110cf03f4026428d7b0bfb6b42",
       "076a124e0a643e2f471f873a1b4954a12e3b08ae",
+      "74f683aaa94e8f3dd27bbcb1e9da0c62d02d3fd3",
+      "35a179f88b4ba301612957f953121c85a1cdfd83",
+      "cc4ae966c63610344313e6c7bf81ae7219ab8370",
       "694390d0c2d80624f499ba4feea3ab1d598f009d",
+      "818529b5b10bbf2f5ef861f0439ef1d84fc69577",
+      "8d20340518d5d0b4f3dea577ce1abdb1655d2750",
+      "5570366cfd960bc64fd688bc8f82d54f18772ead",
+      "dc0fb9abd898336d3da51aed799defe2ea4dfce4",
+      "735fb1149b5f1e8371242313678ae41fb4cc9dc7",
+      "6f6fa64dd78a113e1284091fc533e1921b4900e9",
+      "71f2424542b7b8998dc40762a89dc9587cedac96",
+      "8b625617cb24353ee906fab080c7677a6ec37870",
+      "91d19d17b817eb7c24593ea3a3c1ef52374b2eee",
+      "06be7eb5bee7792109ef00302506888312429819",
+      "4bb829cbd1026ec10dc685277467d30523c90b95",
+      "92de6557e10b610f3ea6579a6be67c53c4f766bc",
+      "e00dfb3fe05cef910495b38d5a24221188e2e1a6",
+      "e7f68999bfa947cfb39601502da8c15e83285196",
+      "e74b1bc160575650d4c46b790aa50a954b2f56c4",
+      "ad3d322fc69061d5009460689edfda09af0b53ce",
+      "ca755be44a2844e10876b8e38e68b9adf736b486",
+      "078bdc6cfbada99413041d859fdeb3d63685c40b",
+      "da38a764b83fcf7f28c2a934c49ab9447f66365c",
       "c758321ee85dd208eae6fd1a438d3f855c94e182",
       "1a85b44f8162bcdb8ff3908957f0c659a389bbac"
     ],
@@ -692,200 +502,8 @@
       "locale",
       "than",
       "english",
-      "migrated",
-      "assertion",
-      "assertj",
-      "regex",
-      "validation",
-      "string"
-    ],
-    "changed_node_types": [
-      "domain_model"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/test/java/org/springframework/samples/petclinic/model"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "domain_model"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 5,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
-    "evidence": [
-      "4c01d60: removing Serializable because it creates a lot of warnings",
-      "076a124: Fixes #37 with other default locale than english",
-      "694390d: migrated assertion to assertJ",
-      "c758321: add regex validation for string input",
-      "1a85b44: fix regex validation issue for string input"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_domain_model_repository",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "e00dfb3fe05cef910495b38d5a24221188e2e1a6"
-    ],
-    "trigger_terms": [
-      "using",
-      "jodatime",
-      "localdate",
-      "instead",
-      "datetime",
-      "visits"
-    ],
-    "changed_node_types": [
-      "domain_model",
-      "repository"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/repository/jdbc"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "domain_model + repository"
-    ],
-    "required_existing_node_types": [
-      "domain_model",
-      "repository"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "e00dfb3fe05cef910495b38d5a24221188e2e1a6",
-    "evidence": [
-      "e00dfb3: Using jodatime LocalDate instead of DateTime for visits"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_domain_model_repository_service_layer",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "92de6557e10b610f3ea6579a6be67c53c4f766bc"
-    ],
-    "trigger_terms": [
-      "fix",
-      "111",
-      "pet",
-      "birthday",
-      "we",
-      "are",
-      "now",
-      "using",
-      "jodatime",
-      "localdate",
-      "instead",
-      "datetime"
-    ],
-    "changed_node_types": [
-      "domain_model",
-      "repository",
-      "service_layer"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
-      "src/test/java/org/springframework/samples/petclinic/service"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "domain_model + repository",
-      "domain_model + service_layer",
-      "repository + service_layer"
-    ],
-    "required_existing_node_types": [
-      "domain_model",
-      "repository",
-      "service_layer"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "92de6557e10b610f3ea6579a6be67c53c4f766bc",
-    "evidence": [
-      "92de655: Fix #111 For pet's birthday we are now using jodatime LocalDate instead of DateTime"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_domain_model_repository_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "8b625617cb24353ee906fab080c7677a6ec37870"
-    ],
-    "trigger_terms": [
-      "87",
-      "petclinic",
-      "should",
-      "be",
-      "compatible",
-      "java",
-      "time",
-      "being"
-    ],
-    "changed_node_types": [
-      "domain_model",
-      "repository",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "*.xml",
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/repository/jdbc"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "domain_model + repository",
-      "domain_model + unknown",
-      "repository + unknown"
-    ],
-    "required_existing_node_types": [
-      "domain_model",
-      "repository",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 5,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "8b625617cb24353ee906fab080c7677a6ec37870",
-    "evidence": [
-      "8b62561: #87 Petclinic should be compatible with Java 7 for the time being"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_domain_model_service_layer_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "35a179f88b4ba301612957f953121c85a1cdfd83"
-    ],
-    "trigger_terms": [
+      "fixed",
+      "typo",
       "latest",
       "versions",
       "imports",
@@ -893,492 +511,194 @@
     ],
     "changed_node_types": [
       "domain_model",
+      "repository",
       "service_layer",
-      "unknown"
+      "unknown",
+      "migration",
+      "api_controller"
     ],
     "changed_path_patterns": [
-      "*.xml",
       "src/main/java/org/springframework/samples/petclinic/model",
       "*.java",
       "src/test/java/org/springframework/samples/petclinic/model",
-      "src/test/java/org/springframework/samples/petclinic/service"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "domain_model + service_layer",
-      "domain_model + unknown",
-      "service_layer + unknown"
-    ],
-    "required_existing_node_types": [
-      "domain_model",
-      "service_layer",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "35a179f88b4ba301612957f953121c85a1cdfd83",
-    "evidence": [
-      "35a179f: latest versions and imports cleanup"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_domain_model_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "candidate",
-    "source_commits": [
-      "da38a764b83fcf7f28c2a934c49ab9447f66365c"
-    ],
-    "trigger_terms": [
-      "json",
-      "formatting",
-      "jodatime",
-      "properties"
-    ],
-    "changed_node_types": [
-      "domain_model",
-      "unknown"
-    ],
-    "changed_path_patterns": [
+      "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
       "*.xml",
-      "src/main/java/org/springframework/samples/petclinic/model",
-      "*.java",
-      "src/main/resources",
-      "*.properties"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "domain_model + unknown"
-    ],
-    "required_existing_node_types": [
-      "domain_model",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 2,
-    "success_count": 0,
-    "failure_count": 2,
-    "last_seen_commit": "da38a764b83fcf7f28c2a934c49ab9447f66365c",
-    "evidence": [
-      "da38a76: Json formatting of JodaTime properties"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_migration",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "e7f68999bfa947cfb39601502da8c15e83285196"
-    ],
-    "trigger_terms": [
-      "owners",
-      "search",
-      "has",
-      "been",
-      "case",
-      "insensitive"
-    ],
-    "changed_node_types": [
-      "migration"
-    ],
-    "changed_path_patterns": [
+      "src/test/java/org/springframework/samples/petclinic/service",
+      "src/main/java/org/springframework/samples/petclinic/util",
+      "src/main/java/org/springframework/samples/petclinic/web",
       "src/main/resources/db/hsqldb",
-      "*.sql"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "migration"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 5,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "e7f68999bfa947cfb39601502da8c15e83285196",
-    "evidence": [
-      "e7f6899: owners search has been case insensitive"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_migration_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "e74b1bc160575650d4c46b790aa50a954b2f56c4"
-    ],
-    "trigger_terms": [
-      "141",
-      "configure",
-      "unicode",
-      "utf",
-      "mysql",
-      "database",
-      "chinese",
-      "language"
-    ],
-    "changed_node_types": [
-      "migration",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "src/main/resources/db/mysql",
       "*.sql",
+      "src/main/resources/db/mysql",
       "src/main/resources/spring",
-      "*.properties"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "migration + unknown"
-    ],
-    "required_existing_node_types": [
-      "migration",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 5,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "e74b1bc160575650d4c46b790aa50a954b2f56c4",
-    "evidence": [
-      "e74b1bc: #141 Configure Unicode and UTF-8 MySQL database for Chinese language"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_repository",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "74f683aaa94e8f3dd27bbcb1e9da0c62d02d3fd3",
-      "cc4ae966c63610344313e6c7bf81ae7219ab8370",
-      "8d20340518d5d0b4f3dea577ce1abdb1655d2750",
-      "5570366cfd960bc64fd688bc8f82d54f18772ead",
-      "dc0fb9abd898336d3da51aed799defe2ea4dfce4",
-      "6f6fa64dd78a113e1284091fc533e1921b4900e9",
-      "71f2424542b7b8998dc40762a89dc9587cedac96",
-      "91d19d17b817eb7c24593ea3a3c1ef52374b2eee",
-      "06be7eb5bee7792109ef00302506888312429819",
-      "078bdc6cfbada99413041d859fdeb3d63685c40b"
-    ],
-    "trigger_terms": [
-      "fixed",
-      "typo",
-      "removed",
-      "deprecated",
-      "mapper",
-      "jdbc",
-      "unused",
-      "attribute",
-      "64",
-      "use",
-      "simple",
-      "rowmapper",
-      "instead",
-      "beanpropertyrowmapper",
-      "removing",
-      "method",
-      "85",
-      "remove",
-      "visitrepository",
-      "from"
-    ],
-    "changed_node_types": [
-      "repository"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
-      "*.java"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "repository"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 10,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "078bdc6cfbada99413041d859fdeb3d63685c40b",
-    "evidence": [
-      "74f683a: Fixed typo",
-      "cc4ae96: removed deprecated Mapper in Jdbc",
-      "8d20340: removed unused attribute #64",
-      "5570366: Use a simple RowMapper instead of a BeanPropertyRowMapper",
-      "dc0fb9a: removing unused method #85",
-      "6f6fa64: Remove unused VisitRepository from constructor",
-      "71f2424: Remove explicit unboxing",
-      "91d19d1: #92 Fix column 'visits.id' not found on MySql",
-      "06be7eb: #92 Use column alias",
-      "078bdc6: #149 JdbcPetRepositoryImpl:: findById() simplification"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_repository_service_layer",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "ca755be44a2844e10876b8e38e68b9adf736b486"
-    ],
-    "trigger_terms": [
-      "improvements",
-      "visitrepository",
-      "findbypetid",
-      "implementation"
-    ],
-    "changed_node_types": [
-      "repository",
-      "service_layer"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
-      "*.java",
+      "*.properties",
       "src/main/java/org/springframework/samples/petclinic/repository/jpa",
       "src/main/java/org/springframework/samples/petclinic/service",
-      "src/test/java/org/springframework/samples/petclinic/service"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "repository + service_layer"
-    ],
-    "required_existing_node_types": [
-      "repository",
-      "service_layer"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 4,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "ca755be44a2844e10876b8e38e68b9adf736b486",
-    "evidence": [
-      "ca755be: Improvements in VisitRepository.findByPetId implementation."
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_repository_service_layer_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "4bb829cbd1026ec10dc685277467d30523c90b95"
-    ],
-    "trigger_terms": [
-      "fix",
-      "101",
-      "display",
-      "pet",
-      "type",
-      "when",
-      "using",
-      "jdbc",
-      "profile"
-    ],
-    "changed_node_types": [
-      "repository",
-      "service_layer",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/web",
-      "src/test/java/org/springframework/samples/petclinic/service"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "repository + service_layer",
-      "repository + unknown",
-      "service_layer + unknown"
-    ],
-    "required_existing_node_types": [
-      "repository",
-      "service_layer",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 4,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "4bb829cbd1026ec10dc685277467d30523c90b95",
-    "evidence": [
-      "4bb829c: Fix #101 display the pet type when using the JDBC profile"
-    ]
-  },
-  {
-    "id": "petclinic_react_persistence_data_change_repository_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "persistence_data_change",
-    "status": "quarantined",
-    "source_commits": [
-      "818529b5b10bbf2f5ef861f0439ef1d84fc69577",
-      "735fb1149b5f1e8371242313678ae41fb4cc9dc7"
-    ],
-    "trigger_terms": [
-      "64",
-      "remove",
-      "select",
-      "by",
-      "using",
-      "onetomanyresultsetextractor",
-      "spring",
-      "data",
-      "core",
-      "jdbc",
-      "extensions",
-      "explicit",
-      "unboxing"
-    ],
-    "changed_node_types": [
-      "repository",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "*.xml",
-      "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
-      "*.java",
-      "src/main/java/org/springframework/samples/petclinic/util"
+      "src/main/resources"
     ],
     "new_file_patterns": [
       "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
       "*.java"
     ],
     "cochange_patterns": [
-      "repository + unknown"
+      "domain_model + service_layer",
+      "domain_model + unknown",
+      "service_layer + unknown",
+      "repository + unknown",
+      "domain_model + repository",
+      "repository + service_layer",
+      "migration + unknown",
+      "api_controller + domain_model",
+      "api_controller + service_layer",
+      "api_controller + unknown"
     ],
     "required_existing_node_types": [
       "repository",
-      "unknown"
+      "domain_model"
     ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 2,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "735fb1149b5f1e8371242313678ae41fb4cc9dc7",
-    "evidence": [
+    "optional_existing_node_types": [
+      "service_layer",
+      "migration",
+      "api_controller"
+    ],
+    "observed_variants": [
+      "modified:domain_model",
+      "modified:repository",
+      "modified:domain_model+service_layer",
+      "created:repository; modified:repository",
+      "modified:domain_model+repository",
+      "modified:repository+service_layer",
+      "modified:domain_model+repository+service_layer",
+      "modified:migration",
+      "modified:api_controller+domain_model+service_layer"
+    ],
+    "changed_node_type_counts": {
+      "repository": 17,
+      "domain_model": 11,
+      "unknown": 8,
+      "service_layer": 5,
+      "migration": 2,
+      "api_controller": 1
+    },
+    "changed_path_pattern_counts": {
+      "*.java": 25,
+      "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 17,
+      "src/main/java/org/springframework/samples/petclinic/model": 9,
+      "src/test/java/org/springframework/samples/petclinic/service": 5,
+      "*.xml": 4,
+      "src/test/java/org/springframework/samples/petclinic/model": 3,
+      "*.properties": 2,
+      "*.sql": 2,
+      "src/main/java/org/springframework/samples/petclinic/web": 2,
+      "src/main/java/org/springframework/samples/petclinic/repository/jpa": 1,
+      "src/main/java/org/springframework/samples/petclinic/service": 1,
+      "src/main/java/org/springframework/samples/petclinic/util": 1,
+      "src/main/resources": 1,
+      "src/main/resources/db/hsqldb": 1,
+      "src/main/resources/db/mysql": 1,
+      "src/main/resources/spring": 1
+    },
+    "created_file_pattern_counts": {
+      "*.java": 1,
+      "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 1
+    },
+    "cochange_counts": {
+      "domain_model + unknown": 4,
+      "repository + unknown": 4,
+      "domain_model + repository": 3,
+      "domain_model + service_layer": 3,
+      "repository + service_layer": 3,
+      "service_layer + unknown": 3,
+      "api_controller + domain_model": 1,
+      "api_controller + service_layer": 1,
+      "api_controller + unknown": 1,
+      "migration + unknown": 1
+    },
+    "created_node_types": [
+      "repository"
+    ],
+    "modified_node_types": [
+      "domain_model",
+      "repository",
+      "service_layer",
+      "unknown",
+      "migration",
+      "api_controller"
+    ],
+    "deleted_node_types": [],
+    "unknown_changed_file_count": 9,
+    "unknown_path_patterns": [
+      "*.xml",
+      "src/main/java/org/springframework/samples/petclinic/util",
+      "*.java",
+      "src/main/java/org/springframework/samples/petclinic/web",
+      "src/main/resources/spring",
+      "*.properties",
+      "src/main/resources"
+    ],
+    "unclassified_examples": [
+      "pom.xml",
+      "src/main/java/org/springframework/samples/petclinic/util/EntityUtils.java",
+      "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
+      "src/main/resources/spring/data-access.properties",
+      "src/main/resources/application.properties"
+    ],
+    "example_commits": [
+      "4c01d60: removing Serializable because it creates a lot of warnings",
+      "076a124: Fixes #37 with other default locale than english",
+      "74f683a: Fixed typo",
+      "35a179f: latest versions and imports cleanup",
+      "cc4ae96: removed deprecated Mapper in Jdbc",
+      "694390d: migrated assertion to assertJ",
       "818529b: #64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
-      "735fb11: Remove explicit unboxing"
+      "8d20340: removed unused attribute #64",
+      "5570366: Use a simple RowMapper instead of a BeanPropertyRowMapper",
+      "dc0fb9a: removing unused method #85",
+      "735fb11: Remove explicit unboxing",
+      "6f6fa64: Remove unused VisitRepository from constructor"
+    ],
+    "confidence": 0.95,
+    "structural_confidence": 0.95,
+    "planner_effectiveness": 0.0769,
+    "support_count": 27,
+    "validation_count": 26,
+    "success_count": 0,
+    "partial_count": 4,
+    "failure_count": 22,
+    "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
+    "promotion_blocker": null,
+    "evidence": [
+      "4c01d60: removing Serializable because it creates a lot of warnings",
+      "076a124: Fixes #37 with other default locale than english",
+      "74f683a: Fixed typo",
+      "35a179f: latest versions and imports cleanup",
+      "cc4ae96: removed deprecated Mapper in Jdbc",
+      "694390d: migrated assertion to assertJ",
+      "818529b: #64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
+      "8d20340: removed unused attribute #64",
+      "5570366: Use a simple RowMapper instead of a BeanPropertyRowMapper",
+      "dc0fb9a: removing unused method #85",
+      "735fb11: Remove explicit unboxing",
+      "6f6fa64: Remove unused VisitRepository from constructor"
     ]
   },
   {
-    "id": "petclinic_react_ui_form_validation_frontend_component",
+    "id": "petclinic_react_ui_form_validation",
     "target_id": "petclinic-react",
     "recipe_type": "ui_form_validation",
-    "status": "quarantined",
+    "status": "active",
     "source_commits": [
+      "339ee36d7da27221aba4866cc2ee91c6e96d4746",
+      "6e73c96acc9c28219709faf5f530c0390f6af925",
+      "4f4290285a86a2dc1e48a7ffae23699265fc3d18",
       "a3ba04ab0a2d0fafcf173e0241b9871cb6ea791d",
       "409415bf40f707e03114a79e292a2a2f6e464ea8",
       "f726ae73d13bd489d7767edd1f7a4442d5cb5578",
       "6137def71abc75c53eed75fb2020f2602d0059d4"
     ],
     "trigger_terms": [
-      "fix",
-      "errors",
-      "initial",
-      "validation",
-      "feedback",
-      "undo",
-      "unused",
-      "forms"
-    ],
-    "changed_node_types": [
-      "frontend_component"
-    ],
-    "changed_path_patterns": [
-      "client/src/components/form",
-      "*.tsx",
-      "client/src/components/owners"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "frontend_component"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 4,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "6137def71abc75c53eed75fb2020f2602d0059d4",
-    "evidence": [
-      "a3ba04a: Fix errors",
-      "409415b: fix initial validation feedback",
-      "f726ae7: undo unused change",
-      "6137def: Fix validation feedback on forms"
-    ]
-  },
-  {
-    "id": "petclinic_react_ui_form_validation_frontend_component_frontend_type",
-    "target_id": "petclinic-react",
-    "recipe_type": "ui_form_validation",
-    "status": "quarantined",
-    "source_commits": [
-      "339ee36d7da27221aba4866cc2ee91c6e96d4746"
-    ],
-    "trigger_terms": [
       "error",
       "handling",
-      "newownerpage"
-    ],
-    "changed_node_types": [
-      "frontend_component",
-      "frontend_type"
-    ],
-    "changed_path_patterns": [
-      "client/src/components/owners",
-      "*.tsx",
-      "client/src/types",
-      "*.ts"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "frontend_component + frontend_type"
-    ],
-    "required_existing_node_types": [
-      "frontend_component",
-      "frontend_type"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "339ee36d7da27221aba4866cc2ee91c6e96d4746",
-    "evidence": [
-      "339ee36: Add error handling to NewOwnerPage"
-    ]
-  },
-  {
-    "id": "petclinic_react_ui_form_validation_frontend_component_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "ui_form_validation",
-    "status": "quarantined",
-    "source_commits": [
-      "6e73c96acc9c28219709faf5f530c0390f6af925",
-      "4f4290285a86a2dc1e48a7ffae23699265fc3d18"
-    ],
-    "trigger_terms": [
+      "newownerpage",
       "visual",
       "feedback",
       "invalid",
@@ -1386,17 +706,29 @@
       "fieldfeedbackpanel",
       "show",
       "status",
-      "indication"
+      "indication",
+      "fix",
+      "errors",
+      "initial",
+      "validation",
+      "undo",
+      "unused",
+      "forms"
     ],
     "changed_node_types": [
+      "frontend_type",
+      "page_component",
+      "unknown",
       "frontend_component",
-      "unknown"
+      "list_component"
     ],
     "changed_path_patterns": [
-      "client",
-      "*.md",
       "client/src/components/owners",
       "*.tsx",
+      "client/src/types",
+      "*.ts",
+      "client",
+      "*.md",
       "client/src/components/form"
     ],
     "new_file_patterns": [
@@ -1404,30 +736,108 @@
       "*.tsx"
     ],
     "cochange_patterns": [
-      "frontend_component + unknown"
+      "frontend_type + page_component",
+      "page_component + unknown",
+      "frontend_component + unknown",
+      "frontend_component + list_component"
     ],
     "required_existing_node_types": [
       "frontend_component",
-      "unknown"
+      "page_component"
     ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 2,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "4f4290285a86a2dc1e48a7ffae23699265fc3d18",
-    "evidence": [
+    "optional_existing_node_types": [
+      "frontend_type",
+      "list_component"
+    ],
+    "observed_variants": [
+      "modified:frontend_type+page_component",
+      "modified:page_component",
+      "created:frontend_component; modified:frontend_component",
+      "modified:frontend_component+list_component",
+      "modified:frontend_component"
+    ],
+    "changed_node_type_counts": {
+      "frontend_component": 5,
+      "page_component": 2,
+      "unknown": 2,
+      "frontend_type": 1,
+      "list_component": 1
+    },
+    "changed_path_pattern_counts": {
+      "*.tsx": 7,
+      "client/src/components/form": 5,
+      "client/src/components/owners": 3,
+      "*.md": 2,
+      "client": 2,
+      "*.ts": 1,
+      "client/src/types": 1
+    },
+    "created_file_pattern_counts": {
+      "*.tsx": 1,
+      "client/src/components/form": 1
+    },
+    "cochange_counts": {
+      "frontend_component + list_component": 1,
+      "frontend_component + unknown": 1,
+      "frontend_type + page_component": 1,
+      "page_component + unknown": 1
+    },
+    "created_node_types": [
+      "frontend_component"
+    ],
+    "modified_node_types": [
+      "frontend_type",
+      "page_component",
+      "unknown",
+      "frontend_component",
+      "list_component"
+    ],
+    "deleted_node_types": [],
+    "unknown_changed_file_count": 2,
+    "unknown_path_patterns": [
+      "client",
+      "*.md"
+    ],
+    "unclassified_examples": [
+      "client/TODO.md"
+    ],
+    "example_commits": [
+      "339ee36: Add error handling to NewOwnerPage",
       "6e73c96: Add visual feedback for invalid fields",
-      "4f42902: Add FieldFeedbackPanel to show status indication on Fields"
+      "4f42902: Add FieldFeedbackPanel to show status indication on Fields",
+      "a3ba04a: Fix errors",
+      "409415b: fix initial validation feedback",
+      "f726ae7: undo unused change",
+      "6137def: Fix validation feedback on forms"
+    ],
+    "confidence": 0.9555,
+    "structural_confidence": 0.9555,
+    "planner_effectiveness": 0.0,
+    "support_count": 7,
+    "validation_count": 6,
+    "success_count": 0,
+    "partial_count": 0,
+    "failure_count": 6,
+    "last_seen_commit": "6137def71abc75c53eed75fb2020f2602d0059d4",
+    "promotion_blocker": null,
+    "evidence": [
+      "339ee36: Add error handling to NewOwnerPage",
+      "6e73c96: Add visual feedback for invalid fields",
+      "4f42902: Add FieldFeedbackPanel to show status indication on Fields",
+      "a3ba04a: Fix errors",
+      "409415b: fix initial validation feedback",
+      "f726ae7: undo unused change",
+      "6137def: Fix validation feedback on forms"
     ]
   },
   {
-    "id": "petclinic_react_ui_page_add_frontend_component",
+    "id": "petclinic_react_ui_page_add",
     "target_id": "petclinic-react",
     "recipe_type": "ui_page_add",
-    "status": "quarantined",
+    "status": "active",
     "source_commits": [
+      "0a36a33c0101b3aad023dbc7a6ebe440755af968",
+      "42c0bd26350d948af8683b6bad54ed07932d31a1",
       "f188ea90562fcccfabf10bd13911afb28dbd1b42",
       "a2690703620b0ec755e1e491c8a183e80f8b9944",
       "d841a4b3565f1f3cd81f91670cb04598c37fcda8",
@@ -1435,31 +845,122 @@
       "c9e1c7cb16564a59f0198a21750b02c5324494d6"
     ],
     "trigger_terms": [
+      "ownerspage",
+      "actions",
+      "createpeteditormodel",
       "eliminando",
       "digo",
       "desnecess",
       "rio"
     ],
     "changed_node_types": [
-      "frontend_component"
+      "frontend_type",
+      "page_component",
+      "route_config",
+      "frontend_component",
+      "unknown"
     ],
     "changed_path_patterns": [
       "client/src/components/owners",
+      "*.tsx",
+      "client/src",
+      "client/src/types",
+      "*.ts",
+      "client",
+      "*.md",
+      "client/src/components/pets"
+    ],
+    "new_file_patterns": [
+      "client/src/components/owners",
       "*.tsx"
     ],
-    "new_file_patterns": [],
-    "cochange_patterns": [],
-    "required_existing_node_types": [
-      "frontend_component"
+    "cochange_patterns": [
+      "frontend_type + page_component",
+      "frontend_type + route_config",
+      "page_component + route_config",
+      "frontend_component + unknown"
     ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 5,
-    "validation_count": 3,
+    "required_existing_node_types": [
+      "page_component",
+      "frontend_component",
+      "frontend_type"
+    ],
+    "optional_existing_node_types": [
+      "route_config"
+    ],
+    "observed_variants": [
+      "created:page_component; modified:frontend_type+route_config",
+      "modified:frontend_component",
+      "modified:page_component"
+    ],
+    "changed_node_type_counts": {
+      "page_component": 6,
+      "frontend_component": 1,
+      "frontend_type": 1,
+      "route_config": 1,
+      "unknown": 1
+    },
+    "changed_path_pattern_counts": {
+      "*.tsx": 6,
+      "client/src/components/owners": 6,
+      "*.ts": 2,
+      "*.md": 1,
+      "client": 1,
+      "client/src": 1,
+      "client/src/components/pets": 1,
+      "client/src/types": 1
+    },
+    "created_file_pattern_counts": {
+      "*.tsx": 1,
+      "client/src/components/owners": 1
+    },
+    "cochange_counts": {
+      "frontend_component + unknown": 1,
+      "frontend_type + page_component": 1,
+      "frontend_type + route_config": 1,
+      "page_component + route_config": 1
+    },
+    "created_node_types": [
+      "page_component"
+    ],
+    "modified_node_types": [
+      "frontend_type",
+      "route_config",
+      "frontend_component",
+      "unknown",
+      "page_component"
+    ],
+    "deleted_node_types": [],
+    "unknown_changed_file_count": 1,
+    "unknown_path_patterns": [
+      "client",
+      "*.md"
+    ],
+    "unclassified_examples": [
+      "client/README.md"
+    ],
+    "example_commits": [
+      "0a36a33: Add OwnersPage (no actions yet)",
+      "42c0bd2: Add createPetEditorModel",
+      "f188ea9: Eliminando c\u00f3digo desnecess\u00e1rio",
+      "a269070: Eliminando c\u00f3digo desnecess\u00e1rio",
+      "d841a4b: Eliminando c\u00f3digo desnecess\u00e1rio",
+      "521fe86: Eliminando c\u00f3digo desnecess\u00e1rio",
+      "c9e1c7c: Eliminando c\u00f3digo desnecess\u00e1rio"
+    ],
+    "confidence": 0.98,
+    "structural_confidence": 0.98,
+    "planner_effectiveness": 0.05,
+    "support_count": 7,
+    "validation_count": 10,
     "success_count": 0,
-    "failure_count": 3,
+    "partial_count": 1,
+    "failure_count": 9,
     "last_seen_commit": "c9e1c7cb16564a59f0198a21750b02c5324494d6",
+    "promotion_blocker": null,
     "evidence": [
+      "0a36a33: Add OwnersPage (no actions yet)",
+      "42c0bd2: Add createPetEditorModel",
       "f188ea9: Eliminando c\u00f3digo desnecess\u00e1rio",
       "a269070: Eliminando c\u00f3digo desnecess\u00e1rio",
       "d841a4b: Eliminando c\u00f3digo desnecess\u00e1rio",
@@ -1468,141 +969,21 @@
     ]
   },
   {
-    "id": "petclinic_react_ui_page_add_frontend_component_frontend_type",
-    "target_id": "petclinic-react",
-    "recipe_type": "ui_page_add",
-    "status": "quarantined",
-    "source_commits": [
-      "0a36a33c0101b3aad023dbc7a6ebe440755af968"
-    ],
-    "trigger_terms": [
-      "ownerspage",
-      "actions"
-    ],
-    "changed_node_types": [
-      "frontend_component",
-      "frontend_type"
-    ],
-    "changed_path_patterns": [
-      "client/src/components/owners",
-      "*.tsx",
-      "client/src",
-      "client/src/types",
-      "*.ts"
-    ],
-    "new_file_patterns": [
-      "client/src/components/owners",
-      "*.tsx"
-    ],
-    "cochange_patterns": [
-      "frontend_component + frontend_type"
-    ],
-    "required_existing_node_types": [
-      "frontend_component",
-      "frontend_type"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 4,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "0a36a33c0101b3aad023dbc7a6ebe440755af968",
-    "evidence": [
-      "0a36a33: Add OwnersPage (no actions yet)"
-    ]
-  },
-  {
-    "id": "petclinic_react_ui_page_add_frontend_component_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "ui_page_add",
-    "status": "quarantined",
-    "source_commits": [
-      "42c0bd26350d948af8683b6bad54ed07932d31a1"
-    ],
-    "trigger_terms": [
-      "createpeteditormodel"
-    ],
-    "changed_node_types": [
-      "frontend_component",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "client",
-      "*.md",
-      "client/src/components/pets",
-      "*.ts"
-    ],
-    "new_file_patterns": [],
-    "cochange_patterns": [
-      "frontend_component + unknown"
-    ],
-    "required_existing_node_types": [
-      "frontend_component",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 3,
-    "success_count": 0,
-    "failure_count": 3,
-    "last_seen_commit": "42c0bd26350d948af8683b6bad54ed07932d31a1",
-    "evidence": [
-      "42c0bd2: Add createPetEditorModel"
-    ]
-  },
-  {
-    "id": "petclinic_react_ui_shell_layout_app_shell_frontend_component",
+    "id": "petclinic_react_ui_shell_layout",
     "target_id": "petclinic-react",
     "recipe_type": "ui_shell_layout",
-    "status": "candidate",
+    "status": "active",
     "source_commits": [
-      "ac2733091d4a0d8fe2b9125c9a3416497a76072b"
-    ],
-    "trigger_terms": [
-      "fix",
-      "menu"
-    ],
-    "changed_node_types": [
-      "app_shell",
-      "frontend_component"
-    ],
-    "changed_path_patterns": [
-      "client/src/components",
-      "*.tsx"
-    ],
-    "new_file_patterns": [
-      "client/src/components",
-      "*.tsx"
-    ],
-    "cochange_patterns": [
-      "app_shell + frontend_component"
-    ],
-    "required_existing_node_types": [
-      "app_shell",
-      "frontend_component"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.0,
-    "support_count": 1,
-    "validation_count": 1,
-    "success_count": 0,
-    "failure_count": 1,
-    "last_seen_commit": "ac2733091d4a0d8fe2b9125c9a3416497a76072b",
-    "evidence": [
-      "ac27330: Fix Menu"
-    ]
-  },
-  {
-    "id": "petclinic_react_ui_shell_layout_app_shell_frontend_component_unknown",
-    "target_id": "petclinic-react",
-    "recipe_type": "ui_shell_layout",
-    "status": "candidate",
-    "source_commits": [
+      "f710ba8915af96ffcdd96aac88205f6a15eff5d3",
+      "ac2733091d4a0d8fe2b9125c9a3416497a76072b",
       "2bebdd0ec9f8c2915758726eee3811d77b0b8a6a"
     ],
     "trigger_terms": [
+      "layout",
+      "welcome",
+      "page",
+      "fix",
+      "menu",
       "split",
       "larger",
       "components",
@@ -1611,61 +992,13 @@
       "styling"
     ],
     "changed_node_types": [
-      "app_shell",
       "frontend_component",
-      "unknown"
-    ],
-    "changed_path_patterns": [
-      "client/src/components",
-      "*.tsx",
-      "client/src/components/owners",
-      "client/src/styles/less",
-      "*.less"
-    ],
-    "new_file_patterns": [
-      "client/src/components/owners",
-      "*.tsx"
-    ],
-    "cochange_patterns": [
-      "app_shell + frontend_component",
-      "app_shell + unknown",
-      "frontend_component + unknown"
-    ],
-    "required_existing_node_types": [
-      "app_shell",
-      "frontend_component",
-      "unknown"
-    ],
-    "optional_existing_node_types": [],
-    "confidence": 0.15,
-    "support_count": 1,
-    "validation_count": 0,
-    "success_count": 0,
-    "failure_count": 0,
-    "last_seen_commit": "2bebdd0ec9f8c2915758726eee3811d77b0b8a6a",
-    "evidence": [
-      "2bebdd0: Split larger components and clean up styling"
-    ]
-  },
-  {
-    "id": "petclinic_react_ui_shell_layout_app_shell_frontend_entrypoint_landing_page",
-    "target_id": "petclinic-react",
-    "recipe_type": "ui_shell_layout",
-    "status": "candidate",
-    "source_commits": [
-      "f710ba8915af96ffcdd96aac88205f6a15eff5d3"
-    ],
-    "trigger_terms": [
-      "layout",
-      "welcome",
-      "page"
-    ],
-    "changed_node_types": [
-      "app_shell",
-      "frontend_entrypoint",
-      "landing_page",
+      "page_component",
       "public_html",
-      "static_asset"
+      "static_asset",
+      "form_component",
+      "list_component",
+      "unknown"
     ],
     "changed_path_patterns": [
       "client/public/images",
@@ -1674,38 +1007,132 @@
       "*.html",
       "client/src/components",
       "*.tsx",
-      "client/src"
+      "client/src",
+      "client/src/components/owners",
+      "client/src/styles/less",
+      "*.less"
     ],
-    "new_file_patterns": [],
+    "new_file_patterns": [
+      "client/src/components",
+      "*.tsx",
+      "client/src/components/owners"
+    ],
     "cochange_patterns": [
-      "app_shell + frontend_entrypoint",
-      "app_shell + landing_page",
-      "app_shell + public_html",
-      "app_shell + static_asset",
-      "frontend_entrypoint + landing_page",
-      "frontend_entrypoint + public_html",
-      "frontend_entrypoint + static_asset",
-      "landing_page + public_html",
-      "landing_page + static_asset",
-      "public_html + static_asset"
+      "frontend_component + page_component",
+      "frontend_component + public_html",
+      "frontend_component + static_asset",
+      "page_component + public_html",
+      "page_component + static_asset",
+      "public_html + static_asset",
+      "form_component + frontend_component",
+      "form_component + list_component",
+      "form_component + page_component",
+      "form_component + unknown",
+      "frontend_component + list_component",
+      "frontend_component + unknown",
+      "list_component + page_component",
+      "list_component + unknown",
+      "page_component + unknown"
     ],
     "required_existing_node_types": [
-      "app_shell",
-      "frontend_entrypoint",
-      "landing_page"
+      "frontend_component",
+      "page_component",
+      "form_component"
     ],
     "optional_existing_node_types": [
+      "list_component",
       "public_html",
       "static_asset"
     ],
-    "confidence": 0.0,
-    "support_count": 1,
+    "observed_variants": [
+      "modified:frontend_component+page_component+public_html+static_asset",
+      "created:frontend_component; modified:frontend_component",
+      "created:form_component+list_component; modified:frontend_component+list_component+page_component"
+    ],
+    "changed_node_type_counts": {
+      "frontend_component": 3,
+      "page_component": 2,
+      "form_component": 1,
+      "list_component": 1,
+      "public_html": 1,
+      "static_asset": 1,
+      "unknown": 1
+    },
+    "changed_path_pattern_counts": {
+      "*.tsx": 3,
+      "client/src/components": 3,
+      "*.html": 1,
+      "*.less": 1,
+      "*.png": 1,
+      "client/public": 1,
+      "client/public/images": 1,
+      "client/src": 1,
+      "client/src/components/owners": 1,
+      "client/src/styles/less": 1
+    },
+    "created_file_pattern_counts": {
+      "*.tsx": 2,
+      "client/src/components": 1,
+      "client/src/components/owners": 1
+    },
+    "cochange_counts": {
+      "frontend_component + page_component": 2,
+      "form_component + frontend_component": 1,
+      "form_component + list_component": 1,
+      "form_component + page_component": 1,
+      "form_component + unknown": 1,
+      "frontend_component + list_component": 1,
+      "frontend_component + public_html": 1,
+      "frontend_component + static_asset": 1,
+      "frontend_component + unknown": 1,
+      "list_component + page_component": 1,
+      "list_component + unknown": 1,
+      "page_component + public_html": 1,
+      "page_component + static_asset": 1,
+      "page_component + unknown": 1,
+      "public_html + static_asset": 1
+    },
+    "created_node_types": [
+      "frontend_component",
+      "form_component",
+      "list_component"
+    ],
+    "modified_node_types": [
+      "frontend_component",
+      "page_component",
+      "public_html",
+      "static_asset",
+      "list_component",
+      "unknown"
+    ],
+    "deleted_node_types": [],
+    "unknown_changed_file_count": 1,
+    "unknown_path_patterns": [
+      "client/src/styles/less",
+      "*.less"
+    ],
+    "unclassified_examples": [
+      "client/src/styles/less/petclinic.less"
+    ],
+    "example_commits": [
+      "f710ba8: Add Layout and Welcome page",
+      "ac27330: Fix Menu",
+      "2bebdd0: Split larger components and clean up styling"
+    ],
+    "confidence": 0.98,
+    "structural_confidence": 0.98,
+    "planner_effectiveness": 0.0,
+    "support_count": 3,
     "validation_count": 2,
     "success_count": 0,
+    "partial_count": 0,
     "failure_count": 2,
-    "last_seen_commit": "f710ba8915af96ffcdd96aac88205f6a15eff5d3",
+    "last_seen_commit": "2bebdd0ec9f8c2915758726eee3811d77b0b8a6a",
+    "promotion_blocker": null,
     "evidence": [
-      "f710ba8: Add Layout and Welcome page"
+      "f710ba8: Add Layout and Welcome page",
+      "ac27330: Fix Menu",
+      "2bebdd0: Split larger components and clean up styling"
     ]
   }
 ]
