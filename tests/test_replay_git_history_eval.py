@@ -306,6 +306,44 @@ def test_replay_runs_recipe_suggestions_against_parent_snapshot(
     assert owners_page in recipe_comparison["matched_files"]
     assert recipe_comparison["exact_file"]["recall"] >= report["comparison"]["exact_file"]["recall"]
     assert combined_comparison["exact_file"]["matched_count"] >= report["comparison"]["exact_file"]["matched_count"]
+    assert report["summary"]["prediction_modes"]["planner_propose"]["exact_recall"] == report["comparison"]["exact_file"]["recall"]
+    assert report["summary"]["prediction_modes"]["recipe_suggestions"]["exact_recall"] == recipe_comparison["exact_file"]["recall"]
+    assert report["summary"]["prediction_modes"]["combined"]["exact_recall"] == combined_comparison["exact_file"]["recall"]
+    assert isinstance(report["summary"]["recipe_helped"], bool)
+    assert report["summary"]["recipe_help_type"] in {
+        "improved_precision",
+        "improved_recall",
+        "same",
+        "worse",
+    }
+    assert owners_page in report["summary"]["recipe_matched_files"]
+
+
+def test_recipe_help_summary_flags_improved_recall() -> None:
+    planner = replay.compare_predictions(
+        predicted_files=[],
+        actual_files=["repo/src/main/resources/db/hsqldb/initDB.sql"],
+    )
+    recipe = replay.compare_predictions(
+        predicted_files=[{"path": "repo/src/main/resources/db/hsqldb/initDB.sql"}],
+        actual_files=["repo/src/main/resources/db/hsqldb/initDB.sql"],
+    )
+    combined = replay.compare_predictions(
+        predicted_files=[{"path": "repo/src/main/resources/db/hsqldb/initDB.sql"}],
+        actual_files=["repo/src/main/resources/db/hsqldb/initDB.sql"],
+    )
+
+    help_summary = replay.recipe_help_summary(
+        planner_comparison=planner,
+        recipe_comparison=recipe,
+        combined_comparison=combined,
+    )
+
+    assert help_summary["recipe_helped"] is True
+    assert help_summary["recipe_help_type"] == "improved_recall"
+    assert help_summary["recipe_matched_files"] == [
+        "repo/src/main/resources/db/hsqldb/initDB.sql"
+    ]
 
 
 def test_surface_category_classification_uses_replay_schema_names() -> None:

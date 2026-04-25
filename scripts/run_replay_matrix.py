@@ -133,13 +133,22 @@ def build_matrix_report(case_results: Sequence[dict[str, Any]], *, output_dir: P
         "total_cases": len(case_results),
         "succeeded": len(succeeded),
         "failed": len(case_results) - len(succeeded),
-        "average_exact_precision": average_metric(succeeded, "exact_precision"),
-        "average_exact_recall": average_metric(succeeded, "exact_recall"),
-        "average_category_precision": average_metric(succeeded, "category_precision"),
-        "average_category_recall": average_metric(succeeded, "category_recall"),
-        "average_high_signal_precision": average_metric(succeeded, "high_signal_precision"),
-        "average_high_signal_recall": average_metric(succeeded, "high_signal_recall"),
+        "recipe_helped_cases": sum(1 for summary in succeeded if summary.get("recipe_helped")),
     }
+    for mode in ("planner", "recipe", "combined"):
+        for family in ("exact", "category", "high_signal"):
+            for metric in ("precision", "recall"):
+                summary[f"average_{mode}_{family}_{metric}"] = average_metric(
+                    succeeded,
+                    f"{mode}_{family}_{metric}",
+                )
+    # Backward-compatible aliases are planner/propose-only metrics.
+    summary["average_exact_precision"] = summary["average_planner_exact_precision"]
+    summary["average_exact_recall"] = summary["average_planner_exact_recall"]
+    summary["average_category_precision"] = summary["average_planner_category_precision"]
+    summary["average_category_recall"] = summary["average_planner_category_recall"]
+    summary["average_high_signal_precision"] = summary["average_planner_high_signal_precision"]
+    summary["average_high_signal_recall"] = summary["average_planner_high_signal_recall"]
     return {
         "summary": summary,
         "archetype_summary": archetype_summary(summaries),
@@ -157,6 +166,9 @@ def case_summary(result: dict[str, Any]) -> dict[str, Any]:
 
     report = result.get("replay_report") or {}
     summary = report.get("summary", {}) if isinstance(report, dict) else {}
+    planner = mode_metrics(report, summary, "planner_propose")
+    recipe = mode_metrics(report, summary, "recipe_suggestions")
+    combined = mode_metrics(report, summary, "combined")
     return {
         "id": result["id"],
         "archetype": result.get("archetype", "unknown"),
@@ -166,16 +178,84 @@ def case_summary(result: dict[str, Any]) -> dict[str, Any]:
         "prompt_quality": result.get("case", {}).get("prompt_quality", "unknown"),
         "succeeded": bool(result["succeeded"]),
         "exit_code": result["exit_code"],
-        "predicted_file_count": summary.get("predicted_file_count", 0),
+        "predicted_file_count": planner["predicted_file_count"],
         "actual_file_count": summary.get("actual_file_count", 0),
-        "matched_file_count": summary.get("matched_file_count", 0),
-        "exact_precision": summary.get("exact_file_precision"),
-        "exact_recall": summary.get("exact_file_recall"),
-        "high_signal_precision": summary.get("high_signal_precision"),
-        "high_signal_recall": summary.get("high_signal_recall"),
-        "category_precision": summary.get("category_precision"),
-        "category_recall": summary.get("category_recall"),
+        "matched_file_count": planner["matched_file_count"],
+        "exact_precision": planner["exact_precision"],
+        "exact_recall": planner["exact_recall"],
+        "high_signal_precision": planner["high_signal_precision"],
+        "high_signal_recall": planner["high_signal_recall"],
+        "category_precision": planner["category_precision"],
+        "category_recall": planner["category_recall"],
+        "planner_predicted_file_count": planner["predicted_file_count"],
+        "planner_matched_file_count": planner["matched_file_count"],
+        "planner_exact_precision": planner["exact_precision"],
+        "planner_exact_recall": planner["exact_recall"],
+        "planner_category_precision": planner["category_precision"],
+        "planner_category_recall": planner["category_recall"],
+        "planner_high_signal_precision": planner["high_signal_precision"],
+        "planner_high_signal_recall": planner["high_signal_recall"],
+        "recipe_predicted_file_count": recipe["predicted_file_count"],
+        "recipe_matched_file_count": recipe["matched_file_count"],
+        "recipe_exact_precision": recipe["exact_precision"],
+        "recipe_exact_recall": recipe["exact_recall"],
+        "recipe_category_precision": recipe["category_precision"],
+        "recipe_category_recall": recipe["category_recall"],
+        "recipe_high_signal_precision": recipe["high_signal_precision"],
+        "recipe_high_signal_recall": recipe["high_signal_recall"],
+        "combined_predicted_file_count": combined["predicted_file_count"],
+        "combined_matched_file_count": combined["matched_file_count"],
+        "combined_exact_precision": combined["exact_precision"],
+        "combined_exact_recall": combined["exact_recall"],
+        "combined_category_precision": combined["category_precision"],
+        "combined_category_recall": combined["category_recall"],
+        "combined_high_signal_precision": combined["high_signal_precision"],
+        "combined_high_signal_recall": combined["high_signal_recall"],
+        "recipe_helped": bool(summary.get("recipe_helped", False)),
+        "recipe_help_type": summary.get("recipe_help_type", "same"),
+        "recipe_matched_files": summary.get("recipe_matched_files", []),
         "report_dir": result["report_dir"],
+    }
+
+
+def mode_metrics(report: dict[str, Any], summary: dict[str, Any], mode: str) -> dict[str, Any]:
+    """Return compact metrics for one prediction mode with legacy fallbacks."""
+
+    sections = report.get("comparison_sections", {}) if isinstance(report, dict) else {}
+    section = sections.get(mode) if isinstance(sections, dict) else None
+    if isinstance(section, dict):
+        return {
+            "predicted_file_count": len(section.get("predicted_files", [])),
+            "matched_file_count": len(section.get("matched_files", [])),
+            "exact_precision": section.get("exact_file", {}).get("precision"),
+            "exact_recall": section.get("exact_file", {}).get("recall"),
+            "category_precision": section.get("category_level", {}).get("precision"),
+            "category_recall": section.get("category_level", {}).get("recall"),
+            "high_signal_precision": section.get("high_signal", {}).get("precision"),
+            "high_signal_recall": section.get("high_signal", {}).get("recall"),
+        }
+
+    if mode == "planner_propose":
+        return {
+            "predicted_file_count": summary.get("predicted_file_count", 0),
+            "matched_file_count": summary.get("matched_file_count", 0),
+            "exact_precision": summary.get("exact_file_precision"),
+            "exact_recall": summary.get("exact_file_recall"),
+            "category_precision": summary.get("category_precision"),
+            "category_recall": summary.get("category_recall"),
+            "high_signal_precision": summary.get("high_signal_precision"),
+            "high_signal_recall": summary.get("high_signal_recall"),
+        }
+    prefix = "recipe" if mode == "recipe_suggestions" else "combined"
+    return {
+        "predicted_file_count": summary.get("recipe_suggestion_file_count" if prefix == "recipe" else "combined_file_count", 0),
+        "matched_file_count": summary.get(f"{prefix}_matched_file_count", 0),
+        "exact_precision": summary.get(f"{prefix}_exact_file_precision"),
+        "exact_recall": summary.get(f"{prefix}_exact_file_recall"),
+        "category_precision": summary.get(f"{prefix}_category_precision"),
+        "category_recall": summary.get(f"{prefix}_category_recall"),
+        "high_signal_precision": summary.get(f"{prefix}_high_signal_precision"),
+        "high_signal_recall": summary.get(f"{prefix}_high_signal_recall"),
     }
 
 
@@ -221,12 +301,30 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
         f"- total cases: {summary['total_cases']}",
         f"- succeeded: {summary['succeeded']}",
         f"- failed: {summary['failed']}",
-        f"- average exact precision: {format_metric(summary['average_exact_precision'])}",
-        f"- average exact recall: {format_metric(summary['average_exact_recall'])}",
-        f"- average category precision: {format_metric(summary['average_category_precision'])}",
-        f"- average category recall: {format_metric(summary['average_category_recall'])}",
-        f"- average high-signal precision: {format_metric(summary['average_high_signal_precision'])}",
-        f"- average high-signal recall: {format_metric(summary['average_high_signal_recall'])}",
+        f"- recipe helped cases: {summary['recipe_helped_cases']}",
+        "",
+        "## Average Metrics By Prediction Mode",
+        "",
+        "| mode | exact P/R | category P/R | high-signal P/R |",
+        "|---|---|---|---|",
+        (
+            "| planner/propose only | "
+            f"{format_metric(summary['average_planner_exact_precision'])}/{format_metric(summary['average_planner_exact_recall'])} | "
+            f"{format_metric(summary['average_planner_category_precision'])}/{format_metric(summary['average_planner_category_recall'])} | "
+            f"{format_metric(summary['average_planner_high_signal_precision'])}/{format_metric(summary['average_planner_high_signal_recall'])} |"
+        ),
+        (
+            "| recipe suggestions only | "
+            f"{format_metric(summary['average_recipe_exact_precision'])}/{format_metric(summary['average_recipe_exact_recall'])} | "
+            f"{format_metric(summary['average_recipe_category_precision'])}/{format_metric(summary['average_recipe_category_recall'])} | "
+            f"{format_metric(summary['average_recipe_high_signal_precision'])}/{format_metric(summary['average_recipe_high_signal_recall'])} |"
+        ),
+        (
+            "| combined | "
+            f"{format_metric(summary['average_combined_exact_precision'])}/{format_metric(summary['average_combined_exact_recall'])} | "
+            f"{format_metric(summary['average_combined_category_precision'])}/{format_metric(summary['average_combined_category_recall'])} | "
+            f"{format_metric(summary['average_combined_high_signal_precision'])}/{format_metric(summary['average_combined_high_signal_recall'])} |"
+        ),
         "",
         "## Archetype Summary",
         "",
@@ -238,8 +336,8 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
         "",
         "## Cases",
         "",
-        "| id | archetype | quality | commit | succeeded | predicted | actual | matched | exact P/R | high-signal P/R | category P/R |",
-        "|---|---|---|---|---:|---:|---:|---:|---|---|---|",
+        "| id | archetype | quality | commit | succeeded | actual | planner exact P/R | recipe exact P/R | combined exact P/R | planner category P/R | recipe category P/R | combined category P/R | planner high-signal P/R | recipe high-signal P/R | combined high-signal P/R | recipe helped | recipe matched files |",
+        "|---|---|---|---|---:|---:|---|---|---|---|---|---|---|---|---|---|---|",
     ])
     for case in report["cases"]:
         lines.append(
@@ -251,12 +349,18 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
                     str(case["candidate_quality"]),
                     f"`{case['commit']}`",
                     str(case["succeeded"]),
-                    str(case["predicted_file_count"]),
                     str(case["actual_file_count"]),
-                    str(case["matched_file_count"]),
-                    f"{format_metric(case['exact_precision'])}/{format_metric(case['exact_recall'])}",
-                    f"{format_metric(case['high_signal_precision'])}/{format_metric(case['high_signal_recall'])}",
-                    f"{format_metric(case['category_precision'])}/{format_metric(case['category_recall'])}",
+                    f"{format_metric(case['planner_exact_precision'])}/{format_metric(case['planner_exact_recall'])}",
+                    f"{format_metric(case['recipe_exact_precision'])}/{format_metric(case['recipe_exact_recall'])}",
+                    f"{format_metric(case['combined_exact_precision'])}/{format_metric(case['combined_exact_recall'])}",
+                    f"{format_metric(case['planner_category_precision'])}/{format_metric(case['planner_category_recall'])}",
+                    f"{format_metric(case['recipe_category_precision'])}/{format_metric(case['recipe_category_recall'])}",
+                    f"{format_metric(case['combined_category_precision'])}/{format_metric(case['combined_category_recall'])}",
+                    f"{format_metric(case['planner_high_signal_precision'])}/{format_metric(case['planner_high_signal_recall'])}",
+                    f"{format_metric(case['recipe_high_signal_precision'])}/{format_metric(case['recipe_high_signal_recall'])}",
+                    f"{format_metric(case['combined_high_signal_precision'])}/{format_metric(case['combined_high_signal_recall'])}",
+                    f"{case.get('recipe_helped')} ({case.get('recipe_help_type')})",
+                    format_path_list(case.get("recipe_matched_files", [])),
                 ]
             )
             + " |"
@@ -273,12 +377,25 @@ def print_matrix_summary(report: dict[str, Any]) -> None:
     print(f"total cases: {summary['total_cases']}")
     print(f"succeeded: {summary['succeeded']}")
     print(f"failed: {summary['failed']}")
-    print(f"average exact precision: {format_metric(summary['average_exact_precision'])}")
-    print(f"average exact recall: {format_metric(summary['average_exact_recall'])}")
-    print(f"average category precision: {format_metric(summary['average_category_precision'])}")
-    print(f"average category recall: {format_metric(summary['average_category_recall'])}")
-    print(f"average high-signal precision: {format_metric(summary['average_high_signal_precision'])}")
-    print(f"average high-signal recall: {format_metric(summary['average_high_signal_recall'])}")
+    print(f"recipe helped cases: {summary['recipe_helped_cases']}")
+    print(f"average planner exact precision: {format_metric(summary['average_planner_exact_precision'])}")
+    print(f"average planner exact recall: {format_metric(summary['average_planner_exact_recall'])}")
+    print(f"average recipe exact precision: {format_metric(summary['average_recipe_exact_precision'])}")
+    print(f"average recipe exact recall: {format_metric(summary['average_recipe_exact_recall'])}")
+    print(f"average combined exact precision: {format_metric(summary['average_combined_exact_precision'])}")
+    print(f"average combined exact recall: {format_metric(summary['average_combined_exact_recall'])}")
+    print(f"average planner category precision: {format_metric(summary['average_planner_category_precision'])}")
+    print(f"average planner category recall: {format_metric(summary['average_planner_category_recall'])}")
+    print(f"average recipe category precision: {format_metric(summary['average_recipe_category_precision'])}")
+    print(f"average recipe category recall: {format_metric(summary['average_recipe_category_recall'])}")
+    print(f"average combined category precision: {format_metric(summary['average_combined_category_precision'])}")
+    print(f"average combined category recall: {format_metric(summary['average_combined_category_recall'])}")
+    print(f"average planner high-signal precision: {format_metric(summary['average_planner_high_signal_precision'])}")
+    print(f"average planner high-signal recall: {format_metric(summary['average_planner_high_signal_recall'])}")
+    print(f"average recipe high-signal precision: {format_metric(summary['average_recipe_high_signal_precision'])}")
+    print(f"average recipe high-signal recall: {format_metric(summary['average_recipe_high_signal_recall'])}")
+    print(f"average combined high-signal precision: {format_metric(summary['average_combined_high_signal_precision'])}")
+    print(f"average combined high-signal recall: {format_metric(summary['average_combined_high_signal_recall'])}")
     print("archetypes: " + ", ".join(f"{key}={value['total']}" for key, value in report["archetype_summary"].items()))
     print(f"report json: {report['reports']['json']}")
     print(f"report md: {report['reports']['markdown']}")
@@ -288,6 +405,13 @@ def format_metric(value: Any) -> str:
     if value is None:
         return "-"
     return f"{float(value):.2f}"
+
+
+def format_path_list(values: Sequence[Any]) -> str:
+    paths = [str(value) for value in values if value]
+    if not paths:
+        return "-"
+    return "<br>".join(f"`{path}`" for path in paths[:5])
 
 
 def resolve_repo_path(value: str) -> Path:

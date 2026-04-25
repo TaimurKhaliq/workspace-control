@@ -10,19 +10,20 @@
 ## Summary
 
 - commands succeeded: True
-- predicted files: 0
 - actual files: 2
-- matched files: 0
-- missed files: 2
-- extra predicted files: 0
-- exact file precision: 0.00
-- exact file recall: 0.00
-- folder-level matched actual files: 0
-- category precision: 0.00
-- category recall: 0.00
-- high-signal exact precision: 0.00
-- high-signal exact recall: 0.00
+- recipe helped: False (same)
+- recipe matched files: -
 - static asset misses: 0
+
+### Prediction Mode Summary
+
+| mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
+|---|---:|---:|---|---|---|
+| planner/propose only | 0 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| recipe suggestions only | 3 | 0 | 0.00/0.00 | 0.50/0.50 | 0.00/0.00 |
+| combined | 3 | 0 | 0.00/0.00 | 0.50/0.50 | 0.00/0.00 |
+
+The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
 ## Command Results
 

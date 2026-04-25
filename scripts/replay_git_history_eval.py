@@ -210,6 +210,16 @@ def run_replay_eval(
         predicted_files=combined_predicted["predicted_files"],
         actual_files=actual_files,
     )
+    prediction_mode_metrics = {
+        "planner_propose": prediction_mode_summary(comparison),
+        "recipe_suggestions": prediction_mode_summary(recipe_comparison),
+        "combined": prediction_mode_summary(combined_comparison),
+    }
+    recipe_help = recipe_help_summary(
+        planner_comparison=comparison,
+        recipe_comparison=recipe_comparison,
+        combined_comparison=combined_comparison,
+    )
     commands_succeeded = all(item["exit_code"] == 0 for item in command_results.values())
 
     report_dir = report_dir.resolve()
@@ -250,12 +260,18 @@ def run_replay_eval(
             "recipe_exact_file_recall": recipe_comparison["recall"],
             "recipe_high_signal_precision": recipe_comparison["high_signal"]["precision"],
             "recipe_high_signal_recall": recipe_comparison["high_signal"]["recall"],
+            "recipe_category_precision": recipe_comparison["category_level"]["precision"],
+            "recipe_category_recall": recipe_comparison["category_level"]["recall"],
             "combined_file_count": len(combined_predicted["predicted_files"]),
             "combined_matched_file_count": len(combined_comparison["matched_files"]),
             "combined_exact_file_precision": combined_comparison["precision"],
             "combined_exact_file_recall": combined_comparison["recall"],
             "combined_high_signal_precision": combined_comparison["high_signal"]["precision"],
             "combined_high_signal_recall": combined_comparison["high_signal"]["recall"],
+            "combined_category_precision": combined_comparison["category_level"]["precision"],
+            "combined_category_recall": combined_comparison["category_level"]["recall"],
+            "prediction_modes": prediction_mode_metrics,
+            **recipe_help,
         },
         "predicted_repos": predicted["predicted_repos"],
         "predicted_files": predicted["predicted_files"],
@@ -269,6 +285,7 @@ def run_replay_eval(
             "recipe_suggestions": recipe_comparison,
             "combined": combined_comparison,
         },
+        "recipe_help": recipe_help,
         "commands": command_results,
         "reports": {
             "json": display_path(report_dir / "latest_replay.json"),
@@ -277,6 +294,61 @@ def run_replay_eval(
     }
     write_reports(report, report_dir)
     return report
+
+
+def prediction_mode_summary(comparison: dict[str, Any]) -> dict[str, Any]:
+    """Return compact metrics for one prediction mode."""
+
+    return {
+        "predicted_file_count": len(comparison["predicted_files"]),
+        "actual_file_count": len(comparison["actual_files"]),
+        "matched_file_count": len(comparison["matched_files"]),
+        "missed_file_count": len(comparison["missed_files"]),
+        "extra_predicted_file_count": len(comparison["extra_predicted_files"]),
+        "exact_precision": comparison["exact_file"]["precision"],
+        "exact_recall": comparison["exact_file"]["recall"],
+        "category_precision": comparison["category_level"]["precision"],
+        "category_recall": comparison["category_level"]["recall"],
+        "high_signal_precision": comparison["high_signal"]["precision"],
+        "high_signal_recall": comparison["high_signal"]["recall"],
+    }
+
+
+def recipe_help_summary(
+    *,
+    planner_comparison: dict[str, Any],
+    recipe_comparison: dict[str, Any],
+    combined_comparison: dict[str, Any],
+) -> dict[str, Any]:
+    """Classify whether recipe suggestions improved replay scoring."""
+
+    planner_exact_recall = float(planner_comparison["exact_file"]["recall"])
+    recipe_exact_recall = float(recipe_comparison["exact_file"]["recall"])
+    combined_exact_recall = float(combined_comparison["exact_file"]["recall"])
+    planner_exact_precision = float(planner_comparison["exact_file"]["precision"])
+    recipe_exact_precision = float(recipe_comparison["exact_file"]["precision"])
+    combined_exact_precision = float(combined_comparison["exact_file"]["precision"])
+    recipe_matched_files = list(recipe_comparison["matched_files"])
+
+    if recipe_exact_recall > planner_exact_recall or combined_exact_recall > planner_exact_recall:
+        help_type = "improved_recall"
+    elif recipe_exact_precision > planner_exact_precision or combined_exact_precision > planner_exact_precision:
+        help_type = "improved_precision"
+    elif (
+        recipe_exact_recall == planner_exact_recall
+        and recipe_exact_precision == planner_exact_precision
+        and combined_exact_recall == planner_exact_recall
+        and combined_exact_precision == planner_exact_precision
+    ):
+        help_type = "same"
+    else:
+        help_type = "worse"
+
+    return {
+        "recipe_helped": help_type in {"improved_recall", "improved_precision"},
+        "recipe_help_type": help_type,
+        "recipe_matched_files": recipe_matched_files,
+    }
 
 
 def resolve_git_root(repo_path: Path) -> Path:
@@ -952,6 +1024,7 @@ def format_markdown_report(report: dict[str, Any]) -> str:
     git_info = report["git"]
     input_info = report["input"]
     comparison = report["comparison"]
+    prediction_modes = summary.get("prediction_modes", {})
     lines = [
         "# Git History Replay Eval",
         "",
@@ -965,25 +1038,47 @@ def format_markdown_report(report: dict[str, Any]) -> str:
         "## Summary",
         "",
         f"- commands succeeded: {summary['commands_succeeded']}",
-        f"- predicted files: {summary['predicted_file_count']}",
         f"- actual files: {summary['actual_file_count']}",
-        f"- matched files: {summary['matched_file_count']}",
-        f"- missed files: {summary['missed_file_count']}",
-        f"- extra predicted files: {summary['extra_predicted_file_count']}",
-        f"- exact file precision: {comparison['precision']:.2f}",
-        f"- exact file recall: {comparison['recall']:.2f}",
-        f"- folder-level matched actual files: {len(comparison['folder_level']['matched_actual_files'])}",
-        f"- category precision: {comparison['category_level']['precision']:.2f}",
-        f"- category recall: {comparison['category_level']['recall']:.2f}",
-        f"- high-signal exact precision: {comparison['high_signal']['precision']:.2f}",
-        f"- high-signal exact recall: {comparison['high_signal']['recall']:.2f}",
+        f"- recipe helped: {summary.get('recipe_helped')} ({summary.get('recipe_help_type')})",
+        f"- recipe matched files: {format_inline_values(summary.get('recipe_matched_files', []))}",
         f"- static asset misses: {len(comparison['static_assets']['missed_files'])}",
         "",
+        "### Prediction Mode Summary",
+        "",
+        "| mode | predicted | matched | exact P/R | category P/R | high-signal P/R |",
+        "|---|---:|---:|---|---|---|",
+    ]
+    for label, key in (
+        ("planner/propose only", "planner_propose"),
+        ("recipe suggestions only", "recipe_suggestions"),
+        ("combined", "combined"),
+    ):
+        metrics = prediction_modes.get(key, {})
+        lines.append(
+            "| "
+            + " | ".join(
+                [
+                    label,
+                    str(metrics.get("predicted_file_count", 0)),
+                    str(metrics.get("matched_file_count", 0)),
+                    f"{format_metric(metrics.get('exact_precision'))}/{format_metric(metrics.get('exact_recall'))}",
+                    f"{format_metric(metrics.get('category_precision'))}/{format_metric(metrics.get('category_recall'))}",
+                    f"{format_metric(metrics.get('high_signal_precision'))}/{format_metric(metrics.get('high_signal_recall'))}",
+                ]
+            )
+            + " |"
+        )
+    lines.extend(
+        [
+            "",
+            "The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.",
+            "",
         "## Command Results",
         "",
         "| command | exit code |",
         "|---|---:|",
     ]
+    )
     for key, result in report["commands"].items():
         lines.append(f"| `{key}` | {result['exit_code']} |")
 
@@ -1140,6 +1235,14 @@ def format_inline_values(values: Sequence[str]) -> str:
     return ", ".join(f"`{value}`" for value in values)
 
 
+def format_metric(value: Any) -> str:
+    """Render a numeric metric for Markdown tables."""
+
+    if value is None:
+        return "-"
+    return f"{float(value):.2f}"
+
+
 def print_replay_summary(report: dict[str, Any]) -> None:
     """Print a compact terminal summary."""
 
@@ -1148,25 +1251,27 @@ def print_replay_summary(report: dict[str, Any]) -> None:
     print(f"repo: {report['git']['repo_name']}")
     print(f"parent: {report['git']['parent_commit']}")
     print(f"target: {report['git']['target_commit']}")
-    print(f"predicted files: {summary['predicted_file_count']}")
     print(f"actual files: {summary['actual_file_count']}")
-    print(f"matched files: {summary['matched_file_count']}")
-    print(f"missed files: {summary['missed_file_count']}")
-    print(f"extra predicted files: {summary['extra_predicted_file_count']}")
-    print(f"exact file precision: {summary['exact_file_precision']:.2f}")
-    print(f"exact file recall: {summary['exact_file_recall']:.2f}")
-    print(f"folder-level matched files: {summary['folder_level_matched_file_count']}")
-    print(f"category precision: {summary['category_precision']:.2f}")
-    print(f"category recall: {summary['category_recall']:.2f}")
-    print(f"high-signal precision: {summary['high_signal_precision']:.2f}")
-    print(f"high-signal recall: {summary['high_signal_recall']:.2f}")
+    print(f"recipe helped: {summary.get('recipe_helped')} ({summary.get('recipe_help_type')})")
+    print(f"recipe matched files: {', '.join(summary.get('recipe_matched_files', [])) or '-'}")
+    print(f"planner predicted files: {summary['predicted_file_count']}")
+    print(f"planner exact precision: {summary['exact_file_precision']:.2f}")
+    print(f"planner exact recall: {summary['exact_file_recall']:.2f}")
+    print(f"planner category precision: {summary['category_precision']:.2f}")
+    print(f"planner category recall: {summary['category_recall']:.2f}")
+    print(f"planner high-signal precision: {summary['high_signal_precision']:.2f}")
+    print(f"planner high-signal recall: {summary['high_signal_recall']:.2f}")
     print(f"static asset misses: {summary['static_asset_miss_count']}")
     print(f"recipe predicted files: {summary.get('recipe_suggestion_file_count', 0)}")
     print(f"recipe exact precision: {summary.get('recipe_exact_file_precision', 0.0):.2f}")
     print(f"recipe exact recall: {summary.get('recipe_exact_file_recall', 0.0):.2f}")
+    print(f"recipe category precision: {summary.get('recipe_category_precision', 0.0):.2f}")
+    print(f"recipe category recall: {summary.get('recipe_category_recall', 0.0):.2f}")
     print(f"combined predicted files: {summary.get('combined_file_count', 0)}")
     print(f"combined exact precision: {summary.get('combined_exact_file_precision', 0.0):.2f}")
     print(f"combined exact recall: {summary.get('combined_exact_file_recall', 0.0):.2f}")
+    print(f"combined category precision: {summary.get('combined_category_precision', 0.0):.2f}")
+    print(f"combined category recall: {summary.get('combined_category_recall', 0.0):.2f}")
     print(f"report json: {report['reports']['json']}")
     print(f"report md: {report['reports']['markdown']}")
 

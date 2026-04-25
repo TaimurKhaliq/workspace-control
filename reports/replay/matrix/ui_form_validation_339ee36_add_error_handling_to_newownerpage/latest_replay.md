@@ -10,19 +10,20 @@
 ## Summary
 
 - commands succeeded: True
-- predicted files: 3
 - actual files: 3
-- matched files: 2
-- missed files: 1
-- extra predicted files: 1
-- exact file precision: 0.67
-- exact file recall: 0.67
-- folder-level matched actual files: 0
-- category precision: 1.00
-- category recall: 0.50
-- high-signal exact precision: 0.67
-- high-signal exact recall: 0.67
+- recipe helped: True (improved_recall)
+- recipe matched files: `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`, `spring-petclinic-reactjs/client/src/types/index.ts`
 - static asset misses: 0
+
+### Prediction Mode Summary
+
+| mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
+|---|---:|---:|---|---|---|
+| planner/propose only | 3 | 2 | 0.67/0.67 | 1.00/0.50 | 0.67/0.67 |
+| recipe suggestions only | 9 | 2 | 0.22/0.67 | 0.50/1.00 | 0.22/0.67 |
+| combined | 10 | 3 | 0.30/1.00 | 0.50/1.00 | 0.30/1.00 |
+
+The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
 ## Command Results
 

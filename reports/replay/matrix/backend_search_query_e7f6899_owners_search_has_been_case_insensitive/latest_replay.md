@@ -10,19 +10,20 @@
 ## Summary
 
 - commands succeeded: True
-- predicted files: 0
 - actual files: 1
-- matched files: 0
-- missed files: 1
-- extra predicted files: 0
-- exact file precision: 0.00
-- exact file recall: 0.00
-- folder-level matched actual files: 0
-- category precision: 0.00
-- category recall: 0.00
-- high-signal exact precision: 0.00
-- high-signal exact recall: 0.00
+- recipe helped: True (improved_recall)
+- recipe matched files: `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 - static asset misses: 0
+
+### Prediction Mode Summary
+
+| mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
+|---|---:|---:|---|---|---|
+| planner/propose only | 0 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| recipe suggestions only | 7 | 1 | 0.14/1.00 | 0.25/1.00 | 0.14/1.00 |
+| combined | 7 | 1 | 0.14/1.00 | 0.25/1.00 | 0.14/1.00 |
+
+The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
 ## Command Results
 

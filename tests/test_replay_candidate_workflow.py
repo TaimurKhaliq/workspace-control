@@ -208,7 +208,33 @@ def test_run_replay_matrix_aggregates_mocked_replay_outputs(tmp_path: Path, monk
                     "high_signal_recall": 1.0,
                     "category_precision": 1.0,
                     "category_recall": 0.75,
-                }
+                    "recipe_helped": True,
+                    "recipe_help_type": "improved_recall",
+                    "recipe_matched_files": ["repo/recipe.py"],
+                },
+                "comparison_sections": {
+                    "planner_propose": {
+                        "predicted_files": ["repo/a.py", "repo/b.py"],
+                        "matched_files": ["repo/a.py", "repo/b.py"],
+                        "exact_file": {"precision": 1.0, "recall": 0.6667},
+                        "category_level": {"precision": 1.0, "recall": 0.75},
+                        "high_signal": {"precision": 1.0, "recall": 1.0},
+                    },
+                    "recipe_suggestions": {
+                        "predicted_files": ["repo/recipe.py"],
+                        "matched_files": ["repo/recipe.py"],
+                        "exact_file": {"precision": 1.0, "recall": 0.3333},
+                        "category_level": {"precision": 0.5, "recall": 0.25},
+                        "high_signal": {"precision": 1.0, "recall": 0.5},
+                    },
+                    "combined": {
+                        "predicted_files": ["repo/a.py", "repo/b.py", "repo/recipe.py"],
+                        "matched_files": ["repo/a.py", "repo/b.py", "repo/recipe.py"],
+                        "exact_file": {"precision": 1.0, "recall": 1.0},
+                        "category_level": {"precision": 1.0, "recall": 1.0},
+                        "high_signal": {"precision": 1.0, "recall": 1.0},
+                    },
+                },
             },
         }
 
@@ -223,5 +249,11 @@ def test_run_replay_matrix_aggregates_mocked_replay_outputs(tmp_path: Path, monk
     assert report["candidate_quality_summary"]["good"] == 1
     assert report["summary"]["average_exact_precision"] == 1.0
     assert report["summary"]["average_exact_recall"] == 0.6667
+    assert report["summary"]["average_planner_exact_recall"] == 0.6667
+    assert report["summary"]["average_recipe_exact_recall"] == 0.3333
+    assert report["summary"]["average_combined_exact_recall"] == 1.0
+    assert report["summary"]["recipe_helped_cases"] == 2
+    assert report["cases"][0]["recipe_helped"] is True
+    assert report["cases"][0]["recipe_matched_files"] == ["repo/recipe.py"]
     assert (tmp_path / "matrix" / "latest_matrix.json").is_file()
     assert (tmp_path / "matrix" / "latest_matrix.md").is_file()
