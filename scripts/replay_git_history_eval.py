@@ -43,6 +43,7 @@ SURFACE_CATEGORIES = (
     "frontend_type",
     "api_contract",
     "api_controller",
+    "api_dto",
     "service_layer",
     "domain_model",
     "repository",
@@ -865,6 +866,8 @@ def classify_surface(path: str) -> str:
         return "landing_page"
     if "openapi" in lowered or "swagger" in lowered:
         return "api_contract"
+    if name.endswith(("request.java", "response.java", "dto.java")) or (name.endswith("resource.java") and "/web/api/" in lowered):
+        return "api_dto"
     if name.endswith(("controller.java", "resource.java")) or "controller" in parts:
         return "api_controller"
     if name.endswith("service.java") or "service" in parts or "services" in parts:

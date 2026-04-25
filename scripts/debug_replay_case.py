@@ -397,12 +397,21 @@ def classify_failure(
     ):
         labels.add("prompt_too_vague")
         reasons.append("Prompt did not produce clear feature intents or ownership.")
+    elif domain_light_but_archetype_clear(str(case.get("prompt", "")), str(case.get("archetype", ""))):
+        labels.add("domain_light_but_archetype_clear")
+        reasons.append("Prompt lacks a strong domain token but has clear archetype terms.")
     if _identifier_page_prompt(str(case.get("prompt", ""))) and not plan.get("feature_intents"):
         labels.add("identifier_normalization_gap")
         reasons.append("Prompt contains an identifier-style page name that did not become UI intent.")
     if case.get("archetype") == "ui_page_add" and "ui" not in plan.get("feature_intents", []):
         labels.add("ui_page_add_archetype_gap")
         reasons.append("UI page-add archetype did not produce UI intent.")
+    if case.get("archetype") == "persistence_data" and search_query_prompt(str(case.get("prompt", ""))):
+        labels.add("backend_search_archetype_gap")
+        reasons.append("Search/query prompt was classified as persistence_data.")
+    if case.get("archetype") in {"backend_api", "persistence_data"} and backend_validation_prompt(str(case.get("prompt", ""))):
+        labels.add("backend_validation_ranking_gap")
+        reasons.append("Backend validation prompt was not classified as backend_validation_change.")
     if case.get("archetype") in {"config_build", "docs_comments", "refactor_move", "infra_deployment", "reject"}:
         labels.add("unsupported_change_type")
         reasons.append("Archetype is not a product-feature planning case.")
@@ -429,6 +438,8 @@ def classify_failure(
         reasons.append("Predictions matched at least one surface category but missed exact files.")
     if not matched_recipes and case.get("archetype") in {
         "backend_api",
+        "backend_search_query",
+        "backend_validation_change",
         "full_stack_ui_api",
         "persistence_data",
         "ui_form_validation",
@@ -490,6 +501,15 @@ def build_diagnosis_summary(
     elif "bad_prompt" in labels or "prompt_too_vague" in labels:
         fix_area = "prompt generation"
         cause = "The prompt did not provide enough actionable product/surface intent."
+    elif "backend_search_archetype_gap" in labels:
+        fix_area = "candidate classification"
+        cause = "Search/query behavior was classified as persistence instead of backend search/query."
+    elif "backend_validation_ranking_gap" in labels:
+        fix_area = "candidate classification"
+        cause = "Backend validation behavior was not classified or ranked as backend validation."
+    elif "domain_light_but_archetype_clear" in labels and "recipe_application_gap" in labels:
+        fix_area = "recipe application"
+        cause = "The prompt is domain-light but has clear validation intent; recipe application needs better generic validation surfaces."
     elif "source_discovery_gap" in labels or "graph_missing_surface" in labels:
         fix_area = "source graph"
         cause = "Discovery or source graph evidence did not expose the expected surfaces."
@@ -530,12 +550,40 @@ def prompt_too_vague(
 ) -> bool:
     if prompt_quality == "high" and _identifier_page_prompt(prompt):
         return False
+    if strong_validation_prompt(prompt):
+        return False
+    if search_query_prompt(prompt) and prompt_quality == "high":
+        return False
     words = [word for word in prompt.split() if word.strip()]
     return len(words) <= 2 or (not plan.get("feature_intents") and not plan.get("primary_owner") and not plan.get("implementation_owner"))
 
 
 def _identifier_page_prompt(prompt: str) -> bool:
     return bool(re.search(r"\b[A-Z][A-Za-z0-9]*(?:Page|View|Screen)\b", prompt))
+
+
+def strong_validation_prompt(prompt: str) -> bool:
+    normalized = prompt.lower().replace("-", " ")
+    return bool(
+        re.search(
+            r"\b(visual feedback|invalid fields?|field feedback|error handling|validation|required field|not null|max range|min range|constraint|regex)\b",
+            normalized,
+        )
+    )
+
+
+def backend_validation_prompt(prompt: str) -> bool:
+    normalized = prompt.lower().replace("-", " ")
+    return bool(re.search(r"\b(validation|required|not null|max range|min range|constraint|regex)\b", normalized))
+
+
+def search_query_prompt(prompt: str) -> bool:
+    normalized = prompt.lower().replace("-", " ")
+    return bool(re.search(r"\b(search|filter|case insensitive|query|find by|lookup)\b", normalized))
+
+
+def domain_light_but_archetype_clear(prompt: str, archetype: str) -> bool:
+    return archetype == "ui_form_validation" and strong_validation_prompt(prompt)
 
 
 def extract_proposed_files(propose_output: dict[str, Any]) -> list[dict[str, Any]]:

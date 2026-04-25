@@ -20,6 +20,7 @@ NodeType = Literal[
     "public_html",
     "api_contract",
     "api_controller",
+    "api_dto",
     "service_layer",
     "domain_model",
     "repository",

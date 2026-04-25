@@ -8,17 +8,19 @@
 ## Candidate Quality Counts
 
 - good: 9
-- questionable: 56
-- reject: 235
+- questionable: 57
+- reject: 234
 
 ## Archetype Counts
 
-- backend_api: 14
-- config_build: 146
-- docs_comments: 36
+- backend_api: 12
+- backend_search_query: 1
+- backend_validation_change: 14
+- config_build: 145
+- docs_comments: 35
 - full_stack_ui_api: 11
-- infra_deployment: 3
-- persistence_data: 32
+- infra_deployment: 2
+- persistence_data: 22
 - refactor_move: 12
 - reject: 28
 - ui_form_validation: 7
@@ -27,27 +29,9 @@
 
 ## backend_api
 
-### `af31104` add max range and not null validation for adding new pet
-
-- score: 60
-- archetype: backend_api
-- candidate quality: good
-- candidate quality reason: Candidate has a useful feature archetype and descriptive prompt.
-- prompt quality: high
-- prompt quality reason: Subject is descriptive and feature-like.
-- included in generated cases: True
-- changed files: 1
-- categories: backend_api
-- prompt: add max range and not null validation for adding new pet
-- needs manual prompt: False
-- suggested matrix case id: `backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit af31104 --prompt "add max range and not null validation for adding new pet"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java`
-
 ### `5cfd482` removed default profile and replaced with "jpa"
 
-- score: 50
+- score: 42
 - archetype: backend_api
 - candidate quality: questionable
 - candidate quality reason: Candidate is feature-like but the generated prompt may need review.
@@ -55,7 +39,7 @@
 - prompt quality reason: Subject is usable but not strongly feature-like.
 - included in generated cases: False
 - changed files: 3
-- categories: backend_service, other, tests
+- categories: backend_service, config_build, other, tests
 - prompt: removed default profile and replaced with "jpa"
 - needs manual prompt: False
 - suggested matrix case id: `backend_api_5cfd482_removed_default_profile_and_replaced_with_jpa`
@@ -90,24 +74,6 @@
   - `src/test/java/org/springframework/samples/petclinic/web/PetControllerTests.java`
   - `src/test/java/org/springframework/samples/petclinic/web/VetControllerTests.java`
   - `src/test/java/org/springframework/samples/petclinic/web/VisitControllerTests.java`
-
-### `4c40375` Include petId in error message instead of null value
-
-- score: 40
-- archetype: backend_api
-- candidate quality: questionable
-- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
-- prompt quality: medium
-- prompt quality reason: Subject is usable but not strongly feature-like.
-- included in generated cases: False
-- changed files: 1
-- categories: backend_api
-- prompt: Include petId in error message instead of null value
-- needs manual prompt: False
-- suggested matrix case id: `backend_api_4c40375_include_petid_in_error_message_instead_of_null_value`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 4c40375 --prompt "Include petId in error message instead of null value"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/web/api/VisitResource.java`
 
 ### `67ae72f` Remove public to methods from the ClinicService
 
@@ -293,6 +259,307 @@
   - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
 
 
+## backend_search_query
+
+### `e7f6899` owners search has been case insensitive
+
+- score: 60
+- archetype: backend_search_query
+- candidate quality: good
+- candidate quality reason: Candidate has a useful feature archetype and descriptive prompt.
+- prompt quality: high
+- prompt quality reason: Subject is descriptive and feature-like.
+- included in generated cases: True
+- changed files: 1
+- categories: persistence
+- prompt: owners search has been case insensitive
+- needs manual prompt: False
+- suggested matrix case id: `backend_search_query_e7f6899_owners_search_has_been_case_insensitive`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit e7f6899 --prompt "owners search has been case insensitive"`
+- first changed files:
+  - `src/main/resources/db/hsqldb/initDB.sql`
+
+
+## backend_validation_change
+
+### `af31104` add max range and not null validation for adding new pet
+
+- score: 60
+- archetype: backend_validation_change
+- candidate quality: good
+- candidate quality reason: Candidate has a useful feature archetype and descriptive prompt.
+- prompt quality: high
+- prompt quality reason: Subject is descriptive and feature-like.
+- included in generated cases: True
+- changed files: 1
+- categories: backend_api
+- prompt: add max range and not null validation for adding new pet
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_af31104_add_max_range_and_not_null_validation_for_adding_new_pet`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit af31104 --prompt "add max range and not null validation for adding new pet"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java`
+
+### `c758321` add regex validation for string input
+
+- score: 60
+- archetype: backend_validation_change
+- candidate quality: good
+- candidate quality reason: Candidate has a useful feature archetype and descriptive prompt.
+- prompt quality: high
+- prompt quality reason: Subject is descriptive and feature-like.
+- included in generated cases: True
+- changed files: 1
+- categories: persistence
+- prompt: add regex validation for string input
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_c758321_add_regex_validation_for_string_input`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit c758321 --prompt "add regex validation for string input"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/model/Person.java`
+
+### `eb6f934` migrate to webjars for frontend resource management
+
+- score: 52
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 7
+- categories: config_build, other
+- prompt: migrate to webjars for frontend resource management
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_eb6f934_migrate_to_webjars_for_frontend_resource_management`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit eb6f934 --prompt "migrate to webjars for frontend resource management"`
+- first changed files:
+  - `pom.xml`
+  - `src/main/webapp/WEB-INF/tags/footer.tag`
+  - `src/main/webapp/WEB-INF/tags/htmlHeader.tag`
+  - `src/main/webapp/bower_components/bower.json`
+  - `src/main/webapp/resources/.gitignore`
+  - `src/main/webapp/resources/css/jquery-ui.theme.min.css`
+  - `src/main/webapp/resources/less/petclinic.less`
+
+### `4bb829c` Fix #101 display the pet type when using the JDBC profile
+
+- score: 50
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 3
+- categories: backend_service, other, persistence, tests
+- prompt: Fix #101 display the pet type when using the JDBC profile
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_4bb829c_fix_101_display_the_pet_type_when_using_the_jdbc_profile`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 4bb829c --prompt "Fix #101 display the pet type when using the JDBC profile"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java`
+  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
+  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
+
+### `ad3d322` Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck
+
+- score: 50
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 5
+- categories: backend_service, other, persistence, tests
+- prompt: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_ad3d322_fising_squid_s2970_squid_s1192_squid_s1488_squid_uselessparenthesescheck`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit ad3d322 --prompt "Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java`
+  - `src/main/java/org/springframework/samples/petclinic/web/OwnerController.java`
+  - `src/main/java/org/springframework/samples/petclinic/web/PetController.java`
+  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
+  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
+
+### `35a179f` latest versions and imports cleanup
+
+- score: 42
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 4
+- categories: backend_service, config_build, persistence, tests
+- prompt: latest versions and imports cleanup
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_35a179f_latest_versions_and_imports_cleanup`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 35a179f --prompt "latest versions and imports cleanup"`
+- first changed files:
+  - `pom.xml`
+  - `src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java`
+  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
+  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
+
+### `1a85b44` fix regex validation issue for string input
+
+- score: 40
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 1
+- categories: persistence
+- prompt: fix regex validation issue for string input
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_1a85b44_fix_regex_validation_issue_for_string_input`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 1a85b44 --prompt "fix regex validation issue for string input"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/model/Person.java`
+
+### `4c40375` Include petId in error message instead of null value
+
+- score: 40
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 1
+- categories: backend_api
+- prompt: Include petId in error message instead of null value
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_4c40375_include_petid_in_error_message_instead_of_null_value`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 4c40375 --prompt "Include petId in error message instead of null value"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/web/api/VisitResource.java`
+
+### `076a124` Fixes #37 with other default locale than english
+
+- score: 30
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 1
+- categories: persistence, tests
+- prompt: Fixes #37 with other default locale than english
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_076a124_fixes_37_with_other_default_locale_than_english`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 076a124 --prompt "Fixes #37 with other default locale than english"`
+- first changed files:
+  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
+
+### `694390d` migrated assertion to assertJ
+
+- score: 30
+- archetype: backend_validation_change
+- candidate quality: questionable
+- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 1
+- categories: persistence, tests
+- prompt: migrated assertion to assertJ
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_694390d_migrated_assertion_to_assertj`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 694390d --prompt "migrated assertion to assertJ"`
+- first changed files:
+  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
+
+### `80ff54a` Fix #89 Web layer: use @Valid whenever possible
+
+- score: 20
+- archetype: backend_validation_change
+- candidate quality: reject
+- candidate quality reason: Changed files do not map to a product-code surface.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 2
+- categories: other
+- prompt: Fix #89 Web layer: use @Valid whenever possible
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_80ff54a_fix_89_web_layer_use_valid_whenever_possible`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 80ff54a --prompt "Fix #89 Web layer: use @Valid whenever possible"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/web/PetController.java`
+  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
+
+### `34d8ca4` chaining validation so we can see multiple error messages when there are multiple validation errors
+
+- score: 0
+- archetype: backend_validation_change
+- candidate quality: reject
+- candidate quality reason: Changed files do not map to a product-code surface.
+- prompt quality: medium
+- prompt quality reason: Subject is usable but not strongly feature-like.
+- included in generated cases: False
+- changed files: 1
+- categories: other
+- prompt: chaining validation so we can see multiple error messages when there are multiple validation errors
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_34d8ca4_chaining_validation_so_we_can_see_multiple_error_messages_when_there_are_multipl`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 34d8ca4 --prompt "chaining validation so we can see multiple error messages when there are multiple validation errors"`
+- first changed files:
+  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
+
+### `5c9ab6b` test methods:used should/shouldNot
+
+- score: -20
+- archetype: backend_validation_change
+- candidate quality: reject
+- candidate quality reason: Prompt quality is too low for an automatic replay benchmark case.
+- prompt quality: low
+- prompt quality reason: Subject focuses on tests, docs, comments, or build tooling.
+- included in generated cases: False
+- changed files: 7
+- categories: backend_service, other, persistence, tests
+- prompt: test methods:used should/shouldNot
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_5c9ab6b_test_methods_used_should_shouldnot`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 5c9ab6b --prompt "test methods:used should/shouldNot"`
+- first changed files:
+  - `sonar-project.properties`
+  - `src/main/java/org/springframework/samples/petclinic/model/PetType.java`
+  - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcVetRepositoryImpl.java`
+  - `src/main/java/org/springframework/samples/petclinic/service/ClinicService.java`
+  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
+  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
+  - `src/test/java/org/springframework/samples/petclinic/web/VisitsViewTests.java`
+
+### `1dfc3b7` Migrated test assertions to AssertJ
+
+- score: -28
+- archetype: backend_validation_change
+- candidate quality: reject
+- candidate quality reason: Prompt quality is too low for an automatic replay benchmark case.
+- prompt quality: low
+- prompt quality reason: Subject focuses on tests, docs, comments, or build tooling.
+- included in generated cases: False
+- changed files: 4
+- categories: backend_service, config_build, persistence, tests
+- prompt: Migrated test assertions to AssertJ
+- needs manual prompt: False
+- suggested matrix case id: `backend_validation_change_1dfc3b7_migrated_test_assertions_to_assertj`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 1dfc3b7 --prompt "Migrated test assertions to AssertJ"`
+- first changed files:
+  - `pom.xml`
+  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
+  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
+  - `src/test/java/org/springframework/samples/petclinic/web/VisitsViewTests.java`
+
+
 ## config_build
 
 ### `1e412c6` Add some missing trimDirectiveWhitespaces on JSPs
@@ -465,24 +732,6 @@
 - first changed files:
   - `src/main/webapp/WEB-INF/jsp/vets/vetList.jsp`
 
-### `cb6bd87` Putting encoding filter first per #80
-
-- score: -10
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 1
-- categories: other
-- prompt: Putting encoding filter first per #80
-- needs manual prompt: False
-- suggested matrix case id: `config_build_cb6bd87_putting_encoding_filter_first_per_80`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit cb6bd87 --prompt "Putting encoding filter first per #80"`
-- first changed files:
-  - `src/main/webapp/WEB-INF/web.xml`
-
 ### `dd552f4` Fix #108 owner update
 
 - score: -10
@@ -519,47 +768,6 @@
 - first changed files:
   - `src/main/java/org/springframework/samples/petclinic/web/OwnerController.java`
   - `src/main/java/org/springframework/samples/petclinic/web/PetController.java`
-
-### `80ff54a` Fix #89 Web layer: use @Valid whenever possible
-
-- score: -10
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 2
-- categories: other
-- prompt: Fix #89 Web layer: use @Valid whenever possible
-- needs manual prompt: False
-- suggested matrix case id: `config_build_80ff54a_fix_89_web_layer_use_valid_whenever_possible`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 80ff54a --prompt "Fix #89 Web layer: use @Valid whenever possible"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/web/PetController.java`
-  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
-
-### `f7498c7` Removed HTTP PUT method - it is not supported in JSP 2.3
-
-- score: -10
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 5
-- categories: other
-- prompt: Removed HTTP PUT method - it is not supported in JSP 2.3
-- needs manual prompt: False
-- suggested matrix case id: `config_build_f7498c7_removed_http_put_method_it_is_not_supported_in_jsp_2_3`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit f7498c7 --prompt "Removed HTTP PUT method - it is not supported in JSP 2.3"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/web/OwnerController.java`
-  - `src/main/java/org/springframework/samples/petclinic/web/PetController.java`
-  - `src/main/webapp/WEB-INF/jsp/owners/createOrUpdateOwnerForm.jsp`
-  - `src/main/webapp/WEB-INF/jsp/pets/createOrUpdatePetForm.jsp`
-  - `src/main/webapp/WEB-INF/web.xml`
 
 ### `cb0504e` #92 add some comments to switch from HSQLDB to MySQL
 
@@ -678,25 +886,6 @@
   - `pom.xml`
   - `src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java`
 
-### `c4b9b0b` migrated to the latest version of jquery and jquery-ui
-
-- score: -18
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 2
-- categories: config_build, other
-- prompt: migrated to the latest version of jquery and jquery-ui
-- needs manual prompt: False
-- suggested matrix case id: `config_build_c4b9b0b_migrated_to_the_latest_version_of_jquery_and_jquery_ui`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit c4b9b0b --prompt "migrated to the latest version of jquery and jquery-ui"`
-- first changed files:
-  - `pom.xml`
-  - `src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp`
-
 ### `ce7e6e8` updated URL on cloud foundry
 
 - score: -18
@@ -777,7 +966,7 @@
   - `src/main/webapp/WEB-INF/jsp/vets/vetList.jsp`
   - `src/main/webapp/WEB-INF/web.xml`
 
-### `eb6f934` migrate to webjars for frontend resource management
+### `f7498c7` Removed HTTP PUT method - it is not supported in JSP 2.3
 
 - score: -18
 - archetype: config_build
@@ -786,20 +975,18 @@
 - prompt quality: low
 - prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
 - included in generated cases: False
-- changed files: 7
+- changed files: 5
 - categories: config_build, other
-- prompt: migrate to webjars for frontend resource management
+- prompt: Removed HTTP PUT method - it is not supported in JSP 2.3
 - needs manual prompt: False
-- suggested matrix case id: `config_build_eb6f934_migrate_to_webjars_for_frontend_resource_management`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit eb6f934 --prompt "migrate to webjars for frontend resource management"`
+- suggested matrix case id: `config_build_f7498c7_removed_http_put_method_it_is_not_supported_in_jsp_2_3`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit f7498c7 --prompt "Removed HTTP PUT method - it is not supported in JSP 2.3"`
 - first changed files:
-  - `pom.xml`
-  - `src/main/webapp/WEB-INF/tags/footer.tag`
-  - `src/main/webapp/WEB-INF/tags/htmlHeader.tag`
-  - `src/main/webapp/bower_components/bower.json`
-  - `src/main/webapp/resources/.gitignore`
-  - `src/main/webapp/resources/css/jquery-ui.theme.min.css`
-  - `src/main/webapp/resources/less/petclinic.less`
+  - `src/main/java/org/springframework/samples/petclinic/web/OwnerController.java`
+  - `src/main/java/org/springframework/samples/petclinic/web/PetController.java`
+  - `src/main/webapp/WEB-INF/jsp/owners/createOrUpdateOwnerForm.jsp`
+  - `src/main/webapp/WEB-INF/jsp/pets/createOrUpdatePetForm.jsp`
+  - `src/main/webapp/WEB-INF/web.xml`
 
 ### `3f0bfbb` updates logo
 
@@ -837,6 +1024,24 @@
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 858a501 --prompt "Add travis config for maven and node"`
 - first changed files:
   - `.travis.yml`
+
+### `87d025f` fixed url for jquery-ui. There was typo "query" instaed of "jquery" and file cannot be loaded
+
+- score: -25
+- archetype: config_build
+- candidate quality: reject
+- candidate quality reason: Build/dependency/config-only changes are excluded by default.
+- prompt quality: low
+- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
+- included in generated cases: False
+- changed files: 1
+- categories: other
+- prompt: fixed url for jquery-ui. There was typo "query" instaed of "jquery" and file cannot be loaded
+- needs manual prompt: False
+- suggested matrix case id: `config_build_87d025f_fixed_url_for_jquery_ui_there_was_typo_query_instaed_of_jquery_and_file_cannot_b`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 87d025f --prompt "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"`
+- first changed files:
+  - `src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp`
 
 ### `e9f5f7b` #164 Add main class required by the spring-boot-maven-plugin
 
@@ -966,24 +1171,6 @@
 - first changed files:
   - `travis.yml`
 
-### `34d8ca4` chaining validation so we can see multiple error messages when there are multiple validation errors
-
-- score: -30
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 1
-- categories: other
-- prompt: chaining validation so we can see multiple error messages when there are multiple validation errors
-- needs manual prompt: False
-- suggested matrix case id: `config_build_34d8ca4_chaining_validation_so_we_can_see_multiple_error_messages_when_there_are_multipl`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 34d8ca4 --prompt "chaining validation so we can see multiple error messages when there are multiple validation errors"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
-
 ### `3e45127` Sonar review: made code more readable
 
 - score: -30
@@ -1001,24 +1188,6 @@
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 3e45127 --prompt "Sonar review: made code more readable"`
 - first changed files:
   - `src/main/java/org/springframework/samples/petclinic/util/CallMonitoringAspect.java`
-
-### `3e8829f` adding explicit reference to default profile because it doesn't seem to work on on some environments
-
-- score: -30
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 1
-- categories: other
-- prompt: adding explicit reference to default profile because it doesn't seem to work on on some environments
-- needs manual prompt: False
-- suggested matrix case id: `config_build_3e8829f_adding_explicit_reference_to_default_profile_because_it_doesn_t_seem_to_work_on_`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 3e8829f --prompt "adding explicit reference to default profile because it doesn't seem to work on on some environments"`
-- first changed files:
-  - `src/main/webapp/WEB-INF/web.xml`
 
 ### `54b7d87` Fixing log back warning per #59
 
@@ -1145,24 +1314,6 @@
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 81fac33 --prompt "#96 change EditorConfig in order to impact other files than Java and XML (i.e.. jsp and html pages)"`
 - first changed files:
   - `.editorconfig`
-
-### `87d025f` fixed url for jquery-ui. There was typo "query" instaed of "jquery" and file cannot be loaded
-
-- score: -30
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 1
-- categories: other
-- prompt: fixed url for jquery-ui. There was typo "query" instaed of "jquery" and file cannot be loaded
-- needs manual prompt: False
-- suggested matrix case id: `config_build_87d025f_fixed_url_for_jquery_ui_there_was_typo_query_instaed_of_jquery_and_file_cannot_b`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 87d025f --prompt "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"`
-- first changed files:
-  - `src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp`
 
 ### `91ed548` removing xdd version number
 
@@ -1398,6 +1549,25 @@
 - first changed files:
   - `src/main/webapp/WEB-INF/tags/menu.tag`
 
+### `c4b9b0b` migrated to the latest version of jquery and jquery-ui
+
+- score: -33
+- archetype: config_build
+- candidate quality: reject
+- candidate quality reason: Build/dependency/config-only changes are excluded by default.
+- prompt quality: low
+- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
+- included in generated cases: False
+- changed files: 2
+- categories: config_build, other
+- prompt: migrated to the latest version of jquery and jquery-ui
+- needs manual prompt: False
+- suggested matrix case id: `config_build_c4b9b0b_migrated_to_the_latest_version_of_jquery_and_jquery_ui`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit c4b9b0b --prompt "migrated to the latest version of jquery and jquery-ui"`
+- first changed files:
+  - `pom.xml`
+  - `src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp`
+
 ### `5a6c108` Added comments when CallMonitoringAspect called
 
 - score: -33
@@ -1543,6 +1713,24 @@
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit c18c845 --prompt "Add missing json-simple dependency"`
 - first changed files:
   - `pom.xml`
+
+### `cb6bd87` Putting encoding filter first per #80
+
+- score: -43
+- archetype: config_build
+- candidate quality: reject
+- candidate quality reason: Build/dependency/config-only changes are excluded by default.
+- prompt quality: low
+- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
+- included in generated cases: False
+- changed files: 1
+- categories: config_build
+- prompt: Putting encoding filter first per #80
+- needs manual prompt: False
+- suggested matrix case id: `config_build_cb6bd87_putting_encoding_filter_first_per_80`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit cb6bd87 --prompt "Putting encoding filter first per #80"`
+- first changed files:
+  - `src/main/webapp/WEB-INF/web.xml`
 
 ### `e49ed43` Add Spring Boot devtools
 
@@ -2015,6 +2203,24 @@
 - first changed files:
   - `client/package-lock.json`
 
+### `3e8829f` adding explicit reference to default profile because it doesn't seem to work on on some environments
+
+- score: -63
+- archetype: config_build
+- candidate quality: reject
+- candidate quality reason: Build/dependency/config-only changes are excluded by default.
+- prompt quality: low
+- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
+- included in generated cases: False
+- changed files: 1
+- categories: config_build
+- prompt: adding explicit reference to default profile because it doesn't seem to work on on some environments
+- needs manual prompt: False
+- suggested matrix case id: `config_build_3e8829f_adding_explicit_reference_to_default_profile_because_it_doesn_t_seem_to_work_on_`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 3e8829f --prompt "adding explicit reference to default profile because it doesn't seem to work on on some environments"`
+- first changed files:
+  - `src/main/webapp/WEB-INF/web.xml`
+
 ### `43216fb` migrated to Hibernate 4.3.1
 
 - score: -63
@@ -2066,24 +2272,6 @@
 - needs manual prompt: False
 - suggested matrix case id: `config_build_50f0bc9_migrated_to_logback_1_1_0`
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 50f0bc9 --prompt "migrated to LogBack 1.1.0"`
-- first changed files:
-  - `pom.xml`
-
-### `515f8d9` Fix jQuery version
-
-- score: -63
-- archetype: config_build
-- candidate quality: reject
-- candidate quality reason: Build/dependency/config-only changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 1
-- categories: config_build
-- prompt: Fix jQuery version
-- needs manual prompt: False
-- suggested matrix case id: `config_build_515f8d9_fix_jquery_version`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 515f8d9 --prompt "Fix jQuery version"`
 - first changed files:
   - `pom.xml`
 
@@ -2248,6 +2436,24 @@
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 74abfb1 --prompt "migrated to Spring 3.2.5"`
 - first changed files:
   - `pom.xml`
+
+### `7fe5184` Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic
+
+- score: -63
+- archetype: config_build
+- candidate quality: reject
+- candidate quality reason: Build/dependency/config-only changes are excluded by default.
+- prompt quality: low
+- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
+- included in generated cases: False
+- changed files: 1
+- categories: config_build
+- prompt: Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic
+- needs manual prompt: False
+- suggested matrix case id: `config_build_7fe5184_servlet_3_0_jsp_2_2_and_el_2_2_are_the_minimum_required_to_deploy_petclinic`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 7fe5184 --prompt "Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic"`
+- first changed files:
+  - `src/main/webapp/WEB-INF/web.xml`
 
 ### `835f53d` Remove spring-boot dependencies
 
@@ -2879,6 +3085,24 @@
 - first changed files:
   - `pom.xml`
 
+### `08d84ed` added comment for welcome file
+
+- score: -78
+- archetype: config_build
+- candidate quality: reject
+- candidate quality reason: Build/dependency/config-only changes are excluded by default.
+- prompt quality: low
+- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
+- included in generated cases: False
+- changed files: 1
+- categories: config_build
+- prompt: added comment for welcome file
+- needs manual prompt: False
+- suggested matrix case id: `config_build_08d84ed_added_comment_for_welcome_file`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 08d84ed --prompt "added comment for welcome file"`
+- first changed files:
+  - `src/main/webapp/WEB-INF/web.xml`
+
 ### `2f3e035` The maven-war-plugin does not failed on missing web.xml
 
 - score: -78
@@ -2894,6 +3118,24 @@
 - needs manual prompt: False
 - suggested matrix case id: `config_build_2f3e035_the_maven_war_plugin_does_not_failed_on_missing_web_xml`
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 2f3e035 --prompt "The maven-war-plugin does not failed on missing web.xml"`
+- first changed files:
+  - `pom.xml`
+
+### `515f8d9` Fix jQuery version
+
+- score: -78
+- archetype: config_build
+- candidate quality: reject
+- candidate quality reason: Build/dependency/config-only changes are excluded by default.
+- prompt quality: low
+- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
+- included in generated cases: False
+- changed files: 1
+- categories: config_build
+- prompt: Fix jQuery version
+- needs manual prompt: False
+- suggested matrix case id: `config_build_515f8d9_fix_jquery_version`
+- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 515f8d9 --prompt "Fix jQuery version"`
 - first changed files:
   - `pom.xml`
 
@@ -3174,24 +3416,6 @@
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit ca8781b --prompt "#129 add travis-ci \"build status\" badge"`
 - first changed files:
   - `readme.md`
-
-### `08d84ed` added comment for welcome file
-
-- score: -45
-- archetype: docs_comments
-- candidate quality: reject
-- candidate quality reason: Docs, comments, or Javadoc changes are not product-feature planning cases.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 1
-- categories: other
-- prompt: added comment for welcome file
-- needs manual prompt: False
-- suggested matrix case id: `docs_comments_08d84ed_added_comment_for_welcome_file`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 08d84ed --prompt "added comment for welcome file"`
-- first changed files:
-  - `src/main/webapp/WEB-INF/web.xml`
 
 ### `0fdd150` Removing deprecated javadoc
 
@@ -3941,62 +4165,8 @@
   - `pom.xml`
   - `src/main/docker/Dockerfile`
 
-### `7fe5184` Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic
-
-- score: -30
-- archetype: infra_deployment
-- candidate quality: reject
-- candidate quality reason: Deployment or infrastructure changes are excluded by default.
-- prompt quality: low
-- prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
-- included in generated cases: False
-- changed files: 1
-- categories: other
-- prompt: Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic
-- needs manual prompt: False
-- suggested matrix case id: `infra_deployment_7fe5184_servlet_3_0_jsp_2_2_and_el_2_2_are_the_minimum_required_to_deploy_petclinic`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 7fe5184 --prompt "Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic"`
-- first changed files:
-  - `src/main/webapp/WEB-INF/web.xml`
-
 
 ## persistence_data
-
-### `c758321` add regex validation for string input
-
-- score: 60
-- archetype: persistence_data
-- candidate quality: good
-- candidate quality reason: Candidate has a useful feature archetype and descriptive prompt.
-- prompt quality: high
-- prompt quality reason: Subject is descriptive and feature-like.
-- included in generated cases: True
-- changed files: 1
-- categories: persistence
-- prompt: add regex validation for string input
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_c758321_add_regex_validation_for_string_input`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit c758321 --prompt "add regex validation for string input"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/model/Person.java`
-
-### `e7f6899` owners search has been case insensitive
-
-- score: 60
-- archetype: persistence_data
-- candidate quality: good
-- candidate quality reason: Candidate has a useful feature archetype and descriptive prompt.
-- prompt quality: high
-- prompt quality reason: Subject is descriptive and feature-like.
-- included in generated cases: True
-- changed files: 1
-- categories: persistence
-- prompt: owners search has been case insensitive
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_e7f6899_owners_search_has_been_case_insensitive`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit e7f6899 --prompt "owners search has been case insensitive"`
-- first changed files:
-  - `src/main/resources/db/hsqldb/initDB.sql`
 
 ### `91d19d1` #92 Fix column 'visits.id' not found on MySql
 
@@ -4185,26 +4355,6 @@
   - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPetRepositoryImpl.java`
   - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcVetRepositoryImpl.java`
 
-### `4bb829c` Fix #101 display the pet type when using the JDBC profile
-
-- score: 50
-- archetype: persistence_data
-- candidate quality: questionable
-- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
-- prompt quality: medium
-- prompt quality reason: Subject is usable but not strongly feature-like.
-- included in generated cases: False
-- changed files: 3
-- categories: backend_service, other, persistence, tests
-- prompt: Fix #101 display the pet type when using the JDBC profile
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_4bb829c_fix_101_display_the_pet_type_when_using_the_jdbc_profile`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 4bb829c --prompt "Fix #101 display the pet type when using the JDBC profile"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java`
-  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
-  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
-
 ### `92de655` Fix #111 For pet's birthday we are now using jodatime LocalDate instead of DateTime
 
 - score: 50
@@ -4223,28 +4373,6 @@
 - first changed files:
   - `src/main/java/org/springframework/samples/petclinic/model/Pet.java`
   - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPetRowMapper.java`
-  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
-
-### `ad3d322` Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck
-
-- score: 50
-- archetype: persistence_data
-- candidate quality: questionable
-- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
-- prompt quality: medium
-- prompt quality reason: Subject is usable but not strongly feature-like.
-- included in generated cases: False
-- changed files: 5
-- categories: backend_service, other, persistence, tests
-- prompt: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_ad3d322_fising_squid_s2970_squid_s1192_squid_s1488_squid_uselessparenthesescheck`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit ad3d322 --prompt "Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java`
-  - `src/main/java/org/springframework/samples/petclinic/web/OwnerController.java`
-  - `src/main/java/org/springframework/samples/petclinic/web/PetController.java`
-  - `src/main/java/org/springframework/samples/petclinic/web/PetValidator.java`
   - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
 
 ### `ca755be` Improvements in VisitRepository.findByPetId implementation.
@@ -4269,27 +4397,6 @@
   - `src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java`
   - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
 
-### `35a179f` latest versions and imports cleanup
-
-- score: 42
-- archetype: persistence_data
-- candidate quality: questionable
-- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
-- prompt quality: medium
-- prompt quality reason: Subject is usable but not strongly feature-like.
-- included in generated cases: False
-- changed files: 4
-- categories: backend_service, config_build, persistence, tests
-- prompt: latest versions and imports cleanup
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_35a179f_latest_versions_and_imports_cleanup`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 35a179f --prompt "latest versions and imports cleanup"`
-- first changed files:
-  - `pom.xml`
-  - `src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java`
-  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
-  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
-
 ### `078bdc6` #149 JdbcPetRepositoryImpl:: findById() simplification
 
 - score: 40
@@ -4307,24 +4414,6 @@
 - suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 078bdc6 --prompt "#149 JdbcPetRepositoryImpl:: findById() simplification"`
 - first changed files:
   - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPetRepositoryImpl.java`
-
-### `1a85b44` fix regex validation issue for string input
-
-- score: 40
-- archetype: persistence_data
-- candidate quality: questionable
-- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
-- prompt quality: medium
-- prompt quality reason: Subject is usable but not strongly feature-like.
-- included in generated cases: False
-- changed files: 1
-- categories: persistence
-- prompt: fix regex validation issue for string input
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_1a85b44_fix_regex_validation_issue_for_string_input`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 1a85b44 --prompt "fix regex validation issue for string input"`
-- first changed files:
-  - `src/main/java/org/springframework/samples/petclinic/model/Person.java`
 
 ### `4c01d60` removing Serializable because it creates a lot of warnings
 
@@ -4434,42 +4523,6 @@
 - first changed files:
   - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcVisitRepositoryImpl.java`
 
-### `076a124` Fixes #37 with other default locale than english
-
-- score: 30
-- archetype: persistence_data
-- candidate quality: questionable
-- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
-- prompt quality: medium
-- prompt quality reason: Subject is usable but not strongly feature-like.
-- included in generated cases: False
-- changed files: 1
-- categories: persistence, tests
-- prompt: Fixes #37 with other default locale than english
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_076a124_fixes_37_with_other_default_locale_than_english`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 076a124 --prompt "Fixes #37 with other default locale than english"`
-- first changed files:
-  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
-
-### `694390d` migrated assertion to assertJ
-
-- score: 30
-- archetype: persistence_data
-- candidate quality: questionable
-- candidate quality reason: Candidate is feature-like but the generated prompt may need review.
-- prompt quality: medium
-- prompt quality reason: Subject is usable but not strongly feature-like.
-- included in generated cases: False
-- changed files: 1
-- categories: persistence, tests
-- prompt: migrated assertion to assertJ
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_694390d_migrated_assertion_to_assertj`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 694390d --prompt "migrated assertion to assertJ"`
-- first changed files:
-  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
-
 ### `74f683a` Fixed typo
 
 - score: 30
@@ -4524,30 +4577,6 @@
 - first changed files:
   - `src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java`
 
-### `5c9ab6b` test methods:used should/shouldNot
-
-- score: -20
-- archetype: persistence_data
-- candidate quality: reject
-- candidate quality reason: Prompt quality is too low for an automatic replay benchmark case.
-- prompt quality: low
-- prompt quality reason: Subject focuses on tests, docs, comments, or build tooling.
-- included in generated cases: False
-- changed files: 7
-- categories: backend_service, other, persistence, tests
-- prompt: test methods:used should/shouldNot
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_5c9ab6b_test_methods_used_should_shouldnot`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 5c9ab6b --prompt "test methods:used should/shouldNot"`
-- first changed files:
-  - `sonar-project.properties`
-  - `src/main/java/org/springframework/samples/petclinic/model/PetType.java`
-  - `src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcVetRepositoryImpl.java`
-  - `src/main/java/org/springframework/samples/petclinic/service/ClinicService.java`
-  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
-  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
-  - `src/test/java/org/springframework/samples/petclinic/web/VisitsViewTests.java`
-
 ### `23824f2` Integrate Resource classes from 'angularjs' branch. Tests not working yet.
 
 - score: -20
@@ -4572,27 +4601,6 @@
   - `src/test/java/org/springframework/samples/petclinic/web/AbstractWebResourceTests.java`
   - `src/test/java/org/springframework/samples/petclinic/web/PetResourceTests.java`
   - `src/test/java/org/springframework/samples/petclinic/web/VetResourceTests.java`
-
-### `1dfc3b7` Migrated test assertions to AssertJ
-
-- score: -28
-- archetype: persistence_data
-- candidate quality: reject
-- candidate quality reason: Prompt quality is too low for an automatic replay benchmark case.
-- prompt quality: low
-- prompt quality reason: Subject focuses on tests, docs, comments, or build tooling.
-- included in generated cases: False
-- changed files: 4
-- categories: backend_service, config_build, persistence, tests
-- prompt: Migrated test assertions to AssertJ
-- needs manual prompt: False
-- suggested matrix case id: `persistence_data_1dfc3b7_migrated_test_assertions_to_assertj`
-- suggested replay command: `python3 scripts/replay_git_history_eval.py --repo-path eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs --commit 1dfc3b7 --prompt "Migrated test assertions to AssertJ"`
-- first changed files:
-  - `pom.xml`
-  - `src/test/java/org/springframework/samples/petclinic/model/ValidatorTests.java`
-  - `src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java`
-  - `src/test/java/org/springframework/samples/petclinic/web/VisitsViewTests.java`
 
 
 ## refactor_move
@@ -4644,7 +4652,7 @@
 - score: -10
 - archetype: refactor_move
 - candidate quality: reject
-- candidate quality reason: Package moves and refactors are not feature-planning replay cases.
+- candidate quality reason: Changed files do not map to a product-code surface.
 - prompt quality: low
 - prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
 - included in generated cases: False
@@ -4671,7 +4679,7 @@
 - score: -10
 - archetype: refactor_move
 - candidate quality: reject
-- candidate quality reason: Package moves and refactors are not feature-planning replay cases.
+- candidate quality reason: Changed files do not map to a product-code surface.
 - prompt quality: low
 - prompt quality reason: Subject is vague or describes config/docs/refactor/infra work rather than a product feature.
 - included in generated cases: False

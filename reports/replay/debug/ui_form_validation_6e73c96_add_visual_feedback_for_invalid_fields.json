@@ -25,6 +25,7 @@
       "frontend_type": [],
       "api_contract": [],
       "api_controller": [],
+      "api_dto": [],
       "service_layer": [],
       "domain_model": [],
       "repository": [],
@@ -88,6 +89,7 @@
       "frontend_type": [],
       "api_contract": [],
       "api_controller": [],
+      "api_dto": [],
       "service_layer": [],
       "domain_model": [],
       "repository": [],
@@ -328,7 +330,8 @@
       }
     },
     "graph_node_counts": {
-      "api_controller": 14,
+      "api_controller": 9,
+      "api_dto": 5,
       "app_shell": 1,
       "domain_model": 16,
       "event_consumer": 1,
@@ -342,7 +345,7 @@
       "shared_component": 6,
       "static_asset": 1
     },
-    "graph_edge_count": 56,
+    "graph_edge_count": 50,
     "relevant_tokens": [
       "add",
       "feedback",
@@ -388,7 +391,7 @@
       {
         "repo_name": "spring-petclinic-reactjs",
         "path": "src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java",
-        "node_type": "api_controller",
+        "node_type": "api_dto",
         "domain_tokens": [
           "owner",
           "resource",
@@ -651,13 +654,13 @@
   },
   "failure_classification": {
     "labels": [
+      "domain_light_but_archetype_clear",
       "exact_match_miss_but_category_match",
       "graph_found_surface_but_proposal_missed",
-      "planner_underpredicted",
-      "prompt_too_vague"
+      "planner_underpredicted"
     ],
     "reasons": [
-      "Prompt did not produce clear feature intents or ownership.",
+      "Prompt lacks a strong domain token but has clear archetype terms.",
       "No predicted files were emitted.",
       "Plan produced null primary and implementation owners.",
       "propose-changes emitted no proposed changes.",
@@ -666,9 +669,9 @@
     ]
   },
   "diagnosis_summary": {
-    "likely_cause": "The prompt did not provide enough actionable product/surface intent.",
-    "recommended_fix_area": "prompt generation",
-    "why": "Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe suggestions matched categories but missed exact files. Source graph found relevant surfaces, but propose-changes emitted no files."
+    "likely_cause": "Relevant graph surfaces were found, but proposal emitted no useful file predictions.",
+    "recommended_fix_area": "propose-changes",
+    "why": "Prompt lacks a strong domain token but has clear archetype terms. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe suggestions matched categories but missed exact files. Source graph found relevant surfaces, but propose-changes emitted no files."
   },
   "reports": {
     "json": "reports/replay/debug/ui_form_validation_6e73c96_add_visual_feedback_for_invalid_fields.json",

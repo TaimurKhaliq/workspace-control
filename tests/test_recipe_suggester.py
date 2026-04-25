@@ -31,7 +31,10 @@ def _seed_workspace(tmp_path: Path, *, include_owners_page: bool = False) -> tup
     if include_owners_page:
         _write(repo / "client/src/components/owners/OwnersPage.tsx", "export function OwnersPage() { return null; }\n")
     _write(repo / "src/main/java/example/rest/OwnerRestController.java", "class OwnerRestController {}\n")
+    _write(repo / "src/main/java/example/web/api/OwnerRequest.java", "class OwnerRequest {}\n")
     _write(repo / "src/main/java/example/service/ClinicService.java", "class ClinicService {}\n")
+    _write(repo / "src/main/java/example/repository/OwnerRepository.java", "class OwnerRepository {}\n")
+    _write(repo / "src/main/java/example/model/Owner.java", "class Owner {}\n")
     return workspace, repo
 
 
@@ -98,6 +101,30 @@ def _write_recipes(learning_root: Path) -> None:
             planner_effectiveness=0.2,
             support_count=2,
         ),
+        ChangeRecipe(
+            id="petclinic_test_backend_validation_change",
+            target_id="petclinic-test",
+            recipe_type="backend_validation_change",
+            status="active",
+            trigger_terms=["validation", "range", "null"],
+            changed_node_types=["api_dto", "domain_model", "api_controller"],
+            modified_node_types=["api_dto", "domain_model"],
+            structural_confidence=0.9,
+            planner_effectiveness=0.1,
+            support_count=2,
+        ),
+        ChangeRecipe(
+            id="petclinic_test_backend_search_query",
+            target_id="petclinic-test",
+            recipe_type="backend_search_query",
+            status="active",
+            trigger_terms=["search", "query", "lookup"],
+            changed_node_types=["repository", "service_layer", "api_controller"],
+            modified_node_types=["repository", "service_layer"],
+            structural_confidence=0.88,
+            planner_effectiveness=0.1,
+            support_count=2,
+        ),
     ]
     path = learning_root / "petclinic-test/change_recipes.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -146,6 +173,15 @@ def test_recipe_matching_for_ui_form_validation(tmp_path: Path) -> None:
     assert any(action.node_type in {"form_component", "page_component"} for action in report.suggestions)
 
 
+def test_ui_form_validation_matches_without_domain_tokens(tmp_path: Path) -> None:
+    report = _service(tmp_path).suggest("petclinic-test", "Add visual feedback for invalid fields")
+
+    assert report.matched_recipes[0].recipe_type == "ui_form_validation"
+    reasons = " | ".join(report.matched_recipes[0].why_matched)
+    assert "form validation" in reasons
+    assert report.matched_recipes[0].score >= 25
+
+
 def test_recipe_matching_for_ui_shell_layout(tmp_path: Path) -> None:
     report = _service(tmp_path).suggest("petclinic-test", "Add Layout and Welcome page")
 
@@ -163,6 +199,26 @@ def test_no_recipe_match_returns_caveat(tmp_path: Path) -> None:
     assert report.matched_recipes == []
     assert report.suggestions == []
     assert any("No learned recipe" in caveat for caveat in report.caveats)
+
+
+def test_backend_search_query_suggests_repository_service_controller_nodes(tmp_path: Path) -> None:
+    report = _service(tmp_path).suggest("petclinic-test", "Owners search has been case insensitive")
+
+    assert report.matched_recipes[0].recipe_type == "backend_search_query"
+    node_types = {action.node_type for action in report.suggestions}
+    assert "repository" in node_types
+    assert "service_layer" in node_types
+    assert "api_controller" in node_types
+
+
+def test_backend_validation_change_suggests_validation_backend_nodes(tmp_path: Path) -> None:
+    report = _service(tmp_path).suggest("petclinic-test", "Add max range and not null validation for adding new owner")
+
+    assert report.matched_recipes[0].recipe_type == "backend_validation_change"
+    node_types = {action.node_type for action in report.suggestions}
+    assert "api_dto" in node_types
+    assert "domain_model" in node_types
+    assert "api_controller" in node_types
 
 
 def test_suggest_from_recipes_cli_outputs_json(tmp_path: Path, capsys) -> None:

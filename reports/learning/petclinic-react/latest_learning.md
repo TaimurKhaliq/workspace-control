@@ -6,38 +6,54 @@
 - previous last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - commits considered: 300
-- commits analyzed: 65
-- recipes discovered/updated: 6
-- validation results: 65
+- commits analyzed: 70
+- recipes discovered/updated: 8
+- validation results: 72
 
 ## Recipe Counts
 
-- active: 6
+- active: 8
 
 ## Recipes
 
-- `petclinic_react_backend_api_change` (backend_api_change, active, structural=0.83, planner=0.20, support=10, validations=10)
+- `petclinic_react_backend_api_change` (backend_api_change, active, structural=0.83, planner=0.12, support=8, validations=8)
   - variants: modified:service_layer, modified:service_layer; deleted:service_layer, modified:api_controller
   - created node types: -
-  - modified node types: service_layer, unknown, api_controller
+  - modified node types: service_layer, unknown, api_controller, api_dto
   - cochanges: service_layer + unknown
   - examples: 5cfd482: removed default profile and replaced with "jpa", 67ae72f: Remove public to methods from the ClinicService, 3f2d3ba: fix typo
   - promotion blocker: -
   - planner note: low planner effectiveness highlights a useful future planner improvement target
-- `petclinic_react_full_stack_ui_api` (full_stack_ui_api, active, structural=0.91, planner=0.32, support=11, validations=11)
-  - variants: created:api_controller+page_component; modified:frontend_component+route_config, created:frontend_component+frontend_type+page_component; modified:api_controller+frontend_component+frontend_type+route_config, created:page_component; modified:api_controller+domain_model+frontend_component+frontend_type+route_config
+- `petclinic_react_backend_search_query` (backend_search_query, active, structural=0.71, planner=0.00, support=3, validations=2)
+  - variants: unknown, modified:migration
+  - created node types: -
+  - modified node types: unknown, migration
+  - cochanges: -
+  - examples: cb6bd87: Putting encoding filter first per #80, e7f6899: owners search has been case insensitive, 87d025f: fixed url for jquery-ui. There was typo "query" instaed of "jquery" and file cannot be loaded
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target
+- `petclinic_react_backend_validation_change` (backend_validation_change, active, structural=0.72, planner=0.08, support=12, validations=12)
+  - variants: unknown, modified:domain_model, modified:domain_model+service_layer
+  - created node types: frontend_component, unknown
+  - modified node types: unknown, domain_model, service_layer, api_controller, repository
+  - cochanges: domain_model + service_layer, domain_model + unknown, service_layer + unknown
+  - examples: 34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors, 076a124: Fixes #37 with other default locale than english, 35a179f: latest versions and imports cleanup
+  - promotion blocker: -
+  - planner note: low planner effectiveness highlights a useful future planner improvement target
+- `petclinic_react_full_stack_ui_api` (full_stack_ui_api, active, structural=0.92, planner=0.32, support=11, validations=11)
+  - variants: created:api_controller+page_component; modified:frontend_component+route_config, created:frontend_component+frontend_type+page_component; modified:api_dto+frontend_component+frontend_type+route_config, created:page_component; modified:api_dto+domain_model+frontend_component+frontend_type+route_config
   - created node types: api_controller, page_component, unknown, frontend_component, frontend_type
-  - modified node types: frontend_component, route_config, api_controller, frontend_type, unknown
+  - modified node types: frontend_component, route_config, api_dto, frontend_type, unknown
   - cochanges: api_controller + frontend_component, api_controller + page_component, api_controller + route_config
   - examples: 7e3cd50: Add ErrorPage, d2017b8: Add FindOwnersPage, 3f55127: Add VetsPage
   - promotion blocker: -
   - planner note: low planner effectiveness highlights a useful future planner improvement target
-- `petclinic_react_persistence_data_change` (persistence_data_change, active, structural=0.95, planner=0.08, support=27, validations=26)
-  - variants: modified:domain_model, modified:repository, modified:domain_model+service_layer
+- `petclinic_react_persistence_data_change` (persistence_data_change, active, structural=0.95, planner=0.10, support=19, validations=21)
+  - variants: modified:domain_model, modified:repository, created:repository; modified:repository
   - created node types: repository
-  - modified node types: domain_model, repository, service_layer, unknown, migration
-  - cochanges: domain_model + service_layer, domain_model + unknown, service_layer + unknown
-  - examples: 4c01d60: removing Serializable because it creates a lot of warnings, 076a124: Fixes #37 with other default locale than english, 74f683a: Fixed typo
+  - modified node types: domain_model, repository, unknown, service_layer, migration
+  - cochanges: repository + unknown, domain_model + repository, domain_model + unknown
+  - examples: 4c01d60: removing Serializable because it creates a lot of warnings, 74f683a: Fixed typo, cc4ae96: removed deprecated Mapper in Jdbc
   - promotion blocker: -
   - planner note: low planner effectiveness highlights a useful future planner improvement target
 - `petclinic_react_ui_form_validation` (ui_form_validation, active, structural=0.96, planner=0.00, support=7, validations=6)

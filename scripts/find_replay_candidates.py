@@ -19,6 +19,8 @@ USEFUL_ARCHETYPES = (
     "ui_shell",
     "ui_page_add",
     "ui_form_validation",
+    "backend_validation_change",
+    "backend_search_query",
     "backend_api",
     "full_stack_ui_api",
     "persistence_data",
@@ -43,6 +45,8 @@ FEATURE_WORDS = {
     "page",
     "layout",
     "api",
+    "lookup",
+    "query",
 }
 VAGUE_SUBJECTS = {
     "cleanup",
@@ -65,6 +69,7 @@ LOW_VALUE_SUBJECT_WORDS = {
     "enzyme",
     "deployment",
     "javadoc",
+    "jquery",
     "jest",
     "instruction",
     "instructions",
@@ -99,6 +104,28 @@ FORM_VALIDATION_SUBJECT_WORDS = {
     "handling",
     "invalid",
     "validation",
+}
+BACKEND_VALIDATION_SUBJECT_WORDS = {
+    "constraint",
+    "constraints",
+    "max",
+    "min",
+    "notnull",
+    "null",
+    "range",
+    "regex",
+    "required",
+    "validation",
+}
+SEARCH_QUERY_SUBJECT_WORDS = {
+    "case",
+    "caseinsensitive",
+    "filter",
+    "find",
+    "insensitive",
+    "lookup",
+    "query",
+    "search",
 }
 REFACTOR_MOVE_WORDS = {
     "move",
@@ -380,7 +407,15 @@ def is_persistence_path(lowered: str, parts: set[str]) -> bool:
 
 
 def is_config_build_path(lowered: str, name: str) -> bool:
-    return name in LOCK_FILE_NAMES or name in {"pom.xml", "build.gradle", "settings.gradle", "package.json", "gradlew", "mvnw"}
+    return name in LOCK_FILE_NAMES or name in {
+        "pom.xml",
+        "build.gradle",
+        "settings.gradle",
+        "package.json",
+        "gradlew",
+        "mvnw",
+        "web.xml",
+    }
 
 
 def is_docs_path(lowered: str) -> bool:
@@ -451,6 +486,10 @@ def classify_archetype(
         return "ui_shell"
     if frontend and subject_words(subject_hint) & FORM_VALIDATION_SUBJECT_WORDS:
         return "full_stack_ui_api" if backend else "ui_form_validation"
+    if is_search_query_change(changed_files, subject_hint) and not frontend:
+        return "backend_search_query"
+    if is_backend_validation_change(changed_files, subject_hint) and not frontend:
+        return "backend_validation_change"
     if frontend and is_page_add_change(changed_files):
         return "full_stack_ui_api" if backend else "ui_page_add"
     if frontend and backend:
@@ -464,6 +503,48 @@ def classify_archetype(
     if category_set and category_set <= {"config_build", "other", "docs"}:
         return "config_build"
     return "reject"
+
+
+def is_search_query_change(changed_files: Sequence[str], subject_hint: str) -> bool:
+    """Return whether subject/path terms suggest backend search/query behavior."""
+
+    words = subject_words(subject_hint)
+    matched_terms = words & SEARCH_QUERY_SUBJECT_WORDS
+    has_search_terms = bool(matched_terms) or "case insensitive" in subject_hint
+    if not has_search_terms:
+        return False
+    schema_markers = ("changelog", "migration", "schema")
+    if any(marker in path.lower() for marker in schema_markers for path in changed_files):
+        return False
+    product_query_paths = (
+        "/controller/",
+        "/repository/",
+        "/service/",
+        "/model/",
+        "/entity/",
+        "/resources/db/",
+        "openapi",
+        "swagger",
+    )
+    if not any(marker in path.lower().replace("\\", "/") for marker in product_query_paths for path in changed_files):
+        return False
+    if matched_terms <= {"filter"}:
+        return any(
+            marker in path.lower().replace("\\", "/")
+            for marker in ("/controller/", "/repository/", "/service/", "openapi", "swagger")
+            for path in changed_files
+        )
+    return True
+
+
+def is_backend_validation_change(changed_files: Sequence[str], subject_hint: str) -> bool:
+    """Return whether subject/path terms suggest backend validation behavior."""
+
+    words = subject_words(subject_hint.replace("-", ""))
+    if words & BACKEND_VALIDATION_SUBJECT_WORDS:
+        return True
+    lowered = " ".join(changed_files).lower()
+    return any(marker in lowered for marker in ("request.java", "constraint", "validation", "validator"))
 
 
 def is_ui_shell_change(changed_files: Sequence[str]) -> bool:
@@ -598,6 +679,8 @@ def classify_candidate_quality(candidate: dict[str, Any]) -> tuple[str, str]:
         return "reject", "Build/dependency/config-only changes are excluded by default."
     if candidate["asset_only"]:
         return "reject", "Asset-only changes are excluded by default."
+    if candidate["categories"] == ["other"]:
+        return "reject", "Changed files do not map to a product-code surface."
     if archetype == "refactor_move":
         return "reject", "Package moves and refactors are not feature-planning replay cases."
     if archetype == "infra_deployment":

@@ -32,6 +32,61 @@
 | `analyze_feature` | 0 |
 | `plan_feature` | 0 |
 | `propose_changes` | 0 |
+| `suggest_from_recipes` | 0 |
+
+## Planner/Propose Predictions Only
+
+- predicted files: 5
+- matched files: 3
+- missed files: 0
+- extra predicted files: 2
+- exact precision: 0.60
+- exact recall: 1.00
+- high-signal precision: 0.60
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 1.00
+- folder-level matched actual files: 0
+
+## Recipe Suggestions Only
+
+- predicted files: 4
+- matched files: 3
+- missed files: 0
+- extra predicted files: 1
+- exact precision: 0.75
+- exact recall: 1.00
+- high-signal precision: 0.75
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 1.00
+- folder-level matched actual files: 0
+
+## Combined Predictions
+
+- predicted files: 5
+- matched files: 3
+- missed files: 0
+- extra predicted files: 2
+- exact precision: 0.60
+- exact recall: 1.00
+- high-signal precision: 0.60
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 1.00
+- folder-level matched actual files: 0
+
+## Recipe Suggestions
+
+- matched recipes:
+  - `petclinic_react_ui_page_add` (ui_page_add, structural=0.98, planner=0.05)
+    - why: source graph contains related domain token(s): owner, owners; request verb includes add; identifier normalization exposes page-style term(s): owner, owners, page
+
+- suggested actions:
+  - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx` (create, high, node=page_component, exists_in_parent=False, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/configureRoutes.tsx` (modify, high, node=route_config, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 

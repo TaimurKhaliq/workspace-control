@@ -69,10 +69,15 @@
     "bbd83e07fcded7ca5f7e76b1b2a1003ab5acb94f",
     "409415bf40f707e03114a79e292a2a2f6e464ea8",
     "f726ae73d13bd489d7767edd1f7a4442d5cb5578",
-    "6137def71abc75c53eed75fb2020f2602d0059d4"
+    "6137def71abc75c53eed75fb2020f2602d0059d4",
+    "34d8ca46ac9add81362532e41461ceb52aa67fbc",
+    "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
+    "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
+    "87d025f854e38a27ce8046add1a5cc140a584eaa",
+    "eb6f9343ad05d014e30b39f17f88d28ec7cecba6"
   ],
   "recipe_catalog_path": "data/learning/petclinic-react/change_recipes.json",
   "validation_history_path": "data/learning/petclinic-react/validation_history.json",
-  "last_learning_run_at": "2026-04-25T18:09:57+00:00",
+  "last_learning_run_at": "2026-04-25T19:04:18+00:00",
   "status": "fresh"
 }

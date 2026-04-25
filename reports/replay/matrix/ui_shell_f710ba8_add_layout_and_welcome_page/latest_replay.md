@@ -32,6 +32,61 @@
 | `analyze_feature` | 0 |
 | `plan_feature` | 0 |
 | `propose_changes` | 0 |
+| `suggest_from_recipes` | 0 |
+
+## Planner/Propose Predictions Only
+
+- predicted files: 4
+- matched files: 4
+- missed files: 6
+- extra predicted files: 0
+- exact precision: 1.00
+- exact recall: 0.40
+- high-signal precision: 1.00
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 0.80
+- folder-level matched actual files: 0
+
+## Recipe Suggestions Only
+
+- predicted files: 4
+- matched files: 4
+- missed files: 6
+- extra predicted files: 0
+- exact precision: 1.00
+- exact recall: 0.40
+- high-signal precision: 1.00
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 0.80
+- folder-level matched actual files: 0
+
+## Combined Predictions
+
+- predicted files: 4
+- matched files: 4
+- missed files: 6
+- extra predicted files: 0
+- exact precision: 1.00
+- exact recall: 0.40
+- high-signal precision: 1.00
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 0.80
+- folder-level matched actual files: 0
+
+## Recipe Suggestions
+
+- matched recipes:
+  - `petclinic_react_ui_shell_layout` (ui_shell_layout, structural=0.98, planner=0.00)
+    - why: matched recipe trigger terms: layout, page, welcome; source graph contains related domain token(s): welcome; request mentions UI shell, layout, welcome, or landing-page work
+
+- suggested actions:
+  - `spring-petclinic-reactjs/client/src/components/App.tsx` (modify, high, node=app_shell, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx` (modify, high, node=landing_page, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/main.tsx` (inspect, medium, node=frontend_entrypoint, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/public/index.html` (inspect, medium, node=public_html, exists_in_parent=True, matched_actual=exact)
 
 ## Predicted Files
 

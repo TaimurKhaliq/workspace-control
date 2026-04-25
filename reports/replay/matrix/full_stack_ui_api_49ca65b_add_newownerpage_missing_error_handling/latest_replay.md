@@ -32,6 +32,75 @@
 | `analyze_feature` | 0 |
 | `plan_feature` | 0 |
 | `propose_changes` | 0 |
+| `suggest_from_recipes` | 0 |
+
+## Planner/Propose Predictions Only
+
+- predicted files: 4
+- matched files: 3
+- missed files: 8
+- extra predicted files: 1
+- exact precision: 0.75
+- exact recall: 0.27
+- high-signal precision: 0.75
+- high-signal recall: 0.27
+- category precision: 1.00
+- category recall: 0.40
+- folder-level matched actual files: 0
+
+## Recipe Suggestions Only
+
+- predicted files: 9
+- matched files: 3
+- missed files: 8
+- extra predicted files: 6
+- exact precision: 0.33
+- exact recall: 0.27
+- high-signal precision: 0.33
+- high-signal recall: 0.27
+- category precision: 0.50
+- category recall: 0.40
+- folder-level matched actual files: 0
+
+## Combined Predictions
+
+- predicted files: 11
+- matched files: 4
+- missed files: 7
+- extra predicted files: 7
+- exact precision: 0.36
+- exact recall: 0.36
+- high-signal precision: 0.36
+- high-signal recall: 0.36
+- category precision: 0.50
+- category recall: 0.40
+- folder-level matched actual files: 0
+
+## Recipe Suggestions
+
+- matched recipes:
+  - `petclinic_react_ui_form_validation` (ui_form_validation, structural=0.96, planner=0.00)
+    - why: matched recipe trigger terms: error, handling; source graph contains related domain token(s): owner; request mentions form validation or invalid-field feedback
+  - `petclinic_react_ui_page_add` (ui_page_add, structural=0.98, planner=0.05)
+    - why: source graph contains related domain token(s): owner; request verb includes add; identifier normalization exposes page-style term(s): owner, page
+  - `petclinic_react_full_stack_ui_api` (full_stack_ui_api, structural=0.92, planner=0.32)
+    - why: matched recipe trigger terms: error, handling, missing; source graph contains related domain token(s): owner; request combines UI surface terms with error/API-style change hints
+
+- suggested actions:
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java` (modify, high, node=api_controller, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java` (modify, medium, node=service_layer, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (modify, medium, node=page_component, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx` (create, high, node=page_component, exists_in_parent=False, matched_actual=no)
+  - `spring-petclinic-reactjs/client/src/configureRoutes.tsx` (modify, high, node=route_config, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/ErrorPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 
@@ -84,7 +153,7 @@
 - precision: 1.00
 - recall: 0.40
 - matched: `frontend_component`, `frontend_type`
-- missed: `api_controller`, `frontend_entrypoint`, `unknown`
+- missed: `api_dto`, `frontend_entrypoint`, `unknown`
 - extra predicted: -
 
 ## Exact File Scoring

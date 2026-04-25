@@ -6,6 +6,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -22,6 +23,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -52,11 +54,12 @@
   },
   {
     "commit": "076a124e0a643e2f471f873a1b4954a12e3b08ae",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "Fixes #37 with other default locale than english",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -73,6 +76,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -97,7 +101,7 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against persistence_data commit"
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "078bdc6cfbada99413041d859fdeb3d63685c40b",
@@ -106,6 +110,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -122,6 +127,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -161,6 +167,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -177,6 +184,58 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "predicted_files": [],
+    "actual_files": [
+      "spring-petclinic-reactjs/src/test/java/org/springframework/samples/petclinic/service/ClinicServiceSpringDataJpaTests.java"
+    ],
+    "exact_precision": 0.0,
+    "exact_recall": 0.0,
+    "category_precision": 0.0,
+    "category_recall": 0.0,
+    "high_signal_precision": 0.0,
+    "high_signal_recall": 0.0,
+    "outcome": "missed",
+    "notes": "missed against backend_api commit"
+  },
+  {
+    "commit": "1080006218bfeea427937ca334ed7908bde3d62c",
+    "recipe_id": "petclinic_react_persistence_data_change",
+    "prompt": "Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation",
+    "predicted_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "actual_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -205,11 +264,12 @@
   },
   {
     "commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "fix regex validation issue for string input",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -226,6 +286,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -255,7 +316,7 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against persistence_data commit"
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "1d96669323c44baa45e3e212df43361ebee7d632",
@@ -264,6 +325,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -280,6 +342,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -313,6 +376,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -329,6 +393,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -362,6 +427,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -378,6 +444,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -419,6 +486,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -435,6 +503,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -474,6 +543,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -490,6 +560,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -524,11 +595,12 @@
   },
   {
     "commit": "35a179f88b4ba301612957f953121c85a1cdfd83",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "latest versions and imports cleanup",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -545,6 +617,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -572,7 +645,7 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against persistence_data commit"
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "3f2d3ba72a855fc0f10fcb49607065a414a9e8b2",
@@ -581,6 +654,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -597,6 +671,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -630,6 +705,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -646,6 +722,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -678,8 +755,8 @@
     ],
     "exact_precision": 0.4,
     "exact_recall": 0.25,
-    "category_precision": 1.0,
-    "category_recall": 0.5,
+    "category_precision": 0.6667,
+    "category_recall": 0.3333,
     "high_signal_precision": 0.4,
     "high_signal_recall": 0.25,
     "outcome": "partial",
@@ -692,6 +769,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -708,6 +786,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -746,6 +825,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -762,6 +842,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -808,6 +889,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -824,6 +906,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -870,6 +953,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -886,6 +970,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -934,6 +1019,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -950,6 +1036,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -998,6 +1085,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1014,6 +1102,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1045,7 +1134,65 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "partial",
-    "notes": "partial against persistence_data commit"
+    "notes": "partial against backend_validation_change commit"
+  },
+  {
+    "commit": "4bb829cbd1026ec10dc685277467d30523c90b95",
+    "recipe_id": "petclinic_react_backend_validation_change",
+    "prompt": "Fix #101 display the pet type when using the JDBC profile",
+    "predicted_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "actual_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "predicted_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/springdatajpa"
+    ],
+    "actual_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
+      "spring-petclinic-reactjs/src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java"
+    ],
+    "exact_precision": 0.0,
+    "exact_recall": 0.0,
+    "category_precision": 1.0,
+    "category_recall": 1.0,
+    "high_signal_precision": 0.0,
+    "high_signal_recall": 0.0,
+    "outcome": "partial",
+    "notes": "partial against backend_validation_change commit"
   },
   {
     "commit": "4bb829cbd1026ec10dc685277467d30523c90b95",
@@ -1054,6 +1201,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1070,6 +1218,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1101,15 +1250,16 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "partial",
-    "notes": "partial against persistence_data commit"
+    "notes": "partial against backend_validation_change commit"
   },
   {
     "commit": "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
-    "recipe_id": "petclinic_react_backend_api_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "Include petId in error message instead of null value",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1126,6 +1276,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1162,7 +1313,7 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against backend_api commit"
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "4f4290285a86a2dc1e48a7ffae23699265fc3d18",
@@ -1171,6 +1322,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1187,6 +1339,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1224,6 +1377,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1240,6 +1394,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1273,6 +1428,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1289,6 +1445,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1322,6 +1479,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1338,6 +1496,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1371,6 +1530,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1387,6 +1547,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1425,6 +1586,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1441,6 +1603,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1475,11 +1638,12 @@
   },
   {
     "commit": "694390d0c2d80624f499ba4feea3ab1d598f009d",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "migrated assertion to assertJ",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1496,6 +1660,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1520,7 +1685,7 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against persistence_data commit"
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "6e73c96acc9c28219709faf5f530c0390f6af925",
@@ -1529,6 +1694,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1545,6 +1711,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1579,6 +1746,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1595,6 +1763,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1628,6 +1797,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1644,6 +1814,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1677,6 +1848,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1693,6 +1865,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1726,6 +1899,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1742,6 +1916,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1777,6 +1952,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1793,6 +1969,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1820,12 +1997,13 @@
     "notes": "missed against persistence_data commit"
   },
   {
-    "commit": "818529b5b10bbf2f5ef861f0439ef1d84fc69577",
-    "recipe_id": "petclinic_react_persistence_data_change",
-    "prompt": "#64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
+    "commit": "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
+    "recipe_id": "petclinic_react_backend_validation_change",
+    "prompt": "Fix #89 Web layer: use @Valid whenever possible",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1842,6 +2020,59 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "predicted_files": [],
+    "actual_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetValidator.java"
+    ],
+    "exact_precision": 0.0,
+    "exact_recall": 0.0,
+    "category_precision": 0.0,
+    "category_recall": 0.0,
+    "high_signal_precision": 0.0,
+    "high_signal_recall": 0.0,
+    "outcome": "missed",
+    "notes": "missed against backend_validation_change commit"
+  },
+  {
+    "commit": "818529b5b10bbf2f5ef861f0439ef1d84fc69577",
+    "recipe_id": "petclinic_react_persistence_data_change",
+    "prompt": "#64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
+    "predicted_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "actual_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1874,12 +2105,13 @@
     "notes": "missed against persistence_data commit"
   },
   {
-    "commit": "8b625617cb24353ee906fab080c7677a6ec37870",
-    "recipe_id": "petclinic_react_persistence_data_change",
-    "prompt": "#87 Petclinic should be compatible with Java 7 for the time being",
+    "commit": "87d025f854e38a27ce8046add1a5cc140a584eaa",
+    "recipe_id": "petclinic_react_backend_search_query",
+    "prompt": "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1896,6 +2128,109 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "predicted_files": [],
+    "actual_files": [
+      "spring-petclinic-reactjs/src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
+    ],
+    "exact_precision": 0.0,
+    "exact_recall": 0.0,
+    "category_precision": 0.0,
+    "category_recall": 0.0,
+    "high_signal_precision": 0.0,
+    "high_signal_recall": 0.0,
+    "outcome": "missed",
+    "notes": "missed against backend_search_query commit"
+  },
+  {
+    "commit": "87d025f854e38a27ce8046add1a5cc140a584eaa",
+    "recipe_id": "petclinic_react_persistence_data_change",
+    "prompt": "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded",
+    "predicted_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "actual_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "predicted_files": [],
+    "actual_files": [
+      "spring-petclinic-reactjs/src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
+    ],
+    "exact_precision": 0.0,
+    "exact_recall": 0.0,
+    "category_precision": 0.0,
+    "category_recall": 0.0,
+    "high_signal_precision": 0.0,
+    "high_signal_recall": 0.0,
+    "outcome": "missed",
+    "notes": "missed against backend_search_query commit"
+  },
+  {
+    "commit": "8b625617cb24353ee906fab080c7677a6ec37870",
+    "recipe_id": "petclinic_react_persistence_data_change",
+    "prompt": "#87 Petclinic should be compatible with Java 7 for the time being",
+    "predicted_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "actual_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1936,6 +2271,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1952,6 +2288,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -1985,6 +2322,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2001,6 +2339,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2030,11 +2369,12 @@
   },
   {
     "commit": "92de6557e10b610f3ea6579a6be67c53c4f766bc",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "Fix #111 For pet's birthday we are now using jodatime LocalDate instead of DateTime",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2051,6 +2391,66 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "predicted_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/PetRepository.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPet.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Pet.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/PetType.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java"
+    ],
+    "actual_files": [
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Pet.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPetRowMapper.java",
+      "spring-petclinic-reactjs/src/test/java/org/springframework/samples/petclinic/service/AbstractClinicServiceTests.java"
+    ],
+    "exact_precision": 0.2,
+    "exact_recall": 0.3333,
+    "category_precision": 1.0,
+    "category_recall": 0.6667,
+    "high_signal_precision": 0.2,
+    "high_signal_recall": 0.3333,
+    "outcome": "partial",
+    "notes": "partial against persistence_data commit"
+  },
+  {
+    "commit": "92de6557e10b610f3ea6579a6be67c53c4f766bc",
+    "recipe_id": "petclinic_react_persistence_data_change",
+    "prompt": "Fix #111 For pet's birthday we are now using jodatime LocalDate instead of DateTime",
+    "predicted_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "actual_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2092,6 +2492,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2108,6 +2509,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2141,6 +2543,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2157,6 +2560,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2192,6 +2596,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2208,6 +2613,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2248,6 +2654,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2264,6 +2671,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2293,11 +2701,12 @@
   },
   {
     "commit": "ad3d322fc69061d5009460689edfda09af0b53ce",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2314,6 +2723,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2342,15 +2752,16 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against persistence_data commit"
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "af3110436e24ef13d68382e060a7250638625301",
-    "recipe_id": "petclinic_react_backend_api_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "add max range and not null validation for adding new pet",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2367,6 +2778,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2398,12 +2810,12 @@
     ],
     "exact_precision": 0.0,
     "exact_recall": 0.0,
-    "category_precision": 0.25,
-    "category_recall": 1.0,
+    "category_precision": 0.0,
+    "category_recall": 0.0,
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
-    "outcome": "partial",
-    "notes": "partial against backend_api commit"
+    "outcome": "missed",
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "bbd83e07fcded7ca5f7e76b1b2a1003ab5acb94f",
@@ -2412,6 +2824,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2428,6 +2841,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2461,6 +2875,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2477,6 +2892,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2505,11 +2921,12 @@
   },
   {
     "commit": "c758321ee85dd208eae6fd1a438d3f855c94e182",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_validation_change",
     "prompt": "add regex validation for string input",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2526,6 +2943,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2555,7 +2973,7 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against persistence_data commit"
+    "notes": "missed against backend_validation_change commit"
   },
   {
     "commit": "c9e1c7cb16564a59f0198a21750b02c5324494d6",
@@ -2564,6 +2982,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2580,6 +2999,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2613,6 +3033,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2629,6 +3050,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2683,6 +3105,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2699,6 +3122,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2736,6 +3160,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2752,6 +3177,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2800,6 +3226,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2816,6 +3243,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2849,6 +3277,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2865,6 +3294,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2898,6 +3328,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2914,6 +3345,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2947,6 +3379,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2963,6 +3396,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -2998,6 +3432,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3014,6 +3449,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3047,6 +3483,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3063,6 +3500,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3097,6 +3535,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3113,6 +3552,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3137,12 +3577,12 @@
     ],
     "exact_precision": 0.0,
     "exact_recall": 0.0,
-    "category_precision": 0.5,
-    "category_recall": 1.0,
+    "category_precision": 0.0,
+    "category_recall": 0.0,
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
-    "outcome": "partial",
-    "notes": "partial against backend_api commit"
+    "outcome": "missed",
+    "notes": "missed against backend_api commit"
   },
   {
     "commit": "e74b1bc160575650d4c46b790aa50a954b2f56c4",
@@ -3151,6 +3591,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3167,6 +3608,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3196,11 +3638,12 @@
   },
   {
     "commit": "e7f68999bfa947cfb39601502da8c15e83285196",
-    "recipe_id": "petclinic_react_persistence_data_change",
+    "recipe_id": "petclinic_react_backend_search_query",
     "prompt": "owners search has been case insensitive",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3217,6 +3660,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3241,15 +3685,16 @@
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
     "outcome": "missed",
-    "notes": "missed against persistence_data commit"
+    "notes": "missed against backend_search_query commit"
   },
   {
-    "commit": "ef10999f0fee1f0d41b89648f60e406669e35c96",
-    "recipe_id": "petclinic_react_full_stack_ui_api",
-    "prompt": "Eliminando c\u00f3digo desnecess\u00e1rio",
+    "commit": "eb6f9343ad05d014e30b39f17f88d28ec7cecba6",
+    "recipe_id": "petclinic_react_backend_validation_change",
+    "prompt": "migrate to webjars for frontend resource management",
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3266,6 +3711,64 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "predicted_files": [],
+    "actual_files": [
+      "spring-petclinic-reactjs/pom.xml",
+      "spring-petclinic-reactjs/src/main/webapp/WEB-INF/tags/footer.tag",
+      "spring-petclinic-reactjs/src/main/webapp/WEB-INF/tags/htmlHeader.tag",
+      "spring-petclinic-reactjs/src/main/webapp/bower_components/bower.json",
+      "spring-petclinic-reactjs/src/main/webapp/resources/.gitignore",
+      "spring-petclinic-reactjs/src/main/webapp/resources/css/jquery-ui.theme.min.css",
+      "spring-petclinic-reactjs/src/main/webapp/resources/less/petclinic.less"
+    ],
+    "exact_precision": 0.0,
+    "exact_recall": 0.0,
+    "category_precision": 0.0,
+    "category_recall": 0.0,
+    "high_signal_precision": 0.0,
+    "high_signal_recall": 0.0,
+    "outcome": "missed",
+    "notes": "missed against backend_validation_change commit"
+  },
+  {
+    "commit": "ef10999f0fee1f0d41b89648f60e406669e35c96",
+    "recipe_id": "petclinic_react_full_stack_ui_api",
+    "prompt": "Eliminando c\u00f3digo desnecess\u00e1rio",
+    "predicted_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
+      "app_shell",
+      "domain_model",
+      "frontend_component",
+      "frontend_entrypoint",
+      "frontend_type",
+      "landing_page",
+      "migration",
+      "public_html",
+      "repository",
+      "service_layer",
+      "static_asset",
+      "unknown"
+    ],
+    "actual_categories": [
+      "api_contract",
+      "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3299,6 +3802,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3315,6 +3819,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3348,6 +3853,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3364,6 +3870,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3397,6 +3904,7 @@
     "predicted_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",
@@ -3413,6 +3921,7 @@
     "actual_categories": [
       "api_contract",
       "api_controller",
+      "api_dto",
       "app_shell",
       "domain_model",
       "frontend_component",

@@ -46,6 +46,19 @@ UI_CREATE_TERMS = {"add", "create", "new"}
 UI_FORM_VALIDATION_TERMS = {"error", "errors", "feedback", "field", "fields", "invalid", "required", "validation", "validate"}
 UI_SHELL_TERMS = {"app", "assets", "home", "landing", "layout", "shell", "welcome"}
 BACKEND_API_TERMS = {"api", "controller", "endpoint", "rest", "search"}
+BACKEND_VALIDATION_TERMS = {
+    "constraint",
+    "constraints",
+    "max",
+    "min",
+    "notnull",
+    "null",
+    "range",
+    "regex",
+    "required",
+    "validation",
+}
+SEARCH_QUERY_TERMS = {"case", "caseinsensitive", "filter", "find", "insensitive", "lookup", "query", "search"}
 PERSISTENCE_TERMS = {"database", "entity", "field", "migration", "model", "persist", "repository", "store"}
 PERSISTENCE_STRONG_TERMS = {"database", "entity", "migration", "model", "persist", "repository", "store"}
 FULL_STACK_TERMS = {"error", "handling", "missing", "page", "validation"}
@@ -219,6 +232,14 @@ def recipe_match_score(
         score += 45
         type_specific = True
         reasons.append("request mentions backend API surface terms")
+    elif recipe.recipe_type == "backend_validation_change" and request_tokens & BACKEND_VALIDATION_TERMS:
+        score += 48
+        type_specific = True
+        reasons.append("request mentions backend validation or constraint terms")
+    elif recipe.recipe_type == "backend_search_query" and request_tokens & SEARCH_QUERY_TERMS:
+        score += 48
+        type_specific = True
+        reasons.append("request mentions search/query behavior")
     elif recipe.recipe_type == "persistence_data_change" and request_tokens & PERSISTENCE_STRONG_TERMS:
         score += 40
         type_specific = True
@@ -231,7 +252,7 @@ def recipe_match_score(
     if "ui" in intents and recipe.recipe_type.startswith("ui_"):
         score += 10
         reasons.append("feature intent includes ui")
-    if "api" in intents and recipe.recipe_type in {"backend_api_change", "full_stack_ui_api"}:
+    if "api" in intents and recipe.recipe_type in {"backend_api_change", "backend_validation_change", "backend_search_query", "full_stack_ui_api"}:
         score += 10
         reasons.append("feature intent includes api")
     if "persistence" in intents and recipe.recipe_type == "persistence_data_change":
@@ -264,6 +285,10 @@ def actions_for_recipe(
         actions.extend(_ui_shell_actions(recipe, match, graph, request_tokens))
     elif recipe.recipe_type == "backend_api_change":
         actions.extend(_backend_api_actions(recipe, match, graph, domain_tokens))
+    elif recipe.recipe_type == "backend_validation_change":
+        actions.extend(_backend_validation_actions(recipe, match, graph, domain_tokens, request_tokens))
+    elif recipe.recipe_type == "backend_search_query":
+        actions.extend(_backend_search_actions(recipe, match, graph, domain_tokens, request_tokens))
     elif recipe.recipe_type == "full_stack_ui_api":
         actions.extend(_ui_form_validation_actions(recipe, match, graph, domain_tokens))
         actions.extend(_backend_api_actions(recipe, match, graph, domain_tokens))
@@ -410,6 +435,126 @@ def _backend_api_actions(
     actions.extend(_node_actions(match, graph, ("api_controller",), domain_tokens, action="modify", confidence="high", limit=2))
     actions.extend(_node_actions(match, graph, ("service_layer",), domain_tokens, action="modify", confidence="medium", limit=2))
     actions.extend(_node_actions(match, graph, ("api_contract",), domain_tokens, action="inspect", confidence="medium", limit=1))
+    return actions
+
+
+def _backend_validation_actions(
+    recipe: ChangeRecipe,
+    match: MatchedRecipe,
+    graph: SourceGraph,
+    domain_tokens: set[str],
+    request_tokens: set[str],
+) -> list[RecipeLikelyAction]:
+    focus_tokens = domain_tokens | (request_tokens & BACKEND_VALIDATION_TERMS)
+    actions: list[RecipeLikelyAction] = []
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("api_dto",),
+            focus_tokens,
+            action="modify",
+            confidence="high",
+            limit=2,
+            evidence="backend validation recipes often update request/response DTO validation surfaces",
+        )
+    )
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("domain_model",),
+            focus_tokens,
+            action="modify",
+            confidence="medium",
+            limit=2,
+            evidence="domain model may hold validation annotations or field constraints",
+        )
+    )
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("api_controller",),
+            focus_tokens,
+            action="inspect",
+            confidence="medium",
+            limit=1,
+            evidence="controller may expose validation flow or binding-error handling",
+        )
+    )
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("api_contract",),
+            focus_tokens,
+            action="inspect",
+            confidence="medium",
+            limit=1,
+            evidence="API contract may document validation constraints",
+        )
+    )
+    return actions
+
+
+def _backend_search_actions(
+    recipe: ChangeRecipe,
+    match: MatchedRecipe,
+    graph: SourceGraph,
+    domain_tokens: set[str],
+    request_tokens: set[str],
+) -> list[RecipeLikelyAction]:
+    focus_tokens = domain_tokens | (request_tokens & SEARCH_QUERY_TERMS)
+    actions: list[RecipeLikelyAction] = []
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("repository",),
+            focus_tokens,
+            action="modify",
+            confidence="high",
+            limit=2,
+            evidence="search/query recipes often update repository query behavior",
+        )
+    )
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("service_layer",),
+            focus_tokens,
+            action="modify",
+            confidence="medium",
+            limit=2,
+            evidence="service layer may coordinate search/query behavior",
+        )
+    )
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("api_controller", "api_dto"),
+            focus_tokens,
+            action="inspect",
+            confidence="medium",
+            limit=2,
+            evidence="API surface may expose search/filter inputs",
+        )
+    )
+    actions.extend(
+        _node_actions(
+            match,
+            graph,
+            ("api_contract",),
+            focus_tokens,
+            action="inspect",
+            confidence="low",
+            limit=1,
+            evidence="API contract may document query parameters",
+        )
+    )
     return actions
 
 

@@ -58,6 +58,31 @@ def test_candidate_archetype_classification() -> None:
     full_stack_flags = finder.candidate_flags(full_stack_files, full_stack_categories, max_files=25)
     assert finder.classify_archetype(full_stack_files, full_stack_categories, full_stack_flags, subject="Add NewOwnerPage missing error handling") == "full_stack_ui_api"
 
+    search_files = ["src/main/resources/db/hsqldb/initDB.sql"]
+    search_categories = sorted({category for path in search_files for category in finder.classify_file_categories(path)})
+    search_flags = finder.candidate_flags(search_files, search_categories, max_files=25)
+    assert finder.classify_archetype(search_files, search_categories, search_flags, subject="Owners search has been case insensitive") == "backend_search_query"
+
+    jquery_files = ["src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"]
+    jquery_categories = sorted({category for path in jquery_files for category in finder.classify_file_categories(path)})
+    jquery_flags = finder.candidate_flags(jquery_files, jquery_categories, max_files=25)
+    assert finder.classify_archetype(jquery_files, jquery_categories, jquery_flags, subject='fixed url for jquery-ui typo "query"') == "config_build"
+
+    encoding_filter_files = ["src/main/webapp/WEB-INF/web.xml"]
+    encoding_filter_categories = sorted({category for path in encoding_filter_files for category in finder.classify_file_categories(path)})
+    encoding_filter_flags = finder.candidate_flags(encoding_filter_files, encoding_filter_categories, max_files=25)
+    assert finder.classify_archetype(encoding_filter_files, encoding_filter_categories, encoding_filter_flags, subject="Putting encoding filter first") == "config_build"
+
+    validation_files = ["src/main/java/example/web/api/PetRequest.java"]
+    validation_categories = sorted({category for path in validation_files for category in finder.classify_file_categories(path)})
+    validation_flags = finder.candidate_flags(validation_files, validation_categories, max_files=25)
+    assert finder.classify_archetype(validation_files, validation_categories, validation_flags, subject="Add max range and not null validation for adding new pet") == "backend_validation_change"
+
+    ui_validation_files = ["client/src/components/owners/NewOwnerPage.tsx"]
+    ui_validation_categories = sorted({category for path in ui_validation_files for category in finder.classify_file_categories(path)})
+    ui_validation_flags = finder.candidate_flags(ui_validation_files, ui_validation_categories, max_files=25)
+    assert finder.classify_archetype(ui_validation_files, ui_validation_categories, ui_validation_flags, subject="Add visual feedback for invalid fields") == "ui_form_validation"
+
 
 def test_candidate_archetype_reclassifies_known_low_value_examples() -> None:
     move_files = ["src/main/java/example/rest/ResourceRestController.java"]

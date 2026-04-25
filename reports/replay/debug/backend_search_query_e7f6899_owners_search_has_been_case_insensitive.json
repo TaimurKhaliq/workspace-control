@@ -1,0 +1,954 @@
+{
+  "case": {
+    "id": "backend_search_query_e7f6899_owners_search_has_been_case_insensitive",
+    "archetype": "backend_search_query",
+    "commit": "e7f6899",
+    "prompt": "owners search has been case insensitive",
+    "candidate_quality": "good",
+    "prompt_quality": "high",
+    "report_dir": "reports/replay/matrix/backend_search_query_e7f6899_owners_search_has_been_case_insensitive"
+  },
+  "actual_diff": {
+    "actual_changed_files": [
+      "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+    ],
+    "actual_file_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [],
+      "frontend_type": [],
+      "api_contract": [],
+      "api_controller": [],
+      "api_dto": [],
+      "service_layer": [],
+      "domain_model": [],
+      "repository": [],
+      "migration": [
+        "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+      ],
+      "unknown": []
+    },
+    "high_signal_actual_files": [
+      "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+    ],
+    "separated_files": {
+      "static_asset": [],
+      "config_build": [],
+      "docs": [],
+      "tests": []
+    },
+    "file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql",
+        "repo_relative_path": "src/main/resources/db/hsqldb/initDB.sql",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "change_kind": "modified",
+        "category": "migration",
+        "parent_folder_exists": true
+      }
+    ],
+    "new_files": [],
+    "modified_files": [
+      "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+    ],
+    "existing_files": [
+      "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
+    ]
+  },
+  "planner_outputs": {
+    "predicted_files": [],
+    "predicted_file_paths": [],
+    "predicted_categories": {
+      "frontend_entrypoint": [],
+      "app_shell": [],
+      "landing_page": [],
+      "public_html": [],
+      "static_asset": [],
+      "frontend_component": [],
+      "frontend_type": [],
+      "api_contract": [],
+      "api_controller": [],
+      "api_dto": [],
+      "service_layer": [],
+      "domain_model": [],
+      "repository": [],
+      "migration": [],
+      "unknown": []
+    },
+    "proposed_files": [],
+    "predicted_reference_files": [],
+    "metrics": {
+      "exact_precision": 0.0,
+      "exact_recall": 0.0,
+      "category_precision": 0.0,
+      "category_recall": 0.0,
+      "high_signal_precision": 0.0,
+      "high_signal_recall": 0.0
+    },
+    "recipe_suggestions": {
+      "matched_recipes": [
+        {
+          "recipe_id": "petclinic_react_backend_search_query",
+          "recipe_type": "backend_search_query",
+          "structural_confidence": 0.71,
+          "planner_effectiveness": 0.0,
+          "score": 96,
+          "why_matched": [
+            "matched recipe trigger terms: been, case, has, insensitive, owners",
+            "source graph contains related domain token(s): has, owner, search",
+            "request mentions search/query behavior",
+            "structural confidence 0.71",
+            "planner effectiveness is low, so this recipe is useful as future-improvement evidence"
+          ]
+        },
+        {
+          "recipe_id": "petclinic_react_backend_api_change",
+          "recipe_type": "backend_api_change",
+          "structural_confidence": 0.8267,
+          "planner_effectiveness": 0.125,
+          "score": 70,
+          "why_matched": [
+            "source graph contains related domain token(s): has, owner, search",
+            "request mentions backend API surface terms",
+            "structural confidence 0.83",
+            "planner effectiveness is low, so this recipe is useful as future-improvement evidence"
+          ]
+        }
+      ],
+      "suggested_actions": [
+        {
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "api_controller",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "suggested_folder": null,
+          "confidence": "high",
+          "evidence": [
+            "current source graph has a api_controller surface matching the learned recipe",
+            "source graph node: api_controller",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "api_controller",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "suggested_folder": null,
+          "confidence": "high",
+          "evidence": [
+            "current source graph has a api_controller surface matching the learned recipe",
+            "source graph node: api_controller",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "service_layer",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "current source graph has a service_layer surface matching the learned recipe",
+            "source graph node: service_layer",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "service_layer",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "current source graph has a service_layer surface matching the learned recipe",
+            "source graph node: service_layer",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "repository",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
+          "suggested_folder": null,
+          "confidence": "high",
+          "evidence": [
+            "search/query recipes often update repository query behavior",
+            "source graph node: repository",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "repository",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java",
+          "suggested_folder": null,
+          "confidence": "high",
+          "evidence": [
+            "search/query recipes often update repository query behavior",
+            "source graph node: repository",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "api_controller",
+          "action": "inspect",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "API surface may expose search/filter inputs",
+            "source graph node: api_controller",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "api_controller",
+          "action": "inspect",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "API surface may expose search/filter inputs",
+            "source graph node: api_controller",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "service_layer",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "service layer may coordinate search/query behavior",
+            "source graph node: service_layer",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        },
+        {
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "service_layer",
+          "action": "modify",
+          "suggested_path": "src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "suggested_folder": null,
+          "confidence": "medium",
+          "evidence": [
+            "service layer may coordinate search/query behavior",
+            "source graph node: service_layer",
+            "repo: spring-petclinic-reactjs"
+          ],
+          "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "exists_in_parent": true,
+          "matched_actual_diff": false,
+          "folder_matched_actual_diff": false
+        }
+      ],
+      "predicted_files": [
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "api_controller",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "api_controller",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "service_layer",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "service_layer",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "search/query recipes often update repository query behavior; source graph node: repository; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "repository",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "search/query recipes often update repository query behavior; source graph node: repository; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "repository",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        }
+      ],
+      "metrics": {
+        "exact_precision": 0.0,
+        "exact_recall": 0.0,
+        "category_precision": 0.0,
+        "category_recall": 0.0,
+        "high_signal_precision": 0.0,
+        "high_signal_recall": 0.0
+      }
+    },
+    "combined_predictions": {
+      "predicted_files": [
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "api_controller",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "api_controller",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "service_layer",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "medium",
+          "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_api_change",
+          "node_type": "service_layer",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "search/query recipes often update repository query behavior; source graph node: repository; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "repository",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        },
+        {
+          "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java",
+          "repo_name": "spring-petclinic-reactjs",
+          "action": "modify",
+          "confidence": "high",
+          "reason": "search/query recipes often update repository query behavior; source graph node: repository; repo: spring-petclinic-reactjs",
+          "matched_recipe_id": "petclinic_react_backend_search_query",
+          "node_type": "repository",
+          "exists_in_parent": true,
+          "source": "recipe_suggestion"
+        }
+      ],
+      "metrics": {
+        "exact_precision": 0.0,
+        "exact_recall": 0.0,
+        "category_precision": 0.0,
+        "category_recall": 0.0,
+        "high_signal_precision": 0.0,
+        "high_signal_recall": 0.0
+      }
+    },
+    "plan": {
+      "primary_owner": null,
+      "implementation_owner": null,
+      "domain_owner": null,
+      "feature_intents": [],
+      "unsupported_intents": [],
+      "missing_evidence": [
+        "no primary owner identified from strong evidence"
+      ],
+      "likely_paths_by_repo": {},
+      "ordered_steps": []
+    },
+    "propose": {
+      "implementation_owner": null,
+      "domain_owner": null,
+      "feature_intents": [],
+      "unsupported_intents": [],
+      "proposed_change_count": 0
+    },
+    "analyze_output_excerpt": "Feature: \"owners search has been case insensitive\"\nNo likely impacted repos found from current stackpilot.yml metadata.\n"
+  },
+  "discovery_source_graph_evidence": {
+    "detected_frameworks": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "detected_frameworks": [
+          "spring_boot"
+        ],
+        "hinted_frameworks": [
+          "react"
+        ],
+        "loaded_framework_packs": [
+          "spring_boot"
+        ],
+        "evidence_mode": "source-discovered",
+        "confidence": "high"
+      }
+    ],
+    "framework_packs": [
+      "spring_boot"
+    ],
+    "frontend_backend_paths": {
+      "spring-petclinic-reactjs": {
+        "ui_locations": [],
+        "api_locations": [
+          "src/main/java/org/springframework/samples/petclinic/web"
+        ],
+        "service_locations": [
+          "src/main/java/org/springframework/samples/petclinic/service"
+        ],
+        "persistence_locations": [
+          "src/main/java/org/springframework/samples/petclinic/repository",
+          "src/main/java/org/springframework/samples/petclinic/repository/springdatajpa",
+          "src/main/java/org/springframework/samples/petclinic/model"
+        ],
+        "event_locations": []
+      }
+    },
+    "graph_node_counts": {
+      "api_controller": 5,
+      "domain_model": 15,
+      "mapper": 2,
+      "repository": 20,
+      "service_layer": 2,
+      "shared_component": 151
+    },
+    "graph_edge_count": 72,
+    "relevant_tokens": [
+      "been",
+      "case",
+      "has",
+      "hsqldb",
+      "init",
+      "insensitive",
+      "owner",
+      "owners",
+      "reactj",
+      "reactjs",
+      "search",
+      "sql"
+    ],
+    "relevant_graph_nodes": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "node_type": "api_controller",
+        "domain_tokens": [
+          "owner",
+          "redirect"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Owner.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "owner",
+          "address",
+          "city",
+          "telephone",
+          "pets",
+          "pet"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/model/Pet.java",
+        "node_type": "domain_model",
+        "domain_tokens": [
+          "pet",
+          "birth",
+          "owner",
+          "visits",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "here"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcOwnerRepositoryImpl.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "parameter",
+          "template",
+          "insert",
+          "like",
+          "pet"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPet.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "pet",
+          "owner"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jdbc/JdbcPetRepositoryImpl.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "pet",
+          "parameter",
+          "template",
+          "insert",
+          "owner",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/jpa/JpaOwnerRepositoryImpl.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "important",
+          "here",
+          "like"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/repository/springdatajpa/SpringDataOwnerRepository.java",
+        "node_type": "repository",
+        "domain_tokens": [
+          "owner",
+          "like"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "node_type": "service_layer",
+        "domain_tokens": [
+          "pet",
+          "vet",
+          "owner",
+          "visit"
+        ],
+        "matched_terms": [
+          "owner"
+        ],
+        "confidence": "high",
+        "evidence_sources": [
+          "spring_mvc"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/docs/assets/js/bootstrap-popover.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "docs",
+          "popover",
+          "note",
+          "constructor",
+          "set",
+          "content",
+          "has",
+          "get"
+        ],
+        "matched_terms": [
+          "has"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/docs/assets/js/bootstrap-tooltip.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "docs",
+          "tooltip",
+          "constructor",
+          "init",
+          "trigger",
+          "selector",
+          "get",
+          "options"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/docs/assets/js/jquery.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "docs",
+          "jquery",
+          "constructor",
+          "init",
+          "selector",
+          "length",
+          "size",
+          "array"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/bootstrap-popover.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "popover",
+          "note",
+          "constructor",
+          "set",
+          "content",
+          "has",
+          "get",
+          "tip"
+        ],
+        "matched_terms": [
+          "has"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/bootstrap-tooltip.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "tooltip",
+          "constructor",
+          "init",
+          "trigger",
+          "selector",
+          "get",
+          "options",
+          "option"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/tests/vendor/jquery.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "tests",
+          "test",
+          "jquery",
+          "constructor",
+          "init",
+          "selector",
+          "length",
+          "size"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/bootstrap/js/tests/vendor/qunit.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "bootstrap",
+          "tests",
+          "test",
+          "qunit",
+          "set",
+          "timeout",
+          "session",
+          "storage",
+          "init"
+        ],
+        "matched_terms": [
+          "init"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "src/main/webapp/vendors/jquery-ui/ui/jquery.ui.autocomplete.js",
+        "node_type": "shared_component",
+        "domain_tokens": [
+          "webapp",
+          "vendors",
+          "vendor",
+          "jquery",
+          "autocomplete",
+          "depends",
+          "depend",
+          "default",
+          "element",
+          "options",
+          "option",
+          "append"
+        ],
+        "matched_terms": [
+          "search"
+        ],
+        "confidence": "medium",
+        "evidence_sources": [
+          "react_components"
+        ]
+      }
+    ],
+    "actual_file_existence": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql",
+        "repo_relative_path": "src/main/resources/db/hsqldb/initDB.sql",
+        "exists_in_parent": true,
+        "is_new_file": false,
+        "change_kind": "modified",
+        "category": "migration",
+        "parent_folder_exists": true
+      }
+    ]
+  },
+  "failure_classification": {
+    "labels": [
+      "graph_found_surface_but_proposal_missed",
+      "planner_underpredicted",
+      "recipe_application_gap"
+    ],
+    "reasons": [
+      "No predicted files were emitted.",
+      "Plan produced null primary and implementation owners.",
+      "propose-changes emitted no proposed changes.",
+      "Recipe sidecar emitted suggestions, but they did not match actual files or categories.",
+      "Source graph found relevant surfaces, but propose-changes emitted no files."
+    ]
+  },
+  "diagnosis_summary": {
+    "likely_cause": "A learned recipe matched, but its node/path pattern application missed the actual changed surfaces.",
+    "recommended_fix_area": "recipe application",
+    "why": "No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe sidecar emitted suggestions, but they did not match actual files or categories. Source graph found relevant surfaces, but propose-changes emitted no files."
+  },
+  "reports": {
+    "json": "reports/replay/debug/backend_search_query_e7f6899_owners_search_has_been_case_insensitive.json",
+    "markdown": "reports/replay/debug/backend_search_query_e7f6899_owners_search_has_been_case_insensitive.md"
+  }
+}

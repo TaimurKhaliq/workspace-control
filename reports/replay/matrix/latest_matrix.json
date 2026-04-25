@@ -5,25 +5,25 @@
     "failed": 0,
     "average_exact_precision": 0.3771,
     "average_exact_recall": 0.2924,
-    "average_category_precision": 0.5312,
-    "average_category_recall": 0.4625,
+    "average_category_precision": 0.5,
+    "average_category_recall": 0.3375,
     "average_high_signal_precision": 0.3771,
     "average_high_signal_recall": 0.3674
   },
   "archetype_summary": {
-    "backend_api": {
+    "backend_search_query": {
       "total": 1,
       "succeeded": 1,
+      "failed": 0
+    },
+    "backend_validation_change": {
+      "total": 2,
+      "succeeded": 2,
       "failed": 0
     },
     "full_stack_ui_api": {
       "total": 1,
       "succeeded": 1,
-      "failed": 0
-    },
-    "persistence_data": {
-      "total": 2,
-      "succeeded": 2,
       "failed": 0
     },
     "ui_form_validation": {
@@ -47,8 +47,28 @@
   },
   "cases": [
     {
-      "id": "backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet",
-      "archetype": "backend_api",
+      "id": "backend_search_query_e7f6899_owners_search_has_been_case_insensitive",
+      "archetype": "backend_search_query",
+      "commit": "e7f6899",
+      "prompt": "owners search has been case insensitive",
+      "candidate_quality": "good",
+      "prompt_quality": "high",
+      "succeeded": true,
+      "exit_code": 0,
+      "predicted_file_count": 0,
+      "actual_file_count": 1,
+      "matched_file_count": 0,
+      "exact_precision": 0.0,
+      "exact_recall": 0.0,
+      "high_signal_precision": 0.0,
+      "high_signal_recall": 0.0,
+      "category_precision": 0.0,
+      "category_recall": 0.0,
+      "report_dir": "reports/replay/matrix/backend_search_query_e7f6899_owners_search_has_been_case_insensitive"
+    },
+    {
+      "id": "backend_validation_change_af31104_add_max_range_and_not_null_validation_for_adding_new_pet",
+      "archetype": "backend_validation_change",
       "commit": "af31104",
       "prompt": "add max range and not null validation for adding new pet",
       "candidate_quality": "good",
@@ -62,9 +82,29 @@
       "exact_recall": 0.0,
       "high_signal_precision": 0.0,
       "high_signal_recall": 0.0,
-      "category_precision": 0.25,
-      "category_recall": 1.0,
-      "report_dir": "reports/replay/matrix/backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet"
+      "category_precision": 0.0,
+      "category_recall": 0.0,
+      "report_dir": "reports/replay/matrix/backend_validation_change_af31104_add_max_range_and_not_null_validation_for_adding_new_pet"
+    },
+    {
+      "id": "backend_validation_change_c758321_add_regex_validation_for_string_input",
+      "archetype": "backend_validation_change",
+      "commit": "c758321",
+      "prompt": "add regex validation for string input",
+      "candidate_quality": "good",
+      "prompt_quality": "high",
+      "succeeded": true,
+      "exit_code": 0,
+      "predicted_file_count": 4,
+      "actual_file_count": 1,
+      "matched_file_count": 0,
+      "exact_precision": 0.0,
+      "exact_recall": 0.0,
+      "high_signal_precision": 0.0,
+      "high_signal_recall": 0.0,
+      "category_precision": 0.0,
+      "category_recall": 0.0,
+      "report_dir": "reports/replay/matrix/backend_validation_change_c758321_add_regex_validation_for_string_input"
     },
     {
       "id": "full_stack_ui_api_49ca65b_add_newownerpage_missing_error_handling",
@@ -85,46 +125,6 @@
       "category_precision": 1.0,
       "category_recall": 0.4,
       "report_dir": "reports/replay/matrix/full_stack_ui_api_49ca65b_add_newownerpage_missing_error_handling"
-    },
-    {
-      "id": "persistence_data_c758321_add_regex_validation_for_string_input",
-      "archetype": "persistence_data",
-      "commit": "c758321",
-      "prompt": "add regex validation for string input",
-      "candidate_quality": "good",
-      "prompt_quality": "high",
-      "succeeded": true,
-      "exit_code": 0,
-      "predicted_file_count": 4,
-      "actual_file_count": 1,
-      "matched_file_count": 0,
-      "exact_precision": 0.0,
-      "exact_recall": 0.0,
-      "high_signal_precision": 0.0,
-      "high_signal_recall": 0.0,
-      "category_precision": 0.0,
-      "category_recall": 0.0,
-      "report_dir": "reports/replay/matrix/persistence_data_c758321_add_regex_validation_for_string_input"
-    },
-    {
-      "id": "persistence_data_e7f6899_owners_search_has_been_case_insensitive",
-      "archetype": "persistence_data",
-      "commit": "e7f6899",
-      "prompt": "owners search has been case insensitive",
-      "candidate_quality": "good",
-      "prompt_quality": "high",
-      "succeeded": true,
-      "exit_code": 0,
-      "predicted_file_count": 0,
-      "actual_file_count": 1,
-      "matched_file_count": 0,
-      "exact_precision": 0.0,
-      "exact_recall": 0.0,
-      "high_signal_precision": 0.0,
-      "high_signal_recall": 0.0,
-      "category_precision": 0.0,
-      "category_recall": 0.0,
-      "report_dir": "reports/replay/matrix/persistence_data_e7f6899_owners_search_has_been_case_insensitive"
     },
     {
       "id": "ui_form_validation_339ee36_add_error_handling_to_newownerpage",

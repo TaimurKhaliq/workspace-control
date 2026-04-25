@@ -4,12 +4,14 @@
   "max_files": 25,
   "candidate_count": 300,
   "archetype_counts": {
-    "backend_api": 14,
-    "config_build": 146,
-    "docs_comments": 36,
+    "backend_api": 12,
+    "backend_search_query": 1,
+    "backend_validation_change": 14,
+    "config_build": 145,
+    "docs_comments": 35,
     "full_stack_ui_api": 11,
-    "infra_deployment": 3,
-    "persistence_data": 32,
+    "infra_deployment": 2,
+    "persistence_data": 22,
     "refactor_move": 12,
     "reject": 28,
     "ui_form_validation": 7,
@@ -18,8 +20,8 @@
   },
   "candidate_quality_counts": {
     "good": 9,
-    "questionable": 56,
-    "reject": 235
+    "questionable": 57,
+    "reject": 234
   },
   "included_case_count": 8,
   "candidates": [
@@ -439,6 +441,34 @@
       "included_in_generated_cases": false
     },
     {
+      "sha": "e7f68999bfa947cfb39601502da8c15e83285196",
+      "short_sha": "e7f6899",
+      "subject": "owners search has been case insensitive",
+      "parent_sha": "df4e3a5541be895ff479c5a1e851f300cd8f8881",
+      "changed_files": [
+        "src/main/resources/db/hsqldb/initDB.sql"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "persistence"
+      ],
+      "archetype": "backend_search_query",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "owners search has been case insensitive",
+      "prompt_quality": "high",
+      "prompt_quality_reason": "Subject is descriptive and feature-like.",
+      "candidate_quality": "good",
+      "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+      "score": 60,
+      "case_id": "backend_search_query_e7f6899_owners_search_has_been_case_insensitive",
+      "included_in_generated_cases": true
+    },
+    {
       "sha": "af3110436e24ef13d68382e060a7250638625301",
       "short_sha": "af31104",
       "subject": "add max range and not null validation for adding new pet",
@@ -450,7 +480,7 @@
       "categories": [
         "backend_api"
       ],
-      "archetype": "backend_api",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -463,7 +493,7 @@
       "candidate_quality": "good",
       "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
       "score": 60,
-      "case_id": "backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet",
+      "case_id": "backend_validation_change_af31104_add_max_range_and_not_null_validation_for_adding_new_pet",
       "included_in_generated_cases": true
     },
     {
@@ -478,7 +508,7 @@
       "categories": [
         "persistence"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -491,35 +521,7 @@
       "candidate_quality": "good",
       "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
       "score": 60,
-      "case_id": "persistence_data_c758321_add_regex_validation_for_string_input",
-      "included_in_generated_cases": true
-    },
-    {
-      "sha": "e7f68999bfa947cfb39601502da8c15e83285196",
-      "short_sha": "e7f6899",
-      "subject": "owners search has been case insensitive",
-      "parent_sha": "df4e3a5541be895ff479c5a1e851f300cd8f8881",
-      "changed_files": [
-        "src/main/resources/db/hsqldb/initDB.sql"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "persistence"
-      ],
-      "archetype": "persistence_data",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "owners search has been case insensitive",
-      "prompt_quality": "high",
-      "prompt_quality_reason": "Subject is descriptive and feature-like.",
-      "candidate_quality": "good",
-      "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
-      "score": 60,
-      "case_id": "persistence_data_e7f6899_owners_search_has_been_case_insensitive",
+      "case_id": "backend_validation_change_c758321_add_regex_validation_for_string_input",
       "included_in_generated_cases": true
     },
     {
@@ -837,6 +839,41 @@
       "included_in_generated_cases": false
     },
     {
+      "sha": "eb6f9343ad05d014e30b39f17f88d28ec7cecba6",
+      "short_sha": "eb6f934",
+      "subject": "migrate to webjars for frontend resource management",
+      "parent_sha": "077f4eb1055f83aaa5de3de9532b93b10f546ef6",
+      "changed_files": [
+        "pom.xml",
+        "src/main/webapp/WEB-INF/tags/footer.tag",
+        "src/main/webapp/WEB-INF/tags/htmlHeader.tag",
+        "src/main/webapp/bower_components/bower.json",
+        "src/main/webapp/resources/.gitignore",
+        "src/main/webapp/resources/css/jquery-ui.theme.min.css",
+        "src/main/webapp/resources/less/petclinic.less"
+      ],
+      "changed_file_count": 7,
+      "categories": [
+        "config_build",
+        "other"
+      ],
+      "archetype": "backend_validation_change",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "migrate to webjars for frontend resource management",
+      "prompt_quality": "medium",
+      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
+      "candidate_quality": "questionable",
+      "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
+      "score": 52,
+      "case_id": "backend_validation_change_eb6f934_migrate_to_webjars_for_frontend_resource_management",
+      "included_in_generated_cases": false
+    },
+    {
       "sha": "8b625617cb24353ee906fab080c7677a6ec37870",
       "short_sha": "8b62561",
       "subject": "#87 Petclinic should be compatible with Java 7 for the time being",
@@ -873,38 +910,6 @@
       "included_in_generated_cases": false
     },
     {
-      "sha": "5cfd482edc474587cf2965750b936ee2ce871b4e",
-      "short_sha": "5cfd482",
-      "subject": "removed default profile and replaced with \"jpa\"",
-      "parent_sha": "ea81fe07d8cddf5720a1f198e502137a2063bc7e",
-      "changed_files": [
-        "src/main/resources/spring/business-config.xml",
-        "src/main/webapp/WEB-INF/web.xml",
-        "src/test/java/org/springframework/samples/petclinic/service/ClinicServiceJpaTests.java"
-      ],
-      "changed_file_count": 3,
-      "categories": [
-        "backend_service",
-        "other",
-        "tests"
-      ],
-      "archetype": "backend_api",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "removed default profile and replaced with \"jpa\"",
-      "prompt_quality": "medium",
-      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
-      "candidate_quality": "questionable",
-      "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
-      "score": 50,
-      "case_id": "backend_api_5cfd482_removed_default_profile_and_replaced_with_jpa",
-      "included_in_generated_cases": false
-    },
-    {
       "sha": "4bb829cbd1026ec10dc685277467d30523c90b95",
       "short_sha": "4bb829c",
       "subject": "Fix #101 display the pet type when using the JDBC profile",
@@ -921,7 +926,7 @@
         "persistence",
         "tests"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -934,7 +939,7 @@
       "candidate_quality": "questionable",
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 50,
-      "case_id": "persistence_data_4bb829c_fix_101_display_the_pet_type_when_using_the_jdbc_profile",
+      "case_id": "backend_validation_change_4bb829c_fix_101_display_the_pet_type_when_using_the_jdbc_profile",
       "included_in_generated_cases": false
     },
     {
@@ -1018,7 +1023,7 @@
         "persistence",
         "tests"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -1031,7 +1036,7 @@
       "candidate_quality": "questionable",
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 50,
-      "case_id": "persistence_data_ad3d322_fising_squid_s2970_squid_s1192_squid_s1488_squid_uselessparenthesescheck",
+      "case_id": "backend_validation_change_ad3d322_fising_squid_s2970_squid_s1192_squid_s1488_squid_uselessparenthesescheck",
       "included_in_generated_cases": false
     },
     {
@@ -1108,6 +1113,39 @@
       "included_in_generated_cases": false
     },
     {
+      "sha": "5cfd482edc474587cf2965750b936ee2ce871b4e",
+      "short_sha": "5cfd482",
+      "subject": "removed default profile and replaced with \"jpa\"",
+      "parent_sha": "ea81fe07d8cddf5720a1f198e502137a2063bc7e",
+      "changed_files": [
+        "src/main/resources/spring/business-config.xml",
+        "src/main/webapp/WEB-INF/web.xml",
+        "src/test/java/org/springframework/samples/petclinic/service/ClinicServiceJpaTests.java"
+      ],
+      "changed_file_count": 3,
+      "categories": [
+        "backend_service",
+        "config_build",
+        "other",
+        "tests"
+      ],
+      "archetype": "backend_api",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "removed default profile and replaced with \"jpa\"",
+      "prompt_quality": "medium",
+      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
+      "candidate_quality": "questionable",
+      "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
+      "score": 42,
+      "case_id": "backend_api_5cfd482_removed_default_profile_and_replaced_with_jpa",
+      "included_in_generated_cases": false
+    },
+    {
       "sha": "35a179f88b4ba301612957f953121c85a1cdfd83",
       "short_sha": "35a179f",
       "subject": "latest versions and imports cleanup",
@@ -1125,7 +1163,7 @@
         "persistence",
         "tests"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -1138,7 +1176,7 @@
       "candidate_quality": "questionable",
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 42,
-      "case_id": "persistence_data_35a179f_latest_versions_and_imports_cleanup",
+      "case_id": "backend_validation_change_35a179f_latest_versions_and_imports_cleanup",
       "included_in_generated_cases": false
     },
     {
@@ -1178,34 +1216,6 @@
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 42,
       "case_id": "backend_api_2637f65_upgrade_to_spring_boot_1_4_0",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
-      "short_sha": "4c40375",
-      "subject": "Include petId in error message instead of null value",
-      "parent_sha": "e30321e548b9b1ee7d377471de702c6acd901ae5",
-      "changed_files": [
-        "src/main/java/org/springframework/samples/petclinic/web/api/VisitResource.java"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "backend_api"
-      ],
-      "archetype": "backend_api",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "Include petId in error message instead of null value",
-      "prompt_quality": "medium",
-      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
-      "candidate_quality": "questionable",
-      "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
-      "score": 40,
-      "case_id": "backend_api_4c40375_include_petid_in_error_message_instead_of_null_value",
       "included_in_generated_cases": false
     },
     {
@@ -1262,6 +1272,62 @@
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 40,
       "case_id": "backend_api_e4ca172_handle_non_existing_owner_from_get_request",
+      "included_in_generated_cases": false
+    },
+    {
+      "sha": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
+      "short_sha": "1a85b44",
+      "subject": "fix regex validation issue for string input",
+      "parent_sha": "c758321ee85dd208eae6fd1a438d3f855c94e182",
+      "changed_files": [
+        "src/main/java/org/springframework/samples/petclinic/model/Person.java"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "persistence"
+      ],
+      "archetype": "backend_validation_change",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "fix regex validation issue for string input",
+      "prompt_quality": "medium",
+      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
+      "candidate_quality": "questionable",
+      "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
+      "score": 40,
+      "case_id": "backend_validation_change_1a85b44_fix_regex_validation_issue_for_string_input",
+      "included_in_generated_cases": false
+    },
+    {
+      "sha": "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
+      "short_sha": "4c40375",
+      "subject": "Include petId in error message instead of null value",
+      "parent_sha": "e30321e548b9b1ee7d377471de702c6acd901ae5",
+      "changed_files": [
+        "src/main/java/org/springframework/samples/petclinic/web/api/VisitResource.java"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "backend_api"
+      ],
+      "archetype": "backend_validation_change",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "Include petId in error message instead of null value",
+      "prompt_quality": "medium",
+      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
+      "candidate_quality": "questionable",
+      "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
+      "score": 40,
+      "case_id": "backend_validation_change_4c40375_include_petid_in_error_message_instead_of_null_value",
       "included_in_generated_cases": false
     },
     {
@@ -1406,34 +1472,6 @@
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 40,
       "case_id": "persistence_data_078bdc6_149_jdbcpetrepositoryimpl_findbyid_simplification",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
-      "short_sha": "1a85b44",
-      "subject": "fix regex validation issue for string input",
-      "parent_sha": "c758321ee85dd208eae6fd1a438d3f855c94e182",
-      "changed_files": [
-        "src/main/java/org/springframework/samples/petclinic/model/Person.java"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "persistence"
-      ],
-      "archetype": "persistence_data",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "fix regex validation issue for string input",
-      "prompt_quality": "medium",
-      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
-      "candidate_quality": "questionable",
-      "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
-      "score": 40,
-      "case_id": "persistence_data_1a85b44_fix_regex_validation_issue_for_string_input",
       "included_in_generated_cases": false
     },
     {
@@ -1927,7 +1965,7 @@
         "persistence",
         "tests"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -1940,7 +1978,7 @@
       "candidate_quality": "questionable",
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 30,
-      "case_id": "persistence_data_076a124_fixes_37_with_other_default_locale_than_english",
+      "case_id": "backend_validation_change_076a124_fixes_37_with_other_default_locale_than_english",
       "included_in_generated_cases": false
     },
     {
@@ -1956,7 +1994,7 @@
         "persistence",
         "tests"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -1969,7 +2007,7 @@
       "candidate_quality": "questionable",
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 30,
-      "case_id": "persistence_data_694390d_migrated_assertion_to_assertj",
+      "case_id": "backend_validation_change_694390d_migrated_assertion_to_assertj",
       "included_in_generated_cases": false
     },
     {
@@ -2027,6 +2065,35 @@
       "candidate_quality_reason": "Candidate is feature-like but the generated prompt may need review.",
       "score": 20,
       "case_id": "backend_api_3f2d3ba_fix_typo",
+      "included_in_generated_cases": false
+    },
+    {
+      "sha": "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
+      "short_sha": "80ff54a",
+      "subject": "Fix #89 Web layer: use @Valid whenever possible",
+      "parent_sha": "a07cf692921b426f3cce8f5270471698168fc32f",
+      "changed_files": [
+        "src/main/java/org/springframework/samples/petclinic/web/PetController.java",
+        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java"
+      ],
+      "changed_file_count": 2,
+      "categories": [
+        "other"
+      ],
+      "archetype": "backend_validation_change",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "Fix #89 Web layer: use @Valid whenever possible",
+      "prompt_quality": "medium",
+      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Changed files do not map to a product-code surface.",
+      "score": 20,
+      "case_id": "backend_validation_change_80ff54a_fix_89_web_layer_use_valid_whenever_possible",
       "included_in_generated_cases": false
     },
     {
@@ -2258,6 +2325,34 @@
       "candidate_quality_reason": "Prompt quality is too low for an automatic replay benchmark case.",
       "score": 5,
       "case_id": "persistence_data_e50583f_update_baseentity_java",
+      "included_in_generated_cases": false
+    },
+    {
+      "sha": "34d8ca46ac9add81362532e41461ceb52aa67fbc",
+      "short_sha": "34d8ca4",
+      "subject": "chaining validation so we can see multiple error messages when there are multiple validation errors",
+      "parent_sha": "c4b9b0b1193d66dadb84f46946de26510856dfd5",
+      "changed_files": [
+        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "other"
+      ],
+      "archetype": "backend_validation_change",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "chaining validation so we can see multiple error messages when there are multiple validation errors",
+      "prompt_quality": "medium",
+      "prompt_quality_reason": "Subject is usable but not strongly feature-like.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Changed files do not map to a product-code surface.",
+      "score": 0,
+      "case_id": "backend_validation_change_34d8ca4_chaining_validation_so_we_can_see_multiple_error_messages_when_there_are_multipl",
       "included_in_generated_cases": false
     },
     {
@@ -2500,34 +2595,6 @@
       "included_in_generated_cases": false
     },
     {
-      "sha": "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
-      "short_sha": "cb6bd87",
-      "subject": "Putting encoding filter first per #80",
-      "parent_sha": "b265fc802d33b465dc6597fb0e763270a415b709",
-      "changed_files": [
-        "src/main/webapp/WEB-INF/web.xml"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "Putting encoding filter first per #80",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -10,
-      "case_id": "config_build_cb6bd87_putting_encoding_filter_first_per_80",
-      "included_in_generated_cases": false
-    },
-    {
       "sha": "dd552f497084f240eec49e4373de5f6a2af64b0a",
       "short_sha": "dd552f4",
       "subject": "Fix #108 owner update",
@@ -2585,35 +2652,6 @@
       "included_in_generated_cases": false
     },
     {
-      "sha": "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
-      "short_sha": "80ff54a",
-      "subject": "Fix #89 Web layer: use @Valid whenever possible",
-      "parent_sha": "a07cf692921b426f3cce8f5270471698168fc32f",
-      "changed_files": [
-        "src/main/java/org/springframework/samples/petclinic/web/PetController.java",
-        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java"
-      ],
-      "changed_file_count": 2,
-      "categories": [
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "Fix #89 Web layer: use @Valid whenever possible",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -10,
-      "case_id": "config_build_80ff54a_fix_89_web_layer_use_valid_whenever_possible",
-      "included_in_generated_cases": false
-    },
-    {
       "sha": "1a6572d1ac0c7659d9243405074f3f19f9a93328",
       "short_sha": "1a6572d",
       "subject": "Replace web.xml by PetclinicInitializer",
@@ -2641,38 +2679,6 @@
       "candidate_quality_reason": "Docs, comments, or Javadoc changes are not product-feature planning cases.",
       "score": -10,
       "case_id": "docs_comments_1a6572d_replace_web_xml_by_petclinicinitializer",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "f7498c79df1ce585d4025f3f64d34d205143c868",
-      "short_sha": "f7498c7",
-      "subject": "Removed HTTP PUT method - it is not supported in JSP 2.3",
-      "parent_sha": "e0be3a39b6bbeced1ee94b93b4dfcf40bc9acfbb",
-      "changed_files": [
-        "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
-        "src/main/java/org/springframework/samples/petclinic/web/PetController.java",
-        "src/main/webapp/WEB-INF/jsp/owners/createOrUpdateOwnerForm.jsp",
-        "src/main/webapp/WEB-INF/jsp/pets/createOrUpdatePetForm.jsp",
-        "src/main/webapp/WEB-INF/web.xml"
-      ],
-      "changed_file_count": 5,
-      "categories": [
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "Removed HTTP PUT method - it is not supported in JSP 2.3",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -10,
-      "case_id": "config_build_f7498c7_removed_http_put_method_it_is_not_supported_in_jsp_2_3",
       "included_in_generated_cases": false
     },
     {
@@ -2707,7 +2713,7 @@
       "prompt_quality": "low",
       "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
       "candidate_quality": "reject",
-      "candidate_quality_reason": "Package moves and refactors are not feature-planning replay cases.",
+      "candidate_quality_reason": "Changed files do not map to a product-code surface.",
       "score": -10,
       "case_id": "refactor_move_49c39b6_renamed_headtag_jsp_staticfiles_jsp",
       "included_in_generated_cases": false
@@ -2746,7 +2752,7 @@
       "prompt_quality": "low",
       "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
       "candidate_quality": "reject",
-      "candidate_quality_reason": "Package moves and refactors are not feature-planning replay cases.",
+      "candidate_quality_reason": "Changed files do not map to a product-code surface.",
       "score": -10,
       "case_id": "refactor_move_3bcf845_77_move_session_scope_attributes_to_the_request_scope_instead",
       "included_in_generated_cases": false
@@ -3084,36 +3090,6 @@
       "included_in_generated_cases": false
     },
     {
-      "sha": "c4b9b0b1193d66dadb84f46946de26510856dfd5",
-      "short_sha": "c4b9b0b",
-      "subject": "migrated to the latest version of jquery and jquery-ui",
-      "parent_sha": "31b602287f5c0ea22d50d7cfcab784a8ee4cb9ed",
-      "changed_files": [
-        "pom.xml",
-        "src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp"
-      ],
-      "changed_file_count": 2,
-      "categories": [
-        "config_build",
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "migrated to the latest version of jquery and jquery-ui",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -18,
-      "case_id": "config_build_c4b9b0b_migrated_to_the_latest_version_of_jquery_and_jquery_ui",
-      "included_in_generated_cases": false
-    },
-    {
       "sha": "ce7e6e8bdcc3b11571e3ada6b12ad9e5395b03f7",
       "short_sha": "ce7e6e8",
       "subject": "updated URL on cloud foundry",
@@ -3238,6 +3214,39 @@
       "included_in_generated_cases": false
     },
     {
+      "sha": "f7498c79df1ce585d4025f3f64d34d205143c868",
+      "short_sha": "f7498c7",
+      "subject": "Removed HTTP PUT method - it is not supported in JSP 2.3",
+      "parent_sha": "e0be3a39b6bbeced1ee94b93b4dfcf40bc9acfbb",
+      "changed_files": [
+        "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "src/main/java/org/springframework/samples/petclinic/web/PetController.java",
+        "src/main/webapp/WEB-INF/jsp/owners/createOrUpdateOwnerForm.jsp",
+        "src/main/webapp/WEB-INF/jsp/pets/createOrUpdatePetForm.jsp",
+        "src/main/webapp/WEB-INF/web.xml"
+      ],
+      "changed_file_count": 5,
+      "categories": [
+        "config_build",
+        "other"
+      ],
+      "archetype": "config_build",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "Removed HTTP PUT method - it is not supported in JSP 2.3",
+      "prompt_quality": "low",
+      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -18,
+      "case_id": "config_build_f7498c7_removed_http_put_method_it_is_not_supported_in_jsp_2_3",
+      "included_in_generated_cases": false
+    },
+    {
       "sha": "9cf1612e6c69963255995f27a6824dc627519f78",
       "short_sha": "9cf1612",
       "subject": "Build styles with regular build",
@@ -3272,41 +3281,6 @@
       "candidate_quality_reason": "Package moves and refactors are not feature-planning replay cases.",
       "score": -18,
       "case_id": "refactor_move_9cf1612_build_styles_with_regular_build",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "eb6f9343ad05d014e30b39f17f88d28ec7cecba6",
-      "short_sha": "eb6f934",
-      "subject": "migrate to webjars for frontend resource management",
-      "parent_sha": "077f4eb1055f83aaa5de3de9532b93b10f546ef6",
-      "changed_files": [
-        "pom.xml",
-        "src/main/webapp/WEB-INF/tags/footer.tag",
-        "src/main/webapp/WEB-INF/tags/htmlHeader.tag",
-        "src/main/webapp/bower_components/bower.json",
-        "src/main/webapp/resources/.gitignore",
-        "src/main/webapp/resources/css/jquery-ui.theme.min.css",
-        "src/main/webapp/resources/less/petclinic.less"
-      ],
-      "changed_file_count": 7,
-      "categories": [
-        "config_build",
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "migrate to webjars for frontend resource management",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -18,
-      "case_id": "config_build_eb6f934_migrate_to_webjars_for_frontend_resource_management",
       "included_in_generated_cases": false
     },
     {
@@ -3388,7 +3362,7 @@
         "persistence",
         "tests"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -3401,7 +3375,7 @@
       "candidate_quality": "reject",
       "candidate_quality_reason": "Prompt quality is too low for an automatic replay benchmark case.",
       "score": -20,
-      "case_id": "persistence_data_5c9ab6b_test_methods_used_should_shouldnot",
+      "case_id": "backend_validation_change_5c9ab6b_test_methods_used_should_shouldnot",
       "included_in_generated_cases": false
     },
     {
@@ -3605,6 +3579,34 @@
       "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
       "score": -25,
       "case_id": "config_build_858a501_add_travis_config_for_maven_and_node",
+      "included_in_generated_cases": false
+    },
+    {
+      "sha": "87d025f854e38a27ce8046add1a5cc140a584eaa",
+      "short_sha": "87d025f",
+      "subject": "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded",
+      "parent_sha": "df4e3a5541be895ff479c5a1e851f300cd8f8881",
+      "changed_files": [
+        "src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "other"
+      ],
+      "archetype": "config_build",
+      "too_large": false,
+      "dependency_only": false,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded",
+      "prompt_quality": "low",
+      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -25,
+      "case_id": "config_build_87d025f_fixed_url_for_jquery_ui_there_was_typo_query_instaed_of_jquery_and_file_cannot_b",
       "included_in_generated_cases": false
     },
     {
@@ -3860,7 +3862,7 @@
         "persistence",
         "tests"
       ],
-      "archetype": "persistence_data",
+      "archetype": "backend_validation_change",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
@@ -3873,7 +3875,7 @@
       "candidate_quality": "reject",
       "candidate_quality_reason": "Prompt quality is too low for an automatic replay benchmark case.",
       "score": -28,
-      "case_id": "persistence_data_1dfc3b7_migrated_test_assertions_to_assertj",
+      "case_id": "backend_validation_change_1dfc3b7_migrated_test_assertions_to_assertj",
       "included_in_generated_cases": false
     },
     {
@@ -4119,34 +4121,6 @@
       "included_in_generated_cases": false
     },
     {
-      "sha": "34d8ca46ac9add81362532e41461ceb52aa67fbc",
-      "short_sha": "34d8ca4",
-      "subject": "chaining validation so we can see multiple error messages when there are multiple validation errors",
-      "parent_sha": "c4b9b0b1193d66dadb84f46946de26510856dfd5",
-      "changed_files": [
-        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "chaining validation so we can see multiple error messages when there are multiple validation errors",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -30,
-      "case_id": "config_build_34d8ca4_chaining_validation_so_we_can_see_multiple_error_messages_when_there_are_multipl",
-      "included_in_generated_cases": false
-    },
-    {
       "sha": "3e4512781e0f7cc4e9ed6a240213f0934d8398d5",
       "short_sha": "3e45127",
       "subject": "Sonar review: made code more readable",
@@ -4172,34 +4146,6 @@
       "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
       "score": -30,
       "case_id": "config_build_3e45127_sonar_review_made_code_more_readable",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "3e8829f3729a0e471838debb82f79308312ef493",
-      "short_sha": "3e8829f",
-      "subject": "adding explicit reference to default profile because it doesn't seem to work on on some environments",
-      "parent_sha": "74abfb1a35059c4c50066a81c539211c6569d4c6",
-      "changed_files": [
-        "src/main/webapp/WEB-INF/web.xml"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "adding explicit reference to default profile because it doesn't seem to work on on some environments",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -30,
-      "case_id": "config_build_3e8829f_adding_explicit_reference_to_default_profile_because_it_doesn_t_seem_to_work_on_",
       "included_in_generated_cases": false
     },
     {
@@ -4396,34 +4342,6 @@
       "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
       "score": -30,
       "case_id": "config_build_81fac33_96_change_editorconfig_in_order_to_impact_other_files_than_java_and_xml_i_e_jsp_",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "87d025f854e38a27ce8046add1a5cc140a584eaa",
-      "short_sha": "87d025f",
-      "subject": "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded",
-      "parent_sha": "df4e3a5541be895ff479c5a1e851f300cd8f8881",
-      "changed_files": [
-        "src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "other"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -30,
-      "case_id": "config_build_87d025f_fixed_url_for_jquery_ui_there_was_typo_query_instaed_of_jquery_and_file_cannot_b",
       "included_in_generated_cases": false
     },
     {
@@ -4791,31 +4709,33 @@
       "included_in_generated_cases": false
     },
     {
-      "sha": "7fe5184bc8326b2f5ab19c00ecae850b096a94f4",
-      "short_sha": "7fe5184",
-      "subject": "Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic",
-      "parent_sha": "8b625617cb24353ee906fab080c7677a6ec37870",
+      "sha": "c4b9b0b1193d66dadb84f46946de26510856dfd5",
+      "short_sha": "c4b9b0b",
+      "subject": "migrated to the latest version of jquery and jquery-ui",
+      "parent_sha": "31b602287f5c0ea22d50d7cfcab784a8ee4cb9ed",
       "changed_files": [
-        "src/main/webapp/WEB-INF/web.xml"
+        "pom.xml",
+        "src/main/webapp/WEB-INF/jsp/fragments/headTag.jsp"
       ],
-      "changed_file_count": 1,
+      "changed_file_count": 2,
       "categories": [
+        "config_build",
         "other"
       ],
-      "archetype": "infra_deployment",
+      "archetype": "config_build",
       "too_large": false,
       "dependency_only": false,
       "docs_only": false,
       "test_only": false,
       "asset_only": false,
       "needs_manual_prompt": false,
-      "prompt": "Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic",
+      "prompt": "migrated to the latest version of jquery and jquery-ui",
       "prompt_quality": "low",
       "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
       "candidate_quality": "reject",
-      "candidate_quality_reason": "Deployment or infrastructure changes are excluded by default.",
-      "score": -30,
-      "case_id": "infra_deployment_7fe5184_servlet_3_0_jsp_2_2_and_el_2_2_are_the_minimum_required_to_deploy_petclinic",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -33,
+      "case_id": "config_build_c4b9b0b_migrated_to_the_latest_version_of_jquery_and_jquery_ui",
       "included_in_generated_cases": false
     },
     {
@@ -5280,6 +5200,34 @@
       "included_in_generated_cases": false
     },
     {
+      "sha": "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
+      "short_sha": "cb6bd87",
+      "subject": "Putting encoding filter first per #80",
+      "parent_sha": "b265fc802d33b465dc6597fb0e763270a415b709",
+      "changed_files": [
+        "src/main/webapp/WEB-INF/web.xml"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "config_build"
+      ],
+      "archetype": "config_build",
+      "too_large": false,
+      "dependency_only": true,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "Putting encoding filter first per #80",
+      "prompt_quality": "low",
+      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -43,
+      "case_id": "config_build_cb6bd87_putting_encoding_filter_first_per_80",
+      "included_in_generated_cases": false
+    },
+    {
       "sha": "e49ed43b642c46e443e42e486ae9b9c70d18ed1b",
       "short_sha": "e49ed43",
       "subject": "Add Spring Boot devtools",
@@ -5518,34 +5466,6 @@
       "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
       "score": -45,
       "case_id": "config_build_b7764e3_added_comments_to_explain_how_database_dialect_is_configured_33",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "08d84ed2b38c42d9410ecca5add77bd339a43fb5",
-      "short_sha": "08d84ed",
-      "subject": "added comment for welcome file",
-      "parent_sha": "5cfd482edc474587cf2965750b936ee2ce871b4e",
-      "changed_files": [
-        "src/main/webapp/WEB-INF/web.xml"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "other"
-      ],
-      "archetype": "docs_comments",
-      "too_large": false,
-      "dependency_only": false,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "added comment for welcome file",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Docs, comments, or Javadoc changes are not product-feature planning cases.",
-      "score": -45,
-      "case_id": "docs_comments_08d84ed_added_comment_for_welcome_file",
       "included_in_generated_cases": false
     },
     {
@@ -6704,6 +6624,34 @@
       "included_in_generated_cases": false
     },
     {
+      "sha": "3e8829f3729a0e471838debb82f79308312ef493",
+      "short_sha": "3e8829f",
+      "subject": "adding explicit reference to default profile because it doesn't seem to work on on some environments",
+      "parent_sha": "74abfb1a35059c4c50066a81c539211c6569d4c6",
+      "changed_files": [
+        "src/main/webapp/WEB-INF/web.xml"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "config_build"
+      ],
+      "archetype": "config_build",
+      "too_large": false,
+      "dependency_only": true,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "adding explicit reference to default profile because it doesn't seem to work on on some environments",
+      "prompt_quality": "low",
+      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -63,
+      "case_id": "config_build_3e8829f_adding_explicit_reference_to_default_profile_because_it_doesn_t_seem_to_work_on_",
+      "included_in_generated_cases": false
+    },
+    {
       "sha": "43216fb1859461bcf69648d7bd9648e17033809b",
       "short_sha": "43216fb",
       "subject": "migrated to Hibernate 4.3.1",
@@ -6785,34 +6733,6 @@
       "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
       "score": -63,
       "case_id": "config_build_50f0bc9_migrated_to_logback_1_1_0",
-      "included_in_generated_cases": false
-    },
-    {
-      "sha": "515f8d99fd8cb1c12a07852ac1b7f06376dbe71a",
-      "short_sha": "515f8d9",
-      "subject": "Fix jQuery version",
-      "parent_sha": "bbc1c8bb805996ead456fefca15f7bcc375d82a0",
-      "changed_files": [
-        "pom.xml"
-      ],
-      "changed_file_count": 1,
-      "categories": [
-        "config_build"
-      ],
-      "archetype": "config_build",
-      "too_large": false,
-      "dependency_only": true,
-      "docs_only": false,
-      "test_only": false,
-      "asset_only": false,
-      "needs_manual_prompt": false,
-      "prompt": "Fix jQuery version",
-      "prompt_quality": "low",
-      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
-      "candidate_quality": "reject",
-      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
-      "score": -63,
-      "case_id": "config_build_515f8d9_fix_jquery_version",
       "included_in_generated_cases": false
     },
     {
@@ -7065,6 +6985,34 @@
       "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
       "score": -63,
       "case_id": "config_build_74abfb1_migrated_to_spring_3_2_5",
+      "included_in_generated_cases": false
+    },
+    {
+      "sha": "7fe5184bc8326b2f5ab19c00ecae850b096a94f4",
+      "short_sha": "7fe5184",
+      "subject": "Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic",
+      "parent_sha": "8b625617cb24353ee906fab080c7677a6ec37870",
+      "changed_files": [
+        "src/main/webapp/WEB-INF/web.xml"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "config_build"
+      ],
+      "archetype": "config_build",
+      "too_large": false,
+      "dependency_only": true,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "Servlet 3.0, JSP 2.2 and EL 2.2 are the minimum required to deploy Petclinic",
+      "prompt_quality": "low",
+      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -63,
+      "case_id": "config_build_7fe5184_servlet_3_0_jsp_2_2_and_el_2_2_are_the_minimum_required_to_deploy_petclinic",
       "included_in_generated_cases": false
     },
     {
@@ -8464,6 +8412,34 @@
       "included_in_generated_cases": false
     },
     {
+      "sha": "08d84ed2b38c42d9410ecca5add77bd339a43fb5",
+      "short_sha": "08d84ed",
+      "subject": "added comment for welcome file",
+      "parent_sha": "5cfd482edc474587cf2965750b936ee2ce871b4e",
+      "changed_files": [
+        "src/main/webapp/WEB-INF/web.xml"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "config_build"
+      ],
+      "archetype": "config_build",
+      "too_large": false,
+      "dependency_only": true,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "added comment for welcome file",
+      "prompt_quality": "low",
+      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -78,
+      "case_id": "config_build_08d84ed_added_comment_for_welcome_file",
+      "included_in_generated_cases": false
+    },
+    {
       "sha": "2f3e035c60551cb5caf2005b9caea8126a59a52e",
       "short_sha": "2f3e035",
       "subject": "The maven-war-plugin does not failed on missing web.xml",
@@ -8489,6 +8465,34 @@
       "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
       "score": -78,
       "case_id": "config_build_2f3e035_the_maven_war_plugin_does_not_failed_on_missing_web_xml",
+      "included_in_generated_cases": false
+    },
+    {
+      "sha": "515f8d99fd8cb1c12a07852ac1b7f06376dbe71a",
+      "short_sha": "515f8d9",
+      "subject": "Fix jQuery version",
+      "parent_sha": "bbc1c8bb805996ead456fefca15f7bcc375d82a0",
+      "changed_files": [
+        "pom.xml"
+      ],
+      "changed_file_count": 1,
+      "categories": [
+        "config_build"
+      ],
+      "archetype": "config_build",
+      "too_large": false,
+      "dependency_only": true,
+      "docs_only": false,
+      "test_only": false,
+      "asset_only": false,
+      "needs_manual_prompt": false,
+      "prompt": "Fix jQuery version",
+      "prompt_quality": "low",
+      "prompt_quality_reason": "Subject is vague or describes config/docs/refactor/infra work rather than a product feature.",
+      "candidate_quality": "reject",
+      "candidate_quality_reason": "Build/dependency/config-only changes are excluded by default.",
+      "score": -78,
+      "case_id": "config_build_515f8d9_fix_jquery_version",
       "included_in_generated_cases": false
     },
     {

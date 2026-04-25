@@ -30,6 +30,7 @@ FRONTEND_NODE_TYPES = {
 BACKEND_NODE_TYPES = {
     "api_contract",
     "api_controller",
+    "api_dto",
     "service_layer",
     "domain_model",
     "repository",

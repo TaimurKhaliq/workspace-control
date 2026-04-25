@@ -28,7 +28,19 @@
     "category_recall": 0.4,
     "high_signal_precision": 0.75,
     "high_signal_recall": 0.2727,
-    "static_asset_miss_count": 0
+    "static_asset_miss_count": 0,
+    "recipe_suggestion_file_count": 9,
+    "recipe_matched_file_count": 3,
+    "recipe_exact_file_precision": 0.3333,
+    "recipe_exact_file_recall": 0.2727,
+    "recipe_high_signal_precision": 0.3333,
+    "recipe_high_signal_recall": 0.2727,
+    "combined_file_count": 11,
+    "combined_matched_file_count": 4,
+    "combined_exact_file_precision": 0.3636,
+    "combined_exact_file_recall": 0.3636,
+    "combined_high_signal_precision": 0.3636,
+    "combined_high_signal_recall": 0.3636
   },
   "predicted_repos": [
     "spring-petclinic-reactjs"
@@ -64,6 +76,517 @@
     }
   ],
   "predicted_reference_files": [],
+  "recipe_suggestions": {
+    "matched_recipes": [
+      {
+        "recipe_id": "petclinic_react_ui_form_validation",
+        "recipe_type": "ui_form_validation",
+        "structural_confidence": 0.9555,
+        "planner_effectiveness": 0.0,
+        "score": 87,
+        "why_matched": [
+          "matched recipe trigger terms: error, handling",
+          "source graph contains related domain token(s): owner",
+          "request mentions form validation or invalid-field feedback",
+          "feature intent includes ui",
+          "structural confidence 0.96",
+          "planner effectiveness is low, so this recipe is useful as future-improvement evidence"
+        ]
+      },
+      {
+        "recipe_id": "petclinic_react_ui_page_add",
+        "recipe_type": "ui_page_add",
+        "structural_confidence": 0.98,
+        "planner_effectiveness": 0.05,
+        "score": 82,
+        "why_matched": [
+          "source graph contains related domain token(s): owner",
+          "request verb includes add",
+          "identifier normalization exposes page-style term(s): owner, page",
+          "request looks like UI page creation",
+          "feature intent includes ui",
+          "structural confidence 0.98",
+          "planner effectiveness is low, so this recipe is useful as future-improvement evidence"
+        ]
+      },
+      {
+        "recipe_id": "petclinic_react_full_stack_ui_api",
+        "recipe_type": "full_stack_ui_api",
+        "structural_confidence": 0.9156,
+        "planner_effectiveness": 0.3182,
+        "score": 76,
+        "why_matched": [
+          "matched recipe trigger terms: error, handling, missing",
+          "source graph contains related domain token(s): owner",
+          "request combines UI surface terms with error/API-style change hints",
+          "structural confidence 0.92",
+          "planner effectiveness is low, so this recipe is useful as future-improvement evidence"
+        ]
+      }
+    ],
+    "suggested_actions": [
+      {
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "api_controller",
+        "action": "modify",
+        "suggested_path": "src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "suggested_folder": null,
+        "confidence": "high",
+        "evidence": [
+          "current source graph has a api_controller surface matching the learned recipe",
+          "source graph node: api_controller",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "exists_in_parent": true,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "api_controller",
+        "action": "modify",
+        "suggested_path": "src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "suggested_folder": null,
+        "confidence": "high",
+        "evidence": [
+          "current source graph has a api_controller surface matching the learned recipe",
+          "source graph node: api_controller",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "exists_in_parent": true,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "frontend_type",
+        "action": "inspect",
+        "suggested_path": "client/src/types/index.ts",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a frontend_type surface matching the learned recipe",
+          "source graph node: frontend_type",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "page_component",
+        "action": "modify",
+        "suggested_path": "client/src/components/ErrorPage.tsx",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a page_component surface matching the learned recipe",
+          "source graph node: page_component",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "page_component",
+        "action": "modify",
+        "suggested_path": "client/src/components/owners/FindOwnersPage.tsx",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a page_component surface matching the learned recipe",
+          "source graph node: page_component",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "service_layer",
+        "action": "modify",
+        "suggested_path": "src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a service_layer surface matching the learned recipe",
+          "source graph node: service_layer",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "exists_in_parent": true,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "service_layer",
+        "action": "modify",
+        "suggested_path": "src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a service_layer surface matching the learned recipe",
+          "source graph node: service_layer",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "exists_in_parent": true,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_form_validation",
+        "node_type": "frontend_type",
+        "action": "inspect",
+        "suggested_path": "client/src/types/index.ts",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a frontend_type surface matching the learned recipe",
+          "source graph node: frontend_type",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_form_validation",
+        "node_type": "page_component",
+        "action": "modify",
+        "suggested_path": "client/src/components/ErrorPage.tsx",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a page_component surface matching the learned recipe",
+          "source graph node: page_component",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_form_validation",
+        "node_type": "page_component",
+        "action": "modify",
+        "suggested_path": "client/src/components/owners/FindOwnersPage.tsx",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "current source graph has a page_component surface matching the learned recipe",
+          "source graph node: page_component",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "page_component",
+        "action": "create",
+        "suggested_path": "client/src/components/NewOwnerPage.tsx",
+        "suggested_folder": null,
+        "confidence": "high",
+        "evidence": [
+          "request explicitly names a page/component identifier",
+          "recipe learned page creation patterns",
+          "suggested path is inferred from current graph sibling folders"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+        "exists_in_parent": false,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "route_config",
+        "action": "modify",
+        "suggested_path": "client/src/configureRoutes.tsx",
+        "suggested_folder": null,
+        "confidence": "high",
+        "evidence": [
+          "recipe commonly modifies routing/configuration when adding pages",
+          "source graph node: shared_component",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "frontend_type",
+        "action": "inspect",
+        "suggested_path": "client/src/types/index.ts",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "recipe often updates frontend types for page additions",
+          "source graph node: frontend_type",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "page_component",
+        "action": "inspect",
+        "suggested_path": "client/src/components/ErrorPage.tsx",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "nearby page is useful as a pattern for the new page",
+          "source graph node: page_component",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": false,
+        "folder_matched_actual_diff": false
+      }
+    ],
+    "predicted_repos": [
+      "spring-petclinic-reactjs"
+    ],
+    "predicted_files": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "api_controller",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "api_controller",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "current source graph has a frontend_type surface matching the learned recipe; source graph node: frontend_type; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "frontend_type",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "medium",
+        "reason": "current source graph has a page_component surface matching the learned recipe; source graph node: page_component; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "page_component",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "medium",
+        "reason": "current source graph has a page_component surface matching the learned recipe; source graph node: page_component; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "page_component",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "medium",
+        "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "service_layer",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "medium",
+        "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "service_layer",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "create",
+        "confidence": "high",
+        "reason": "request explicitly names a page/component identifier; recipe learned page creation patterns; suggested path is inferred from current graph sibling folders",
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "page_component",
+        "exists_in_parent": false,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "recipe commonly modifies routing/configuration when adding pages; source graph node: shared_component; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "route_config",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      }
+    ],
+    "predicted_reference_files": [],
+    "missing_evidence": [],
+    "caveats": [
+      "Recipe suggestions are sidecar guidance only; plan-feature and propose-changes are unchanged."
+    ]
+  },
+  "combined_predictions": {
+    "predicted_files": [
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Nearby same-domain frontend file can provide the page and routing pattern."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Nearby same-domain frontend file can provide the page and routing pattern."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Shared frontend types may need review for the new page surface."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "create",
+        "confidence": "high",
+        "reason": "Feature explicitly names this page component, and nearby frontend paths indicate the folder convention."
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "api_controller",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "api_controller",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "medium",
+        "reason": "current source graph has a page_component surface matching the learned recipe; source graph node: page_component; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "page_component",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "medium",
+        "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "service_layer",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "medium",
+        "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
+        "node_type": "service_layer",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "create",
+        "confidence": "high",
+        "reason": "request explicitly names a page/component identifier; recipe learned page creation patterns; suggested path is inferred from current graph sibling folders",
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "page_component",
+        "exists_in_parent": false,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "recipe commonly modifies routing/configuration when adding pages; source graph node: shared_component; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_ui_page_add",
+        "node_type": "route_config",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      }
+    ],
+    "predicted_reference_files": [],
+    "predicted_repos": [
+      "spring-petclinic-reactjs"
+    ]
+  },
   "actual_files": [
     "spring-petclinic-reactjs/client/TODO.md",
     "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
@@ -141,7 +664,7 @@
         "frontend_type"
       ],
       "actual_categories": [
-        "api_controller",
+        "api_dto",
         "frontend_component",
         "frontend_entrypoint",
         "frontend_type",
@@ -152,7 +675,7 @@
         "frontend_type"
       ],
       "missed_categories": [
-        "api_controller",
+        "api_dto",
         "frontend_entrypoint",
         "unknown"
       ],
@@ -180,6 +703,7 @@
         ],
         "api_contract": [],
         "api_controller": [],
+        "api_dto": [],
         "service_layer": [],
         "domain_model": [],
         "repository": [],
@@ -203,7 +727,8 @@
           "spring-petclinic-reactjs/client/src/types/index.ts"
         ],
         "api_contract": [],
-        "api_controller": [
+        "api_controller": [],
+        "api_dto": [
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
@@ -278,29 +803,718 @@
       "missed_count": 0
     }
   },
+  "comparison_sections": {
+    "planner_propose": {
+      "predicted_files": [
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts"
+      ],
+      "actual_files": [
+        "spring-petclinic-reactjs/client/TODO.md",
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts",
+        "spring-petclinic-reactjs/client/src/util/index.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+      ],
+      "matched_files": [
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts"
+      ],
+      "missed_files": [
+        "spring-petclinic-reactjs/client/TODO.md",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/util/index.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+      ],
+      "extra_predicted_files": [
+        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx"
+      ],
+      "precision": 0.75,
+      "recall": 0.2727,
+      "exact_file": {
+        "precision": 0.75,
+        "recall": 0.2727,
+        "predicted_count": 4,
+        "actual_count": 11,
+        "matched_count": 3,
+        "missed_count": 8,
+        "extra_predicted_count": 1
+      },
+      "folder_level": {
+        "matches": [],
+        "matched_predicted_paths": [],
+        "matched_actual_files": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "matched_predicted_count": 0,
+        "matched_actual_count": 0
+      },
+      "category_level": {
+        "predicted_categories": [
+          "frontend_component",
+          "frontend_type"
+        ],
+        "actual_categories": [
+          "api_dto",
+          "frontend_component",
+          "frontend_entrypoint",
+          "frontend_type",
+          "unknown"
+        ],
+        "matched_categories": [
+          "frontend_component",
+          "frontend_type"
+        ],
+        "missed_categories": [
+          "api_dto",
+          "frontend_entrypoint",
+          "unknown"
+        ],
+        "extra_predicted_categories": [],
+        "precision": 1.0,
+        "recall": 0.4,
+        "predicted_count": 2,
+        "actual_count": 5,
+        "matched_count": 2,
+        "missed_count": 3,
+        "extra_predicted_count": 0,
+        "predicted_by_category": {
+          "frontend_entrypoint": [],
+          "app_shell": [],
+          "landing_page": [],
+          "public_html": [],
+          "static_asset": [],
+          "frontend_component": [
+            "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx"
+          ],
+          "frontend_type": [
+            "spring-petclinic-reactjs/client/src/types/index.ts"
+          ],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        },
+        "actual_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/util/index.tsx"
+          ],
+          "app_shell": [],
+          "landing_page": [],
+          "public_html": [],
+          "static_asset": [],
+          "frontend_component": [
+            "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+            "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+          ],
+          "frontend_type": [
+            "spring-petclinic-reactjs/client/src/types/index.ts"
+          ],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+          ],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": [
+            "spring-petclinic-reactjs/client/TODO.md",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java"
+          ]
+        }
+      },
+      "high_signal": {
+        "predicted_files": [
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts"
+        ],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/TODO.md",
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts",
+          "spring-petclinic-reactjs/client/src/util/index.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+        ],
+        "matched_files": [
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts"
+        ],
+        "missed_files": [
+          "spring-petclinic-reactjs/client/TODO.md",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/util/index.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+        ],
+        "extra_predicted_files": [
+          "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx"
+        ],
+        "precision": 0.75,
+        "recall": 0.2727,
+        "predicted_count": 4,
+        "actual_count": 11,
+        "matched_count": 3,
+        "missed_count": 8,
+        "extra_predicted_count": 1
+      },
+      "static_assets": {
+        "predicted_files": [],
+        "actual_files": [],
+        "exact_matched_files": [],
+        "folder_level_matched_files": [],
+        "missed_files": [],
+        "predicted_count": 0,
+        "actual_count": 0,
+        "exact_matched_count": 0,
+        "folder_level_matched_count": 0,
+        "missed_count": 0
+      }
+    },
+    "recipe_suggestions": {
+      "predicted_files": [
+        "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+      ],
+      "actual_files": [
+        "spring-petclinic-reactjs/client/TODO.md",
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts",
+        "spring-petclinic-reactjs/client/src/util/index.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+      ],
+      "matched_files": [
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts"
+      ],
+      "missed_files": [
+        "spring-petclinic-reactjs/client/TODO.md",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/util/index.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+      ],
+      "extra_predicted_files": [
+        "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+      ],
+      "precision": 0.3333,
+      "recall": 0.2727,
+      "exact_file": {
+        "precision": 0.3333,
+        "recall": 0.2727,
+        "predicted_count": 9,
+        "actual_count": 11,
+        "matched_count": 3,
+        "missed_count": 8,
+        "extra_predicted_count": 6
+      },
+      "folder_level": {
+        "matches": [],
+        "matched_predicted_paths": [],
+        "matched_actual_files": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "matched_predicted_count": 0,
+        "matched_actual_count": 0
+      },
+      "category_level": {
+        "predicted_categories": [
+          "api_controller",
+          "frontend_component",
+          "frontend_type",
+          "service_layer"
+        ],
+        "actual_categories": [
+          "api_dto",
+          "frontend_component",
+          "frontend_entrypoint",
+          "frontend_type",
+          "unknown"
+        ],
+        "matched_categories": [
+          "frontend_component",
+          "frontend_type"
+        ],
+        "missed_categories": [
+          "api_dto",
+          "frontend_entrypoint",
+          "unknown"
+        ],
+        "extra_predicted_categories": [
+          "api_controller",
+          "service_layer"
+        ],
+        "precision": 0.5,
+        "recall": 0.4,
+        "predicted_count": 4,
+        "actual_count": 5,
+        "matched_count": 2,
+        "missed_count": 3,
+        "extra_predicted_count": 2,
+        "predicted_by_category": {
+          "frontend_entrypoint": [],
+          "app_shell": [],
+          "landing_page": [],
+          "public_html": [],
+          "static_asset": [],
+          "frontend_component": [
+            "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+            "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+          ],
+          "frontend_type": [
+            "spring-petclinic-reactjs/client/src/types/index.ts"
+          ],
+          "api_contract": [],
+          "api_controller": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+          ],
+          "api_dto": [],
+          "service_layer": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java"
+          ],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        },
+        "actual_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/util/index.tsx"
+          ],
+          "app_shell": [],
+          "landing_page": [],
+          "public_html": [],
+          "static_asset": [],
+          "frontend_component": [
+            "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+            "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+          ],
+          "frontend_type": [
+            "spring-petclinic-reactjs/client/src/types/index.ts"
+          ],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+          ],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": [
+            "spring-petclinic-reactjs/client/TODO.md",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java"
+          ]
+        }
+      },
+      "high_signal": {
+        "predicted_files": [
+          "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+        ],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/TODO.md",
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts",
+          "spring-petclinic-reactjs/client/src/util/index.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+        ],
+        "matched_files": [
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts"
+        ],
+        "missed_files": [
+          "spring-petclinic-reactjs/client/TODO.md",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/util/index.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+        ],
+        "extra_predicted_files": [
+          "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+        ],
+        "precision": 0.3333,
+        "recall": 0.2727,
+        "predicted_count": 9,
+        "actual_count": 11,
+        "matched_count": 3,
+        "missed_count": 8,
+        "extra_predicted_count": 6
+      },
+      "static_assets": {
+        "predicted_files": [],
+        "actual_files": [],
+        "exact_matched_files": [],
+        "folder_level_matched_files": [],
+        "missed_files": [],
+        "predicted_count": 0,
+        "actual_count": 0,
+        "exact_matched_count": 0,
+        "folder_level_matched_count": 0,
+        "missed_count": 0
+      }
+    },
+    "combined": {
+      "predicted_files": [
+        "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+      ],
+      "actual_files": [
+        "spring-petclinic-reactjs/client/TODO.md",
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts",
+        "spring-petclinic-reactjs/client/src/util/index.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+      ],
+      "matched_files": [
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "spring-petclinic-reactjs/client/src/types/index.ts"
+      ],
+      "missed_files": [
+        "spring-petclinic-reactjs/client/TODO.md",
+        "spring-petclinic-reactjs/client/src/util/index.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+      ],
+      "extra_predicted_files": [
+        "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+      ],
+      "precision": 0.3636,
+      "recall": 0.3636,
+      "exact_file": {
+        "precision": 0.3636,
+        "recall": 0.3636,
+        "predicted_count": 11,
+        "actual_count": 11,
+        "matched_count": 4,
+        "missed_count": 7,
+        "extra_predicted_count": 7
+      },
+      "folder_level": {
+        "matches": [],
+        "matched_predicted_paths": [],
+        "matched_actual_files": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "matched_predicted_count": 0,
+        "matched_actual_count": 0
+      },
+      "category_level": {
+        "predicted_categories": [
+          "api_controller",
+          "frontend_component",
+          "frontend_type",
+          "service_layer"
+        ],
+        "actual_categories": [
+          "api_dto",
+          "frontend_component",
+          "frontend_entrypoint",
+          "frontend_type",
+          "unknown"
+        ],
+        "matched_categories": [
+          "frontend_component",
+          "frontend_type"
+        ],
+        "missed_categories": [
+          "api_dto",
+          "frontend_entrypoint",
+          "unknown"
+        ],
+        "extra_predicted_categories": [
+          "api_controller",
+          "service_layer"
+        ],
+        "precision": 0.5,
+        "recall": 0.4,
+        "predicted_count": 4,
+        "actual_count": 5,
+        "matched_count": 2,
+        "missed_count": 3,
+        "extra_predicted_count": 2,
+        "predicted_by_category": {
+          "frontend_entrypoint": [],
+          "app_shell": [],
+          "landing_page": [],
+          "public_html": [],
+          "static_asset": [],
+          "frontend_component": [
+            "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+            "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+          ],
+          "frontend_type": [
+            "spring-petclinic-reactjs/client/src/types/index.ts"
+          ],
+          "api_contract": [],
+          "api_controller": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+          ],
+          "api_dto": [],
+          "service_layer": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java"
+          ],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        },
+        "actual_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/util/index.tsx"
+          ],
+          "app_shell": [],
+          "landing_page": [],
+          "public_html": [],
+          "static_asset": [],
+          "frontend_component": [
+            "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+            "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+            "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+          ],
+          "frontend_type": [
+            "spring-petclinic-reactjs/client/src/types/index.ts"
+          ],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+          ],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": [
+            "spring-petclinic-reactjs/client/TODO.md",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java"
+          ]
+        }
+      },
+      "high_signal": {
+        "predicted_files": [
+          "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+        ],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/TODO.md",
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts",
+          "spring-petclinic-reactjs/client/src/util/index.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+        ],
+        "matched_files": [
+          "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+          "spring-petclinic-reactjs/client/src/types/index.ts"
+        ],
+        "missed_files": [
+          "spring-petclinic-reactjs/client/TODO.md",
+          "spring-petclinic-reactjs/client/src/util/index.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java"
+        ],
+        "extra_predicted_files": [
+          "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/NewOwnerPage.tsx",
+          "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java"
+        ],
+        "precision": 0.3636,
+        "recall": 0.3636,
+        "predicted_count": 11,
+        "actual_count": 11,
+        "matched_count": 4,
+        "missed_count": 7,
+        "extra_predicted_count": 7
+      },
+      "static_assets": {
+        "predicted_files": [],
+        "actual_files": [],
+        "exact_matched_files": [],
+        "folder_level_matched_files": [],
+        "missed_files": [],
+        "predicted_count": 0,
+        "actual_count": 0,
+        "exact_matched_count": 0,
+        "folder_level_matched_count": 0,
+        "missed_count": 0
+      }
+    }
+  },
   "commands": {
     "discover_architecture": {
-      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-wsawlt31/discovery_targets.json",
+      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-_siuboia/discovery_targets.json",
       "exit_code": 0,
       "stdout": "Architecture Discovery\n\nrepo: spring-petclinic-reactjs\n  mode: source-discovered\n  confidence: high\n  discovered frameworks: react, spring_boot\n  hinted frameworks: -\n  framework detections: react ^15.0.0 (detected, high, client/package.json), spring_boot 1.4.0.RELEASE (detected, high, pom.xml)\n  framework packs loaded: react (detected), spring_boot (detected)\n  framework-derived hints: react node kinds: page, editor, form, detail, list, component, react path categories: api, service, ui, react validation hints: npm test, npm run build, spring_boot node kinds: controller, service, repository, entity, model, dto, spring_boot path categories: api, event, persistence, service, spring_boot validation hints: mvn test, gradle test\n  discovered api: src/main/java/org/springframework/samples/petclinic/web, src/main/java/org/springframework/samples/petclinic/web/api\n  discovered service/business logic: src/main/java/org/springframework/samples/petclinic/service\n  discovered persistence/migration: src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model\n  discovered ui/components: client/src/components, client/src/types, client/src/components/owners, client/src/components/vets\n  hinted locations:\n    api: src/main/java/**/controller, src/main/java/**/dto\n    service/business logic: src/main/java/**/service\n    persistence/migration: -\n    ui/components: -\n",
       "stderr": ""
     },
     "analyze_feature": {
-      "command": "python3 main.py analyze-feature \"Add NewOwnerPage (missing error handling)\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-wsawlt31/discovery_targets.json",
+      "command": "python3 main.py analyze-feature \"Add NewOwnerPage (missing error handling)\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-_siuboia/discovery_targets.json",
       "exit_code": 0,
       "stdout": "Feature: \"Add NewOwnerPage (missing error handling)\"\nrepo                     | role          | score | reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \n-------------------------+---------------+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nspring-petclinic-reactjs | primary-owner | 125   | inferred_metadata: domain match (error); deterministic_intent: frontend signals (keywords: page; repo type; manifest: frontend, react, ui, web); adapter_discovery: adapter discovery (react, spring_boot; paths: client/src/components, client/src/types, client/src/components/owners); backend ownership (inferred_metadata: owns_entities: owner | inferred_metadata: owns_fields: error, owner; tokens: custom error | inferred_metadata: owns_tables: owner | inferred_metadata: api_keywords: error, owner; tokens: api owner candidate, custom error, domain service owner candidate | adapter_discovery: source-backed ownership (owns_entities: owner; owns_fields: error, owner, custom error; owns_tables: owner; discovered controller/dto, service, entity/repository)); inferred_metadata: keyword overlap (owner)\n",
       "stderr": ""
     },
     "plan_feature": {
-      "command": "python3 main.py plan-feature \"Add NewOwnerPage (missing error handling)\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-wsawlt31/discovery_targets.json",
+      "command": "python3 main.py plan-feature \"Add NewOwnerPage (missing error handling)\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-_siuboia/discovery_targets.json",
       "exit_code": 0,
       "stdout": "{\n  \"feature_request\": \"Add NewOwnerPage (missing error handling)\",\n  \"feature_intents\": [\n    \"ui\"\n  ],\n  \"unsupported_intents\": [],\n  \"concept_grounding\": [\n    {\n      \"concept\": \"owner\",\n      \"status\": \"direct_match\",\n      \"matched_terms\": [\n        \"owner\",\n        \"i owner\",\n        \"or owner\",\n        \"owner id\",\n        \"owner jsp\",\n        \"web owner\",\n        \"owner java\",\n        \"model owner\"\n      ],\n      \"sources\": [\n        \"inferred_metadata:spring-petclinic-reactjs\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/FindOwnersPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/OwnersPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/types/index.ts\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/model/Owner.java\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/model/Pet.java\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java\"\n      ]\n    }\n  ],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"primary_owner\": \"spring-petclinic-reactjs\",\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"direct_dependents\": [],\n  \"possible_downstreams\": [],\n  \"db_change_needed\": false,\n  \"api_change_needed\": false,\n  \"ui_change_needed\": true,\n  \"likely_paths_by_repo\": {\n    \"spring-petclinic-reactjs\": [\n      \"client/src/components/owners\",\n      \"client/src/types\"\n    ]\n  },\n  \"validation_commands\": [\n    \"./mvnw test\"\n  ],\n  \"ordered_steps\": [\n    \"In spring-petclinic-reactjs (primary-owner, score=125), update the requested UI page, layout, route, and component composition using discovered UI paths: client/src/components, client/src/types, client/src/components/owners.\",\n    \"Run validation commands in impacted repos: ./mvnw test.\"\n  ],\n  \"requires_human_approval\": false\n}\n",
       "stderr": ""
     },
     "propose_changes": {
-      "command": "python3 main.py propose-changes \"Add NewOwnerPage (missing error handling)\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-wsawlt31/discovery_targets.json",
+      "command": "python3 main.py propose-changes \"Add NewOwnerPage (missing error handling)\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-_siuboia/discovery_targets.json",
       "exit_code": 0,
       "stdout": "{\n  \"feature_request\": \"Add NewOwnerPage (missing error handling)\",\n  \"feature_intents\": [\n    \"ui\"\n  ],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"proposed_changes\": [\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"role\": \"primary-owner\",\n      \"likely_files_to_inspect\": [\n        \"client/src/components/owners/FindOwnersPage.tsx\",\n        \"client/src/components/owners/OwnersPage.tsx\",\n        \"client/src/types/index.ts\"\n      ],\n      \"files\": [\n        {\n          \"path\": \"client/src/components/owners/FindOwnersPage.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Nearby same-domain frontend file can provide the page and routing pattern.\"\n        },\n        {\n          \"path\": \"client/src/components/owners/OwnersPage.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Nearby same-domain frontend file can provide the page and routing pattern.\"\n        },\n        {\n          \"path\": \"client/src/types/index.ts\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Shared frontend types may need review for the new page surface.\"\n        },\n        {\n          \"path\": \"client/src/components/owners/NewOwnerPage.tsx\",\n          \"action\": \"create\",\n          \"confidence\": \"high\",\n          \"reason\": \"Feature explicitly names this page component, and nearby frontend paths indicate the folder convention.\"\n        }\n      ],\n      \"likely_changes\": [\n        \"Scaffold the requested page component in the matching frontend domain folder.\",\n        \"Wire the page into the existing route/config surface without adding backend actions.\"\n      ],\n      \"possible_new_files\": [\n        \"client/src/components/owners/NewOwnerPage.tsx\"\n      ],\n      \"rationale\": \"Role: primary-owner. Intents: ui. Evidence: ranked by deterministic feature analysis, inferred ownership from discovered source names, analysis role: primary owner, discovered frameworks: react, spring_boot, source discovered architecture evidence. Path confidence: Concrete files were inferred from discovered naming conventions. Overall confidence: high.\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    "suggest_from_recipes": {
+      "command": "python3 main.py suggest-from-recipes \"Add NewOwnerPage (missing error handling)\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-_siuboia/discovery_targets.json --learning-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-_siuboia/learning --report-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-_siuboia/learning_reports",
+      "exit_code": 0,
+      "stdout": "{\n  \"feature_request\": \"Add NewOwnerPage (missing error handling)\",\n  \"target_id\": \"replay-spring-petclinic-reactjs\",\n  \"matched_recipes\": [\n    {\n      \"recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"recipe_type\": \"ui_form_validation\",\n      \"structural_confidence\": 0.9555,\n      \"planner_effectiveness\": 0.0,\n      \"score\": 87,\n      \"why_matched\": [\n        \"matched recipe trigger terms: error, handling\",\n        \"source graph contains related domain token(s): owner\",\n        \"request mentions form validation or invalid-field feedback\",\n        \"feature intent includes ui\",\n        \"structural confidence 0.96\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    },\n    {\n      \"recipe_id\": \"petclinic_react_ui_page_add\",\n      \"recipe_type\": \"ui_page_add\",\n      \"structural_confidence\": 0.98,\n      \"planner_effectiveness\": 0.05,\n      \"score\": 82,\n      \"why_matched\": [\n        \"source graph contains related domain token(s): owner\",\n        \"request verb includes add\",\n        \"identifier normalization exposes page-style term(s): owner, page\",\n        \"request looks like UI page creation\",\n        \"feature intent includes ui\",\n        \"structural confidence 0.98\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    },\n    {\n      \"recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"recipe_type\": \"full_stack_ui_api\",\n      \"structural_confidence\": 0.9156,\n      \"planner_effectiveness\": 0.3182,\n      \"score\": 76,\n      \"why_matched\": [\n        \"matched recipe trigger terms: error, handling, missing\",\n        \"source graph contains related domain token(s): owner\",\n        \"request combines UI surface terms with error/API-style change hints\",\n        \"structural confidence 0.92\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    }\n  ],\n  \"suggestions\": [\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"current source graph has a api_controller surface matching the learned recipe\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/OwnerController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"current source graph has a api_controller surface matching the learned recipe\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"frontend_type\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/types/index.ts\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a frontend_type surface matching the learned recipe\",\n        \"source graph node: frontend_type\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"page_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/ErrorPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a page_component surface matching the learned recipe\",\n        \"source graph node: page_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"page_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/owners/FindOwnersPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a page_component surface matching the learned recipe\",\n        \"source graph node: page_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"service_layer\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicService.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a service_layer surface matching the learned recipe\",\n        \"source graph node: service_layer\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"service_layer\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a service_layer surface matching the learned recipe\",\n        \"source graph node: service_layer\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"frontend_type\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/types/index.ts\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a frontend_type surface matching the learned recipe\",\n        \"source graph node: frontend_type\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"page_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/ErrorPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a page_component surface matching the learned recipe\",\n        \"source graph node: page_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"page_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/owners/FindOwnersPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a page_component surface matching the learned recipe\",\n        \"source graph node: page_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_page_add\",\n      \"node_type\": \"page_component\",\n      \"action\": \"create\",\n      \"suggested_path\": \"client/src/components/NewOwnerPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"request explicitly names a page/component identifier\",\n        \"recipe learned page creation patterns\",\n        \"suggested path is inferred from current graph sibling folders\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_page_add\",\n      \"node_type\": \"route_config\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/configureRoutes.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"recipe commonly modifies routing/configuration when adding pages\",\n        \"source graph node: shared_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_page_add\",\n      \"node_type\": \"frontend_type\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/types/index.ts\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"recipe often updates frontend types for page additions\",\n        \"source graph node: frontend_type\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_page_add\",\n      \"node_type\": \"page_component\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/components/ErrorPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"nearby page is useful as a pattern for the new page\",\n        \"source graph node: page_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    }\n  ],\n  \"missing_evidence\": [],\n  \"caveats\": [\n    \"Recipe suggestions are sidecar guidance only; plan-feature and propose-changes are unchanged.\"\n  ]\n}\n",
       "stderr": ""
     }
   },

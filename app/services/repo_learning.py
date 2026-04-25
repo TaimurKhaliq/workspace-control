@@ -54,6 +54,8 @@ RECIPE_TYPE_BY_ARCHETYPE = {
     "ui_form_validation": "ui_form_validation",
     "backend_api": "backend_api_change",
     "backend_validation": "backend_validation_change",
+    "backend_validation_change": "backend_validation_change",
+    "backend_search_query": "backend_search_query",
     "persistence_data": "persistence_data_change",
     "full_stack_ui_api": "full_stack_ui_api",
     "config_build": "config_build_change",
@@ -64,6 +66,7 @@ PRODUCT_RECIPE_TYPES = {
     "ui_form_validation",
     "backend_api_change",
     "backend_validation_change",
+    "backend_search_query",
     "persistence_data_change",
     "full_stack_ui_api",
 }
@@ -846,6 +849,8 @@ def classify_learning_node_type(path: str) -> str:
         if "list" in stem or "table" in stem:
             return "list_component"
         return "frontend_component"
+    if name.endswith(("request.java", "response.java", "dto.java")) or (name.endswith("resource.java") and "api" in parts):
+        return "api_dto"
     if name.endswith(("controller.java", "resource.java")) or "controller" in parts:
         return "api_controller"
     if name.endswith("service.java") or "service" in parts or "services" in parts:

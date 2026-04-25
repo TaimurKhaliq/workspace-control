@@ -9,10 +9,10 @@
 
 ## Diagnosis
 
-- labels: `exact_match_miss_but_category_match`, `graph_found_surface_but_proposal_missed`, `planner_underpredicted`, `prompt_too_vague`
-- likely cause: The prompt did not provide enough actionable product/surface intent.
-- recommended fix area: `prompt generation`
-- why: Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe suggestions matched categories but missed exact files. Source graph found relevant surfaces, but propose-changes emitted no files.
+- labels: `domain_light_but_archetype_clear`, `exact_match_miss_but_category_match`, `graph_found_surface_but_proposal_missed`, `planner_underpredicted`
+- likely cause: Relevant graph surfaces were found, but proposal emitted no useful file predictions.
+- recommended fix area: `propose-changes`
+- why: Prompt lacks a strong domain token but has clear archetype terms. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. Recipe suggestions matched categories but missed exact files. Source graph found relevant surfaces, but propose-changes emitted no files.
 
 ## Metrics
 
@@ -82,14 +82,14 @@
 
 ## Discovery / Source Graph
 
-- graph edge count: 56
-- graph node counts: `{'api_controller': 14, 'app_shell': 1, 'domain_model': 16, 'event_consumer': 1, 'frontend_entrypoint': 1, 'frontend_type': 1, 'landing_page': 1, 'page_component': 6, 'public_html': 1, 'repository': 4, 'service_layer': 2, 'shared_component': 6, 'static_asset': 1}`
+- graph edge count: 50
+- graph node counts: `{'api_controller': 9, 'api_dto': 5, 'app_shell': 1, 'domain_model': 16, 'event_consumer': 1, 'frontend_entrypoint': 1, 'frontend_type': 1, 'landing_page': 1, 'page_component': 6, 'public_html': 1, 'repository': 4, 'service_layer': 2, 'shared_component': 6, 'static_asset': 1}`
 - relevant tokens: `add`, `feedback`, `for`, `invalid`, `new`, `owner`, `owners`, `reactj`, `reactjs`, `todo`, `visual`
 
 ## Relevant Graph Nodes
 
 - `client/src/components/owners/NewOwnerPage.tsx` (page_component) terms=`new`, `owner`, `owners`
-- `src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java` (api_controller) terms=`owner`, `todo`
+- `src/main/java/org/springframework/samples/petclinic/web/api/OwnerResource.java` (api_dto) terms=`owner`, `todo`
 - `client/src/components/owners/FindOwnersPage.tsx` (page_component) terms=`owner`, `owners`
 - `client/src/components/owners/OwnersPage.tsx` (page_component) terms=`owner`, `owners`
 - `client/src/components/owners/types.ts` (shared_component) terms=`owner`, `owners`

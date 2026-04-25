@@ -28,7 +28,19 @@
     "category_recall": 0.8,
     "high_signal_precision": 1.0,
     "high_signal_recall": 1.0,
-    "static_asset_miss_count": 6
+    "static_asset_miss_count": 6,
+    "recipe_suggestion_file_count": 4,
+    "recipe_matched_file_count": 4,
+    "recipe_exact_file_precision": 1.0,
+    "recipe_exact_file_recall": 0.4,
+    "recipe_high_signal_precision": 1.0,
+    "recipe_high_signal_recall": 1.0,
+    "combined_file_count": 4,
+    "combined_matched_file_count": 4,
+    "combined_exact_file_precision": 1.0,
+    "combined_exact_file_recall": 0.4,
+    "combined_high_signal_precision": 1.0,
+    "combined_high_signal_recall": 1.0
   },
   "predicted_repos": [
     "spring-petclinic-reactjs"
@@ -64,6 +76,185 @@
     }
   ],
   "predicted_reference_files": [],
+  "recipe_suggestions": {
+    "matched_recipes": [
+      {
+        "recipe_id": "petclinic_react_ui_shell_layout",
+        "recipe_type": "ui_shell_layout",
+        "structural_confidence": 0.98,
+        "planner_effectiveness": 0.0,
+        "score": 97,
+        "why_matched": [
+          "matched recipe trigger terms: layout, page, welcome",
+          "source graph contains related domain token(s): welcome",
+          "request mentions UI shell, layout, welcome, or landing-page work",
+          "feature intent includes ui",
+          "structural confidence 0.98",
+          "planner effectiveness is low, so this recipe is useful as future-improvement evidence"
+        ]
+      }
+    ],
+    "suggested_actions": [
+      {
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "app_shell",
+        "action": "modify",
+        "suggested_path": "client/src/components/App.tsx",
+        "suggested_folder": null,
+        "confidence": "high",
+        "evidence": [
+          "UI shell recipes usually change the app composition root",
+          "source graph node: app_shell",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "landing_page",
+        "action": "modify",
+        "suggested_path": "client/src/components/WelcomePage.tsx",
+        "suggested_folder": null,
+        "confidence": "high",
+        "evidence": [
+          "request or recipe points to welcome/landing page work",
+          "source graph node: landing_page",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "frontend_entrypoint",
+        "action": "inspect",
+        "suggested_path": "client/src/main.tsx",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "entrypoint often needs review for shell/layout changes",
+          "source graph node: frontend_entrypoint",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/src/main.tsx",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      },
+      {
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "public_html",
+        "action": "inspect",
+        "suggested_path": "client/public/index.html",
+        "suggested_folder": null,
+        "confidence": "medium",
+        "evidence": [
+          "public HTML entry can be involved in shell changes",
+          "source graph node: public_html",
+          "repo: spring-petclinic-reactjs"
+        ],
+        "qualified_path": "spring-petclinic-reactjs/client/public/index.html",
+        "exists_in_parent": true,
+        "matched_actual_diff": true,
+        "folder_matched_actual_diff": false
+      }
+    ],
+    "predicted_repos": [
+      "spring-petclinic-reactjs"
+    ],
+    "predicted_files": [
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "UI shell recipes usually change the app composition root; source graph node: app_shell; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "app_shell",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "request or recipe points to welcome/landing page work; source graph node: landing_page; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "landing_page",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/main.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "entrypoint often needs review for shell/layout changes; source graph node: frontend_entrypoint; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "frontend_entrypoint",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/public/index.html",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "public HTML entry can be involved in shell changes; source graph node: public_html; repo: spring-petclinic-reactjs",
+        "matched_recipe_id": "petclinic_react_ui_shell_layout",
+        "node_type": "public_html",
+        "exists_in_parent": true,
+        "source": "recipe_suggestion"
+      }
+    ],
+    "predicted_reference_files": [],
+    "missing_evidence": [],
+    "caveats": [
+      "Recipe suggestions are sidecar guidance only; plan-feature and propose-changes are unchanged."
+    ]
+  },
+  "combined_predictions": {
+    "predicted_files": [
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "Welcome or landing page component directly matches the requested page addition."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "App shell component likely owns layout, route composition, and welcome page placement."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/main.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Frontend entrypoint may need review for shell bootstrap or route wiring."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/public/index.html",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Public HTML entrypoint may need review for app shell and static asset integration."
+      }
+    ],
+    "predicted_reference_files": [],
+    "predicted_repos": [
+      "spring-petclinic-reactjs"
+    ]
+  },
   "actual_files": [
     "spring-petclinic-reactjs/client/public/images/favicon.png",
     "spring-petclinic-reactjs/client/public/images/pets.png",
@@ -179,6 +370,7 @@
         "frontend_type": [],
         "api_contract": [],
         "api_controller": [],
+        "api_dto": [],
         "service_layer": [],
         "domain_model": [],
         "repository": [],
@@ -210,6 +402,7 @@
         "frontend_type": [],
         "api_contract": [],
         "api_controller": [],
+        "api_dto": [],
         "service_layer": [],
         "domain_model": [],
         "repository": [],
@@ -273,29 +466,634 @@
       "missed_count": 6
     }
   },
+  "comparison_sections": {
+    "planner_propose": {
+      "predicted_files": [
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "actual_files": [
+        "spring-petclinic-reactjs/client/public/images/favicon.png",
+        "spring-petclinic-reactjs/client/public/images/pets.png",
+        "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+        "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png",
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "matched_files": [
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "missed_files": [
+        "spring-petclinic-reactjs/client/public/images/favicon.png",
+        "spring-petclinic-reactjs/client/public/images/pets.png",
+        "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+        "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+      ],
+      "extra_predicted_files": [],
+      "precision": 1.0,
+      "recall": 0.4,
+      "exact_file": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "predicted_count": 4,
+        "actual_count": 10,
+        "matched_count": 4,
+        "missed_count": 6,
+        "extra_predicted_count": 0
+      },
+      "folder_level": {
+        "matches": [],
+        "matched_predicted_paths": [],
+        "matched_actual_files": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "matched_predicted_count": 0,
+        "matched_actual_count": 0
+      },
+      "category_level": {
+        "predicted_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html"
+        ],
+        "actual_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html",
+          "static_asset"
+        ],
+        "matched_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html"
+        ],
+        "missed_categories": [
+          "static_asset"
+        ],
+        "extra_predicted_categories": [],
+        "precision": 1.0,
+        "recall": 0.8,
+        "predicted_count": 4,
+        "actual_count": 5,
+        "matched_count": 4,
+        "missed_count": 1,
+        "extra_predicted_count": 0,
+        "predicted_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/main.tsx"
+          ],
+          "app_shell": [
+            "spring-petclinic-reactjs/client/src/components/App.tsx"
+          ],
+          "landing_page": [
+            "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx"
+          ],
+          "public_html": [
+            "spring-petclinic-reactjs/client/public/index.html"
+          ],
+          "static_asset": [],
+          "frontend_component": [],
+          "frontend_type": [],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        },
+        "actual_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/main.tsx"
+          ],
+          "app_shell": [
+            "spring-petclinic-reactjs/client/src/components/App.tsx"
+          ],
+          "landing_page": [
+            "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx"
+          ],
+          "public_html": [
+            "spring-petclinic-reactjs/client/public/index.html"
+          ],
+          "static_asset": [
+            "spring-petclinic-reactjs/client/public/images/favicon.png",
+            "spring-petclinic-reactjs/client/public/images/pets.png",
+            "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+            "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+            "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+            "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+          ],
+          "frontend_component": [],
+          "frontend_type": [],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        }
+      },
+      "high_signal": {
+        "predicted_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "matched_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "missed_files": [],
+        "extra_predicted_files": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "predicted_count": 4,
+        "actual_count": 4,
+        "matched_count": 4,
+        "missed_count": 0,
+        "extra_predicted_count": 0
+      },
+      "static_assets": {
+        "predicted_files": [],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/public/images/favicon.png",
+          "spring-petclinic-reactjs/client/public/images/pets.png",
+          "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+          "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+        ],
+        "exact_matched_files": [],
+        "folder_level_matched_files": [],
+        "missed_files": [
+          "spring-petclinic-reactjs/client/public/images/favicon.png",
+          "spring-petclinic-reactjs/client/public/images/pets.png",
+          "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+          "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+        ],
+        "predicted_count": 0,
+        "actual_count": 6,
+        "exact_matched_count": 0,
+        "folder_level_matched_count": 0,
+        "missed_count": 6
+      }
+    },
+    "recipe_suggestions": {
+      "predicted_files": [
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "actual_files": [
+        "spring-petclinic-reactjs/client/public/images/favicon.png",
+        "spring-petclinic-reactjs/client/public/images/pets.png",
+        "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+        "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png",
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "matched_files": [
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "missed_files": [
+        "spring-petclinic-reactjs/client/public/images/favicon.png",
+        "spring-petclinic-reactjs/client/public/images/pets.png",
+        "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+        "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+      ],
+      "extra_predicted_files": [],
+      "precision": 1.0,
+      "recall": 0.4,
+      "exact_file": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "predicted_count": 4,
+        "actual_count": 10,
+        "matched_count": 4,
+        "missed_count": 6,
+        "extra_predicted_count": 0
+      },
+      "folder_level": {
+        "matches": [],
+        "matched_predicted_paths": [],
+        "matched_actual_files": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "matched_predicted_count": 0,
+        "matched_actual_count": 0
+      },
+      "category_level": {
+        "predicted_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html"
+        ],
+        "actual_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html",
+          "static_asset"
+        ],
+        "matched_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html"
+        ],
+        "missed_categories": [
+          "static_asset"
+        ],
+        "extra_predicted_categories": [],
+        "precision": 1.0,
+        "recall": 0.8,
+        "predicted_count": 4,
+        "actual_count": 5,
+        "matched_count": 4,
+        "missed_count": 1,
+        "extra_predicted_count": 0,
+        "predicted_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/main.tsx"
+          ],
+          "app_shell": [
+            "spring-petclinic-reactjs/client/src/components/App.tsx"
+          ],
+          "landing_page": [
+            "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx"
+          ],
+          "public_html": [
+            "spring-petclinic-reactjs/client/public/index.html"
+          ],
+          "static_asset": [],
+          "frontend_component": [],
+          "frontend_type": [],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        },
+        "actual_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/main.tsx"
+          ],
+          "app_shell": [
+            "spring-petclinic-reactjs/client/src/components/App.tsx"
+          ],
+          "landing_page": [
+            "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx"
+          ],
+          "public_html": [
+            "spring-petclinic-reactjs/client/public/index.html"
+          ],
+          "static_asset": [
+            "spring-petclinic-reactjs/client/public/images/favicon.png",
+            "spring-petclinic-reactjs/client/public/images/pets.png",
+            "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+            "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+            "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+            "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+          ],
+          "frontend_component": [],
+          "frontend_type": [],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        }
+      },
+      "high_signal": {
+        "predicted_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "matched_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "missed_files": [],
+        "extra_predicted_files": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "predicted_count": 4,
+        "actual_count": 4,
+        "matched_count": 4,
+        "missed_count": 0,
+        "extra_predicted_count": 0
+      },
+      "static_assets": {
+        "predicted_files": [],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/public/images/favicon.png",
+          "spring-petclinic-reactjs/client/public/images/pets.png",
+          "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+          "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+        ],
+        "exact_matched_files": [],
+        "folder_level_matched_files": [],
+        "missed_files": [
+          "spring-petclinic-reactjs/client/public/images/favicon.png",
+          "spring-petclinic-reactjs/client/public/images/pets.png",
+          "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+          "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+        ],
+        "predicted_count": 0,
+        "actual_count": 6,
+        "exact_matched_count": 0,
+        "folder_level_matched_count": 0,
+        "missed_count": 6
+      }
+    },
+    "combined": {
+      "predicted_files": [
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "actual_files": [
+        "spring-petclinic-reactjs/client/public/images/favicon.png",
+        "spring-petclinic-reactjs/client/public/images/pets.png",
+        "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+        "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png",
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "matched_files": [
+        "spring-petclinic-reactjs/client/public/index.html",
+        "spring-petclinic-reactjs/client/src/components/App.tsx",
+        "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "spring-petclinic-reactjs/client/src/main.tsx"
+      ],
+      "missed_files": [
+        "spring-petclinic-reactjs/client/public/images/favicon.png",
+        "spring-petclinic-reactjs/client/public/images/pets.png",
+        "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+        "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+        "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+      ],
+      "extra_predicted_files": [],
+      "precision": 1.0,
+      "recall": 0.4,
+      "exact_file": {
+        "precision": 1.0,
+        "recall": 0.4,
+        "predicted_count": 4,
+        "actual_count": 10,
+        "matched_count": 4,
+        "missed_count": 6,
+        "extra_predicted_count": 0
+      },
+      "folder_level": {
+        "matches": [],
+        "matched_predicted_paths": [],
+        "matched_actual_files": [],
+        "precision": 0.0,
+        "recall": 0.0,
+        "matched_predicted_count": 0,
+        "matched_actual_count": 0
+      },
+      "category_level": {
+        "predicted_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html"
+        ],
+        "actual_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html",
+          "static_asset"
+        ],
+        "matched_categories": [
+          "app_shell",
+          "frontend_entrypoint",
+          "landing_page",
+          "public_html"
+        ],
+        "missed_categories": [
+          "static_asset"
+        ],
+        "extra_predicted_categories": [],
+        "precision": 1.0,
+        "recall": 0.8,
+        "predicted_count": 4,
+        "actual_count": 5,
+        "matched_count": 4,
+        "missed_count": 1,
+        "extra_predicted_count": 0,
+        "predicted_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/main.tsx"
+          ],
+          "app_shell": [
+            "spring-petclinic-reactjs/client/src/components/App.tsx"
+          ],
+          "landing_page": [
+            "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx"
+          ],
+          "public_html": [
+            "spring-petclinic-reactjs/client/public/index.html"
+          ],
+          "static_asset": [],
+          "frontend_component": [],
+          "frontend_type": [],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        },
+        "actual_by_category": {
+          "frontend_entrypoint": [
+            "spring-petclinic-reactjs/client/src/main.tsx"
+          ],
+          "app_shell": [
+            "spring-petclinic-reactjs/client/src/components/App.tsx"
+          ],
+          "landing_page": [
+            "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx"
+          ],
+          "public_html": [
+            "spring-petclinic-reactjs/client/public/index.html"
+          ],
+          "static_asset": [
+            "spring-petclinic-reactjs/client/public/images/favicon.png",
+            "spring-petclinic-reactjs/client/public/images/pets.png",
+            "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+            "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+            "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+            "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+          ],
+          "frontend_component": [],
+          "frontend_type": [],
+          "api_contract": [],
+          "api_controller": [],
+          "api_dto": [],
+          "service_layer": [],
+          "domain_model": [],
+          "repository": [],
+          "migration": [],
+          "unknown": []
+        }
+      },
+      "high_signal": {
+        "predicted_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "matched_files": [
+          "spring-petclinic-reactjs/client/public/index.html",
+          "spring-petclinic-reactjs/client/src/components/App.tsx",
+          "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+          "spring-petclinic-reactjs/client/src/main.tsx"
+        ],
+        "missed_files": [],
+        "extra_predicted_files": [],
+        "precision": 1.0,
+        "recall": 1.0,
+        "predicted_count": 4,
+        "actual_count": 4,
+        "matched_count": 4,
+        "missed_count": 0,
+        "extra_predicted_count": 0
+      },
+      "static_assets": {
+        "predicted_files": [],
+        "actual_files": [
+          "spring-petclinic-reactjs/client/public/images/favicon.png",
+          "spring-petclinic-reactjs/client/public/images/pets.png",
+          "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+          "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+        ],
+        "exact_matched_files": [],
+        "folder_level_matched_files": [],
+        "missed_files": [
+          "spring-petclinic-reactjs/client/public/images/favicon.png",
+          "spring-petclinic-reactjs/client/public/images/pets.png",
+          "spring-petclinic-reactjs/client/public/images/platform-bg.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png",
+          "spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png",
+          "spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png"
+        ],
+        "predicted_count": 0,
+        "actual_count": 6,
+        "exact_matched_count": 0,
+        "folder_level_matched_count": 0,
+        "missed_count": 6
+      }
+    }
+  },
   "commands": {
     "discover_architecture": {
-      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-ug7ne70u/discovery_targets.json",
+      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-5pakva09/discovery_targets.json",
       "exit_code": 0,
       "stdout": "Architecture Discovery\n\nrepo: spring-petclinic-reactjs\n  mode: source-discovered\n  confidence: high\n  discovered frameworks: react, spring_boot\n  hinted frameworks: -\n  framework detections: react ^15.0.0 (detected, high, client/package.json), spring_boot 1.4.0.RELEASE (detected, high, pom.xml)\n  framework packs loaded: react (detected), spring_boot (detected)\n  framework-derived hints: react node kinds: page, editor, form, detail, list, component, react path categories: api, service, ui, react validation hints: npm test, npm run build, spring_boot node kinds: controller, service, repository, entity, model, dto, spring_boot path categories: api, event, persistence, service, spring_boot validation hints: mvn test, gradle test\n  discovered api: src/main/java/org/springframework/samples/petclinic/web, src/main/java/org/springframework/samples/petclinic/web/api\n  discovered service/business logic: src/main/java/org/springframework/samples/petclinic/service\n  discovered persistence/migration: src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model\n  discovered ui/components: client/src/components, client/src/types\n  hinted locations:\n    api: src/main/java/**/controller, src/main/java/**/dto\n    service/business logic: src/main/java/**/service\n    persistence/migration: -\n    ui/components: -\n",
       "stderr": ""
     },
     "analyze_feature": {
-      "command": "python3 main.py analyze-feature \"Add Layout and Welcome page\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-ug7ne70u/discovery_targets.json",
+      "command": "python3 main.py analyze-feature \"Add Layout and Welcome page\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-5pakva09/discovery_targets.json",
       "exit_code": 0,
       "stdout": "Feature: \"Add Layout and Welcome page\"\nrepo                     | role             | score | reason                                                                                                                                                                                                           \n-------------------------+------------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nspring-petclinic-reactjs | direct-dependent | 23    | deterministic_intent: frontend signals (keywords: page; repo type; manifest: frontend, react, ui, web); adapter_discovery: adapter discovery (react, spring_boot; paths: client/src/components, client/src/types)\n",
       "stderr": ""
     },
     "plan_feature": {
-      "command": "python3 main.py plan-feature \"Add Layout and Welcome page\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-ug7ne70u/discovery_targets.json",
+      "command": "python3 main.py plan-feature \"Add Layout and Welcome page\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-5pakva09/discovery_targets.json",
       "exit_code": 0,
       "stdout": "{\n  \"feature_request\": \"Add Layout and Welcome page\",\n  \"feature_intents\": [\n    \"ui\"\n  ],\n  \"unsupported_intents\": [],\n  \"concept_grounding\": [],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"primary_owner\": \"spring-petclinic-reactjs\",\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": null,\n  \"direct_dependents\": [],\n  \"possible_downstreams\": [],\n  \"db_change_needed\": false,\n  \"api_change_needed\": false,\n  \"ui_change_needed\": true,\n  \"likely_paths_by_repo\": {\n    \"spring-petclinic-reactjs\": [\n      \"client/src/components/WelcomePage.tsx\",\n      \"client/src/components/App.tsx\",\n      \"client/src/main.tsx\",\n      \"client/public/index.html\",\n      \"client/src/components\",\n      \"client/src/types\"\n    ]\n  },\n  \"validation_commands\": [\n    \"./mvnw test\"\n  ],\n  \"ordered_steps\": [\n    \"In spring-petclinic-reactjs (primary-owner, score=23), update the UI shell, layout composition, welcome/landing page wiring, frontend entrypoint, and public/static asset references using discovered UI paths: client/src/components, client/src/types.\",\n    \"Run validation commands in impacted repos: ./mvnw test.\"\n  ],\n  \"requires_human_approval\": false\n}\n",
       "stderr": ""
     },
     "propose_changes": {
-      "command": "python3 main.py propose-changes \"Add Layout and Welcome page\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-ug7ne70u/discovery_targets.json",
+      "command": "python3 main.py propose-changes \"Add Layout and Welcome page\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-5pakva09/discovery_targets.json",
       "exit_code": 0,
       "stdout": "{\n  \"feature_request\": \"Add Layout and Welcome page\",\n  \"feature_intents\": [\n    \"ui\"\n  ],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": null,\n  \"proposed_changes\": [\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"role\": \"primary-owner\",\n      \"likely_files_to_inspect\": [\n        \"client/src/components/WelcomePage.tsx\",\n        \"client/src/components/App.tsx\",\n        \"client/src/main.tsx\",\n        \"client/public/index.html\"\n      ],\n      \"files\": [\n        {\n          \"path\": \"client/src/components/WelcomePage.tsx\",\n          \"action\": \"modify\",\n          \"confidence\": \"high\",\n          \"reason\": \"Welcome or landing page component directly matches the requested page addition.\"\n        },\n        {\n          \"path\": \"client/src/components/App.tsx\",\n          \"action\": \"modify\",\n          \"confidence\": \"high\",\n          \"reason\": \"App shell component likely owns layout, route composition, and welcome page placement.\"\n        },\n        {\n          \"path\": \"client/src/main.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Frontend entrypoint may need review for shell bootstrap or route wiring.\"\n        },\n        {\n          \"path\": \"client/public/index.html\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Public HTML entrypoint may need review for app shell and static asset integration.\"\n        }\n      ],\n      \"likely_changes\": [\n        \"Update app shell/layout composition and welcome or landing page wiring.\",\n        \"Review frontend entrypoint, public HTML, and static asset references used by the shell.\"\n      ],\n      \"possible_new_files\": [],\n      \"rationale\": \"Role: primary-owner. Intents: ui. Evidence: ranked by deterministic feature analysis, inferred ownership from discovered source names, analysis role: direct dependent, discovered frameworks: react, spring_boot, source discovered architecture evidence. Path confidence: Concrete files were inferred from discovered naming conventions. Overall confidence: high.\"\n    }\n  ]\n}\n",
+      "stderr": ""
+    },
+    "suggest_from_recipes": {
+      "command": "python3 main.py suggest-from-recipes \"Add Layout and Welcome page\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-5pakva09/discovery_targets.json --learning-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-5pakva09/learning --report-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-5pakva09/learning_reports",
+      "exit_code": 0,
+      "stdout": "{\n  \"feature_request\": \"Add Layout and Welcome page\",\n  \"target_id\": \"replay-spring-petclinic-reactjs\",\n  \"matched_recipes\": [\n    {\n      \"recipe_id\": \"petclinic_react_ui_shell_layout\",\n      \"recipe_type\": \"ui_shell_layout\",\n      \"structural_confidence\": 0.98,\n      \"planner_effectiveness\": 0.0,\n      \"score\": 97,\n      \"why_matched\": [\n        \"matched recipe trigger terms: layout, page, welcome\",\n        \"source graph contains related domain token(s): welcome\",\n        \"request mentions UI shell, layout, welcome, or landing-page work\",\n        \"feature intent includes ui\",\n        \"structural confidence 0.98\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    }\n  ],\n  \"suggestions\": [\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_shell_layout\",\n      \"node_type\": \"app_shell\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/App.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"UI shell recipes usually change the app composition root\",\n        \"source graph node: app_shell\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_shell_layout\",\n      \"node_type\": \"landing_page\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/WelcomePage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"request or recipe points to welcome/landing page work\",\n        \"source graph node: landing_page\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_shell_layout\",\n      \"node_type\": \"frontend_entrypoint\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/main.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"entrypoint often needs review for shell/layout changes\",\n        \"source graph node: frontend_entrypoint\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_shell_layout\",\n      \"node_type\": \"public_html\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/public/index.html\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"public HTML entry can be involved in shell changes\",\n        \"source graph node: public_html\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    }\n  ],\n  \"missing_evidence\": [],\n  \"caveats\": [\n    \"Recipe suggestions are sidecar guidance only; plan-feature and propose-changes are unchanged.\"\n  ]\n}\n",
       "stderr": ""
     }
   },

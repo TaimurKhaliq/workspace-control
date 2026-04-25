@@ -7,11 +7,11 @@
   "previous_last_analyzed_commit": "4a6c26d99f48d8bfac97352130b9fae4feab2509",
   "last_analyzed_commit": "4a6c26d99f48d8bfac97352130b9fae4feab2509",
   "commits_considered": 300,
-  "commits_analyzed": 65,
-  "recipes_discovered_or_updated": 6,
-  "validation_results": 65,
+  "commits_analyzed": 70,
+  "recipes_discovered_or_updated": 8,
+  "validation_results": 72,
   "recipe_counts": {
-    "active": 6
+    "active": 8
   },
   "analyzed_commit_ids": [
     "4c01d60b36de22110cf03f4026428d7b0bfb6b42",
@@ -78,7 +78,12 @@
     "bbd83e07fcded7ca5f7e76b1b2a1003ab5acb94f",
     "409415bf40f707e03114a79e292a2a2f6e464ea8",
     "f726ae73d13bd489d7767edd1f7a4442d5cb5578",
-    "6137def71abc75c53eed75fb2020f2602d0059d4"
+    "6137def71abc75c53eed75fb2020f2602d0059d4",
+    "34d8ca46ac9add81362532e41461ceb52aa67fbc",
+    "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
+    "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
+    "87d025f854e38a27ce8046add1a5cc140a584eaa",
+    "eb6f9343ad05d014e30b39f17f88d28ec7cecba6"
   ],
   "recipes": [
     {
@@ -93,8 +98,6 @@
         "2637f65b90cf90bb45093e2e902e4ce716abae67",
         "1080006218bfeea427937ca334ed7908bde3d62c",
         "72afd1a032c6abba950b937c40c57a8647727dc7",
-        "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
-        "af3110436e24ef13d68382e060a7250638625301",
         "e4ca17206f816c9791a11c006eccc47e8c95385b",
         "55359a491a02c88b296764e673fb10e9b27974fb"
       ],
@@ -123,7 +126,8 @@
       "changed_node_types": [
         "service_layer",
         "unknown",
-        "api_controller"
+        "api_controller",
+        "api_dto"
       ],
       "changed_path_patterns": [
         "src/main/resources/spring",
@@ -146,23 +150,27 @@
         "service_layer",
         "api_controller"
       ],
-      "optional_existing_node_types": [],
+      "optional_existing_node_types": [
+        "api_dto"
+      ],
       "observed_variants": [
         "modified:service_layer",
         "modified:service_layer; deleted:service_layer",
         "modified:api_controller",
+        "modified:api_dto",
         "unknown"
       ],
       "changed_node_type_counts": {
         "service_layer": 5,
-        "unknown": 4,
-        "api_controller": 3
+        "unknown": 3,
+        "api_controller": 1,
+        "api_dto": 1
       },
       "changed_path_pattern_counts": {
-        "*.java": 10,
-        "src/main/java/org/springframework/samples/petclinic/web/api": 4,
+        "*.java": 8,
         "src/test/java/org/springframework/samples/petclinic/service": 4,
         "*.xml": 2,
+        "src/main/java/org/springframework/samples/petclinic/web/api": 2,
         "src/main/java/org/springframework/samples/petclinic": 1,
         "src/main/java/org/springframework/samples/petclinic/config": 1,
         "src/main/java/org/springframework/samples/petclinic/service": 1,
@@ -179,12 +187,13 @@
       "modified_node_types": [
         "service_layer",
         "unknown",
-        "api_controller"
+        "api_controller",
+        "api_dto"
       ],
       "deleted_node_types": [
         "service_layer"
       ],
-      "unknown_changed_file_count": 12,
+      "unknown_changed_file_count": 11,
       "unknown_path_patterns": [
         "src/main/resources/spring",
         "*.xml",
@@ -193,7 +202,6 @@
         "*.java",
         "src/main/java/org/springframework/samples/petclinic/config",
         "src/test/java/org/springframework/samples/petclinic/web",
-        "src/main/java/org/springframework/samples/petclinic/web/api",
         "src/test/java/org/springframework/samples/petclinic/web/api"
       ],
       "unclassified_examples": [
@@ -207,7 +215,6 @@
         "src/test/java/org/springframework/samples/petclinic/web/PetControllerTests.java",
         "src/test/java/org/springframework/samples/petclinic/web/VetControllerTests.java",
         "src/test/java/org/springframework/samples/petclinic/web/VisitControllerTests.java",
-        "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java",
         "src/test/java/org/springframework/samples/petclinic/web/api/OwnerResourceTests.java"
       ],
       "example_commits": [
@@ -217,18 +224,16 @@
         "2637f65: Upgrade to Spring Boot 1.4.0",
         "1080006: Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation",
         "72afd1a: Enable CORS",
-        "4c40375: Include petId in error message instead of null value",
-        "af31104: add max range and not null validation for adding new pet",
         "e4ca172: handle non existing owner  from get request",
         "55359a4: remove unnecessary code"
       ],
-      "confidence": 0.83,
-      "structural_confidence": 0.83,
-      "planner_effectiveness": 0.2,
-      "support_count": 10,
-      "validation_count": 10,
+      "confidence": 0.8267,
+      "structural_confidence": 0.8267,
+      "planner_effectiveness": 0.125,
+      "support_count": 8,
+      "validation_count": 8,
       "success_count": 0,
-      "partial_count": 4,
+      "partial_count": 2,
       "failure_count": 6,
       "last_seen_commit": "55359a491a02c88b296764e673fb10e9b27974fb",
       "promotion_blocker": null,
@@ -239,10 +244,403 @@
         "2637f65: Upgrade to Spring Boot 1.4.0",
         "1080006: Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation",
         "72afd1a: Enable CORS",
-        "4c40375: Include petId in error message instead of null value",
-        "af31104: add max range and not null validation for adding new pet",
         "e4ca172: handle non existing owner  from get request",
         "55359a4: remove unnecessary code"
+      ]
+    },
+    {
+      "id": "petclinic_react_backend_search_query",
+      "target_id": "petclinic-react",
+      "recipe_type": "backend_search_query",
+      "status": "active",
+      "source_commits": [
+        "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
+        "e7f68999bfa947cfb39601502da8c15e83285196",
+        "87d025f854e38a27ce8046add1a5cc140a584eaa"
+      ],
+      "trigger_terms": [
+        "putting",
+        "encoding",
+        "filter",
+        "first",
+        "per",
+        "80",
+        "owners",
+        "search",
+        "has",
+        "been",
+        "case",
+        "insensitive",
+        "fixed",
+        "url",
+        "jquery",
+        "ui",
+        "there",
+        "was",
+        "typo",
+        "query"
+      ],
+      "changed_node_types": [
+        "unknown",
+        "migration"
+      ],
+      "changed_path_patterns": [
+        "src/main/webapp/WEB-INF",
+        "*.xml",
+        "src/main/resources/db/hsqldb",
+        "*.sql",
+        "src/main/webapp/WEB-INF/jsp/fragments",
+        "*.jsp"
+      ],
+      "new_file_patterns": [],
+      "cochange_patterns": [],
+      "required_existing_node_types": [
+        "migration"
+      ],
+      "optional_existing_node_types": [],
+      "observed_variants": [
+        "unknown",
+        "modified:migration"
+      ],
+      "changed_node_type_counts": {
+        "unknown": 2,
+        "migration": 1
+      },
+      "changed_path_pattern_counts": {
+        "*.jsp": 1,
+        "*.sql": 1,
+        "*.xml": 1,
+        "src/main/resources/db/hsqldb": 1,
+        "src/main/webapp/WEB-INF": 1,
+        "src/main/webapp/WEB-INF/jsp/fragments": 1
+      },
+      "created_file_pattern_counts": {},
+      "cochange_counts": {},
+      "created_node_types": [],
+      "modified_node_types": [
+        "unknown",
+        "migration"
+      ],
+      "deleted_node_types": [],
+      "unknown_changed_file_count": 2,
+      "unknown_path_patterns": [
+        "src/main/webapp/WEB-INF",
+        "*.xml",
+        "src/main/webapp/WEB-INF/jsp/fragments",
+        "*.jsp"
+      ],
+      "unclassified_examples": [
+        "src/main/webapp/WEB-INF/web.xml",
+        "src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
+      ],
+      "example_commits": [
+        "cb6bd87: Putting encoding filter first per #80",
+        "e7f6899: owners search has been case insensitive",
+        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+      ],
+      "confidence": 0.71,
+      "structural_confidence": 0.71,
+      "planner_effectiveness": 0.0,
+      "support_count": 3,
+      "validation_count": 2,
+      "success_count": 0,
+      "partial_count": 0,
+      "failure_count": 2,
+      "last_seen_commit": "87d025f854e38a27ce8046add1a5cc140a584eaa",
+      "promotion_blocker": null,
+      "evidence": [
+        "cb6bd87: Putting encoding filter first per #80",
+        "e7f6899: owners search has been case insensitive",
+        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+      ]
+    },
+    {
+      "id": "petclinic_react_backend_validation_change",
+      "target_id": "petclinic-react",
+      "recipe_type": "backend_validation_change",
+      "status": "active",
+      "source_commits": [
+        "34d8ca46ac9add81362532e41461ceb52aa67fbc",
+        "076a124e0a643e2f471f873a1b4954a12e3b08ae",
+        "35a179f88b4ba301612957f953121c85a1cdfd83",
+        "694390d0c2d80624f499ba4feea3ab1d598f009d",
+        "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
+        "4bb829cbd1026ec10dc685277467d30523c90b95",
+        "ad3d322fc69061d5009460689edfda09af0b53ce",
+        "eb6f9343ad05d014e30b39f17f88d28ec7cecba6",
+        "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
+        "af3110436e24ef13d68382e060a7250638625301",
+        "c758321ee85dd208eae6fd1a438d3f855c94e182",
+        "1a85b44f8162bcdb8ff3908957f0c659a389bbac"
+      ],
+      "trigger_terms": [
+        "chaining",
+        "validation",
+        "so",
+        "we",
+        "can",
+        "see",
+        "multiple",
+        "error",
+        "messages",
+        "when",
+        "there",
+        "are",
+        "fixes",
+        "37",
+        "other",
+        "default",
+        "locale",
+        "than",
+        "english",
+        "latest"
+      ],
+      "changed_node_types": [
+        "unknown",
+        "domain_model",
+        "service_layer",
+        "api_controller",
+        "repository",
+        "frontend_component",
+        "static_asset",
+        "api_dto"
+      ],
+      "changed_path_patterns": [
+        "src/main/java/org/springframework/samples/petclinic/web",
+        "*.java",
+        "src/test/java/org/springframework/samples/petclinic/model",
+        "*.xml",
+        "src/main/java/org/springframework/samples/petclinic/model",
+        "src/test/java/org/springframework/samples/petclinic/service",
+        "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
+        "*.json",
+        "src/main/webapp/WEB-INF/tags",
+        "*.tag",
+        "src/main/webapp/bower_components",
+        "src/main/webapp/resources",
+        "src/main/webapp/resources/css",
+        "*.css",
+        "src/main/webapp/resources/less",
+        "*.less",
+        "src/main/webapp/vendors/bootstrap/dist/fonts",
+        "*.eot",
+        "*.svg",
+        "*.ttf",
+        "*.woff",
+        "*.woff2",
+        "src/main/webapp/vendors/bootstrap/dist/js",
+        "*.js"
+      ],
+      "new_file_patterns": [
+        "src/main/webapp/bower_components",
+        "*.json",
+        "src/main/webapp/resources",
+        "src/main/webapp/resources/css",
+        "*.css"
+      ],
+      "cochange_patterns": [
+        "domain_model + service_layer",
+        "domain_model + unknown",
+        "service_layer + unknown",
+        "api_controller + unknown",
+        "repository + service_layer",
+        "repository + unknown",
+        "api_controller + domain_model",
+        "api_controller + service_layer",
+        "frontend_component + static_asset",
+        "frontend_component + unknown",
+        "static_asset + unknown"
+      ],
+      "required_existing_node_types": [
+        "domain_model",
+        "service_layer"
+      ],
+      "optional_existing_node_types": [
+        "api_controller",
+        "api_dto",
+        "frontend_component",
+        "repository",
+        "static_asset"
+      ],
+      "observed_variants": [
+        "unknown",
+        "modified:domain_model",
+        "modified:domain_model+service_layer",
+        "modified:api_controller",
+        "modified:repository+service_layer",
+        "modified:api_controller+domain_model+service_layer",
+        "created:frontend_component; deleted:static_asset",
+        "modified:api_dto"
+      ],
+      "changed_node_type_counts": {
+        "domain_model": 6,
+        "unknown": 6,
+        "service_layer": 3,
+        "api_controller": 2,
+        "api_dto": 2,
+        "frontend_component": 1,
+        "repository": 1,
+        "static_asset": 1
+      },
+      "changed_path_pattern_counts": {
+        "*.java": 11,
+        "src/main/java/org/springframework/samples/petclinic/model": 4,
+        "src/main/java/org/springframework/samples/petclinic/web": 4,
+        "src/test/java/org/springframework/samples/petclinic/model": 3,
+        "src/test/java/org/springframework/samples/petclinic/service": 3,
+        "*.xml": 2,
+        "src/main/java/org/springframework/samples/petclinic/web/api": 2,
+        "*.css": 1,
+        "*.eot": 1,
+        "*.gif": 1,
+        "*.js": 1,
+        "*.json": 1,
+        "*.less": 1,
+        "*.map": 1,
+        "*.png": 1,
+        "*.svg": 1,
+        "*.tag": 1,
+        "*.ttf": 1,
+        "*.woff": 1,
+        "*.woff2": 1,
+        "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 1,
+        "src/main/webapp/WEB-INF/tags": 1,
+        "src/main/webapp/bower_components": 1,
+        "src/main/webapp/resources": 1,
+        "src/main/webapp/resources/css": 1,
+        "src/main/webapp/resources/less": 1,
+        "src/main/webapp/vendors/bootstrap/dist/fonts": 1,
+        "src/main/webapp/vendors/bootstrap/dist/js": 1,
+        "src/main/webapp/vendors/bootstrap/less": 1,
+        "src/main/webapp/vendors/bootstrap/less/mixins": 1,
+        "src/main/webapp/vendors/jquery": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base/images": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base/minified": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base/minified/images": 1,
+        "src/main/webapp/vendors/jquery-ui/ui": 1,
+        "src/main/webapp/vendors/jquery-ui/ui/i18n": 1,
+        "src/main/webapp/vendors/jquery-ui/ui/minified": 1,
+        "src/main/webapp/vendors/jquery-ui/ui/minified/i18n": 1
+      },
+      "created_file_pattern_counts": {
+        "*.css": 1,
+        "*.json": 1,
+        "src/main/webapp/bower_components": 1,
+        "src/main/webapp/resources": 1,
+        "src/main/webapp/resources/css": 1
+      },
+      "cochange_counts": {
+        "service_layer + unknown": 3,
+        "api_controller + unknown": 2,
+        "domain_model + service_layer": 2,
+        "domain_model + unknown": 2,
+        "api_controller + domain_model": 1,
+        "api_controller + service_layer": 1,
+        "frontend_component + static_asset": 1,
+        "frontend_component + unknown": 1,
+        "repository + service_layer": 1,
+        "repository + unknown": 1,
+        "static_asset + unknown": 1
+      },
+      "created_node_types": [
+        "frontend_component",
+        "unknown"
+      ],
+      "modified_node_types": [
+        "unknown",
+        "domain_model",
+        "service_layer",
+        "api_controller",
+        "repository",
+        "api_dto"
+      ],
+      "deleted_node_types": [
+        "static_asset",
+        "unknown"
+      ],
+      "unknown_changed_file_count": 352,
+      "unknown_path_patterns": [
+        "src/main/java/org/springframework/samples/petclinic/web",
+        "*.java",
+        "*.xml",
+        "*.json",
+        "src/main/webapp/WEB-INF/tags",
+        "*.tag",
+        "src/main/webapp/resources",
+        "src/main/webapp/resources/css",
+        "*.css",
+        "src/main/webapp/resources/less",
+        "*.less",
+        "src/main/webapp/vendors/bootstrap/dist/fonts",
+        "*.eot",
+        "*.ttf",
+        "*.woff",
+        "*.woff2",
+        "src/main/webapp/vendors/bootstrap/dist/js",
+        "*.js",
+        "src/main/webapp/vendors/bootstrap/less",
+        "src/main/webapp/vendors/bootstrap/less/mixins"
+      ],
+      "unclassified_examples": [
+        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
+        "pom.xml",
+        ".bowerrc",
+        "bower.json",
+        "src/main/webapp/WEB-INF/tags/footer.tag",
+        "src/main/webapp/WEB-INF/tags/htmlHeader.tag",
+        "src/main/webapp/resources/.gitignore",
+        "src/main/webapp/resources/css/jquery-ui.theme.min.css",
+        "src/main/webapp/resources/css/petclinic.css",
+        "src/main/webapp/resources/less/petclinic.less",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.eot",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.ttf",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.woff",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2",
+        "src/main/webapp/vendors/bootstrap/dist/js/bootstrap.js",
+        "src/main/webapp/vendors/bootstrap/dist/js/bootstrap.min.js",
+        "src/main/webapp/vendors/bootstrap/dist/js/npm.js",
+        "src/main/webapp/vendors/bootstrap/less/.csscomb.json",
+        "src/main/webapp/vendors/bootstrap/less/.csslintrc",
+        "src/main/webapp/vendors/bootstrap/less/alerts.less"
+      ],
+      "example_commits": [
+        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
+        "076a124: Fixes #37 with other default locale than english",
+        "35a179f: latest versions and imports cleanup",
+        "694390d: migrated assertion to assertJ",
+        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
+        "4bb829c: Fix #101 display the pet type when using the JDBC profile",
+        "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
+        "eb6f934: migrate to webjars for frontend resource management",
+        "4c40375: Include petId in error message instead of null value",
+        "af31104: add max range and not null validation for adding new pet",
+        "c758321: add regex validation for string input",
+        "1a85b44: fix regex validation issue for string input"
+      ],
+      "confidence": 0.723,
+      "structural_confidence": 0.723,
+      "planner_effectiveness": 0.0833,
+      "support_count": 12,
+      "validation_count": 12,
+      "success_count": 0,
+      "partial_count": 2,
+      "failure_count": 10,
+      "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
+      "promotion_blocker": null,
+      "evidence": [
+        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
+        "076a124: Fixes #37 with other default locale than english",
+        "35a179f: latest versions and imports cleanup",
+        "694390d: migrated assertion to assertJ",
+        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
+        "4bb829c: Fix #101 display the pet type when using the JDBC profile",
+        "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
+        "eb6f934: migrate to webjars for frontend resource management",
+        "4c40375: Include petId in error message instead of null value",
+        "af31104: add max range and not null validation for adding new pet",
+        "c758321: add regex validation for string input",
+        "1a85b44: fix regex validation issue for string input"
       ]
     },
     {
@@ -286,6 +684,7 @@
         "page_component",
         "route_config",
         "unknown",
+        "api_dto",
         "frontend_type",
         "domain_model",
         "form_component",
@@ -339,23 +738,23 @@
         "page_component + route_config",
         "page_component + unknown",
         "route_config + unknown",
-        "api_controller + frontend_type",
+        "api_dto + frontend_component",
+        "api_dto + frontend_type",
+        "api_dto + page_component",
+        "api_dto + route_config",
+        "api_dto + unknown",
         "frontend_component + frontend_type",
         "frontend_type + page_component",
         "frontend_type + route_config",
         "frontend_type + unknown",
-        "api_controller + domain_model",
-        "domain_model + frontend_component",
-        "domain_model + frontend_type",
-        "domain_model + page_component",
-        "domain_model + route_config"
+        "api_dto + domain_model"
       ],
       "required_existing_node_types": [
-        "api_controller",
-        "page_component"
+        "page_component",
+        "route_config"
       ],
       "optional_existing_node_types": [
-        "route_config",
+        "api_dto",
         "frontend_component",
         "frontend_type",
         "domain_model",
@@ -363,23 +762,24 @@
       ],
       "observed_variants": [
         "created:api_controller+page_component; modified:frontend_component+route_config",
-        "created:frontend_component+frontend_type+page_component; modified:api_controller+frontend_component+frontend_type+route_config",
-        "created:page_component; modified:api_controller+domain_model+frontend_component+frontend_type+route_config",
-        "created:api_controller+page_component; modified:api_controller+frontend_component+frontend_type+page_component+route_config",
-        "created:form_component+frontend_component+page_component; modified:api_controller+domain_model+frontend_component+frontend_type+page_component; deleted:frontend_type",
-        "created:form_component+frontend_component+page_component; modified:api_controller+page_component+route_config",
-        "created:api_controller+detail_component+page_component; modified:domain_model+route_config",
+        "created:frontend_component+frontend_type+page_component; modified:api_dto+frontend_component+frontend_type+route_config",
+        "created:page_component; modified:api_dto+domain_model+frontend_component+frontend_type+route_config",
+        "created:api_dto+page_component; modified:api_dto+frontend_component+frontend_type+page_component+route_config",
+        "created:form_component+frontend_component+page_component; modified:api_dto+domain_model+frontend_component+frontend_type+page_component; deleted:frontend_type",
+        "created:form_component+frontend_component+page_component; modified:api_dto+page_component+route_config",
+        "created:api_dto+detail_component+page_component; modified:domain_model+route_config",
         "unknown"
       ],
       "changed_node_type_counts": {
         "unknown": 10,
-        "api_controller": 7,
         "page_component": 7,
         "route_config": 7,
+        "api_dto": 6,
         "frontend_component": 6,
         "frontend_type": 4,
         "domain_model": 3,
         "form_component": 2,
+        "api_controller": 1,
         "detail_component": 1
       },
       "changed_path_pattern_counts": {
@@ -420,25 +820,25 @@
         "client/src/util": 1
       },
       "cochange_counts": {
-        "api_controller + page_component": 7,
-        "api_controller + route_config": 7,
-        "api_controller + frontend_component": 6,
-        "api_controller + unknown": 6,
+        "api_dto + page_component": 6,
+        "api_dto + route_config": 6,
         "frontend_component + page_component": 6,
         "page_component + route_config": 6,
+        "api_dto + frontend_component": 5,
+        "api_dto + unknown": 5,
         "frontend_component + route_config": 5,
         "frontend_component + unknown": 5,
         "page_component + unknown": 5,
-        "api_controller + frontend_type": 4,
+        "api_dto + frontend_type": 4,
         "frontend_component + frontend_type": 4,
         "route_config + unknown": 4,
-        "api_controller + domain_model": 3,
+        "api_dto + domain_model": 3,
         "domain_model + page_component": 3,
         "domain_model + route_config": 3,
         "frontend_type + page_component": 3,
         "frontend_type + route_config": 3,
         "frontend_type + unknown": 3,
-        "api_controller + form_component": 2,
+        "api_dto + form_component": 2,
         "domain_model + frontend_component": 2,
         "domain_model + frontend_type": 2,
         "domain_model + unknown": 2,
@@ -446,7 +846,11 @@
         "form_component + page_component": 2,
         "form_component + route_config": 2,
         "form_component + unknown": 2,
-        "api_controller + detail_component": 1,
+        "api_controller + frontend_component": 1,
+        "api_controller + page_component": 1,
+        "api_controller + route_config": 1,
+        "api_controller + unknown": 1,
+        "api_dto + detail_component": 1,
         "detail_component + domain_model": 1,
         "detail_component + page_component": 1,
         "detail_component + route_config": 1,
@@ -459,13 +863,14 @@
         "unknown",
         "frontend_component",
         "frontend_type",
+        "api_dto",
         "form_component",
         "detail_component"
       ],
       "modified_node_types": [
         "frontend_component",
         "route_config",
-        "api_controller",
+        "api_dto",
         "frontend_type",
         "unknown",
         "domain_model",
@@ -474,7 +879,7 @@
       "deleted_node_types": [
         "frontend_type"
       ],
-      "unknown_changed_file_count": 18,
+      "unknown_changed_file_count": 17,
       "unknown_path_patterns": [
         "src/main/java/org/springframework/samples/petclinic/web/api",
         "*.java",
@@ -495,8 +900,7 @@
         "client/typings.json",
         "src/main/java/org/springframework/samples/petclinic/web/api/petclinic.less",
         "src/test/java/org/springframework/samples/petclinic/web/api/VetResourceTests.java",
-        "src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
-        "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
+        "src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java"
       ],
       "example_commits": [
         "7e3cd50: Add ErrorPage",
@@ -511,8 +915,8 @@
         "1d96669: Eliminando c\u00f3digo desnecess\u00e1rio",
         "bbd83e0: Eliminando c\u00f3digo desnecess\u00e1rio"
       ],
-      "confidence": 0.9118,
-      "structural_confidence": 0.9118,
+      "confidence": 0.9156,
+      "structural_confidence": 0.9156,
       "planner_effectiveness": 0.3182,
       "support_count": 11,
       "validation_count": 11,
@@ -542,11 +946,8 @@
       "status": "active",
       "source_commits": [
         "4c01d60b36de22110cf03f4026428d7b0bfb6b42",
-        "076a124e0a643e2f471f873a1b4954a12e3b08ae",
         "74f683aaa94e8f3dd27bbcb1e9da0c62d02d3fd3",
-        "35a179f88b4ba301612957f953121c85a1cdfd83",
         "cc4ae966c63610344313e6c7bf81ae7219ab8370",
-        "694390d0c2d80624f499ba4feea3ab1d598f009d",
         "818529b5b10bbf2f5ef861f0439ef1d84fc69577",
         "8d20340518d5d0b4f3dea577ce1abdb1655d2750",
         "5570366cfd960bc64fd688bc8f82d54f18772ead",
@@ -557,17 +958,12 @@
         "8b625617cb24353ee906fab080c7677a6ec37870",
         "91d19d17b817eb7c24593ea3a3c1ef52374b2eee",
         "06be7eb5bee7792109ef00302506888312429819",
-        "4bb829cbd1026ec10dc685277467d30523c90b95",
         "92de6557e10b610f3ea6579a6be67c53c4f766bc",
         "e00dfb3fe05cef910495b38d5a24221188e2e1a6",
-        "e7f68999bfa947cfb39601502da8c15e83285196",
         "e74b1bc160575650d4c46b790aa50a954b2f56c4",
-        "ad3d322fc69061d5009460689edfda09af0b53ce",
         "ca755be44a2844e10876b8e38e68b9adf736b486",
         "078bdc6cfbada99413041d859fdeb3d63685c40b",
-        "da38a764b83fcf7f28c2a934c49ab9447f66365c",
-        "c758321ee85dd208eae6fd1a438d3f855c94e182",
-        "1a85b44f8162bcdb8ff3908957f0c659a389bbac"
+        "da38a764b83fcf7f28c2a934c49ab9447f66365c"
       ],
       "trigger_terms": [
         "removing",
@@ -577,40 +973,36 @@
         "creates",
         "lot",
         "warnings",
-        "fixes",
-        "37",
-        "other",
-        "default",
-        "locale",
-        "than",
-        "english",
         "fixed",
         "typo",
-        "latest",
-        "versions",
-        "imports",
-        "cleanup"
+        "removed",
+        "deprecated",
+        "mapper",
+        "jdbc",
+        "64",
+        "remove",
+        "select",
+        "by",
+        "using",
+        "onetomanyresultsetextractor",
+        "spring"
       ],
       "changed_node_types": [
         "domain_model",
         "repository",
-        "service_layer",
         "unknown",
-        "migration",
-        "api_controller"
+        "service_layer",
+        "migration"
       ],
       "changed_path_patterns": [
         "src/main/java/org/springframework/samples/petclinic/model",
         "*.java",
-        "src/test/java/org/springframework/samples/petclinic/model",
         "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
         "*.xml",
-        "src/test/java/org/springframework/samples/petclinic/service",
         "src/main/java/org/springframework/samples/petclinic/util",
-        "src/main/java/org/springframework/samples/petclinic/web",
-        "src/main/resources/db/hsqldb",
-        "*.sql",
+        "src/test/java/org/springframework/samples/petclinic/service",
         "src/main/resources/db/mysql",
+        "*.sql",
         "src/main/resources/spring",
         "*.properties",
         "src/main/java/org/springframework/samples/petclinic/repository/jpa",
@@ -622,16 +1014,12 @@
         "*.java"
       ],
       "cochange_patterns": [
-        "domain_model + service_layer",
-        "domain_model + unknown",
-        "service_layer + unknown",
         "repository + unknown",
         "domain_model + repository",
+        "domain_model + unknown",
+        "domain_model + service_layer",
         "repository + service_layer",
-        "migration + unknown",
-        "api_controller + domain_model",
-        "api_controller + service_layer",
-        "api_controller + unknown"
+        "migration + unknown"
       ],
       "required_existing_node_types": [
         "repository",
@@ -639,43 +1027,36 @@
       ],
       "optional_existing_node_types": [
         "service_layer",
-        "migration",
-        "api_controller"
+        "migration"
       ],
       "observed_variants": [
         "modified:domain_model",
         "modified:repository",
-        "modified:domain_model+service_layer",
         "created:repository; modified:repository",
         "modified:domain_model+repository",
-        "modified:repository+service_layer",
         "modified:domain_model+repository+service_layer",
         "modified:migration",
-        "modified:api_controller+domain_model+service_layer"
+        "modified:repository+service_layer"
       ],
       "changed_node_type_counts": {
-        "repository": 17,
-        "domain_model": 11,
-        "unknown": 8,
-        "service_layer": 5,
-        "migration": 2,
-        "api_controller": 1
+        "repository": 16,
+        "domain_model": 5,
+        "unknown": 5,
+        "service_layer": 2,
+        "migration": 1
       },
       "changed_path_pattern_counts": {
-        "*.java": 25,
-        "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 17,
-        "src/main/java/org/springframework/samples/petclinic/model": 9,
-        "src/test/java/org/springframework/samples/petclinic/service": 5,
-        "*.xml": 4,
-        "src/test/java/org/springframework/samples/petclinic/model": 3,
+        "*.java": 18,
+        "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 16,
+        "src/main/java/org/springframework/samples/petclinic/model": 5,
+        "*.xml": 3,
         "*.properties": 2,
-        "*.sql": 2,
-        "src/main/java/org/springframework/samples/petclinic/web": 2,
+        "src/test/java/org/springframework/samples/petclinic/service": 2,
+        "*.sql": 1,
         "src/main/java/org/springframework/samples/petclinic/repository/jpa": 1,
         "src/main/java/org/springframework/samples/petclinic/service": 1,
         "src/main/java/org/springframework/samples/petclinic/util": 1,
         "src/main/resources": 1,
-        "src/main/resources/db/hsqldb": 1,
         "src/main/resources/db/mysql": 1,
         "src/main/resources/spring": 1
       },
@@ -684,15 +1065,11 @@
         "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 1
       },
       "cochange_counts": {
-        "domain_model + unknown": 4,
-        "repository + unknown": 4,
         "domain_model + repository": 3,
-        "domain_model + service_layer": 3,
-        "repository + service_layer": 3,
-        "service_layer + unknown": 3,
-        "api_controller + domain_model": 1,
-        "api_controller + service_layer": 1,
-        "api_controller + unknown": 1,
+        "repository + unknown": 3,
+        "domain_model + unknown": 2,
+        "repository + service_layer": 2,
+        "domain_model + service_layer": 1,
         "migration + unknown": 1
       },
       "created_node_types": [
@@ -701,18 +1078,16 @@
       "modified_node_types": [
         "domain_model",
         "repository",
-        "service_layer",
         "unknown",
-        "migration",
-        "api_controller"
+        "service_layer",
+        "migration"
       ],
       "deleted_node_types": [],
-      "unknown_changed_file_count": 9,
+      "unknown_changed_file_count": 6,
       "unknown_path_patterns": [
         "*.xml",
         "src/main/java/org/springframework/samples/petclinic/util",
         "*.java",
-        "src/main/java/org/springframework/samples/petclinic/web",
         "src/main/resources/spring",
         "*.properties",
         "src/main/resources"
@@ -720,47 +1095,46 @@
       "unclassified_examples": [
         "pom.xml",
         "src/main/java/org/springframework/samples/petclinic/util/EntityUtils.java",
-        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
         "src/main/resources/spring/data-access.properties",
         "src/main/resources/application.properties"
       ],
       "example_commits": [
         "4c01d60: removing Serializable because it creates a lot of warnings",
-        "076a124: Fixes #37 with other default locale than english",
         "74f683a: Fixed typo",
-        "35a179f: latest versions and imports cleanup",
         "cc4ae96: removed deprecated Mapper in Jdbc",
-        "694390d: migrated assertion to assertJ",
         "818529b: #64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
         "8d20340: removed unused attribute #64",
         "5570366: Use a simple RowMapper instead of a BeanPropertyRowMapper",
         "dc0fb9a: removing unused method #85",
         "735fb11: Remove explicit unboxing",
-        "6f6fa64: Remove unused VisitRepository from constructor"
+        "6f6fa64: Remove unused VisitRepository from constructor",
+        "71f2424: Remove explicit unboxing",
+        "8b62561: #87 Petclinic should be compatible with Java 7 for the time being",
+        "91d19d1: #92 Fix column 'visits.id' not found on MySql"
       ],
       "confidence": 0.95,
       "structural_confidence": 0.95,
-      "planner_effectiveness": 0.0769,
-      "support_count": 27,
-      "validation_count": 26,
+      "planner_effectiveness": 0.0952,
+      "support_count": 19,
+      "validation_count": 21,
       "success_count": 0,
       "partial_count": 4,
-      "failure_count": 22,
-      "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
+      "failure_count": 17,
+      "last_seen_commit": "da38a764b83fcf7f28c2a934c49ab9447f66365c",
       "promotion_blocker": null,
       "evidence": [
         "4c01d60: removing Serializable because it creates a lot of warnings",
-        "076a124: Fixes #37 with other default locale than english",
         "74f683a: Fixed typo",
-        "35a179f: latest versions and imports cleanup",
         "cc4ae96: removed deprecated Mapper in Jdbc",
-        "694390d: migrated assertion to assertJ",
         "818529b: #64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
         "8d20340: removed unused attribute #64",
         "5570366: Use a simple RowMapper instead of a BeanPropertyRowMapper",
         "dc0fb9a: removing unused method #85",
         "735fb11: Remove explicit unboxing",
-        "6f6fa64: Remove unused VisitRepository from constructor"
+        "6f6fa64: Remove unused VisitRepository from constructor",
+        "71f2424: Remove explicit unboxing",
+        "8b62561: #87 Petclinic should be compatible with Java 7 for the time being",
+        "91d19d1: #92 Fix column 'visits.id' not found on MySql"
       ]
     },
     {
@@ -1231,8 +1605,6 @@
         "2637f65b90cf90bb45093e2e902e4ce716abae67",
         "1080006218bfeea427937ca334ed7908bde3d62c",
         "72afd1a032c6abba950b937c40c57a8647727dc7",
-        "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
-        "af3110436e24ef13d68382e060a7250638625301",
         "e4ca17206f816c9791a11c006eccc47e8c95385b",
         "55359a491a02c88b296764e673fb10e9b27974fb"
       ],
@@ -1261,7 +1633,8 @@
       "changed_node_types": [
         "service_layer",
         "unknown",
-        "api_controller"
+        "api_controller",
+        "api_dto"
       ],
       "changed_path_patterns": [
         "src/main/resources/spring",
@@ -1284,23 +1657,27 @@
         "service_layer",
         "api_controller"
       ],
-      "optional_existing_node_types": [],
+      "optional_existing_node_types": [
+        "api_dto"
+      ],
       "observed_variants": [
         "modified:service_layer",
         "modified:service_layer; deleted:service_layer",
         "modified:api_controller",
+        "modified:api_dto",
         "unknown"
       ],
       "changed_node_type_counts": {
         "service_layer": 5,
-        "unknown": 4,
-        "api_controller": 3
+        "unknown": 3,
+        "api_controller": 1,
+        "api_dto": 1
       },
       "changed_path_pattern_counts": {
-        "*.java": 10,
-        "src/main/java/org/springframework/samples/petclinic/web/api": 4,
+        "*.java": 8,
         "src/test/java/org/springframework/samples/petclinic/service": 4,
         "*.xml": 2,
+        "src/main/java/org/springframework/samples/petclinic/web/api": 2,
         "src/main/java/org/springframework/samples/petclinic": 1,
         "src/main/java/org/springframework/samples/petclinic/config": 1,
         "src/main/java/org/springframework/samples/petclinic/service": 1,
@@ -1317,12 +1694,13 @@
       "modified_node_types": [
         "service_layer",
         "unknown",
-        "api_controller"
+        "api_controller",
+        "api_dto"
       ],
       "deleted_node_types": [
         "service_layer"
       ],
-      "unknown_changed_file_count": 12,
+      "unknown_changed_file_count": 11,
       "unknown_path_patterns": [
         "src/main/resources/spring",
         "*.xml",
@@ -1331,7 +1709,6 @@
         "*.java",
         "src/main/java/org/springframework/samples/petclinic/config",
         "src/test/java/org/springframework/samples/petclinic/web",
-        "src/main/java/org/springframework/samples/petclinic/web/api",
         "src/test/java/org/springframework/samples/petclinic/web/api"
       ],
       "unclassified_examples": [
@@ -1345,7 +1722,6 @@
         "src/test/java/org/springframework/samples/petclinic/web/PetControllerTests.java",
         "src/test/java/org/springframework/samples/petclinic/web/VetControllerTests.java",
         "src/test/java/org/springframework/samples/petclinic/web/VisitControllerTests.java",
-        "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java",
         "src/test/java/org/springframework/samples/petclinic/web/api/OwnerResourceTests.java"
       ],
       "example_commits": [
@@ -1355,18 +1731,16 @@
         "2637f65: Upgrade to Spring Boot 1.4.0",
         "1080006: Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation",
         "72afd1a: Enable CORS",
-        "4c40375: Include petId in error message instead of null value",
-        "af31104: add max range and not null validation for adding new pet",
         "e4ca172: handle non existing owner  from get request",
         "55359a4: remove unnecessary code"
       ],
-      "confidence": 0.83,
-      "structural_confidence": 0.83,
-      "planner_effectiveness": 0.2,
-      "support_count": 10,
-      "validation_count": 10,
+      "confidence": 0.8267,
+      "structural_confidence": 0.8267,
+      "planner_effectiveness": 0.125,
+      "support_count": 8,
+      "validation_count": 8,
       "success_count": 0,
-      "partial_count": 4,
+      "partial_count": 2,
       "failure_count": 6,
       "last_seen_commit": "55359a491a02c88b296764e673fb10e9b27974fb",
       "promotion_blocker": null,
@@ -1377,10 +1751,403 @@
         "2637f65: Upgrade to Spring Boot 1.4.0",
         "1080006: Merging AbstractClinicServiceTests and ClinicServiceSpringDataJpaTests then using the Spring Boot @DataJpaTest annotation",
         "72afd1a: Enable CORS",
-        "4c40375: Include petId in error message instead of null value",
-        "af31104: add max range and not null validation for adding new pet",
         "e4ca172: handle non existing owner  from get request",
         "55359a4: remove unnecessary code"
+      ]
+    },
+    {
+      "id": "petclinic_react_backend_search_query",
+      "target_id": "petclinic-react",
+      "recipe_type": "backend_search_query",
+      "status": "active",
+      "source_commits": [
+        "cb6bd875dedbd7e8e4d666fd211a623c1b04f72c",
+        "e7f68999bfa947cfb39601502da8c15e83285196",
+        "87d025f854e38a27ce8046add1a5cc140a584eaa"
+      ],
+      "trigger_terms": [
+        "putting",
+        "encoding",
+        "filter",
+        "first",
+        "per",
+        "80",
+        "owners",
+        "search",
+        "has",
+        "been",
+        "case",
+        "insensitive",
+        "fixed",
+        "url",
+        "jquery",
+        "ui",
+        "there",
+        "was",
+        "typo",
+        "query"
+      ],
+      "changed_node_types": [
+        "unknown",
+        "migration"
+      ],
+      "changed_path_patterns": [
+        "src/main/webapp/WEB-INF",
+        "*.xml",
+        "src/main/resources/db/hsqldb",
+        "*.sql",
+        "src/main/webapp/WEB-INF/jsp/fragments",
+        "*.jsp"
+      ],
+      "new_file_patterns": [],
+      "cochange_patterns": [],
+      "required_existing_node_types": [
+        "migration"
+      ],
+      "optional_existing_node_types": [],
+      "observed_variants": [
+        "unknown",
+        "modified:migration"
+      ],
+      "changed_node_type_counts": {
+        "unknown": 2,
+        "migration": 1
+      },
+      "changed_path_pattern_counts": {
+        "*.jsp": 1,
+        "*.sql": 1,
+        "*.xml": 1,
+        "src/main/resources/db/hsqldb": 1,
+        "src/main/webapp/WEB-INF": 1,
+        "src/main/webapp/WEB-INF/jsp/fragments": 1
+      },
+      "created_file_pattern_counts": {},
+      "cochange_counts": {},
+      "created_node_types": [],
+      "modified_node_types": [
+        "unknown",
+        "migration"
+      ],
+      "deleted_node_types": [],
+      "unknown_changed_file_count": 2,
+      "unknown_path_patterns": [
+        "src/main/webapp/WEB-INF",
+        "*.xml",
+        "src/main/webapp/WEB-INF/jsp/fragments",
+        "*.jsp"
+      ],
+      "unclassified_examples": [
+        "src/main/webapp/WEB-INF/web.xml",
+        "src/main/webapp/WEB-INF/jsp/fragments/staticFiles.jsp"
+      ],
+      "example_commits": [
+        "cb6bd87: Putting encoding filter first per #80",
+        "e7f6899: owners search has been case insensitive",
+        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+      ],
+      "confidence": 0.71,
+      "structural_confidence": 0.71,
+      "planner_effectiveness": 0.0,
+      "support_count": 3,
+      "validation_count": 2,
+      "success_count": 0,
+      "partial_count": 0,
+      "failure_count": 2,
+      "last_seen_commit": "87d025f854e38a27ce8046add1a5cc140a584eaa",
+      "promotion_blocker": null,
+      "evidence": [
+        "cb6bd87: Putting encoding filter first per #80",
+        "e7f6899: owners search has been case insensitive",
+        "87d025f: fixed url for jquery-ui. There was typo \"query\" instaed of \"jquery\" and file cannot be loaded"
+      ]
+    },
+    {
+      "id": "petclinic_react_backend_validation_change",
+      "target_id": "petclinic-react",
+      "recipe_type": "backend_validation_change",
+      "status": "active",
+      "source_commits": [
+        "34d8ca46ac9add81362532e41461ceb52aa67fbc",
+        "076a124e0a643e2f471f873a1b4954a12e3b08ae",
+        "35a179f88b4ba301612957f953121c85a1cdfd83",
+        "694390d0c2d80624f499ba4feea3ab1d598f009d",
+        "80ff54ac03c32d5974b2e5e6e9ed6bde10402372",
+        "4bb829cbd1026ec10dc685277467d30523c90b95",
+        "ad3d322fc69061d5009460689edfda09af0b53ce",
+        "eb6f9343ad05d014e30b39f17f88d28ec7cecba6",
+        "4c403755db2f1bd3c3f84c5e1654a624b8b11864",
+        "af3110436e24ef13d68382e060a7250638625301",
+        "c758321ee85dd208eae6fd1a438d3f855c94e182",
+        "1a85b44f8162bcdb8ff3908957f0c659a389bbac"
+      ],
+      "trigger_terms": [
+        "chaining",
+        "validation",
+        "so",
+        "we",
+        "can",
+        "see",
+        "multiple",
+        "error",
+        "messages",
+        "when",
+        "there",
+        "are",
+        "fixes",
+        "37",
+        "other",
+        "default",
+        "locale",
+        "than",
+        "english",
+        "latest"
+      ],
+      "changed_node_types": [
+        "unknown",
+        "domain_model",
+        "service_layer",
+        "api_controller",
+        "repository",
+        "frontend_component",
+        "static_asset",
+        "api_dto"
+      ],
+      "changed_path_patterns": [
+        "src/main/java/org/springframework/samples/petclinic/web",
+        "*.java",
+        "src/test/java/org/springframework/samples/petclinic/model",
+        "*.xml",
+        "src/main/java/org/springframework/samples/petclinic/model",
+        "src/test/java/org/springframework/samples/petclinic/service",
+        "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
+        "*.json",
+        "src/main/webapp/WEB-INF/tags",
+        "*.tag",
+        "src/main/webapp/bower_components",
+        "src/main/webapp/resources",
+        "src/main/webapp/resources/css",
+        "*.css",
+        "src/main/webapp/resources/less",
+        "*.less",
+        "src/main/webapp/vendors/bootstrap/dist/fonts",
+        "*.eot",
+        "*.svg",
+        "*.ttf",
+        "*.woff",
+        "*.woff2",
+        "src/main/webapp/vendors/bootstrap/dist/js",
+        "*.js"
+      ],
+      "new_file_patterns": [
+        "src/main/webapp/bower_components",
+        "*.json",
+        "src/main/webapp/resources",
+        "src/main/webapp/resources/css",
+        "*.css"
+      ],
+      "cochange_patterns": [
+        "domain_model + service_layer",
+        "domain_model + unknown",
+        "service_layer + unknown",
+        "api_controller + unknown",
+        "repository + service_layer",
+        "repository + unknown",
+        "api_controller + domain_model",
+        "api_controller + service_layer",
+        "frontend_component + static_asset",
+        "frontend_component + unknown",
+        "static_asset + unknown"
+      ],
+      "required_existing_node_types": [
+        "domain_model",
+        "service_layer"
+      ],
+      "optional_existing_node_types": [
+        "api_controller",
+        "api_dto",
+        "frontend_component",
+        "repository",
+        "static_asset"
+      ],
+      "observed_variants": [
+        "unknown",
+        "modified:domain_model",
+        "modified:domain_model+service_layer",
+        "modified:api_controller",
+        "modified:repository+service_layer",
+        "modified:api_controller+domain_model+service_layer",
+        "created:frontend_component; deleted:static_asset",
+        "modified:api_dto"
+      ],
+      "changed_node_type_counts": {
+        "domain_model": 6,
+        "unknown": 6,
+        "service_layer": 3,
+        "api_controller": 2,
+        "api_dto": 2,
+        "frontend_component": 1,
+        "repository": 1,
+        "static_asset": 1
+      },
+      "changed_path_pattern_counts": {
+        "*.java": 11,
+        "src/main/java/org/springframework/samples/petclinic/model": 4,
+        "src/main/java/org/springframework/samples/petclinic/web": 4,
+        "src/test/java/org/springframework/samples/petclinic/model": 3,
+        "src/test/java/org/springframework/samples/petclinic/service": 3,
+        "*.xml": 2,
+        "src/main/java/org/springframework/samples/petclinic/web/api": 2,
+        "*.css": 1,
+        "*.eot": 1,
+        "*.gif": 1,
+        "*.js": 1,
+        "*.json": 1,
+        "*.less": 1,
+        "*.map": 1,
+        "*.png": 1,
+        "*.svg": 1,
+        "*.tag": 1,
+        "*.ttf": 1,
+        "*.woff": 1,
+        "*.woff2": 1,
+        "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 1,
+        "src/main/webapp/WEB-INF/tags": 1,
+        "src/main/webapp/bower_components": 1,
+        "src/main/webapp/resources": 1,
+        "src/main/webapp/resources/css": 1,
+        "src/main/webapp/resources/less": 1,
+        "src/main/webapp/vendors/bootstrap/dist/fonts": 1,
+        "src/main/webapp/vendors/bootstrap/dist/js": 1,
+        "src/main/webapp/vendors/bootstrap/less": 1,
+        "src/main/webapp/vendors/bootstrap/less/mixins": 1,
+        "src/main/webapp/vendors/jquery": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base/images": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base/minified": 1,
+        "src/main/webapp/vendors/jquery-ui/themes/base/minified/images": 1,
+        "src/main/webapp/vendors/jquery-ui/ui": 1,
+        "src/main/webapp/vendors/jquery-ui/ui/i18n": 1,
+        "src/main/webapp/vendors/jquery-ui/ui/minified": 1,
+        "src/main/webapp/vendors/jquery-ui/ui/minified/i18n": 1
+      },
+      "created_file_pattern_counts": {
+        "*.css": 1,
+        "*.json": 1,
+        "src/main/webapp/bower_components": 1,
+        "src/main/webapp/resources": 1,
+        "src/main/webapp/resources/css": 1
+      },
+      "cochange_counts": {
+        "service_layer + unknown": 3,
+        "api_controller + unknown": 2,
+        "domain_model + service_layer": 2,
+        "domain_model + unknown": 2,
+        "api_controller + domain_model": 1,
+        "api_controller + service_layer": 1,
+        "frontend_component + static_asset": 1,
+        "frontend_component + unknown": 1,
+        "repository + service_layer": 1,
+        "repository + unknown": 1,
+        "static_asset + unknown": 1
+      },
+      "created_node_types": [
+        "frontend_component",
+        "unknown"
+      ],
+      "modified_node_types": [
+        "unknown",
+        "domain_model",
+        "service_layer",
+        "api_controller",
+        "repository",
+        "api_dto"
+      ],
+      "deleted_node_types": [
+        "static_asset",
+        "unknown"
+      ],
+      "unknown_changed_file_count": 352,
+      "unknown_path_patterns": [
+        "src/main/java/org/springframework/samples/petclinic/web",
+        "*.java",
+        "*.xml",
+        "*.json",
+        "src/main/webapp/WEB-INF/tags",
+        "*.tag",
+        "src/main/webapp/resources",
+        "src/main/webapp/resources/css",
+        "*.css",
+        "src/main/webapp/resources/less",
+        "*.less",
+        "src/main/webapp/vendors/bootstrap/dist/fonts",
+        "*.eot",
+        "*.ttf",
+        "*.woff",
+        "*.woff2",
+        "src/main/webapp/vendors/bootstrap/dist/js",
+        "*.js",
+        "src/main/webapp/vendors/bootstrap/less",
+        "src/main/webapp/vendors/bootstrap/less/mixins"
+      ],
+      "unclassified_examples": [
+        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
+        "pom.xml",
+        ".bowerrc",
+        "bower.json",
+        "src/main/webapp/WEB-INF/tags/footer.tag",
+        "src/main/webapp/WEB-INF/tags/htmlHeader.tag",
+        "src/main/webapp/resources/.gitignore",
+        "src/main/webapp/resources/css/jquery-ui.theme.min.css",
+        "src/main/webapp/resources/css/petclinic.css",
+        "src/main/webapp/resources/less/petclinic.less",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.eot",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.ttf",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.woff",
+        "src/main/webapp/vendors/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2",
+        "src/main/webapp/vendors/bootstrap/dist/js/bootstrap.js",
+        "src/main/webapp/vendors/bootstrap/dist/js/bootstrap.min.js",
+        "src/main/webapp/vendors/bootstrap/dist/js/npm.js",
+        "src/main/webapp/vendors/bootstrap/less/.csscomb.json",
+        "src/main/webapp/vendors/bootstrap/less/.csslintrc",
+        "src/main/webapp/vendors/bootstrap/less/alerts.less"
+      ],
+      "example_commits": [
+        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
+        "076a124: Fixes #37 with other default locale than english",
+        "35a179f: latest versions and imports cleanup",
+        "694390d: migrated assertion to assertJ",
+        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
+        "4bb829c: Fix #101 display the pet type when using the JDBC profile",
+        "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
+        "eb6f934: migrate to webjars for frontend resource management",
+        "4c40375: Include petId in error message instead of null value",
+        "af31104: add max range and not null validation for adding new pet",
+        "c758321: add regex validation for string input",
+        "1a85b44: fix regex validation issue for string input"
+      ],
+      "confidence": 0.723,
+      "structural_confidence": 0.723,
+      "planner_effectiveness": 0.0833,
+      "support_count": 12,
+      "validation_count": 12,
+      "success_count": 0,
+      "partial_count": 2,
+      "failure_count": 10,
+      "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
+      "promotion_blocker": null,
+      "evidence": [
+        "34d8ca4: chaining validation so we can see multiple error messages when there are multiple validation errors",
+        "076a124: Fixes #37 with other default locale than english",
+        "35a179f: latest versions and imports cleanup",
+        "694390d: migrated assertion to assertJ",
+        "80ff54a: Fix #89 Web layer: use @Valid whenever possible",
+        "4bb829c: Fix #101 display the pet type when using the JDBC profile",
+        "ad3d322: Fising squid:S2970, squid:S1192, squid:S1488, squid:UselessParenthesesCheck",
+        "eb6f934: migrate to webjars for frontend resource management",
+        "4c40375: Include petId in error message instead of null value",
+        "af31104: add max range and not null validation for adding new pet",
+        "c758321: add regex validation for string input",
+        "1a85b44: fix regex validation issue for string input"
       ]
     },
     {
@@ -1424,6 +2191,7 @@
         "page_component",
         "route_config",
         "unknown",
+        "api_dto",
         "frontend_type",
         "domain_model",
         "form_component",
@@ -1477,23 +2245,23 @@
         "page_component + route_config",
         "page_component + unknown",
         "route_config + unknown",
-        "api_controller + frontend_type",
+        "api_dto + frontend_component",
+        "api_dto + frontend_type",
+        "api_dto + page_component",
+        "api_dto + route_config",
+        "api_dto + unknown",
         "frontend_component + frontend_type",
         "frontend_type + page_component",
         "frontend_type + route_config",
         "frontend_type + unknown",
-        "api_controller + domain_model",
-        "domain_model + frontend_component",
-        "domain_model + frontend_type",
-        "domain_model + page_component",
-        "domain_model + route_config"
+        "api_dto + domain_model"
       ],
       "required_existing_node_types": [
-        "api_controller",
-        "page_component"
+        "page_component",
+        "route_config"
       ],
       "optional_existing_node_types": [
-        "route_config",
+        "api_dto",
         "frontend_component",
         "frontend_type",
         "domain_model",
@@ -1501,23 +2269,24 @@
       ],
       "observed_variants": [
         "created:api_controller+page_component; modified:frontend_component+route_config",
-        "created:frontend_component+frontend_type+page_component; modified:api_controller+frontend_component+frontend_type+route_config",
-        "created:page_component; modified:api_controller+domain_model+frontend_component+frontend_type+route_config",
-        "created:api_controller+page_component; modified:api_controller+frontend_component+frontend_type+page_component+route_config",
-        "created:form_component+frontend_component+page_component; modified:api_controller+domain_model+frontend_component+frontend_type+page_component; deleted:frontend_type",
-        "created:form_component+frontend_component+page_component; modified:api_controller+page_component+route_config",
-        "created:api_controller+detail_component+page_component; modified:domain_model+route_config",
+        "created:frontend_component+frontend_type+page_component; modified:api_dto+frontend_component+frontend_type+route_config",
+        "created:page_component; modified:api_dto+domain_model+frontend_component+frontend_type+route_config",
+        "created:api_dto+page_component; modified:api_dto+frontend_component+frontend_type+page_component+route_config",
+        "created:form_component+frontend_component+page_component; modified:api_dto+domain_model+frontend_component+frontend_type+page_component; deleted:frontend_type",
+        "created:form_component+frontend_component+page_component; modified:api_dto+page_component+route_config",
+        "created:api_dto+detail_component+page_component; modified:domain_model+route_config",
         "unknown"
       ],
       "changed_node_type_counts": {
         "unknown": 10,
-        "api_controller": 7,
         "page_component": 7,
         "route_config": 7,
+        "api_dto": 6,
         "frontend_component": 6,
         "frontend_type": 4,
         "domain_model": 3,
         "form_component": 2,
+        "api_controller": 1,
         "detail_component": 1
       },
       "changed_path_pattern_counts": {
@@ -1558,25 +2327,25 @@
         "client/src/util": 1
       },
       "cochange_counts": {
-        "api_controller + page_component": 7,
-        "api_controller + route_config": 7,
-        "api_controller + frontend_component": 6,
-        "api_controller + unknown": 6,
+        "api_dto + page_component": 6,
+        "api_dto + route_config": 6,
         "frontend_component + page_component": 6,
         "page_component + route_config": 6,
+        "api_dto + frontend_component": 5,
+        "api_dto + unknown": 5,
         "frontend_component + route_config": 5,
         "frontend_component + unknown": 5,
         "page_component + unknown": 5,
-        "api_controller + frontend_type": 4,
+        "api_dto + frontend_type": 4,
         "frontend_component + frontend_type": 4,
         "route_config + unknown": 4,
-        "api_controller + domain_model": 3,
+        "api_dto + domain_model": 3,
         "domain_model + page_component": 3,
         "domain_model + route_config": 3,
         "frontend_type + page_component": 3,
         "frontend_type + route_config": 3,
         "frontend_type + unknown": 3,
-        "api_controller + form_component": 2,
+        "api_dto + form_component": 2,
         "domain_model + frontend_component": 2,
         "domain_model + frontend_type": 2,
         "domain_model + unknown": 2,
@@ -1584,7 +2353,11 @@
         "form_component + page_component": 2,
         "form_component + route_config": 2,
         "form_component + unknown": 2,
-        "api_controller + detail_component": 1,
+        "api_controller + frontend_component": 1,
+        "api_controller + page_component": 1,
+        "api_controller + route_config": 1,
+        "api_controller + unknown": 1,
+        "api_dto + detail_component": 1,
         "detail_component + domain_model": 1,
         "detail_component + page_component": 1,
         "detail_component + route_config": 1,
@@ -1597,13 +2370,14 @@
         "unknown",
         "frontend_component",
         "frontend_type",
+        "api_dto",
         "form_component",
         "detail_component"
       ],
       "modified_node_types": [
         "frontend_component",
         "route_config",
-        "api_controller",
+        "api_dto",
         "frontend_type",
         "unknown",
         "domain_model",
@@ -1612,7 +2386,7 @@
       "deleted_node_types": [
         "frontend_type"
       ],
-      "unknown_changed_file_count": 18,
+      "unknown_changed_file_count": 17,
       "unknown_path_patterns": [
         "src/main/java/org/springframework/samples/petclinic/web/api",
         "*.java",
@@ -1633,8 +2407,7 @@
         "client/typings.json",
         "src/main/java/org/springframework/samples/petclinic/web/api/petclinic.less",
         "src/test/java/org/springframework/samples/petclinic/web/api/VetResourceTests.java",
-        "src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java",
-        "src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
+        "src/main/java/org/springframework/samples/petclinic/web/api/InvalidRequestException.java"
       ],
       "example_commits": [
         "7e3cd50: Add ErrorPage",
@@ -1649,8 +2422,8 @@
         "1d96669: Eliminando c\u00f3digo desnecess\u00e1rio",
         "bbd83e0: Eliminando c\u00f3digo desnecess\u00e1rio"
       ],
-      "confidence": 0.9118,
-      "structural_confidence": 0.9118,
+      "confidence": 0.9156,
+      "structural_confidence": 0.9156,
       "planner_effectiveness": 0.3182,
       "support_count": 11,
       "validation_count": 11,
@@ -1680,11 +2453,8 @@
       "status": "active",
       "source_commits": [
         "4c01d60b36de22110cf03f4026428d7b0bfb6b42",
-        "076a124e0a643e2f471f873a1b4954a12e3b08ae",
         "74f683aaa94e8f3dd27bbcb1e9da0c62d02d3fd3",
-        "35a179f88b4ba301612957f953121c85a1cdfd83",
         "cc4ae966c63610344313e6c7bf81ae7219ab8370",
-        "694390d0c2d80624f499ba4feea3ab1d598f009d",
         "818529b5b10bbf2f5ef861f0439ef1d84fc69577",
         "8d20340518d5d0b4f3dea577ce1abdb1655d2750",
         "5570366cfd960bc64fd688bc8f82d54f18772ead",
@@ -1695,17 +2465,12 @@
         "8b625617cb24353ee906fab080c7677a6ec37870",
         "91d19d17b817eb7c24593ea3a3c1ef52374b2eee",
         "06be7eb5bee7792109ef00302506888312429819",
-        "4bb829cbd1026ec10dc685277467d30523c90b95",
         "92de6557e10b610f3ea6579a6be67c53c4f766bc",
         "e00dfb3fe05cef910495b38d5a24221188e2e1a6",
-        "e7f68999bfa947cfb39601502da8c15e83285196",
         "e74b1bc160575650d4c46b790aa50a954b2f56c4",
-        "ad3d322fc69061d5009460689edfda09af0b53ce",
         "ca755be44a2844e10876b8e38e68b9adf736b486",
         "078bdc6cfbada99413041d859fdeb3d63685c40b",
-        "da38a764b83fcf7f28c2a934c49ab9447f66365c",
-        "c758321ee85dd208eae6fd1a438d3f855c94e182",
-        "1a85b44f8162bcdb8ff3908957f0c659a389bbac"
+        "da38a764b83fcf7f28c2a934c49ab9447f66365c"
       ],
       "trigger_terms": [
         "removing",
@@ -1715,40 +2480,36 @@
         "creates",
         "lot",
         "warnings",
-        "fixes",
-        "37",
-        "other",
-        "default",
-        "locale",
-        "than",
-        "english",
         "fixed",
         "typo",
-        "latest",
-        "versions",
-        "imports",
-        "cleanup"
+        "removed",
+        "deprecated",
+        "mapper",
+        "jdbc",
+        "64",
+        "remove",
+        "select",
+        "by",
+        "using",
+        "onetomanyresultsetextractor",
+        "spring"
       ],
       "changed_node_types": [
         "domain_model",
         "repository",
-        "service_layer",
         "unknown",
-        "migration",
-        "api_controller"
+        "service_layer",
+        "migration"
       ],
       "changed_path_patterns": [
         "src/main/java/org/springframework/samples/petclinic/model",
         "*.java",
-        "src/test/java/org/springframework/samples/petclinic/model",
         "src/main/java/org/springframework/samples/petclinic/repository/jdbc",
         "*.xml",
-        "src/test/java/org/springframework/samples/petclinic/service",
         "src/main/java/org/springframework/samples/petclinic/util",
-        "src/main/java/org/springframework/samples/petclinic/web",
-        "src/main/resources/db/hsqldb",
-        "*.sql",
+        "src/test/java/org/springframework/samples/petclinic/service",
         "src/main/resources/db/mysql",
+        "*.sql",
         "src/main/resources/spring",
         "*.properties",
         "src/main/java/org/springframework/samples/petclinic/repository/jpa",
@@ -1760,16 +2521,12 @@
         "*.java"
       ],
       "cochange_patterns": [
-        "domain_model + service_layer",
-        "domain_model + unknown",
-        "service_layer + unknown",
         "repository + unknown",
         "domain_model + repository",
+        "domain_model + unknown",
+        "domain_model + service_layer",
         "repository + service_layer",
-        "migration + unknown",
-        "api_controller + domain_model",
-        "api_controller + service_layer",
-        "api_controller + unknown"
+        "migration + unknown"
       ],
       "required_existing_node_types": [
         "repository",
@@ -1777,43 +2534,36 @@
       ],
       "optional_existing_node_types": [
         "service_layer",
-        "migration",
-        "api_controller"
+        "migration"
       ],
       "observed_variants": [
         "modified:domain_model",
         "modified:repository",
-        "modified:domain_model+service_layer",
         "created:repository; modified:repository",
         "modified:domain_model+repository",
-        "modified:repository+service_layer",
         "modified:domain_model+repository+service_layer",
         "modified:migration",
-        "modified:api_controller+domain_model+service_layer"
+        "modified:repository+service_layer"
       ],
       "changed_node_type_counts": {
-        "repository": 17,
-        "domain_model": 11,
-        "unknown": 8,
-        "service_layer": 5,
-        "migration": 2,
-        "api_controller": 1
+        "repository": 16,
+        "domain_model": 5,
+        "unknown": 5,
+        "service_layer": 2,
+        "migration": 1
       },
       "changed_path_pattern_counts": {
-        "*.java": 25,
-        "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 17,
-        "src/main/java/org/springframework/samples/petclinic/model": 9,
-        "src/test/java/org/springframework/samples/petclinic/service": 5,
-        "*.xml": 4,
-        "src/test/java/org/springframework/samples/petclinic/model": 3,
+        "*.java": 18,
+        "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 16,
+        "src/main/java/org/springframework/samples/petclinic/model": 5,
+        "*.xml": 3,
         "*.properties": 2,
-        "*.sql": 2,
-        "src/main/java/org/springframework/samples/petclinic/web": 2,
+        "src/test/java/org/springframework/samples/petclinic/service": 2,
+        "*.sql": 1,
         "src/main/java/org/springframework/samples/petclinic/repository/jpa": 1,
         "src/main/java/org/springframework/samples/petclinic/service": 1,
         "src/main/java/org/springframework/samples/petclinic/util": 1,
         "src/main/resources": 1,
-        "src/main/resources/db/hsqldb": 1,
         "src/main/resources/db/mysql": 1,
         "src/main/resources/spring": 1
       },
@@ -1822,15 +2572,11 @@
         "src/main/java/org/springframework/samples/petclinic/repository/jdbc": 1
       },
       "cochange_counts": {
-        "domain_model + unknown": 4,
-        "repository + unknown": 4,
         "domain_model + repository": 3,
-        "domain_model + service_layer": 3,
-        "repository + service_layer": 3,
-        "service_layer + unknown": 3,
-        "api_controller + domain_model": 1,
-        "api_controller + service_layer": 1,
-        "api_controller + unknown": 1,
+        "repository + unknown": 3,
+        "domain_model + unknown": 2,
+        "repository + service_layer": 2,
+        "domain_model + service_layer": 1,
         "migration + unknown": 1
       },
       "created_node_types": [
@@ -1839,18 +2585,16 @@
       "modified_node_types": [
         "domain_model",
         "repository",
-        "service_layer",
         "unknown",
-        "migration",
-        "api_controller"
+        "service_layer",
+        "migration"
       ],
       "deleted_node_types": [],
-      "unknown_changed_file_count": 9,
+      "unknown_changed_file_count": 6,
       "unknown_path_patterns": [
         "*.xml",
         "src/main/java/org/springframework/samples/petclinic/util",
         "*.java",
-        "src/main/java/org/springframework/samples/petclinic/web",
         "src/main/resources/spring",
         "*.properties",
         "src/main/resources"
@@ -1858,334 +2602,46 @@
       "unclassified_examples": [
         "pom.xml",
         "src/main/java/org/springframework/samples/petclinic/util/EntityUtils.java",
-        "src/main/java/org/springframework/samples/petclinic/web/PetValidator.java",
         "src/main/resources/spring/data-access.properties",
         "src/main/resources/application.properties"
       ],
       "example_commits": [
         "4c01d60: removing Serializable because it creates a lot of warnings",
-        "076a124: Fixes #37 with other default locale than english",
         "74f683a: Fixed typo",
-        "35a179f: latest versions and imports cleanup",
         "cc4ae96: removed deprecated Mapper in Jdbc",
-        "694390d: migrated assertion to assertJ",
         "818529b: #64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
         "8d20340: removed unused attribute #64",
         "5570366: Use a simple RowMapper instead of a BeanPropertyRowMapper",
         "dc0fb9a: removing unused method #85",
         "735fb11: Remove explicit unboxing",
-        "6f6fa64: Remove unused VisitRepository from constructor"
+        "6f6fa64: Remove unused VisitRepository from constructor",
+        "71f2424: Remove explicit unboxing",
+        "8b62561: #87 Petclinic should be compatible with Java 7 for the time being",
+        "91d19d1: #92 Fix column 'visits.id' not found on MySql"
       ],
       "confidence": 0.95,
       "structural_confidence": 0.95,
-      "planner_effectiveness": 0.0769,
-      "support_count": 27,
-      "validation_count": 26,
+      "planner_effectiveness": 0.0952,
+      "support_count": 19,
+      "validation_count": 21,
       "success_count": 0,
       "partial_count": 4,
-      "failure_count": 22,
-      "last_seen_commit": "1a85b44f8162bcdb8ff3908957f0c659a389bbac",
+      "failure_count": 17,
+      "last_seen_commit": "da38a764b83fcf7f28c2a934c49ab9447f66365c",
       "promotion_blocker": null,
       "evidence": [
         "4c01d60: removing Serializable because it creates a lot of warnings",
-        "076a124: Fixes #37 with other default locale than english",
         "74f683a: Fixed typo",
-        "35a179f: latest versions and imports cleanup",
         "cc4ae96: removed deprecated Mapper in Jdbc",
-        "694390d: migrated assertion to assertJ",
         "818529b: #64 Remove N+1 select by using the OneToManyResultSetExtractor of Spring Data Core JDBC Extensions",
         "8d20340: removed unused attribute #64",
         "5570366: Use a simple RowMapper instead of a BeanPropertyRowMapper",
         "dc0fb9a: removing unused method #85",
         "735fb11: Remove explicit unboxing",
-        "6f6fa64: Remove unused VisitRepository from constructor"
-      ]
-    },
-    {
-      "id": "petclinic_react_ui_form_validation",
-      "target_id": "petclinic-react",
-      "recipe_type": "ui_form_validation",
-      "status": "active",
-      "source_commits": [
-        "339ee36d7da27221aba4866cc2ee91c6e96d4746",
-        "6e73c96acc9c28219709faf5f530c0390f6af925",
-        "4f4290285a86a2dc1e48a7ffae23699265fc3d18",
-        "a3ba04ab0a2d0fafcf173e0241b9871cb6ea791d",
-        "409415bf40f707e03114a79e292a2a2f6e464ea8",
-        "f726ae73d13bd489d7767edd1f7a4442d5cb5578",
-        "6137def71abc75c53eed75fb2020f2602d0059d4"
-      ],
-      "trigger_terms": [
-        "error",
-        "handling",
-        "newownerpage",
-        "visual",
-        "feedback",
-        "invalid",
-        "fields",
-        "fieldfeedbackpanel",
-        "show",
-        "status",
-        "indication",
-        "fix",
-        "errors",
-        "initial",
-        "validation",
-        "undo",
-        "unused",
-        "forms"
-      ],
-      "changed_node_types": [
-        "frontend_type",
-        "page_component",
-        "unknown",
-        "frontend_component",
-        "list_component"
-      ],
-      "changed_path_patterns": [
-        "client/src/components/owners",
-        "*.tsx",
-        "client/src/types",
-        "*.ts",
-        "client",
-        "*.md",
-        "client/src/components/form"
-      ],
-      "new_file_patterns": [
-        "client/src/components/form",
-        "*.tsx"
-      ],
-      "cochange_patterns": [
-        "frontend_type + page_component",
-        "page_component + unknown",
-        "frontend_component + unknown",
-        "frontend_component + list_component"
-      ],
-      "required_existing_node_types": [
-        "frontend_component",
-        "page_component"
-      ],
-      "optional_existing_node_types": [
-        "frontend_type",
-        "list_component"
-      ],
-      "observed_variants": [
-        "modified:frontend_type+page_component",
-        "modified:page_component",
-        "created:frontend_component; modified:frontend_component",
-        "modified:frontend_component+list_component",
-        "modified:frontend_component"
-      ],
-      "changed_node_type_counts": {
-        "frontend_component": 5,
-        "page_component": 2,
-        "unknown": 2,
-        "frontend_type": 1,
-        "list_component": 1
-      },
-      "changed_path_pattern_counts": {
-        "*.tsx": 7,
-        "client/src/components/form": 5,
-        "client/src/components/owners": 3,
-        "*.md": 2,
-        "client": 2,
-        "*.ts": 1,
-        "client/src/types": 1
-      },
-      "created_file_pattern_counts": {
-        "*.tsx": 1,
-        "client/src/components/form": 1
-      },
-      "cochange_counts": {
-        "frontend_component + list_component": 1,
-        "frontend_component + unknown": 1,
-        "frontend_type + page_component": 1,
-        "page_component + unknown": 1
-      },
-      "created_node_types": [
-        "frontend_component"
-      ],
-      "modified_node_types": [
-        "frontend_type",
-        "page_component",
-        "unknown",
-        "frontend_component",
-        "list_component"
-      ],
-      "deleted_node_types": [],
-      "unknown_changed_file_count": 2,
-      "unknown_path_patterns": [
-        "client",
-        "*.md"
-      ],
-      "unclassified_examples": [
-        "client/TODO.md"
-      ],
-      "example_commits": [
-        "339ee36: Add error handling to NewOwnerPage",
-        "6e73c96: Add visual feedback for invalid fields",
-        "4f42902: Add FieldFeedbackPanel to show status indication on Fields",
-        "a3ba04a: Fix errors",
-        "409415b: fix initial validation feedback",
-        "f726ae7: undo unused change",
-        "6137def: Fix validation feedback on forms"
-      ],
-      "confidence": 0.9555,
-      "structural_confidence": 0.9555,
-      "planner_effectiveness": 0.0,
-      "support_count": 7,
-      "validation_count": 6,
-      "success_count": 0,
-      "partial_count": 0,
-      "failure_count": 6,
-      "last_seen_commit": "6137def71abc75c53eed75fb2020f2602d0059d4",
-      "promotion_blocker": null,
-      "evidence": [
-        "339ee36: Add error handling to NewOwnerPage",
-        "6e73c96: Add visual feedback for invalid fields",
-        "4f42902: Add FieldFeedbackPanel to show status indication on Fields",
-        "a3ba04a: Fix errors",
-        "409415b: fix initial validation feedback",
-        "f726ae7: undo unused change",
-        "6137def: Fix validation feedback on forms"
-      ]
-    },
-    {
-      "id": "petclinic_react_ui_page_add",
-      "target_id": "petclinic-react",
-      "recipe_type": "ui_page_add",
-      "status": "active",
-      "source_commits": [
-        "0a36a33c0101b3aad023dbc7a6ebe440755af968",
-        "42c0bd26350d948af8683b6bad54ed07932d31a1",
-        "f188ea90562fcccfabf10bd13911afb28dbd1b42",
-        "a2690703620b0ec755e1e491c8a183e80f8b9944",
-        "d841a4b3565f1f3cd81f91670cb04598c37fcda8",
-        "521fe86226c384b574bff2307cbcaf10ae7d137a",
-        "c9e1c7cb16564a59f0198a21750b02c5324494d6"
-      ],
-      "trigger_terms": [
-        "ownerspage",
-        "actions",
-        "createpeteditormodel",
-        "eliminando",
-        "digo",
-        "desnecess",
-        "rio"
-      ],
-      "changed_node_types": [
-        "frontend_type",
-        "page_component",
-        "route_config",
-        "frontend_component",
-        "unknown"
-      ],
-      "changed_path_patterns": [
-        "client/src/components/owners",
-        "*.tsx",
-        "client/src",
-        "client/src/types",
-        "*.ts",
-        "client",
-        "*.md",
-        "client/src/components/pets"
-      ],
-      "new_file_patterns": [
-        "client/src/components/owners",
-        "*.tsx"
-      ],
-      "cochange_patterns": [
-        "frontend_type + page_component",
-        "frontend_type + route_config",
-        "page_component + route_config",
-        "frontend_component + unknown"
-      ],
-      "required_existing_node_types": [
-        "page_component",
-        "frontend_component",
-        "frontend_type"
-      ],
-      "optional_existing_node_types": [
-        "route_config"
-      ],
-      "observed_variants": [
-        "created:page_component; modified:frontend_type+route_config",
-        "modified:frontend_component",
-        "modified:page_component"
-      ],
-      "changed_node_type_counts": {
-        "page_component": 6,
-        "frontend_component": 1,
-        "frontend_type": 1,
-        "route_config": 1,
-        "unknown": 1
-      },
-      "changed_path_pattern_counts": {
-        "*.tsx": 6,
-        "client/src/components/owners": 6,
-        "*.ts": 2,
-        "*.md": 1,
-        "client": 1,
-        "client/src": 1,
-        "client/src/components/pets": 1,
-        "client/src/types": 1
-      },
-      "created_file_pattern_counts": {
-        "*.tsx": 1,
-        "client/src/components/owners": 1
-      },
-      "cochange_counts": {
-        "frontend_component + unknown": 1,
-        "frontend_type + page_component": 1,
-        "frontend_type + route_config": 1,
-        "page_component + route_config": 1
-      },
-      "created_node_types": [
-        "page_component"
-      ],
-      "modified_node_types": [
-        "frontend_type",
-        "route_config",
-        "frontend_component",
-        "unknown",
-        "page_component"
-      ],
-      "deleted_node_types": [],
-      "unknown_changed_file_count": 1,
-      "unknown_path_patterns": [
-        "client",
-        "*.md"
-      ],
-      "unclassified_examples": [
-        "client/README.md"
-      ],
-      "example_commits": [
-        "0a36a33: Add OwnersPage (no actions yet)",
-        "42c0bd2: Add createPetEditorModel",
-        "f188ea9: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "a269070: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "d841a4b: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "521fe86: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "c9e1c7c: Eliminando c\u00f3digo desnecess\u00e1rio"
-      ],
-      "confidence": 0.98,
-      "structural_confidence": 0.98,
-      "planner_effectiveness": 0.05,
-      "support_count": 7,
-      "validation_count": 10,
-      "success_count": 0,
-      "partial_count": 1,
-      "failure_count": 9,
-      "last_seen_commit": "c9e1c7cb16564a59f0198a21750b02c5324494d6",
-      "promotion_blocker": null,
-      "evidence": [
-        "0a36a33: Add OwnersPage (no actions yet)",
-        "42c0bd2: Add createPetEditorModel",
-        "f188ea9: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "a269070: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "d841a4b: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "521fe86: Eliminando c\u00f3digo desnecess\u00e1rio",
-        "c9e1c7c: Eliminando c\u00f3digo desnecess\u00e1rio"
+        "6f6fa64: Remove unused VisitRepository from constructor",
+        "71f2424: Remove explicit unboxing",
+        "8b62561: #87 Petclinic should be compatible with Java 7 for the time being",
+        "91d19d1: #92 Fix column 'visits.id' not found on MySql"
       ]
     }
   ],
