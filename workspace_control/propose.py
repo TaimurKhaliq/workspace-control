@@ -22,8 +22,9 @@ from .models import (
     InventoryRow,
 )
 from .plan import create_feature_plan
+from .ui_shell import ui_shell_path_kind, ui_shell_paths, ui_shell_requested
 
-FRONTEND_PATH_MARKERS = ("pages", "components", "forms", "services", "api")
+FRONTEND_PATH_MARKERS = ("pages", "components", "forms", "services", "api", "public")
 API_PATH_MARKERS = ("controller", "controllers", "api", "rest", "dto", "openapi")
 SERVICE_PATH_MARKERS = ("service", "services", "application", "domain")
 PERSISTENCE_PATH_MARKERS = (
@@ -62,7 +63,7 @@ CATEGORY_TOKENS = {
     },
 }
 FILE_PATTERNS = {
-    "frontend": ("*.tsx", "*.ts", "*.jsx", "*.js"),
+    "frontend": ("*.tsx", "*.ts", "*.jsx", "*.js", "*.html", "*.css", "*.svg"),
     "api": (
         "*Controller.java",
         "*Resource.java",
@@ -348,14 +349,23 @@ def _likely_files_to_inspect(
     allow_concrete_files = not _has_ungrounded_concepts(plan)
 
     if frontend and plan.ui_change_needed:
+        ui_shell_change = ui_shell_requested(plan.feature_request)
+        shell_paths = ui_shell_paths(repo_dir) if ui_shell_change else []
+        if shell_paths:
+            files.extend(path for path in shell_paths if _path_looks_like_file(path))
+            folders.extend(
+                path for path in shell_paths if not _path_looks_like_file(path)
+            )
+
         ui_paths = _merge_paths(
             _discovery_paths(discovery, "ui"),
             _matching_paths(planned_paths, FRONTEND_PATH_MARKERS),
-            _discovery_paths(discovery, "api"),
+            [] if ui_shell_change else _discovery_paths(discovery, "api"),
         )
-        if allow_concrete_files:
+        if allow_concrete_files and not shell_paths:
             files.extend(_existing_files_for_category(repo_dir, ui_paths, plan, row, "frontend"))
-        folders.extend(ui_paths)
+        if not shell_paths:
+            folders.extend(ui_paths)
 
     if backend and plan.api_change_needed:
         api_paths = _merge_paths(
@@ -477,11 +487,21 @@ def _existing_file_plan(
     unrelated = _path_has_unrelated_domain(path, target_tokens)
     path_target_match = _path_matches_target_signal(path, target_tokens)
     group = _inspect_path_group(path)
+    shell_kind = ui_shell_path_kind(path) if ui_shell_requested(plan.feature_request) else None
 
     action = "inspect"
     confidence = "medium"
 
-    if unrelated:
+    if shell_kind in {"app_shell", "landing_page"}:
+        action = "modify"
+        confidence = "high"
+    elif shell_kind in {"entrypoint", "public_entry_html"}:
+        action = "inspect"
+        confidence = "medium"
+    elif shell_kind == "static_assets":
+        action = "inspect-only"
+        confidence = "low"
+    elif unrelated:
         action = "inspect-only"
         confidence = "low"
     elif not _path_looks_like_file(path):
@@ -768,8 +788,11 @@ def _existing_file_reason(
     tokens = _path_all_tokens(path)
     request_tokens = _tokenize_with_camel_case(plan.feature_request)
     target_tokens = _grounded_target_tokens(plan)
+    shell_kind = ui_shell_path_kind(path) if ui_shell_requested(plan.feature_request) else None
 
     if action == "inspect-only":
+        if shell_kind == "static_assets":
+            return "Static asset folder may support the welcome or layout experience, but exact asset changes are uncertain."
         if any(token in tokens for token in ("controller", "rest")):
             if "type" in tokens and "pet" in tokens:
                 return "Different domain REST controller; useful only as a controller pattern reference."
@@ -782,11 +805,31 @@ def _existing_file_reason(
         return "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
     if _same_domain_secondary_frontend(path, plan, target_tokens):
         return "Same owner domain and may display the telephone field after update, but the request specifically targets the edit screen."
-    if any(token in tokens for token in ("edit", "page")) and _inspect_path_group(path) == "frontend":
+    if shell_kind == "landing_page":
+        return "Welcome or landing page component directly matches the requested page addition."
+    if shell_kind == "app_shell":
+        return "App shell component likely owns layout, route composition, and welcome page placement."
+    if shell_kind == "entrypoint":
+        return "Frontend entrypoint may need review for shell bootstrap or route wiring."
+    if shell_kind == "public_entry_html":
+        return "Public HTML entrypoint may need review for app shell and static asset integration."
+    if "welcome" in tokens and _inspect_path_group(path) == "frontend":
+        return "Welcome page component matches the requested UI page addition."
+    if "layout" in tokens and _inspect_path_group(path) == "frontend":
+        return "Layout component matches the requested UI layout addition."
+    if (
+        "edit" in tokens
+        and "owner" in tokens
+        and _inspect_path_group(path) == "frontend"
+    ):
         return "Feature explicitly mentions the owner edit screen, and this page likely owns the edit flow."
+    if "page" in tokens and _inspect_path_group(path) == "frontend":
+        return "Frontend page component is related to the requested UI change."
     if any(token in tokens for token in ("editor", "form")) and _inspect_path_group(path) == "frontend":
         return "Likely owner form component where telephone input and validation are handled."
     if tokens & FRONTEND_SUPPORT_FILE_TOKENS and _inspect_path_group(path) == "frontend":
+        if not target_tokens:
+            return "Shared frontend type definitions may support the requested UI change."
         return "Likely shared owner client types referenced by the edit flow and API payload."
     if any(token in tokens for token in ("controller", "rest")) and concept_match:
         return "Owner-specific REST controller likely handles update requests for owner fields."
@@ -804,16 +847,28 @@ def _existing_file_reason(
         return "Likely API contract/spec reference for the requested owner update flow."
     if not _path_looks_like_file(path):
         mode = "discovered" if discovery is not None else "planned"
+        if not target_tokens:
+            return f"Likely {mode} area to inspect before editing concrete files."
         return f"Likely {mode} owner-related area to inspect before editing concrete files."
     if confidence == "high":
         if _inspect_path_group(path) == "frontend":
+            if not target_tokens:
+                return "Frontend file matches the requested UI flow and is likely to need a targeted change."
             return "Frontend file matches the requested owner update flow and is likely to need a targeted UI change."
         if _inspect_path_group(path) == "backend":
+            if not target_tokens:
+                return "Backend file may support the requested flow and could need a targeted change."
             return "Backend file matches the requested owner update flow and is likely to need a targeted API change."
+        if not target_tokens:
+            return "Shared support file matches the requested flow and may need a targeted change."
         return "Shared support file matches the requested owner update flow and may need a targeted change."
     if _inspect_path_group(path) == "frontend":
+        if not target_tokens:
+            return "Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain."
         return "Frontend file is related to the owner update flow, but its exact edit responsibility is uncertain."
     if _inspect_path_group(path) == "backend":
+        if not target_tokens:
+            return "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
         return "Backend file is related to the owner update flow, but its exact edit responsibility is uncertain."
     return "Shared support file is related to the requested flow, but the exact change is uncertain."
 
@@ -859,7 +914,14 @@ def _likely_changes(plan: FeaturePlan, row: InventoryRow, role: str) -> list[str
             ]
         )
 
-    if frontend and plan.ui_change_needed:
+    if frontend and plan.ui_change_needed and ui_shell_requested(plan.feature_request):
+        changes.extend(
+            [
+                "Update app shell/layout composition and welcome or landing page wiring.",
+                "Review frontend entrypoint, public HTML, and static asset references used by the shell.",
+            ]
+        )
+    elif frontend and plan.ui_change_needed:
         changes.extend(
             [
                 "Update the relevant page/form UI and validation states.",
@@ -907,6 +969,8 @@ def _possible_new_files(
     if metadata_only:
         return []
     if _has_ungrounded_concepts(plan):
+        return []
+    if frontend and plan.ui_change_needed and ui_shell_requested(plan.feature_request):
         return []
 
     new_surface_likely = _new_file_surface_likely(plan)

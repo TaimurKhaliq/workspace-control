@@ -230,6 +230,43 @@ def _seed_public_repo_like_proposal_workspace(tmp_path: Path) -> None:
         )
 
 
+def _seed_petclinic_like_ui_shell_workspace(tmp_path: Path) -> None:
+    repo = tmp_path / "spring-petclinic-reactjs"
+    for path in [
+        "client/src/components",
+        "client/public/images",
+        "src/main/java/org/springframework/samples/petclinic/web/api",
+    ]:
+        (repo / path).mkdir(parents=True, exist_ok=True)
+
+    (repo / "pom.xml").write_text(
+        "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>",
+        encoding="utf-8",
+    )
+    (repo / "client/package.json").write_text(
+        json.dumps(
+            {
+                "name": "petclinic-client",
+                "dependencies": {"react": "18.2.0", "typescript": "5.0.0"},
+                "scripts": {"test": "vitest", "build": "vite build"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    files = {
+        "client/src/main.tsx": "import App from './components/App';\n",
+        "client/src/components/App.tsx": "export default function App() { return null; }\n",
+        "client/src/components/WelcomePage.tsx": "export function WelcomePage() { return null; }\n",
+        "client/src/components/NotFoundPage.tsx": "export function NotFoundPage() { return null; }\n",
+        "client/public/index.html": "<div id=\"root\"></div>\n",
+        "client/public/images/logo.svg": "<svg />\n",
+        "src/main/java/org/springframework/samples/petclinic/web/api/OwnerController.java": "class OwnerController {}\n",
+    }
+    for relative, text in files.items():
+        (repo / relative).parent.mkdir(parents=True, exist_ok=True)
+        (repo / relative).write_text(text, encoding="utf-8")
+
+
 def _proposal_by_repo(proposal):
     return {item.repo_name: item for item in proposal.proposed_changes}
 
@@ -581,6 +618,52 @@ def test_propose_changes_grounded_public_repo_case_filters_unrelated_domains(
             "VisitRestController",
         )
     )
+
+
+def test_ui_shell_landing_page_request_prefers_shell_entrypoint_and_public_files(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_petclinic_like_ui_shell_workspace(tmp_path)
+
+    feature_request = "Add Layout and Welcome page"
+    exit_code = run(["plan-feature", feature_request, "--scan-root", str(tmp_path)])
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+    repo_name = "spring-petclinic-reactjs"
+
+    assert exit_code == 0
+    assert "ui" in plan["feature_intents"]
+    assert plan["implementation_owner"] == repo_name
+    assert "client/src/components/WelcomePage.tsx" in plan["likely_paths_by_repo"][repo_name]
+    assert "client/src/components/App.tsx" in plan["likely_paths_by_repo"][repo_name]
+    assert "client/src/main.tsx" in plan["likely_paths_by_repo"][repo_name]
+    assert "client/public/index.html" in plan["likely_paths_by_repo"][repo_name]
+    assert not any(
+        path.startswith("src/main/java")
+        for path in plan["likely_paths_by_repo"][repo_name]
+    )
+
+    rows = build_inventory(tmp_path)
+    proposal = create_change_proposal(feature_request, rows, scan_root=tmp_path)
+    item = _proposal_by_repo(proposal)[repo_name]
+    files = _file_by_path(item)
+
+    assert "client/src/components/WelcomePage.tsx" in item.likely_files_to_inspect
+    assert "client/src/components/App.tsx" in item.likely_files_to_inspect
+    assert "client/src/main.tsx" in item.likely_files_to_inspect
+    assert "client/public/index.html" in item.likely_files_to_inspect
+    assert "client/public/images" in item.likely_files_to_inspect
+    assert "client/src/components/NotFoundPage.tsx" not in item.likely_files_to_inspect
+    assert not any(path.startswith("src/main/java") for path in item.likely_files_to_inspect)
+    assert files["client/src/components/WelcomePage.tsx"].action == "modify"
+    assert files["client/src/components/WelcomePage.tsx"].confidence == "high"
+    assert files["client/src/components/App.tsx"].action == "modify"
+    assert files["client/src/components/App.tsx"].confidence == "high"
+    assert files["client/src/main.tsx"].action == "inspect"
+    assert files["client/public/index.html"].action == "inspect"
+    assert files["client/public/images"].action == "inspect-only"
+    assert item.possible_new_files == []
 
 
 def test_change_proposal_item_normalizes_legacy_file_strings_into_file_objects() -> None:

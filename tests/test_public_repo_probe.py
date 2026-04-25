@@ -128,9 +128,13 @@ def test_run_public_repo_probe_writes_reports_without_network(
     )
 
 
-def test_replay_git_history_eval_placeholder_is_non_destructive() -> None:
+def test_replay_git_history_eval_candidate_help() -> None:
     completed = subprocess.run(
-        [sys.executable, str(REPO_ROOT / "scripts" / "replay_git_history_eval.py")],
+        [
+            sys.executable,
+            str(REPO_ROOT / "scripts" / "replay_git_history_eval.py"),
+            "--candidate-help",
+        ],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
@@ -139,5 +143,5 @@ def test_replay_git_history_eval_placeholder_is_non_destructive() -> None:
 
     assert completed.returncode == 0
     assert completed.stderr == ""
-    assert "checkout a parent commit" in completed.stdout
-    assert "No repository changes were made." in completed.stdout
+    assert "How to find candidate commits" in completed.stdout
+    assert "git -C /path/to/repo log --oneline" in completed.stdout

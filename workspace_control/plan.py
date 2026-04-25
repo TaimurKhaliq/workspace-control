@@ -14,6 +14,7 @@ from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 
 from .analyze import analyze_feature
 from .models import ConceptGrounding, FeatureImpact, FeaturePlan, InventoryRow
+from .ui_shell import ui_shell_paths, ui_shell_requested
 
 INTENT_ORDER = ("ui", "persistence", "api", "event_integration")
 INTENT_PHRASES = {
@@ -26,6 +27,15 @@ INTENT_PHRASES = {
         "settings",
         "ui",
         "frontend",
+        "layout",
+        "welcome page",
+        "landing page",
+        "home page",
+        "app shell",
+        "entrypoint",
+        "entry point",
+        "public assets",
+        "static assets",
     ),
     "persistence": (
         "persist",
@@ -127,7 +137,18 @@ SPECIFIC_FEATURE_TOKENS = {
     "password",
     "phone",
 }
-SPECIFIC_UI_TOKENS = {"screen", "page", "form", "button", "modal"}
+SPECIFIC_UI_TOKENS = {
+    "screen",
+    "page",
+    "form",
+    "button",
+    "modal",
+    "layout",
+    "welcome",
+    "landing",
+    "home",
+    "entrypoint",
+}
 DOWNSTREAM_REASON_MARKERS = (
     "downstream",
     "event",
@@ -515,7 +536,14 @@ def _filter_impacts_for_plan(
                 f"{reason}; downgraded for event_integration intent without UI signals"
             )
 
-        if ui_only_intent and _row_is_backend(row) and not explicit_reference:
+        discovery = architecture_by_repo.get(impact.repo_name)
+        if (
+            ui_only_intent
+            and _row_is_backend(row)
+            and not _row_is_frontend(row)
+            and not _has_ui_paths(discovery)
+            and not explicit_reference
+        ):
             role = "weak-match"
             score = min(score, MIN_RELEVANT_SCORE - 1)
             reason = f"{reason}; downgraded for UI-only intent"
@@ -1000,12 +1028,16 @@ def _infer_likely_paths(
     ui_change_needed: bool,
     ui_copy_only: bool,
     event_integration_mode: bool,
+    ui_shell_change: bool,
 ) -> list[str]:
     paths: list[str] = []
+    ui_only_change = ui_change_needed and not (
+        api_change_needed or db_change_needed or event_integration_mode
+    )
     if not _has_source_discovered_paths(discovery):
         paths.append("stackpilot.yml")
 
-    if _row_is_backend(row):
+    if _row_is_backend(row) and not (_row_is_frontend(row) and ui_only_change):
         discovered_backend_paths = _backend_discovered_paths(
             discovery,
             db_change_needed=db_change_needed,
@@ -1057,12 +1089,17 @@ def _infer_likely_paths(
             if frontend_discovered:
                 paths.extend(frontend_discovered)
 
-    elif _row_is_frontend(row):
+    if _row_is_frontend(row) and (
+        not _row_is_backend(row) or ui_only_change
+    ):
+        if ui_shell_change:
+            paths.extend(ui_shell_paths(repo_dir))
+
         frontend_discovered = _frontend_discovered_paths(
             discovery,
             repo_name,
             concept_grounding,
-            include_support=not ui_copy_only,
+            include_support=not (ui_copy_only or ui_only_change),
         )
         if frontend_discovered:
             paths.extend(frontend_discovered)
@@ -1076,7 +1113,12 @@ def _infer_likely_paths(
                 FRONTEND_UI_PATH_FALLBACKS if ui_copy_only else FRONTEND_PATH_FALLBACKS
             )
 
-        if ui_change_needed and "src/forms" not in paths and "forms" not in paths:
+        if (
+            ui_change_needed
+            and not ui_only_change
+            and "src/forms" not in paths
+            and "forms" not in paths
+        ):
             paths.append("src/forms")
 
     return _dedupe_preserve_order(paths)
@@ -1139,13 +1181,11 @@ def _frontend_discovered_paths(
         return _dedupe_preserve_order(
             [*grounded_paths, *support_paths]
         )
-    return _dedupe_preserve_order(
-        [
-            *discovery.likely_ui_locations,
-            *discovery.likely_api_locations,
-            *discovery.likely_service_locations,
-        ]
-    )
+    paths = list(discovery.likely_ui_locations)
+    if include_support:
+        paths.extend(discovery.likely_api_locations)
+        paths.extend(discovery.likely_service_locations)
+    return _dedupe_preserve_order(paths)
 
 
 def _non_migration_persistence_path(path: str) -> bool:
@@ -1166,7 +1206,32 @@ def _primary_owner_step(
     ui_copy_only: bool,
     feature_intents: set[str],
     discovery: RepoDiscovery | None,
+    ui_shell_change: bool = False,
 ) -> str:
+    ui_only_change = "ui" in feature_intents and not any(
+        intent in feature_intents
+        for intent in ("api", "persistence", "event_integration")
+    )
+    if _row_is_frontend(row) and ui_only_change:
+        if ui_shell_change:
+            return (
+                f"In {repo_name} (primary-owner, score={score}), update the UI shell, "
+                "layout composition, welcome/landing page wiring, frontend entrypoint, "
+                "and public/static asset references"
+                f"{_path_note(' using discovered UI paths', _ui_paths(discovery))}."
+            )
+        if ui_copy_only:
+            return (
+                f"In {repo_name} (primary-owner, score={score}), update the relevant "
+                "UI copy, label text, and presentation on the profile screen"
+                f"{_path_note(' using discovered UI paths', _ui_paths(discovery))}."
+            )
+        return (
+            f"In {repo_name} (primary-owner, score={score}), update the requested UI page, "
+            "layout, route, and component composition"
+            f"{_path_note(' using discovered UI paths', _ui_paths(discovery))}."
+        )
+
     if _row_is_backend(row):
         if "event_integration" in feature_intents:
             trigger_note = _path_note(
@@ -1217,6 +1282,13 @@ def _primary_owner_step(
         )
 
     if _row_is_frontend(row):
+        if ui_shell_change:
+            return (
+                f"In {repo_name} (primary-owner, score={score}), update the UI shell, "
+                "layout composition, welcome/landing page wiring, frontend entrypoint, "
+                "and public/static asset references"
+                f"{_path_note(' using discovered UI paths', _ui_paths(discovery))}."
+            )
         if ui_copy_only:
             return (
                 f"In {repo_name} (primary-owner, score={score}), update the relevant "
@@ -1458,6 +1530,9 @@ def create_feature_plan(
     )
     by_repo = {row.repo_name: row for row in effective_rows}
     feature_intents = _classify_feature_intents(feature_request)
+    ui_shell_change = ui_shell_requested(feature_request)
+    if ui_shell_change:
+        feature_intents = _with_feature_intent(feature_intents, "ui")
     pure_ui_copy_change = _pure_ui_copy_change_requested(feature_request, feature_intents)
     discovery_by_repo = _architecture_by_repo(scan_root, discovery_snapshot)
     workspace_root = _workspace_root(scan_root, discovery_snapshot)
@@ -1622,6 +1697,7 @@ def create_feature_plan(
             ui_change_needed=ui_change_needed,
             ui_copy_only=pure_ui_copy_change,
             event_integration_mode=event_integration_mode,
+            ui_shell_change=ui_shell_change,
         )
 
         validation_commands.extend(row.build_commands)
@@ -1645,6 +1721,7 @@ def create_feature_plan(
                 ui_copy_only=pure_ui_copy_change,
                 feature_intents=feature_intents_set,
                 discovery=discovery_by_repo.get(primary_owner),
+                ui_shell_change=ui_shell_change,
             )
         )
         if (
@@ -1656,6 +1733,10 @@ def create_feature_plan(
                 concept_grounding,
             )
             and _row_is_backend(by_repo[primary_owner])
+            and not (
+                ui_change_needed
+                and not (api_change_needed or db_change_needed or event_integration_mode)
+            )
         ):
             ordered_steps.append(
                 _frontend_ui_step(
