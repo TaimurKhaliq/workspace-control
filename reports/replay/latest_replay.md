@@ -2,27 +2,27 @@
 
 - repo: `spring-petclinic-reactjs`
 - repo path: `eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs`
-- parent commit: `7f0abc4ea45a412b811295dd11b42363d3c5c9c8`
-- target commit: `f710ba8915af96ffcdd96aac88205f6a15eff5d3`
-- prompt: Add Layout and Welcome page
+- parent commit: `d2017b8f57050830ec8980f7b578eb272c66af67`
+- target commit: `0a36a33c0101b3aad023dbc7a6ebe440755af968`
+- prompt: Add OwnersPage (no actions yet)
 - source repo mode: read-only; parent snapshot was materialized from `git archive` into a temporary workspace
 
 ## Summary
 
 - commands succeeded: True
-- predicted files: 4
-- actual files: 10
-- matched files: 4
-- missed files: 6
-- extra predicted files: 0
-- exact file precision: 1.00
-- exact file recall: 0.40
+- predicted files: 5
+- actual files: 3
+- matched files: 3
+- missed files: 0
+- extra predicted files: 2
+- exact file precision: 0.60
+- exact file recall: 1.00
 - folder-level matched actual files: 0
 - category precision: 1.00
-- category recall: 0.80
-- high-signal exact precision: 1.00
+- category recall: 1.00
+- high-signal exact precision: 0.60
 - high-signal exact recall: 1.00
-- static asset misses: 6
+- static asset misses: 0
 
 ## Command Results
 
@@ -32,46 +32,90 @@
 | `analyze_feature` | 0 |
 | `plan_feature` | 0 |
 | `propose_changes` | 0 |
+| `suggest_from_recipes` | 0 |
+
+## Planner/Propose Predictions Only
+
+- predicted files: 5
+- matched files: 3
+- missed files: 0
+- extra predicted files: 2
+- exact precision: 0.60
+- exact recall: 1.00
+- high-signal precision: 0.60
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 1.00
+- folder-level matched actual files: 0
+
+## Recipe Suggestions Only
+
+- predicted files: 4
+- matched files: 3
+- missed files: 0
+- extra predicted files: 1
+- exact precision: 0.75
+- exact recall: 1.00
+- high-signal precision: 0.75
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 1.00
+- folder-level matched actual files: 0
+
+## Combined Predictions
+
+- predicted files: 5
+- matched files: 3
+- missed files: 0
+- extra predicted files: 2
+- exact precision: 0.60
+- exact recall: 1.00
+- high-signal precision: 0.60
+- high-signal recall: 1.00
+- category precision: 1.00
+- category recall: 1.00
+- folder-level matched actual files: 0
+
+## Recipe Suggestions
+
+- matched recipes:
+  - `petclinic_react_ui_page_add` (ui_page_add, structural=0.98, planner=0.05)
+    - why: source graph contains related domain token(s): owner, owners; request verb includes add; identifier normalization exposes page-style term(s): owner, owners, page
+
+- suggested actions:
+  - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx` (create, high, node=page_component, exists_in_parent=False, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/configureRoutes.tsx` (modify, high, node=route_config, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/types/index.ts` (inspect, medium, node=frontend_type, exists_in_parent=True, matched_actual=exact)
+  - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx` (inspect, medium, node=page_component, exists_in_parent=True, matched_actual=no)
 
 ## Predicted Files
 
-- `spring-petclinic-reactjs/client/public/index.html`
-- `spring-petclinic-reactjs/client/src/components/App.tsx`
-- `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
-- `spring-petclinic-reactjs/client/src/main.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/types.ts`
+- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## Actual Files
 
-- `spring-petclinic-reactjs/client/public/images/favicon.png`
-- `spring-petclinic-reactjs/client/public/images/pets.png`
-- `spring-petclinic-reactjs/client/public/images/platform-bg.png`
-- `spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png`
-- `spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png`
-- `spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png`
-- `spring-petclinic-reactjs/client/public/index.html`
-- `spring-petclinic-reactjs/client/src/components/App.tsx`
-- `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
-- `spring-petclinic-reactjs/client/src/main.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## Matched Files
 
-- `spring-petclinic-reactjs/client/public/index.html`
-- `spring-petclinic-reactjs/client/src/components/App.tsx`
-- `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
-- `spring-petclinic-reactjs/client/src/main.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## Missed Files
 
-- `spring-petclinic-reactjs/client/public/images/favicon.png`
-- `spring-petclinic-reactjs/client/public/images/pets.png`
-- `spring-petclinic-reactjs/client/public/images/platform-bg.png`
-- `spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png`
-- `spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png`
-- `spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png`
+-
 
 ## Extra Predicted Files
 
--
+- `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/types.ts`
 
 ## Folder-Level Matches
 
@@ -80,37 +124,36 @@
 ## Category-Level Matches
 
 - precision: 1.00
-- recall: 0.80
-- matched: `app_shell`, `frontend_entrypoint`, `landing_page`, `public_html`
-- missed: `static_asset`
+- recall: 1.00
+- matched: `frontend_component`, `frontend_type`
+- missed: -
 - extra predicted: -
 
 ## Exact File Scoring
 
-- precision: 1.00
-- recall: 0.40
-- predicted count: 4
-- actual count: 10
-- matched count: 4
-- missed count: 6
-- extra predicted count: 0
+- precision: 0.60
+- recall: 1.00
+- predicted count: 5
+- actual count: 3
+- matched count: 3
+- missed count: 0
+- extra predicted count: 2
 
 ## High-Signal File Scoring
 
-- precision: 1.00
+- precision: 0.60
 - recall: 1.00
-- predicted count: 4
-- actual count: 4
-- matched count: 4
+- predicted count: 5
+- actual count: 3
+- matched count: 3
 - missed count: 0
-- extra predicted count: 0
+- extra predicted count: 2
 
 ## High-Signal Matched Files
 
-- `spring-petclinic-reactjs/client/public/index.html`
-- `spring-petclinic-reactjs/client/src/components/App.tsx`
-- `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`
-- `spring-petclinic-reactjs/client/src/main.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## High-Signal Missed Files
 
@@ -118,12 +161,7 @@
 
 ## Static Asset Misses
 
-- `spring-petclinic-reactjs/client/public/images/favicon.png`
-- `spring-petclinic-reactjs/client/public/images/pets.png`
-- `spring-petclinic-reactjs/client/public/images/platform-bg.png`
-- `spring-petclinic-reactjs/client/public/images/spring-logo-dataflow-mobile.png`
-- `spring-petclinic-reactjs/client/public/images/spring-logo-dataflow.png`
-- `spring-petclinic-reactjs/client/public/images/spring-pivotal-logo.png`
+-
 
 ## Candidate Commit Helper
 

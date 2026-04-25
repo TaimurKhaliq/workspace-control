@@ -120,6 +120,10 @@ def test_recipe_matching_for_ui_page_add_and_new_file_suggestion(tmp_path: Path)
     report = _service(tmp_path).suggest("petclinic-test", "Add OwnersPage (no actions yet)")
 
     assert report.matched_recipes[0].recipe_type == "ui_page_add"
+    reasons = " | ".join(report.matched_recipes[0].why_matched)
+    assert "request verb includes add" in reasons
+    assert "identifier normalization exposes page-style term" in reasons
+    assert "actions" not in reasons
     actions = report.suggestions
     assert any(
         action.action == "create"

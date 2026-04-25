@@ -24,7 +24,8 @@ from app.services.text_normalization import normalize_text, split_identifiers, t
 ACTIVE_RECIPE_STATUSES = {"active", "candidate"}
 REQUEST_STOPWORDS = {
     "a",
-    "add",
+    "action",
+    "actions",
     "allow",
     "and",
     "for",
@@ -38,6 +39,7 @@ REQUEST_STOPWORDS = {
     "to",
     "yet",
 }
+NOISY_TRIGGER_TERMS = {"action", "actions", "yet"}
 PAGE_SUFFIXES = ("Page", "Form", "Editor", "Details", "Detail", "List", "Table")
 UI_PAGE_TERMS = {"page", "screen", "view"}
 UI_CREATE_TERMS = {"add", "create", "new"}
@@ -188,7 +190,7 @@ def recipe_match_score(
     score = int(recipe.structural_confidence * 20)
     reasons: list[str] = []
     type_specific = False
-    trigger_overlap = sorted(request_tokens & set(recipe.trigger_terms))
+    trigger_overlap = sorted((request_tokens & set(recipe.trigger_terms)) - NOISY_TRIGGER_TERMS)
     if trigger_overlap:
         score += min(25, len(trigger_overlap) * 5)
         reasons.append(f"matched recipe trigger terms: {', '.join(trigger_overlap[:5])}")
@@ -199,6 +201,11 @@ def recipe_match_score(
     if recipe.recipe_type == "ui_page_add" and is_ui_page_add_request(request_tokens):
         score += 50
         type_specific = True
+        if "add" in request_tokens:
+            reasons.append("request verb includes add")
+        page_terms = sorted((request_tokens & {"page"}) | (set(domain_overlap) & request_tokens))
+        if page_terms:
+            reasons.append(f"identifier normalization exposes page-style term(s): {', '.join(page_terms[:5])}")
         reasons.append("request looks like UI page creation")
     elif recipe.recipe_type == "ui_form_validation" and request_tokens & UI_FORM_VALIDATION_TERMS:
         score += 45

@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from app.models.discovery import DiscoveryTargetRecord
+from app.models.repo_learning import ChangeRecipe
 from app.services.discovery_target_registry import DiscoveryTargetRegistry
 from scripts import replay_git_history_eval as replay
 from workspace_control.cli import run
@@ -37,6 +38,58 @@ def _seed_git_repo(tmp_path: Path) -> tuple[Path, str, str]:
     _git(repo, ["commit", "-m", "update app"])
     target = _git(repo, ["rev-parse", "HEAD"])
     return repo, parent, target
+
+
+def _write(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
+def _commit_all(repo: Path, message: str) -> str:
+    _git(repo, ["add", "."])
+    _git(repo, ["commit", "-m", message])
+    return _git(repo, ["rev-parse", "HEAD"])
+
+
+def _seed_page_add_repo(tmp_path: Path) -> tuple[Path, str, str]:
+    repo = tmp_path / "spring-petclinic-reactjs"
+    repo.mkdir()
+    _git(repo, ["init"])
+    _git(repo, ["config", "user.email", "test@example.com"])
+    _git(repo, ["config", "user.name", "Test User"])
+    _write(
+        repo / "client/package.json",
+        json.dumps({"dependencies": {"react": "18.2.0"}}),
+    )
+    _write(repo / "client/src/configureRoutes.tsx", "export const routes = [];\n")
+    _write(repo / "client/src/components/owners/FindOwnersPage.tsx", "export function FindOwnersPage() { return null; }\n")
+    _write(repo / "client/src/types/index.ts", "export interface Owner { id: string }\n")
+    parent = _commit_all(repo, "Initial owners surfaces")
+
+    _write(repo / "client/src/components/owners/OwnersPage.tsx", "export function OwnersPage() { return null; }\n")
+    _write(repo / "client/src/configureRoutes.tsx", "export const routes = ['owners'];\n")
+    _write(repo / "client/src/types/index.ts", "export interface Owner { id: string; name?: string }\n")
+    target = _commit_all(repo, "Add OwnersPage (no actions yet)")
+    return repo, parent, target
+
+
+def _write_ui_page_add_recipe_catalog(path: Path) -> Path:
+    recipe = ChangeRecipe(
+        id="petclinic_react_ui_page_add",
+        target_id="petclinic-react",
+        recipe_type="ui_page_add",
+        status="active",
+        trigger_terms=["owners", "page"],
+        changed_node_types=["page_component", "route_config", "frontend_type"],
+        created_node_types=["page_component"],
+        modified_node_types=["route_config", "frontend_type"],
+        structural_confidence=0.98,
+        planner_effectiveness=0.05,
+        support_count=7,
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps([recipe.model_dump(mode="python")], indent=2), encoding="utf-8")
+    return path
 
 
 def test_run_replay_eval_writes_overlap_reports(tmp_path: Path, monkeypatch) -> None:
@@ -207,6 +260,52 @@ def test_high_signal_recall_excludes_static_asset_misses() -> None:
     assert comparison["static_assets"]["missed_files"] == [
         "repo/client/public/images/hero.png"
     ]
+
+
+def test_replay_runs_recipe_suggestions_against_parent_snapshot(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo, _parent, target = _seed_page_add_repo(tmp_path)
+    catalog = _write_ui_page_add_recipe_catalog(tmp_path / "learning/petclinic-react/change_recipes.json")
+    monkeypatch.setattr(replay, "find_learning_catalog_for_repo", lambda source_repo_name: catalog)
+
+    report = replay.run_replay_eval(
+        repo_path=repo,
+        commit=target,
+        prompt="Add OwnersPage (no actions yet)",
+        report_dir=tmp_path / "reports",
+        python_executable=sys.executable,
+    )
+
+    assert "suggest_from_recipes" in report["commands"]
+    recipe = report["recipe_suggestions"]["matched_recipes"][0]
+    assert recipe["recipe_type"] == "ui_page_add"
+    reasons = " | ".join(recipe["why_matched"])
+    assert "request verb includes add" in reasons
+    assert "identifier normalization exposes page-style term" in reasons
+    assert "actions" not in reasons
+
+    actions_by_path = {
+        action["qualified_path"]: action
+        for action in report["recipe_suggestions"]["suggested_actions"]
+    }
+    owners_page = "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx"
+    routes = "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+    types = "spring-petclinic-reactjs/client/src/types/index.ts"
+    assert actions_by_path[owners_page]["action"] == "create"
+    assert actions_by_path[owners_page]["exists_in_parent"] is False
+    assert actions_by_path[owners_page]["matched_actual_diff"] is True
+    assert actions_by_path[routes]["action"] == "modify"
+    assert actions_by_path[routes]["exists_in_parent"] is True
+    assert actions_by_path[types]["action"] == "inspect"
+    assert actions_by_path[types]["exists_in_parent"] is True
+
+    recipe_comparison = report["comparison_sections"]["recipe_suggestions"]
+    combined_comparison = report["comparison_sections"]["combined"]
+    assert owners_page in recipe_comparison["matched_files"]
+    assert recipe_comparison["exact_file"]["recall"] >= report["comparison"]["exact_file"]["recall"]
+    assert combined_comparison["exact_file"]["matched_count"] >= report["comparison"]["exact_file"]["matched_count"]
 
 
 def test_surface_category_classification_uses_replay_schema_names() -> None:

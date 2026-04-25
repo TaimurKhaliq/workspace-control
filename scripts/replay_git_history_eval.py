@@ -168,12 +168,45 @@ def run_replay_eval(
             target_id=f"replay-{repo_name}",
             prompt=prompt,
             python_executable=resolved_python,
+            source_repo_name=repo_name,
+        )
+        proposal_payload = parse_json_stdout(command_results["propose_changes"])
+        recipe_payload = parse_json_stdout(command_results.get("suggest_from_recipes", {}))
+        predicted = predicted_files_from_proposal(proposal_payload, default_repo_name=repo_name)
+        recipe_predicted = predicted_files_from_recipe_suggestions(
+            recipe_payload,
+            default_repo_name=repo_name,
+            snapshot_repo=snapshot_repo,
+        )
+        recipe_diagnostics = recipe_diagnostics_from_suggestions(
+            recipe_payload,
+            recipe_predicted=recipe_predicted,
+            actual_files=actual_files,
+            default_repo_name=repo_name,
+            snapshot_repo=snapshot_repo,
         )
 
-    proposal_payload = parse_json_stdout(command_results["propose_changes"])
-    predicted = predicted_files_from_proposal(proposal_payload, default_repo_name=repo_name)
     comparison = compare_predictions(
         predicted_files=predicted["predicted_files"],
+        actual_files=actual_files,
+    )
+    recipe_comparison = compare_predictions(
+        predicted_files=recipe_predicted["predicted_files"],
+        actual_files=actual_files,
+    )
+    combined_predicted = {
+        "predicted_files": dedupe_records(
+            [*predicted["predicted_files"], *recipe_predicted["predicted_files"]]
+        ),
+        "predicted_reference_files": dedupe_records(
+            [*predicted["predicted_reference_files"], *recipe_predicted["predicted_reference_files"]]
+        ),
+        "predicted_repos": sorted(
+            set(predicted["predicted_repos"]) | set(recipe_predicted["predicted_repos"])
+        ),
+    }
+    combined_comparison = compare_predictions(
+        predicted_files=combined_predicted["predicted_files"],
         actual_files=actual_files,
     )
     commands_succeeded = all(item["exit_code"] == 0 for item in command_results.values())
@@ -210,12 +243,31 @@ def run_replay_eval(
             "high_signal_precision": comparison["high_signal"]["precision"],
             "high_signal_recall": comparison["high_signal"]["recall"],
             "static_asset_miss_count": len(comparison["static_assets"]["missed_files"]),
+            "recipe_suggestion_file_count": len(recipe_predicted["predicted_files"]),
+            "recipe_matched_file_count": len(recipe_comparison["matched_files"]),
+            "recipe_exact_file_precision": recipe_comparison["precision"],
+            "recipe_exact_file_recall": recipe_comparison["recall"],
+            "recipe_high_signal_precision": recipe_comparison["high_signal"]["precision"],
+            "recipe_high_signal_recall": recipe_comparison["high_signal"]["recall"],
+            "combined_file_count": len(combined_predicted["predicted_files"]),
+            "combined_matched_file_count": len(combined_comparison["matched_files"]),
+            "combined_exact_file_precision": combined_comparison["precision"],
+            "combined_exact_file_recall": combined_comparison["recall"],
+            "combined_high_signal_precision": combined_comparison["high_signal"]["precision"],
+            "combined_high_signal_recall": combined_comparison["high_signal"]["recall"],
         },
         "predicted_repos": predicted["predicted_repos"],
         "predicted_files": predicted["predicted_files"],
         "predicted_reference_files": predicted["predicted_reference_files"],
+        "recipe_suggestions": recipe_diagnostics,
+        "combined_predictions": combined_predicted,
         "actual_files": actual_files,
         "comparison": comparison,
+        "comparison_sections": {
+            "planner_propose": comparison,
+            "recipe_suggestions": recipe_comparison,
+            "combined": combined_comparison,
+        },
         "commands": command_results,
         "reports": {
             "json": display_path(report_dir / "latest_replay.json"),
@@ -288,14 +340,22 @@ def run_workspace_commands(
     target_id: str = "replay-target",
     prompt: str,
     python_executable: str,
+    source_repo_name: str | None = None,
 ) -> dict[str, dict[str, Any]]:
     """Run discover/analyze/plan/propose through the target registry pipeline."""
 
     registry_path = workspace_root.parent / "discovery_targets.json"
+    learning_root = workspace_root.parent / "learning"
+    report_root = workspace_root.parent / "learning_reports"
     write_replay_registry(
         registry_path,
         target_id=target_id,
         workspace_root=workspace_root,
+    )
+    prepare_replay_learning_catalog(
+        learning_root,
+        replay_target_id=target_id,
+        source_repo_name=source_repo_name,
     )
     target_args = ["--target-id", target_id, "--registry-path", str(registry_path)]
     commands = {
@@ -303,11 +363,73 @@ def run_workspace_commands(
         "analyze_feature": ["analyze-feature", prompt, *target_args],
         "plan_feature": ["plan-feature", prompt, *target_args],
         "propose_changes": ["propose-changes", prompt, *target_args],
+        "suggest_from_recipes": [
+            "suggest-from-recipes",
+            prompt,
+            *target_args,
+            "--learning-root",
+            str(learning_root),
+            "--report-root",
+            str(report_root),
+        ],
     }
     return {
         key: run_cli_command(args, python_executable=python_executable)
         for key, args in commands.items()
     }
+
+
+def prepare_replay_learning_catalog(
+    learning_root: Path,
+    *,
+    replay_target_id: str,
+    source_repo_name: str | None,
+) -> None:
+    """Copy a matching learned recipe catalog into the temporary replay target id."""
+
+    learning_root.mkdir(parents=True, exist_ok=True)
+    destination = learning_root / replay_target_id / "change_recipes.json"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    source_catalog = find_learning_catalog_for_repo(source_repo_name)
+    if source_catalog is None:
+        destination.write_text("[]\n", encoding="utf-8")
+        return
+    destination.write_text(source_catalog.read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def find_learning_catalog_for_repo(
+    source_repo_name: str | None,
+    *,
+    learning_root: Path = REPO_ROOT / "data" / "learning",
+) -> Path | None:
+    """Find a repo-local recipe catalog that matches the replay source repo name."""
+
+    if not learning_root.is_dir():
+        return None
+    candidates: list[tuple[str, Path]] = []
+    for target_dir in sorted(path for path in learning_root.iterdir() if path.is_dir()):
+        catalog = target_dir / "change_recipes.json"
+        if not catalog.is_file():
+            continue
+        state_path = target_dir / "repo_learning_state.json"
+        state_repo = ""
+        if state_path.is_file():
+            try:
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+                state_repo = str(state.get("repo_name") or Path(str(state.get("repo_path") or "")).name)
+            except json.JSONDecodeError:
+                state_repo = ""
+        if source_repo_name and state_repo == source_repo_name:
+            return catalog
+        candidates.append((target_dir.name, catalog))
+    if source_repo_name:
+        slug = re.sub(r"[^a-z0-9]+", "-", source_repo_name.lower()).strip("-")
+        for target_id, catalog in candidates:
+            if target_id == slug or target_id in slug or slug in target_id:
+                return catalog
+    if len(candidates) == 1:
+        return candidates[0][1]
+    return None
 
 
 def write_replay_registry(
@@ -417,6 +539,109 @@ def predicted_files_from_proposal(
         "predicted_repos": sorted(predicted_repos),
         "predicted_files": predicted_files,
         "predicted_reference_files": reference_files,
+    }
+
+
+def predicted_files_from_recipe_suggestions(
+    payload: dict[str, Any],
+    *,
+    default_repo_name: str,
+    snapshot_repo: Path,
+) -> dict[str, list[Any]]:
+    """Extract comparable predicted file paths from suggest-from-recipes JSON."""
+
+    suggestions = payload.get("suggestions", []) if isinstance(payload, dict) else []
+    predicted_repos = {default_repo_name} if suggestions else set()
+    predicted_files: list[dict[str, Any]] = []
+    reference_files: list[dict[str, Any]] = []
+    if not isinstance(suggestions, list):
+        suggestions = []
+
+    for suggestion in suggestions:
+        if not isinstance(suggestion, dict):
+            continue
+        raw_path = suggestion.get("suggested_path") or suggestion.get("suggested_folder")
+        if not isinstance(raw_path, str) or not raw_path:
+            continue
+        repo_relative = raw_path.replace("\\", "/").lstrip("/")
+        exists_in_parent = (snapshot_repo / repo_relative).exists()
+        action = str(suggestion.get("action") or "inspect")
+        if action == "create" and exists_in_parent:
+            action = "inspect"
+        elif action != "create" and not exists_in_parent and Path(repo_relative).suffix:
+            action = "create"
+        record = {
+            "path": qualify_repo_path(default_repo_name, repo_relative),
+            "repo_name": default_repo_name,
+            "action": action,
+            "confidence": str(suggestion.get("confidence") or "medium"),
+            "reason": "; ".join(str(item) for item in suggestion.get("evidence", []) if isinstance(item, str)),
+            "matched_recipe_id": str(suggestion.get("matched_recipe_id") or ""),
+            "node_type": str(suggestion.get("node_type") or ""),
+            "exists_in_parent": exists_in_parent,
+            "source": "recipe_suggestion",
+        }
+        if action == "inspect-only":
+            reference_files.append(record)
+        else:
+            predicted_files.append(record)
+
+    return {
+        "predicted_repos": sorted(predicted_repos),
+        "predicted_files": dedupe_records(predicted_files),
+        "predicted_reference_files": dedupe_records(reference_files),
+    }
+
+
+def recipe_diagnostics_from_suggestions(
+    payload: dict[str, Any],
+    *,
+    recipe_predicted: dict[str, list[Any]],
+    actual_files: Sequence[str],
+    default_repo_name: str,
+    snapshot_repo: Path,
+) -> dict[str, Any]:
+    """Build recipe-specific diagnostics for replay reports."""
+
+    matched_recipes = payload.get("matched_recipes", []) if isinstance(payload, dict) else []
+    suggestions = payload.get("suggestions", []) if isinstance(payload, dict) else []
+    actual_set = set(actual_files)
+    folder_matches = folder_level_matches(
+        [record["path"] for record in recipe_predicted["predicted_files"]],
+        actual_files,
+    )
+    folder_matched = set(folder_matches["matched_actual_files"])
+    diagnostics: list[dict[str, Any]] = []
+    if not isinstance(suggestions, list):
+        suggestions = []
+    for suggestion in suggestions:
+        if not isinstance(suggestion, dict):
+            continue
+        raw_path = suggestion.get("suggested_path") or suggestion.get("suggested_folder")
+        if not isinstance(raw_path, str) or not raw_path:
+            continue
+        repo_relative = raw_path.replace("\\", "/").lstrip("/")
+        qualified = qualify_repo_path(default_repo_name, repo_relative)
+        diagnostics.append(
+            {
+                **suggestion,
+                "qualified_path": qualified,
+                "exists_in_parent": (snapshot_repo / repo_relative).exists(),
+                "matched_actual_diff": qualified in actual_set,
+                "folder_matched_actual_diff": any(
+                    actual_path.startswith(qualified.rstrip("/") + "/")
+                    for actual_path in folder_matched
+                ),
+            }
+        )
+    return {
+        "matched_recipes": matched_recipes if isinstance(matched_recipes, list) else [],
+        "suggested_actions": diagnostics,
+        "predicted_repos": recipe_predicted["predicted_repos"],
+        "predicted_files": recipe_predicted["predicted_files"],
+        "predicted_reference_files": recipe_predicted["predicted_reference_files"],
+        "missing_evidence": payload.get("missing_evidence", []) if isinstance(payload, dict) else [],
+        "caveats": payload.get("caveats", []) if isinstance(payload, dict) else [],
     }
 
 
@@ -759,6 +984,13 @@ def format_markdown_report(report: dict[str, Any]) -> str:
     for key, result in report["commands"].items():
         lines.append(f"| `{key}` | {result['exit_code']} |")
 
+    sections = report.get("comparison_sections", {})
+    if sections:
+        lines.extend(section_for_prediction_comparison("Planner/Propose Predictions Only", sections["planner_propose"]))
+        lines.extend(section_for_prediction_comparison("Recipe Suggestions Only", sections["recipe_suggestions"]))
+        lines.extend(section_for_prediction_comparison("Combined Predictions", sections["combined"]))
+    lines.extend(section_for_recipe_diagnostics(report.get("recipe_suggestions", {})))
+
     lines.extend(section_for_paths("Predicted Files", comparison["predicted_files"]))
     lines.extend(section_for_paths("Actual Files", comparison["actual_files"]))
     lines.extend(section_for_paths("Matched Files", comparison["matched_files"]))
@@ -781,6 +1013,61 @@ def format_markdown_report(report: dict[str, Any]) -> str:
         ]
     )
     return "\n".join(lines)
+
+
+def section_for_prediction_comparison(title: str, comparison: dict[str, Any]) -> list[str]:
+    """Render one replay prediction comparison section."""
+
+    return [
+        "",
+        f"## {title}",
+        "",
+        f"- predicted files: {len(comparison['predicted_files'])}",
+        f"- matched files: {len(comparison['matched_files'])}",
+        f"- missed files: {len(comparison['missed_files'])}",
+        f"- extra predicted files: {len(comparison['extra_predicted_files'])}",
+        f"- exact precision: {comparison['precision']:.2f}",
+        f"- exact recall: {comparison['recall']:.2f}",
+        f"- high-signal precision: {comparison['high_signal']['precision']:.2f}",
+        f"- high-signal recall: {comparison['high_signal']['recall']:.2f}",
+        f"- category precision: {comparison['category_level']['precision']:.2f}",
+        f"- category recall: {comparison['category_level']['recall']:.2f}",
+        f"- folder-level matched actual files: {len(comparison['folder_level']['matched_actual_files'])}",
+    ]
+
+
+def section_for_recipe_diagnostics(recipe_suggestions: dict[str, Any]) -> list[str]:
+    """Render recipe-specific diagnostics."""
+
+    lines = ["", "## Recipe Suggestions", ""]
+    matched_recipes = recipe_suggestions.get("matched_recipes", []) if isinstance(recipe_suggestions, dict) else []
+    suggested_actions = recipe_suggestions.get("suggested_actions", []) if isinstance(recipe_suggestions, dict) else []
+    if not matched_recipes:
+        lines.append("- matched recipes: -")
+    else:
+        lines.append("- matched recipes:")
+        for recipe in matched_recipes:
+            lines.append(
+                f"  - `{recipe.get('recipe_id')}` ({recipe.get('recipe_type')}, "
+                f"structural={float(recipe.get('structural_confidence') or 0):.2f}, "
+                f"planner={float(recipe.get('planner_effectiveness') or 0):.2f})"
+            )
+            reasons = recipe.get("why_matched", [])
+            if reasons:
+                lines.append(f"    - why: {'; '.join(str(reason) for reason in reasons[:3])}")
+
+    lines.extend(["", "- suggested actions:"])
+    if not suggested_actions:
+        lines.append("  -")
+    else:
+        for action in suggested_actions:
+            match = "exact" if action.get("matched_actual_diff") else "folder" if action.get("folder_matched_actual_diff") else "no"
+            lines.append(
+                f"  - `{action.get('qualified_path')}` "
+                f"({action.get('action')}, {action.get('confidence')}, node={action.get('node_type')}, "
+                f"exists_in_parent={action.get('exists_in_parent')}, matched_actual={match})"
+            )
+    return lines
 
 
 def section_for_folder_matches(matches: Sequence[dict[str, Any]]) -> list[str]:
@@ -871,6 +1158,12 @@ def print_replay_summary(report: dict[str, Any]) -> None:
     print(f"high-signal precision: {summary['high_signal_precision']:.2f}")
     print(f"high-signal recall: {summary['high_signal_recall']:.2f}")
     print(f"static asset misses: {summary['static_asset_miss_count']}")
+    print(f"recipe predicted files: {summary.get('recipe_suggestion_file_count', 0)}")
+    print(f"recipe exact precision: {summary.get('recipe_exact_file_precision', 0.0):.2f}")
+    print(f"recipe exact recall: {summary.get('recipe_exact_file_recall', 0.0):.2f}")
+    print(f"combined predicted files: {summary.get('combined_file_count', 0)}")
+    print(f"combined exact precision: {summary.get('combined_exact_file_precision', 0.0):.2f}")
+    print(f"combined exact recall: {summary.get('combined_exact_file_recall', 0.0):.2f}")
     print(f"report json: {report['reports']['json']}")
     print(f"report md: {report['reports']['markdown']}")
 
