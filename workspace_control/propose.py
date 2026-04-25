@@ -10,6 +10,7 @@ from app.models.discovery import (
     RepoDiscovery,
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
+from app.models.recipe_suggestion import RecipeSuggestionReport
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 from app.services.text_normalization import normalize_text as normalize_request_text
 from app.services.text_normalization import tokenize_text
@@ -18,6 +19,7 @@ from .analyze import analyze_feature
 from .models import (
     ChangeProposal,
     ChangeProposalItem,
+    CombinedRecommendation,
     FilePlan,
     FeatureImpact,
     FeaturePlan,
@@ -185,6 +187,7 @@ def create_change_proposal(
     *,
     scan_root: Path | None = None,
     discovery_snapshot: DiscoverySnapshot | None = None,
+    recipe_report: RecipeSuggestionReport | None = None,
 ) -> ChangeProposal:
     """Create deterministic read-only change proposals from a feature plan."""
 
@@ -219,6 +222,7 @@ def create_change_proposal(
         impacts=resolved_impacts,
         scan_root=effective_scan_root,
         discovery_snapshot=effective_snapshot,
+        recipe_report=recipe_report,
     )
     by_repo = {row.repo_name: row for row in effective_rows}
     impact_by_repo = {impact.repo_name: impact for impact in resolved_impacts}
@@ -276,14 +280,35 @@ def create_change_proposal(
             )
         )
 
+    recipe_suggestions = _recipe_recommendations(
+        recipe_report,
+        discovery_snapshot=effective_snapshot,
+        workspace_root=workspace_root,
+    )
+    planner_recommendations = _planner_recommendations(proposed_changes)
+    combined_recommendations = _combine_recommendations(
+        planner_recommendations,
+        recipe_suggestions,
+    )
+    missing_evidence = list(plan.missing_evidence)
+    if not planner_recommendations and recipe_suggestions:
+        missing_evidence = _dedupe_preserve_order(
+            [
+                *missing_evidence,
+                "Planner produced no concrete file predictions; recipe evidence provided fallback suggestions.",
+            ]
+        )
+
     return ChangeProposal(
         feature_request=plan.feature_request,
         feature_intents=plan.feature_intents,
         confidence=plan.confidence,
-        missing_evidence=plan.missing_evidence,
+        missing_evidence=missing_evidence,
         implementation_owner=plan.implementation_owner,
         domain_owner=plan.domain_owner,
         proposed_changes=proposed_changes,
+        recipe_suggestions=recipe_suggestions,
+        combined_recommendations=combined_recommendations,
     )
 
 
@@ -291,6 +316,143 @@ def format_change_proposal(proposal: ChangeProposal) -> str:
     """Render proposed changes as deterministic JSON."""
 
     return json.dumps(proposal.model_dump(mode="python"), indent=2, sort_keys=False)
+
+
+def _planner_recommendations(
+    proposed_changes: Sequence[ChangeProposalItem],
+) -> list[CombinedRecommendation]:
+    recommendations: list[CombinedRecommendation] = []
+    for item in proposed_changes:
+        for file_plan in item.files:
+            recommendations.append(
+                CombinedRecommendation(
+                    repo_name=item.repo_name,
+                    path=file_plan.path,
+                    action=file_plan.action,
+                    confidence=file_plan.confidence,
+                    source="planner",
+                    evidence=[file_plan.reason],
+                )
+            )
+    return recommendations
+
+
+def _recipe_recommendations(
+    recipe_report: RecipeSuggestionReport | None,
+    *,
+    discovery_snapshot: DiscoverySnapshot | None,
+    workspace_root: Path | None,
+) -> list[CombinedRecommendation]:
+    if recipe_report is None:
+        return []
+
+    recommendations: list[CombinedRecommendation] = []
+    for suggestion in recipe_report.suggestions:
+        path = suggestion.suggested_path or suggestion.suggested_folder
+        if not path:
+            continue
+        repo_name = _repo_name_for_recipe_suggestion(
+            suggestion.evidence,
+            path,
+            discovery_snapshot=discovery_snapshot,
+            workspace_root=workspace_root,
+        )
+        if repo_name is None:
+            continue
+        recommendations.append(
+            CombinedRecommendation(
+                repo_name=repo_name,
+                path=path,
+                action=suggestion.action,
+                confidence=suggestion.confidence,
+                source="recipe",
+                evidence=list(suggestion.evidence),
+                matched_recipe_id=suggestion.matched_recipe_id,
+            )
+        )
+    return _dedupe_recommendations(recommendations)
+
+
+def _repo_name_for_recipe_suggestion(
+    evidence: Sequence[str],
+    path: str,
+    *,
+    discovery_snapshot: DiscoverySnapshot | None,
+    workspace_root: Path | None,
+) -> str | None:
+    for item in evidence:
+        if item.startswith("repo: "):
+            repo_name = item.removeprefix("repo: ").strip()
+            if repo_name:
+                return repo_name
+
+    graph = discovery_snapshot.source_graph if discovery_snapshot is not None else None
+    if graph is not None:
+        for node in graph.nodes:
+            if node.path == path:
+                return node.repo_name
+
+    if discovery_snapshot is not None and len(discovery_snapshot.report.repos) == 1:
+        return discovery_snapshot.report.repos[0].repo_name
+
+    if workspace_root is not None and workspace_root.is_dir():
+        matches = [
+            child.name
+            for child in sorted(workspace_root.iterdir(), key=lambda item: item.name)
+            if child.is_dir() and ((child / path).exists() or (child / path).parent.exists())
+        ]
+        if len(matches) == 1:
+            return matches[0]
+    return None
+
+
+def _combine_recommendations(
+    planner: Sequence[CombinedRecommendation],
+    recipe: Sequence[CombinedRecommendation],
+) -> list[CombinedRecommendation]:
+    by_key: dict[tuple[str, str, str], CombinedRecommendation] = {}
+    ordered_keys: list[tuple[str, str, str]] = []
+    for item in [*planner, *recipe]:
+        key = (item.repo_name, item.path, item.action)
+        existing = by_key.get(key)
+        if existing is None:
+            by_key[key] = item
+            ordered_keys.append(key)
+            continue
+        by_key[key] = existing.model_copy(
+            update={
+                "source": "both",
+                "confidence": _boost_confidence(existing.confidence, item.confidence),
+                "evidence": _dedupe_preserve_order([*existing.evidence, *item.evidence]),
+                "matched_recipe_id": existing.matched_recipe_id or item.matched_recipe_id,
+            }
+        )
+    return [by_key[key] for key in ordered_keys]
+
+
+def _dedupe_recommendations(
+    recommendations: Sequence[CombinedRecommendation],
+) -> list[CombinedRecommendation]:
+    by_key: dict[tuple[str, str, str], CombinedRecommendation] = {}
+    ordered_keys: list[tuple[str, str, str]] = []
+    for item in recommendations:
+        key = (item.repo_name, item.path, item.action)
+        if key in by_key:
+            continue
+        by_key[key] = item
+        ordered_keys.append(key)
+    return [by_key[key] for key in ordered_keys]
+
+
+def _boost_confidence(left: str, right: str) -> str:
+    rank = min(_confidence_rank(left), _confidence_rank(right))
+    if rank > 0:
+        rank -= 1
+    return {0: "high", 1: "medium", 2: "low"}[rank]
+
+
+def _confidence_rank(value: str) -> int:
+    return {"high": 0, "medium": 1, "low": 2}.get(value, 2)
 
 
 def _workspace_root(

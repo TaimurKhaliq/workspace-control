@@ -13,6 +13,7 @@ from app.services.concept_grounding import ConceptGroundingService
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 from app.services.text_normalization import normalize_text as normalize_request_text
 from app.services.text_normalization import tokenize_text
+from app.models.recipe_suggestion import RecipeSuggestionReport
 
 from .analyze import analyze_feature
 from .models import ConceptGrounding, FeatureImpact, FeaturePlan, InventoryRow
@@ -1512,6 +1513,7 @@ def create_feature_plan(
     *,
     scan_root: Path | None = None,
     discovery_snapshot: DiscoverySnapshot | None = None,
+    recipe_report: RecipeSuggestionReport | None = None,
 ) -> FeaturePlan:
     """Build a deterministic feature plan from impact analysis."""
 
@@ -1828,6 +1830,27 @@ def create_feature_plan(
         unsupported_intents=unsupported_intents,
         concept_grounding=concept_grounding,
     )
+    recipe_plan = _recipe_plan_overlay(
+        recipe_report,
+        feature_intents=feature_intents,
+        primary_owner=primary_owner,
+        implementation_owner=implementation_owner,
+        missing_evidence=missing_evidence,
+        requires_human_approval=requires_human_approval,
+    )
+    feature_intents = recipe_plan["feature_intents"]
+    primary_owner = recipe_plan["primary_owner"]
+    implementation_owner = recipe_plan["implementation_owner"]
+    missing_evidence = recipe_plan["missing_evidence"]
+    requires_human_approval = recipe_plan["requires_human_approval"]
+    ui_change_needed = "ui" in feature_intents
+    db_change_needed = "persistence" in feature_intents
+    api_change_needed = api_change_needed or "api" in feature_intents and not any(
+        intent in feature_intents for intent in ("ui", "persistence", "event_integration")
+    )
+    matched_recipes = recipe_plan["matched_recipes"]
+    recipe_guidance = recipe_plan["recipe_guidance"]
+    recipe_confidence_summary = recipe_plan["recipe_confidence_summary"]
 
     return FeaturePlan(
         feature_request=feature_request,
@@ -1848,7 +1871,132 @@ def create_feature_plan(
         validation_commands=validation_commands,
         ordered_steps=ordered_steps,
         requires_human_approval=requires_human_approval,
+        matched_recipes=matched_recipes,
+        recipe_guidance=recipe_guidance,
+        recipe_confidence_summary=recipe_confidence_summary,
     )
+
+
+def _recipe_plan_overlay(
+    recipe_report: RecipeSuggestionReport | None,
+    *,
+    feature_intents: Sequence[str],
+    primary_owner: str | None,
+    implementation_owner: str | None,
+    missing_evidence: Sequence[str],
+    requires_human_approval: bool,
+) -> dict[str, object]:
+    """Add conservative recipe evidence without overriding strong native planning."""
+
+    if recipe_report is None or not recipe_report.matched_recipes:
+        return {
+            "feature_intents": list(feature_intents),
+            "primary_owner": primary_owner,
+            "implementation_owner": implementation_owner,
+            "missing_evidence": list(missing_evidence),
+            "requires_human_approval": requires_human_approval,
+            "matched_recipes": [],
+            "recipe_guidance": [],
+            "recipe_confidence_summary": {},
+        }
+
+    matched = [item.model_dump(mode="python") for item in recipe_report.matched_recipes]
+    guidance = [
+        {
+            "matched_recipe_id": item.matched_recipe_id,
+            "node_type": item.node_type,
+            "action": item.action,
+            "path": item.suggested_path,
+            "folder": item.suggested_folder,
+            "confidence": item.confidence,
+            "evidence": list(item.evidence),
+        }
+        for item in recipe_report.suggestions
+    ]
+    recipe_intents = _recipe_supported_intents(recipe_report)
+    influenced_plan: list[str] = []
+    final_intents = list(feature_intents)
+    final_primary_owner = primary_owner
+    final_implementation_owner = implementation_owner
+    final_missing = list(missing_evidence)
+    final_requires_human_approval = requires_human_approval
+
+    if not final_intents and recipe_intents:
+        final_intents = [intent for intent in INTENT_ORDER if intent in recipe_intents]
+        influenced_plan.append("feature_intents")
+        final_missing.append(
+            "planner-native intent evidence was weak; recipe evidence supplied supported intent(s)"
+        )
+
+    if final_implementation_owner is None and recipe_report.suggestions:
+        inferred_owner = _implementation_owner_from_recipe_report(recipe_report)
+        if inferred_owner is not None:
+            final_implementation_owner = inferred_owner
+            influenced_plan.append("implementation_owner")
+            final_missing.append(
+                "implementation owner inferred from active repo-local recipe evidence"
+            )
+
+    if influenced_plan:
+        final_requires_human_approval = True
+
+    best = recipe_report.matched_recipes[0]
+    summary = {
+        "matched_count": len(recipe_report.matched_recipes),
+        "suggestion_count": len(recipe_report.suggestions),
+        "strongest_recipe_id": best.recipe_id,
+        "strongest_recipe_type": best.recipe_type,
+        "strongest_structural_confidence": best.structural_confidence,
+        "strongest_planner_effectiveness": best.planner_effectiveness,
+        "recipe_supported_intents": [intent for intent in INTENT_ORDER if intent in recipe_intents],
+        "influenced_plan": influenced_plan,
+        "caveats": _recipe_caveats(recipe_report),
+    }
+
+    return {
+        "feature_intents": _dedupe_preserve_order(final_intents),
+        "primary_owner": final_primary_owner,
+        "implementation_owner": final_implementation_owner,
+        "missing_evidence": _dedupe_preserve_order(final_missing),
+        "requires_human_approval": final_requires_human_approval,
+        "matched_recipes": matched,
+        "recipe_guidance": guidance,
+        "recipe_confidence_summary": summary,
+    }
+
+
+def _recipe_supported_intents(recipe_report: RecipeSuggestionReport) -> set[str]:
+    intents: set[str] = set()
+    for match in recipe_report.matched_recipes:
+        if match.recipe_type.startswith("ui_"):
+            intents.add("ui")
+        if match.recipe_type in {
+            "backend_api_change",
+            "backend_validation_change",
+            "backend_search_query",
+            "full_stack_ui_api",
+        }:
+            intents.add("api")
+        if match.recipe_type in {"persistence_data_change"}:
+            intents.add("persistence")
+        if match.recipe_type in {"event_integration"}:
+            intents.add("event_integration")
+    return intents
+
+
+def _implementation_owner_from_recipe_report(recipe_report: RecipeSuggestionReport) -> str | None:
+    for suggestion in recipe_report.suggestions:
+        for evidence in suggestion.evidence:
+            if evidence.startswith("repo: "):
+                return evidence.removeprefix("repo: ").strip() or None
+    return None
+
+
+def _recipe_caveats(recipe_report: RecipeSuggestionReport) -> list[str]:
+    caveats = list(recipe_report.caveats)
+    if any(match.planner_effectiveness < 0.5 for match in recipe_report.matched_recipes):
+        caveats.append("one or more matched recipes are structurally strong but planner effectiveness is low")
+    return _dedupe_preserve_order(caveats)
 
 
 def format_feature_plan(plan: FeaturePlan) -> str:

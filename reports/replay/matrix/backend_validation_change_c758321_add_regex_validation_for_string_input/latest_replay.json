@@ -16,11 +16,11 @@
   },
   "summary": {
     "commands_succeeded": true,
-    "predicted_file_count": 4,
+    "predicted_file_count": 6,
     "actual_file_count": 1,
     "matched_file_count": 0,
     "missed_file_count": 1,
-    "extra_predicted_file_count": 4,
+    "extra_predicted_file_count": 6,
     "exact_file_precision": 0.0,
     "exact_file_recall": 0.0,
     "folder_level_matched_file_count": 0,
@@ -37,21 +37,21 @@
     "recipe_high_signal_recall": 0.0,
     "recipe_category_precision": 0.1667,
     "recipe_category_recall": 1.0,
-    "combined_file_count": 17,
+    "combined_file_count": 15,
     "combined_matched_file_count": 0,
     "combined_exact_file_precision": 0.0,
     "combined_exact_file_recall": 0.0,
     "combined_high_signal_precision": 0.0,
     "combined_high_signal_recall": 0.0,
-    "combined_category_precision": 0.125,
+    "combined_category_precision": 0.1667,
     "combined_category_recall": 1.0,
     "prediction_modes": {
       "planner_propose": {
-        "predicted_file_count": 4,
+        "predicted_file_count": 6,
         "actual_file_count": 1,
         "matched_file_count": 0,
         "missed_file_count": 1,
-        "extra_predicted_file_count": 4,
+        "extra_predicted_file_count": 6,
         "exact_precision": 0.0,
         "exact_recall": 0.0,
         "category_precision": 0.0,
@@ -73,14 +73,14 @@
         "high_signal_recall": 0.0
       },
       "combined": {
-        "predicted_file_count": 17,
+        "predicted_file_count": 15,
         "actual_file_count": 1,
         "matched_file_count": 0,
         "missed_file_count": 1,
-        "extra_predicted_file_count": 17,
+        "extra_predicted_file_count": 15,
         "exact_precision": 0.0,
         "exact_recall": 0.0,
-        "category_precision": 0.125,
+        "category_precision": 0.1667,
         "category_recall": 1.0,
         "high_signal_precision": 0.0,
         "high_signal_recall": 0.0
@@ -95,35 +95,71 @@
   ],
   "predicted_files": [
     {
-      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
       "repo_name": "spring-petclinic-reactjs",
       "action": "inspect",
-      "confidence": "low",
-      "reason": "Likely discovered area to inspect before editing concrete files."
+      "confidence": "medium",
+      "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
     },
     {
-      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
       "repo_name": "spring-petclinic-reactjs",
       "action": "inspect",
-      "confidence": "low",
-      "reason": "Likely discovered area to inspect before editing concrete files."
+      "confidence": "medium",
+      "reason": "Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain."
     },
     {
-      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
       "repo_name": "spring-petclinic-reactjs",
       "action": "inspect",
-      "confidence": "low",
-      "reason": "Likely discovered area to inspect before editing concrete files."
+      "confidence": "medium",
+      "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
     },
     {
-      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
       "repo_name": "spring-petclinic-reactjs",
       "action": "inspect",
-      "confidence": "low",
-      "reason": "Likely discovered area to inspect before editing concrete files."
+      "confidence": "medium",
+      "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
+    },
+    {
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+      "repo_name": "spring-petclinic-reactjs",
+      "action": "inspect",
+      "confidence": "medium",
+      "reason": "Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain."
+    },
+    {
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+      "repo_name": "spring-petclinic-reactjs",
+      "action": "inspect",
+      "confidence": "medium",
+      "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
     }
   ],
-  "predicted_reference_files": [],
+  "predicted_reference_files": [
+    {
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java",
+      "repo_name": "spring-petclinic-reactjs",
+      "action": "inspect-only",
+      "confidence": "low",
+      "reason": "Different domain controller; useful only as a REST update/validation pattern reference."
+    },
+    {
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/VetController.java",
+      "repo_name": "spring-petclinic-reactjs",
+      "action": "inspect-only",
+      "confidence": "low",
+      "reason": "Different domain controller; useful only as a REST update/validation pattern reference."
+    },
+    {
+      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/VisitController.java",
+      "repo_name": "spring-petclinic-reactjs",
+      "action": "inspect-only",
+      "confidence": "low",
+      "reason": "Different domain controller; useful only as a REST update/validation pattern reference."
+    }
+  ],
   "recipe_suggestions": {
     "matched_recipes": [
       {
@@ -635,49 +671,52 @@
     "predicted_reference_files": [],
     "missing_evidence": [],
     "caveats": [
-      "Recipe suggestions are sidecar guidance only; plan-feature and propose-changes are unchanged."
+      "Recipe suggestions are deterministic repo-local guidance; planner-native output remains visible separately."
     ]
   },
   "combined_predictions": {
     "predicted_files": [
       {
-        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
         "repo_name": "spring-petclinic-reactjs",
         "action": "inspect",
-        "confidence": "low",
-        "reason": "Likely discovered area to inspect before editing concrete files."
+        "confidence": "medium",
+        "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
       },
       {
-        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
         "repo_name": "spring-petclinic-reactjs",
         "action": "inspect",
-        "confidence": "low",
-        "reason": "Likely discovered area to inspect before editing concrete files."
+        "confidence": "medium",
+        "reason": "Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain."
       },
       {
-        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
         "repo_name": "spring-petclinic-reactjs",
         "action": "inspect",
-        "confidence": "low",
-        "reason": "Likely discovered area to inspect before editing concrete files."
+        "confidence": "medium",
+        "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
       },
       {
-        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
         "repo_name": "spring-petclinic-reactjs",
         "action": "inspect",
-        "confidence": "low",
-        "reason": "Likely discovered area to inspect before editing concrete files."
+        "confidence": "medium",
+        "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
       },
       {
         "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
         "repo_name": "spring-petclinic-reactjs",
-        "action": "modify",
-        "confidence": "high",
-        "reason": "backend validation recipes often update request/response DTO validation surfaces; source graph node: api_dto; repo: spring-petclinic-reactjs",
-        "matched_recipe_id": "petclinic_react_backend_validation_change",
-        "node_type": "api_dto",
-        "exists_in_parent": true,
-        "source": "recipe_suggestion"
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain."
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
       },
       {
         "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java",
@@ -709,17 +748,6 @@
         "reason": "domain model may hold validation annotations or field constraints; source graph node: domain_model; repo: spring-petclinic-reactjs",
         "matched_recipe_id": "petclinic_react_backend_validation_change",
         "node_type": "domain_model",
-        "exists_in_parent": true,
-        "source": "recipe_suggestion"
-      },
-      {
-        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
-        "repo_name": "spring-petclinic-reactjs",
-        "action": "inspect",
-        "confidence": "medium",
-        "reason": "controller may expose validation flow or binding-error handling; source graph node: api_controller; repo: spring-petclinic-reactjs",
-        "matched_recipe_id": "petclinic_react_backend_validation_change",
-        "node_type": "api_controller",
         "exists_in_parent": true,
         "source": "recipe_suggestion"
       },
@@ -779,28 +807,6 @@
         "source": "recipe_suggestion"
       },
       {
-        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
-        "repo_name": "spring-petclinic-reactjs",
-        "action": "modify",
-        "confidence": "high",
-        "reason": "current source graph has a api_controller surface matching the learned recipe; source graph node: api_controller; repo: spring-petclinic-reactjs",
-        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
-        "node_type": "api_controller",
-        "exists_in_parent": true,
-        "source": "recipe_suggestion"
-      },
-      {
-        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
-        "repo_name": "spring-petclinic-reactjs",
-        "action": "modify",
-        "confidence": "medium",
-        "reason": "current source graph has a service_layer surface matching the learned recipe; source graph node: service_layer; repo: spring-petclinic-reactjs",
-        "matched_recipe_id": "petclinic_react_full_stack_ui_api",
-        "node_type": "service_layer",
-        "exists_in_parent": true,
-        "source": "recipe_suggestion"
-      },
-      {
         "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
         "repo_name": "spring-petclinic-reactjs",
         "action": "modify",
@@ -812,7 +818,29 @@
         "source": "recipe_suggestion"
       }
     ],
-    "predicted_reference_files": [],
+    "predicted_reference_files": [
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain controller; useful only as a REST update/validation pattern reference."
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/VetController.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain controller; useful only as a REST update/validation pattern reference."
+      },
+      {
+        "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/VisitController.java",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain controller; useful only as a REST update/validation pattern reference."
+      }
+    ],
     "predicted_repos": [
       "spring-petclinic-reactjs"
     ]
@@ -822,10 +850,12 @@
   ],
   "comparison": {
     "predicted_files": [
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
@@ -835,21 +865,23 @@
       "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
     ],
     "extra_predicted_files": [
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
     ],
     "precision": 0.0,
     "recall": 0.0,
     "exact_file": {
       "precision": 0.0,
       "recall": 0.0,
-      "predicted_count": 4,
+      "predicted_count": 6,
       "actual_count": 1,
       "matched_count": 0,
       "missed_count": 1,
-      "extra_predicted_count": 4
+      "extra_predicted_count": 6
     },
     "folder_level": {
       "matches": [],
@@ -862,9 +894,9 @@
     },
     "category_level": {
       "predicted_categories": [
-        "repository",
-        "service_layer",
-        "unknown"
+        "api_controller",
+        "api_dto",
+        "service_layer"
       ],
       "actual_categories": [
         "domain_model"
@@ -874,9 +906,9 @@
         "domain_model"
       ],
       "extra_predicted_categories": [
-        "repository",
-        "service_layer",
-        "unknown"
+        "api_controller",
+        "api_dto",
+        "service_layer"
       ],
       "precision": 0.0,
       "recall": 0.0,
@@ -894,20 +926,22 @@
         "frontend_component": [],
         "frontend_type": [],
         "api_contract": [],
-        "api_controller": [],
-        "api_dto": [],
+        "api_controller": [
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
+        ],
+        "api_dto": [
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java"
+        ],
         "service_layer": [
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service"
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java"
         ],
         "domain_model": [],
-        "repository": [
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
-        ],
+        "repository": [],
         "migration": [],
-        "unknown": [
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
-        ]
+        "unknown": []
       },
       "actual_by_category": {
         "frontend_entrypoint": [],
@@ -931,10 +965,12 @@
     },
     "high_signal": {
       "predicted_files": [
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
       ],
       "actual_files": [
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
@@ -944,18 +980,20 @@
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
       ],
       "extra_predicted_files": [
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
       ],
       "precision": 0.0,
       "recall": 0.0,
-      "predicted_count": 4,
+      "predicted_count": 6,
       "actual_count": 1,
       "matched_count": 0,
       "missed_count": 1,
-      "extra_predicted_count": 4
+      "extra_predicted_count": 6
     },
     "static_assets": {
       "predicted_files": [],
@@ -973,10 +1011,12 @@
   "comparison_sections": {
     "planner_propose": {
       "predicted_files": [
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
       ],
       "actual_files": [
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
@@ -986,21 +1026,23 @@
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
       ],
       "extra_predicted_files": [
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
       ],
       "precision": 0.0,
       "recall": 0.0,
       "exact_file": {
         "precision": 0.0,
         "recall": 0.0,
-        "predicted_count": 4,
+        "predicted_count": 6,
         "actual_count": 1,
         "matched_count": 0,
         "missed_count": 1,
-        "extra_predicted_count": 4
+        "extra_predicted_count": 6
       },
       "folder_level": {
         "matches": [],
@@ -1013,9 +1055,9 @@
       },
       "category_level": {
         "predicted_categories": [
-          "repository",
-          "service_layer",
-          "unknown"
+          "api_controller",
+          "api_dto",
+          "service_layer"
         ],
         "actual_categories": [
           "domain_model"
@@ -1025,9 +1067,9 @@
           "domain_model"
         ],
         "extra_predicted_categories": [
-          "repository",
-          "service_layer",
-          "unknown"
+          "api_controller",
+          "api_dto",
+          "service_layer"
         ],
         "precision": 0.0,
         "recall": 0.0,
@@ -1045,20 +1087,22 @@
           "frontend_component": [],
           "frontend_type": [],
           "api_contract": [],
-          "api_controller": [],
-          "api_dto": [],
+          "api_controller": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
+          ],
+          "api_dto": [
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java"
+          ],
           "service_layer": [
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service"
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java"
           ],
           "domain_model": [],
-          "repository": [
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
-          ],
+          "repository": [],
           "migration": [],
-          "unknown": [
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
-          ]
+          "unknown": []
         },
         "actual_by_category": {
           "frontend_entrypoint": [],
@@ -1082,10 +1126,12 @@
       },
       "high_signal": {
         "predicted_files": [
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
         ],
         "actual_files": [
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
@@ -1095,18 +1141,20 @@
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
         ],
         "extra_predicted_files": [
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
         ],
         "precision": 0.0,
         "recall": 0.0,
-        "predicted_count": 4,
+        "predicted_count": 6,
         "actual_count": 1,
         "matched_count": 0,
         "missed_count": 1,
-        "extra_predicted_count": 4
+        "extra_predicted_count": 6
       },
       "static_assets": {
         "predicted_files": [],
@@ -1333,15 +1381,13 @@
         "spring-petclinic-reactjs/client/src/types/index.ts",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java"
       ],
       "actual_files": [
@@ -1359,15 +1405,13 @@
         "spring-petclinic-reactjs/client/src/types/index.ts",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java"
       ],
       "precision": 0.0,
@@ -1375,11 +1419,11 @@
       "exact_file": {
         "precision": 0.0,
         "recall": 0.0,
-        "predicted_count": 17,
+        "predicted_count": 15,
         "actual_count": 1,
         "matched_count": 0,
         "missed_count": 1,
-        "extra_predicted_count": 17
+        "extra_predicted_count": 15
       },
       "folder_level": {
         "matches": [],
@@ -1397,9 +1441,7 @@
           "domain_model",
           "frontend_component",
           "frontend_type",
-          "repository",
-          "service_layer",
-          "unknown"
+          "service_layer"
         ],
         "actual_categories": [
           "domain_model"
@@ -1413,17 +1455,15 @@
           "api_dto",
           "frontend_component",
           "frontend_type",
-          "repository",
-          "service_layer",
-          "unknown"
+          "service_layer"
         ],
-        "precision": 0.125,
+        "precision": 0.1667,
         "recall": 1.0,
-        "predicted_count": 8,
+        "predicted_count": 6,
         "actual_count": 1,
         "matched_count": 1,
         "missed_count": 0,
-        "extra_predicted_count": 7,
+        "extra_predicted_count": 5,
         "predicted_by_category": {
           "frontend_entrypoint": [],
           "app_shell": [],
@@ -1442,14 +1482,15 @@
           "api_contract": [],
           "api_controller": [
             "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java"
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java"
           ],
           "api_dto": [
             "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
             "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java"
           ],
           "service_layer": [
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
             "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
             "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java"
           ],
@@ -1457,14 +1498,9 @@
             "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
             "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java"
           ],
-          "repository": [
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
-          ],
+          "repository": [],
           "migration": [],
-          "unknown": [
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-            "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api"
-          ]
+          "unknown": []
         },
         "actual_by_category": {
           "frontend_entrypoint": [],
@@ -1495,15 +1531,13 @@
           "spring-petclinic-reactjs/client/src/types/index.ts",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java"
         ],
         "actual_files": [
@@ -1521,24 +1555,22 @@
           "spring-petclinic-reactjs/client/src/types/index.ts",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
           "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java"
         ],
         "precision": 0.0,
         "recall": 0.0,
-        "predicted_count": 17,
+        "predicted_count": 15,
         "actual_count": 1,
         "matched_count": 0,
         "missed_count": 1,
-        "extra_predicted_count": 17
+        "extra_predicted_count": 15
       },
       "static_assets": {
         "predicted_files": [],
@@ -1561,33 +1593,33 @@
   },
   "commands": {
     "discover_architecture": {
-      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-7x_ujgg6/discovery_targets.json",
+      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-1cp_o_n1/discovery_targets.json",
       "exit_code": 0,
       "stdout": "Architecture Discovery\n\nrepo: spring-petclinic-reactjs\n  mode: source-discovered\n  confidence: high\n  discovered frameworks: react, spring_boot\n  hinted frameworks: -\n  framework detections: react ^15.0.0 (detected, high, client/package.json), spring_boot 1.4.0.RELEASE (detected, high, pom.xml)\n  framework packs loaded: react (detected), spring_boot (detected)\n  framework-derived hints: react node kinds: page, editor, form, detail, list, component, react path categories: api, service, ui, react validation hints: npm test, npm run build, spring_boot node kinds: controller, service, repository, entity, model, dto, spring_boot path categories: api, event, persistence, service, spring_boot validation hints: mvn test, gradle test\n  discovered api: src/main/java/org/springframework/samples/petclinic/web, src/main/java/org/springframework/samples/petclinic/web/api\n  discovered service/business logic: src/main/java/org/springframework/samples/petclinic/service\n  discovered persistence/migration: src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model\n  discovered ui/components: client/src/components, client/src/types, client/src/components/form, client/src/components/owners, client/src/components/pets, client/src/components/vets, client/src/components/visits\n  hinted locations:\n    api: src/main/java/**/controller, src/main/java/**/dto\n    service/business logic: src/main/java/**/service\n    persistence/migration: -\n    ui/components: -\n",
       "stderr": ""
     },
     "analyze_feature": {
-      "command": "python3 main.py analyze-feature \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-7x_ujgg6/discovery_targets.json",
+      "command": "python3 main.py analyze-feature \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-1cp_o_n1/discovery_targets.json",
       "exit_code": 0,
       "stdout": "Feature: \"add regex validation for string input\"\nrepo                     | role             | score | reason                                                                                                                                                                                                                                                                                          \n-------------------------+------------------+-------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nspring-petclinic-reactjs | direct-dependent | 21    | deterministic_intent: backend signals (keywords: validation; repo type; manifest: api, backend, service); adapter_discovery: adapter discovery (react, spring_boot; paths: src/main/java/org/springframework/samples/petclinic/web, src/main/java/org/springframework/samples/petclinic/web/api)\n",
       "stderr": ""
     },
     "plan_feature": {
-      "command": "python3 main.py plan-feature \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-7x_ujgg6/discovery_targets.json",
+      "command": "python3 main.py plan-feature \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-1cp_o_n1/discovery_targets.json",
       "exit_code": 0,
-      "stdout": "{\n  \"feature_request\": \"add regex validation for string input\",\n  \"feature_intents\": [\n    \"api\"\n  ],\n  \"unsupported_intents\": [],\n  \"concept_grounding\": [],\n  \"confidence\": \"medium\",\n  \"missing_evidence\": [\n    \"primary owner inferred from generic intent alignment\"\n  ],\n  \"primary_owner\": \"spring-petclinic-reactjs\",\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"direct_dependents\": [],\n  \"possible_downstreams\": [],\n  \"db_change_needed\": false,\n  \"api_change_needed\": false,\n  \"ui_change_needed\": false,\n  \"likely_paths_by_repo\": {\n    \"spring-petclinic-reactjs\": [\n      \"src/main/java/org/springframework/samples/petclinic/web\",\n      \"src/main/java/org/springframework/samples/petclinic/web/api\",\n      \"src/main/java/org/springframework/samples/petclinic/service\",\n      \"src/main/java/org/springframework/samples/petclinic/repository\"\n    ]\n  },\n  \"validation_commands\": [\n    \"./mvnw test\",\n    \"cd client && npm test\"\n  ],\n  \"ordered_steps\": [\n    \"In spring-petclinic-reactjs (primary-owner, score=21), implement service-level feature logic and review entity/repository mappings for impact using discovered service/data paths: src/main/java/org/springframework/samples/petclinic/service, src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model.\",\n    \"Run validation commands in impacted repos: ./mvnw test ; cd client && npm test.\"\n  ],\n  \"requires_human_approval\": false\n}\n",
+      "stdout": "{\n  \"feature_request\": \"add regex validation for string input\",\n  \"feature_intents\": [\n    \"api\"\n  ],\n  \"unsupported_intents\": [],\n  \"concept_grounding\": [],\n  \"confidence\": \"medium\",\n  \"missing_evidence\": [\n    \"primary owner inferred from generic intent alignment\"\n  ],\n  \"primary_owner\": \"spring-petclinic-reactjs\",\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"direct_dependents\": [],\n  \"possible_downstreams\": [],\n  \"db_change_needed\": false,\n  \"api_change_needed\": true,\n  \"ui_change_needed\": false,\n  \"likely_paths_by_repo\": {\n    \"spring-petclinic-reactjs\": [\n      \"src/main/java/org/springframework/samples/petclinic/web\",\n      \"src/main/java/org/springframework/samples/petclinic/web/api\",\n      \"src/main/java/org/springframework/samples/petclinic/service\",\n      \"src/main/java/org/springframework/samples/petclinic/repository\"\n    ]\n  },\n  \"validation_commands\": [\n    \"./mvnw test\",\n    \"cd client && npm test\"\n  ],\n  \"ordered_steps\": [\n    \"In spring-petclinic-reactjs (primary-owner, score=21), implement service-level feature logic and review entity/repository mappings for impact using discovered service/data paths: src/main/java/org/springframework/samples/petclinic/service, src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model.\",\n    \"Run validation commands in impacted repos: ./mvnw test ; cd client && npm test.\"\n  ],\n  \"requires_human_approval\": false,\n  \"matched_recipes\": [],\n  \"recipe_guidance\": [],\n  \"recipe_confidence_summary\": {}\n}\n",
       "stderr": ""
     },
     "propose_changes": {
-      "command": "python3 main.py propose-changes \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-7x_ujgg6/discovery_targets.json",
+      "command": "python3 main.py propose-changes \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-1cp_o_n1/discovery_targets.json",
       "exit_code": 0,
-      "stdout": "{\n  \"feature_request\": \"add regex validation for string input\",\n  \"feature_intents\": [\n    \"api\"\n  ],\n  \"confidence\": \"medium\",\n  \"missing_evidence\": [\n    \"primary owner inferred from generic intent alignment\"\n  ],\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"proposed_changes\": [\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"role\": \"primary-owner\",\n      \"likely_files_to_inspect\": [\n        \"src/main/java/org/springframework/samples/petclinic/web\",\n        \"src/main/java/org/springframework/samples/petclinic/web/api\",\n        \"src/main/java/org/springframework/samples/petclinic/service\",\n        \"src/main/java/org/springframework/samples/petclinic/repository\"\n      ],\n      \"files\": [\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web\",\n          \"action\": \"inspect\",\n          \"confidence\": \"low\",\n          \"reason\": \"Likely discovered area to inspect before editing concrete files.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/api\",\n          \"action\": \"inspect\",\n          \"confidence\": \"low\",\n          \"reason\": \"Likely discovered area to inspect before editing concrete files.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/service\",\n          \"action\": \"inspect\",\n          \"confidence\": \"low\",\n          \"reason\": \"Likely discovered area to inspect before editing concrete files.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/repository\",\n          \"action\": \"inspect\",\n          \"confidence\": \"low\",\n          \"reason\": \"Likely discovered area to inspect before editing concrete files.\"\n        }\n      ],\n      \"likely_changes\": [\n        \"Inspect planned paths and update only if the feature evidence applies.\"\n      ],\n      \"possible_new_files\": [],\n      \"rationale\": \"Role: primary-owner. Intents: api. Evidence: ranked by deterministic feature analysis, inferred ownership from discovered source names, analysis role: direct dependent, discovered frameworks: react, spring_boot, source discovered architecture evidence. Path confidence: No concrete file convention matched; likely folders are listed instead. Overall confidence: medium.\"\n    }\n  ]\n}\n",
+      "stdout": "{\n  \"feature_request\": \"add regex validation for string input\",\n  \"feature_intents\": [\n    \"api\"\n  ],\n  \"confidence\": \"medium\",\n  \"missing_evidence\": [\n    \"primary owner inferred from generic intent alignment\"\n  ],\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"proposed_changes\": [\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"role\": \"primary-owner\",\n      \"likely_files_to_inspect\": [\n        \"src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java\",\n        \"src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java\",\n        \"src/main/java/org/springframework/samples/petclinic/web/CrashController.java\",\n        \"src/main/java/org/springframework/samples/petclinic/web/OwnerController.java\",\n        \"src/main/java/org/springframework/samples/petclinic/web/PetController.java\",\n        \"src/main/java/org/springframework/samples/petclinic/web/VetController.java\",\n        \"src/main/java/org/springframework/samples/petclinic/web/VisitController.java\",\n        \"src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java\",\n        \"src/main/java/org/springframework/samples/petclinic/service/ClinicService.java\"\n      ],\n      \"files\": [\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/CrashController.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/OwnerController.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/PetController.java\",\n          \"action\": \"inspect-only\",\n          \"confidence\": \"low\",\n          \"reason\": \"Different domain controller; useful only as a REST update/validation pattern reference.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/VetController.java\",\n          \"action\": \"inspect-only\",\n          \"confidence\": \"low\",\n          \"reason\": \"Different domain controller; useful only as a REST update/validation pattern reference.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/VisitController.java\",\n          \"action\": \"inspect-only\",\n          \"confidence\": \"low\",\n          \"reason\": \"Different domain controller; useful only as a REST update/validation pattern reference.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicService.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n        }\n      ],\n      \"likely_changes\": [\n        \"Update API request/response contract and DTO mapping.\",\n        \"Update controller/service validation flow.\"\n      ],\n      \"possible_new_files\": [],\n      \"rationale\": \"Role: primary-owner. Intents: api. Evidence: ranked by deterministic feature analysis, inferred ownership from discovered source names, analysis role: direct dependent, discovered frameworks: react, spring_boot, source discovered architecture evidence. Path confidence: Concrete files were inferred from discovered naming conventions. Overall confidence: medium.\"\n    }\n  ],\n  \"recipe_suggestions\": [],\n  \"combined_recommendations\": [\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java\",\n      \"action\": \"inspect\",\n      \"confidence\": \"medium\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java\",\n      \"action\": \"inspect\",\n      \"confidence\": \"medium\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/CrashController.java\",\n      \"action\": \"inspect\",\n      \"confidence\": \"medium\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/OwnerController.java\",\n      \"action\": \"inspect\",\n      \"confidence\": \"medium\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/PetController.java\",\n      \"action\": \"inspect-only\",\n      \"confidence\": \"low\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Different domain controller; useful only as a REST update/validation pattern reference.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/VetController.java\",\n      \"action\": \"inspect-only\",\n      \"confidence\": \"low\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Different domain controller; useful only as a REST update/validation pattern reference.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/VisitController.java\",\n      \"action\": \"inspect-only\",\n      \"confidence\": \"low\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Different domain controller; useful only as a REST update/validation pattern reference.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java\",\n      \"action\": \"inspect\",\n      \"confidence\": \"medium\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain.\"\n      ],\n      \"matched_recipe_id\": null\n    },\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicService.java\",\n      \"action\": \"inspect\",\n      \"confidence\": \"medium\",\n      \"source\": \"planner\",\n      \"evidence\": [\n        \"Backend file may support the requested flow, but its exact edit responsibility is uncertain.\"\n      ],\n      \"matched_recipe_id\": null\n    }\n  ]\n}\n",
       "stderr": ""
     },
     "suggest_from_recipes": {
-      "command": "python3 main.py suggest-from-recipes \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-7x_ujgg6/discovery_targets.json --learning-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-7x_ujgg6/learning --report-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-7x_ujgg6/learning_reports",
+      "command": "python3 main.py suggest-from-recipes \"add regex validation for string input\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-1cp_o_n1/discovery_targets.json --learning-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-1cp_o_n1/learning --report-root /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-1cp_o_n1/learning_reports",
       "exit_code": 0,
-      "stdout": "{\n  \"feature_request\": \"add regex validation for string input\",\n  \"target_id\": \"replay-spring-petclinic-reactjs\",\n  \"matched_recipes\": [\n    {\n      \"recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"recipe_type\": \"backend_validation_change\",\n      \"structural_confidence\": 0.7223,\n      \"planner_effectiveness\": 0.1,\n      \"score\": 75,\n      \"why_matched\": [\n        \"source graph contains related domain token(s): input\",\n        \"request mentions backend validation or constraint terms\",\n        \"feature intent includes api\",\n        \"structural confidence 0.72\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    },\n    {\n      \"recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"recipe_type\": \"ui_form_validation\",\n      \"structural_confidence\": 0.9555,\n      \"planner_effectiveness\": 0.0,\n      \"score\": 72,\n      \"why_matched\": [\n        \"matched recipe trigger terms: validation\",\n        \"source graph contains related domain token(s): input\",\n        \"request mentions form validation or invalid-field feedback\",\n        \"structural confidence 0.96\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    },\n    {\n      \"recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"recipe_type\": \"full_stack_ui_api\",\n      \"structural_confidence\": 0.9156,\n      \"planner_effectiveness\": 0.3182,\n      \"score\": 71,\n      \"why_matched\": [\n        \"source graph contains related domain token(s): input\",\n        \"request combines UI surface terms with error/API-style change hints\",\n        \"feature intent includes api\",\n        \"structural confidence 0.92\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    }\n  ],\n  \"suggestions\": [\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"api_dto\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"backend validation recipes often update request/response DTO validation surfaces\",\n        \"source graph node: api_dto\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"api_dto\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"backend validation recipes often update request/response DTO validation surfaces\",\n        \"source graph node: api_dto\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"domain_model\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"domain model may hold validation annotations or field constraints\",\n        \"source graph node: domain_model\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"domain_model\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"domain model may hold validation annotations or field constraints\",\n        \"source graph node: domain_model\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/CrashController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"controller may expose validation flow or binding-error handling\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/SelectInput.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/DateInput.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/Input.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"frontend_type\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/types/index.ts\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a frontend_type surface matching the learned recipe\",\n        \"source graph node: frontend_type\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"page_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/visits/VisitsPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: page_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/DateInput.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/Input.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"frontend_type\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/types/index.ts\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a frontend_type surface matching the learned recipe\",\n        \"source graph node: frontend_type\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/CrashController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"current source graph has a api_controller surface matching the learned recipe\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"current source graph has a api_controller surface matching the learned recipe\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"service_layer\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicService.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a service_layer surface matching the learned recipe\",\n        \"source graph node: service_layer\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"service_layer\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a service_layer surface matching the learned recipe\",\n        \"source graph node: service_layer\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    }\n  ],\n  \"missing_evidence\": [],\n  \"caveats\": [\n    \"Recipe suggestions are sidecar guidance only; plan-feature and propose-changes are unchanged.\"\n  ]\n}\n",
+      "stdout": "{\n  \"feature_request\": \"add regex validation for string input\",\n  \"target_id\": \"replay-spring-petclinic-reactjs\",\n  \"matched_recipes\": [\n    {\n      \"recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"recipe_type\": \"backend_validation_change\",\n      \"structural_confidence\": 0.7223,\n      \"planner_effectiveness\": 0.1,\n      \"score\": 75,\n      \"why_matched\": [\n        \"source graph contains related domain token(s): input\",\n        \"request mentions backend validation or constraint terms\",\n        \"feature intent includes api\",\n        \"structural confidence 0.72\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    },\n    {\n      \"recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"recipe_type\": \"ui_form_validation\",\n      \"structural_confidence\": 0.9555,\n      \"planner_effectiveness\": 0.0,\n      \"score\": 72,\n      \"why_matched\": [\n        \"matched recipe trigger terms: validation\",\n        \"source graph contains related domain token(s): input\",\n        \"request mentions form validation or invalid-field feedback\",\n        \"structural confidence 0.96\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    },\n    {\n      \"recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"recipe_type\": \"full_stack_ui_api\",\n      \"structural_confidence\": 0.9156,\n      \"planner_effectiveness\": 0.3182,\n      \"score\": 71,\n      \"why_matched\": [\n        \"source graph contains related domain token(s): input\",\n        \"request combines UI surface terms with error/API-style change hints\",\n        \"feature intent includes api\",\n        \"structural confidence 0.92\",\n        \"planner effectiveness is low, so this recipe is useful as future-improvement evidence\"\n      ]\n    }\n  ],\n  \"suggestions\": [\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"api_dto\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"backend validation recipes often update request/response DTO validation surfaces\",\n        \"source graph node: api_dto\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"api_dto\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/api/FieldErrorResource.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"backend validation recipes often update request/response DTO validation surfaces\",\n        \"source graph node: api_dto\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"domain_model\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/model/BaseEntity.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"domain model may hold validation annotations or field constraints\",\n        \"source graph node: domain_model\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"domain_model\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/model/NamedEntity.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"domain model may hold validation annotations or field constraints\",\n        \"source graph node: domain_model\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_backend_validation_change\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/CrashController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"controller may expose validation flow or binding-error handling\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/SelectInput.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/DateInput.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/Input.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_ui_form_validation\",\n      \"node_type\": \"frontend_type\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/types/index.ts\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a frontend_type surface matching the learned recipe\",\n        \"source graph node: frontend_type\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"page_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/visits/VisitsPage.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: page_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/DateInput.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"form_component\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"client/src/components/form/Input.tsx\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"field-validation recipe prefers components with form/input/field feedback evidence\",\n        \"form/input evidence\",\n        \"validation terms\",\n        \"error/feedback terms\",\n        \"field terms\",\n        \"source graph node: form_component\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"frontend_type\",\n      \"action\": \"inspect\",\n      \"suggested_path\": \"client/src/types/index.ts\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a frontend_type surface matching the learned recipe\",\n        \"source graph node: frontend_type\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/CrashController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"current source graph has a api_controller surface matching the learned recipe\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"api_controller\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"high\",\n      \"evidence\": [\n        \"current source graph has a api_controller surface matching the learned recipe\",\n        \"source graph node: api_controller\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"service_layer\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicService.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a service_layer surface matching the learned recipe\",\n        \"source graph node: service_layer\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    },\n    {\n      \"matched_recipe_id\": \"petclinic_react_full_stack_ui_api\",\n      \"node_type\": \"service_layer\",\n      \"action\": \"modify\",\n      \"suggested_path\": \"src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java\",\n      \"suggested_folder\": null,\n      \"confidence\": \"medium\",\n      \"evidence\": [\n        \"current source graph has a service_layer surface matching the learned recipe\",\n        \"source graph node: service_layer\",\n        \"repo: spring-petclinic-reactjs\"\n      ]\n    }\n  ],\n  \"missing_evidence\": [],\n  \"caveats\": [\n    \"Recipe suggestions are deterministic repo-local guidance; planner-native output remains visible separately.\"\n  ]\n}\n",
       "stderr": ""
     }
   },

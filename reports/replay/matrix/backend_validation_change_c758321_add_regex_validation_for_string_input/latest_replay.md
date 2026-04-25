@@ -19,9 +19,9 @@
 
 | mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
 |---|---:|---:|---|---|---|
-| planner/propose only | 4 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| planner/propose only | 6 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
 | recipe suggestions only | 13 | 0 | 0.00/0.00 | 0.17/1.00 | 0.00/0.00 |
-| combined | 17 | 0 | 0.00/0.00 | 0.12/1.00 | 0.00/0.00 |
+| combined | 15 | 0 | 0.00/0.00 | 0.17/1.00 | 0.00/0.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -37,10 +37,10 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Planner/Propose Predictions Only
 
-- predicted files: 4
+- predicted files: 6
 - matched files: 0
 - missed files: 1
-- extra predicted files: 4
+- extra predicted files: 6
 - exact precision: 0.00
 - exact recall: 0.00
 - high-signal precision: 0.00
@@ -65,15 +65,15 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Combined Predictions
 
-- predicted files: 17
+- predicted files: 15
 - matched files: 0
 - missed files: 1
-- extra predicted files: 17
+- extra predicted files: 15
 - exact precision: 0.00
 - exact recall: 0.00
 - high-signal precision: 0.00
 - high-signal recall: 0.00
-- category precision: 0.12
+- category precision: 0.17
 - category recall: 1.00
 - folder-level matched actual files: 0
 
@@ -108,10 +108,12 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Planner/Propose Predicted Files
 
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java`
 
 ## Actual Files
 
@@ -135,10 +137,12 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Planner/Propose Extra Predicted Files
 
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java`
 
 ## Planner/Propose Folder-Level Matches
 
@@ -150,27 +154,27 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - recall: 0.00
 - matched: -
 - missed: `domain_model`
-- extra predicted: `repository`, `service_layer`, `unknown`
+- extra predicted: `api_controller`, `api_dto`, `service_layer`
 
 ## Planner/Propose Exact File Scoring
 
 - precision: 0.00
 - recall: 0.00
-- predicted count: 4
+- predicted count: 6
 - actual count: 1
 - matched count: 0
 - missed count: 1
-- extra predicted count: 4
+- extra predicted count: 6
 
 ## Planner/Propose High-Signal File Scoring
 
 - precision: 0.00
 - recall: 0.00
-- predicted count: 4
+- predicted count: 6
 - actual count: 1
 - matched count: 0
 - missed count: 1
-- extra predicted count: 4
+- extra predicted count: 6
 
 ## Planner/Propose High-Signal Matched Files
 

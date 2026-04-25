@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from app.models.discovery import DiscoverySnapshot, DiscoveryTarget, RepoDiscovery
+from app.models.recipe_suggestion import RecipeSuggestionReport
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 
@@ -28,6 +29,7 @@ def create_feature_explanation(
     *,
     scan_root: Path | None = None,
     discovery_snapshot: DiscoverySnapshot | None = None,
+    recipe_report: RecipeSuggestionReport | None = None,
 ) -> dict[str, Any]:
     """Create a deterministic debug explanation from existing pipeline outputs."""
 
@@ -64,6 +66,7 @@ def create_feature_explanation(
         impacts=impacts,
         scan_root=effective_scan_root,
         discovery_snapshot=snapshot,
+        recipe_report=recipe_report,
     )
     proposal = create_change_proposal(
         feature_request,
@@ -71,6 +74,7 @@ def create_feature_explanation(
         impacts=impacts,
         scan_root=effective_scan_root,
         discovery_snapshot=snapshot,
+        recipe_report=recipe_report,
     )
 
     profiles_by_repo = {
@@ -107,6 +111,7 @@ def create_feature_explanation(
             repos,
             plan,
         ),
+        "recipe_guidance": _recipe_guidance(plan, proposal),
         "missing_evidence": list(plan.missing_evidence),
         "evidence_sources": _evidence_sources(
             repos,
@@ -279,6 +284,7 @@ def _top_proposed_files(
                     "path": file_plan.path,
                     "action": file_plan.action,
                     "confidence": file_plan.confidence,
+                    "source": _combined_source_for_file(proposal, item.repo_name, file_plan.path),
                     "reason": file_plan.reason,
                     "evidence_sources": _file_evidence_sources(
                         item.repo_name,
@@ -293,6 +299,32 @@ def _top_proposed_files(
             if len(files) >= MAX_PROPOSED_FILES:
                 return files
     return files
+
+
+def _combined_source_for_file(proposal: ChangeProposal, repo_name: str, path: str) -> str:
+    for item in proposal.combined_recommendations:
+        if item.repo_name == repo_name and item.path == path:
+            return item.source
+    return "planner"
+
+
+def _recipe_guidance(plan: FeaturePlan, proposal: ChangeProposal) -> dict[str, Any]:
+    return {
+        "matched_recipes": [item.model_dump(mode="python") for item in plan.matched_recipes],
+        "recipe_confidence_summary": dict(plan.recipe_confidence_summary),
+        "plan_guidance": [item.model_dump(mode="python") for item in plan.recipe_guidance],
+        "proposal_recipe_suggestion_count": len(proposal.recipe_suggestions),
+        "combined_recommendation_count": len(proposal.combined_recommendations),
+        "recipe_influenced_plan": list(
+            plan.recipe_confidence_summary.get("influenced_plan", [])
+            if isinstance(plan.recipe_confidence_summary, dict)
+            else []
+        ),
+        "top_combined_recommendations": [
+            item.model_dump(mode="python")
+            for item in proposal.combined_recommendations[:10]
+        ],
+    }
 
 
 def _file_evidence_sources(

@@ -19,9 +19,9 @@
 
 | mode | predicted | matched | exact P/R | category P/R | high-signal P/R |
 |---|---:|---:|---|---|---|
-| planner/propose only | 11 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| planner/propose only | 5 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
 | recipe suggestions only | 13 | 1 | 0.08/1.00 | 0.17/1.00 | 0.08/1.00 |
-| combined | 23 | 1 | 0.04/1.00 | 0.12/1.00 | 0.04/1.00 |
+| combined | 17 | 1 | 0.06/1.00 | 0.14/1.00 | 0.06/1.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -37,17 +37,17 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Planner/Propose Predictions Only
 
-- predicted files: 11
+- predicted files: 5
 - matched files: 0
 - missed files: 1
-- extra predicted files: 11
+- extra predicted files: 5
 - exact precision: 0.00
 - exact recall: 0.00
 - high-signal precision: 0.00
 - high-signal recall: 0.00
 - category precision: 0.00
 - category recall: 0.00
-- folder-level matched actual files: 1
+- folder-level matched actual files: 0
 
 ## Recipe Suggestions Only
 
@@ -65,17 +65,17 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Combined Predictions
 
-- predicted files: 23
+- predicted files: 17
 - matched files: 1
 - missed files: 0
-- extra predicted files: 22
-- exact precision: 0.04
+- extra predicted files: 16
+- exact precision: 0.06
 - exact recall: 1.00
-- high-signal precision: 0.04
+- high-signal precision: 0.06
 - high-signal recall: 1.00
-- category precision: 0.12
+- category precision: 0.14
 - category recall: 1.00
-- folder-level matched actual files: 1
+- folder-level matched actual files: 0
 
 ## Recipe Suggestions
 
@@ -109,16 +109,10 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 ## Planner/Propose Predicted Files
 
 - `spring-petclinic-reactjs/Run PetClinicApplication.launch`
-- `spring-petclinic-reactjs/client/src/components/owners/PetsTable.tsx`
 - `spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/pets/NewPetPage.tsx`
-- `spring-petclinic-reactjs/client/src/components/pets/PetEditor.tsx`
 - `spring-petclinic-reactjs/client/src/components/pets/createPetEditorModel.ts`
-- `spring-petclinic-reactjs/client/src/components/visits/PetDetails.tsx`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java`
 
 ## Actual Files
 
@@ -143,23 +137,14 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 ## Planner/Propose Extra Predicted Files
 
 - `spring-petclinic-reactjs/Run PetClinicApplication.launch`
-- `spring-petclinic-reactjs/client/src/components/owners/PetsTable.tsx`
 - `spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/pets/NewPetPage.tsx`
-- `spring-petclinic-reactjs/client/src/components/pets/PetEditor.tsx`
 - `spring-petclinic-reactjs/client/src/components/pets/createPetEditorModel.ts`
-- `spring-petclinic-reactjs/client/src/components/visits/PetDetails.tsx`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api`
+- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java`
 
 ## Planner/Propose Folder-Level Matches
 
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api`
-  - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java`
+-
 
 ## Planner/Propose Category-Level Matches
 
@@ -167,27 +152,27 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 - recall: 0.00
 - matched: -
 - missed: `api_dto`
-- extra predicted: `frontend_component`, `repository`, `service_layer`, `unknown`
+- extra predicted: `api_controller`, `frontend_component`, `unknown`
 
 ## Planner/Propose Exact File Scoring
 
 - precision: 0.00
 - recall: 0.00
-- predicted count: 11
+- predicted count: 5
 - actual count: 1
 - matched count: 0
 - missed count: 1
-- extra predicted count: 11
+- extra predicted count: 5
 
 ## Planner/Propose High-Signal File Scoring
 
 - precision: 0.00
 - recall: 0.00
-- predicted count: 11
+- predicted count: 5
 - actual count: 1
 - matched count: 0
 - missed count: 1
-- extra predicted count: 11
+- extra predicted count: 5
 
 ## Planner/Propose High-Signal Matched Files
 

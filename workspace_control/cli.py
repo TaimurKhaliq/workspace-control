@@ -674,14 +674,16 @@ def run(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "explain-feature":
+        recipe_report = _integrated_recipe_report_for_args(args)
         explanation = create_feature_explanation(
             args.feature_description,
             rows,
             scan_root=effective_scan_root,
             discovery_snapshot=discovery_snapshot,
+            recipe_report=recipe_report,
         )
         if args.target_id:
-            explanation["recipe_evidence"] = _recipe_evidence_for_args(args)
+            explanation["recipe_evidence"] = _recipe_evidence_for_args(args, recipe_report=recipe_report)
         print(format_feature_explanation(explanation))
         return 0
 
@@ -696,22 +698,26 @@ def run(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "propose-changes":
+        recipe_report = _integrated_recipe_report_for_args(args)
         proposal = create_change_proposal(
             args.feature_description,
             rows,
             impacts=impacts,
             scan_root=effective_scan_root,
             discovery_snapshot=discovery_snapshot,
+            recipe_report=recipe_report,
         )
         print(format_change_proposal(proposal))
         return 0
 
+    recipe_report = _integrated_recipe_report_for_args(args)
     plan = create_feature_plan(
         args.feature_description,
         rows,
         impacts=impacts,
         scan_root=effective_scan_root,
         discovery_snapshot=discovery_snapshot,
+        recipe_report=recipe_report,
     )
     print(format_feature_plan(plan))
     return 0
@@ -726,8 +732,50 @@ def _discover_snapshot_for_args(args):
     return ArchitectureDiscoveryService().discover(target)
 
 
-def _recipe_evidence_for_args(args) -> dict[str, object]:
+def _integrated_recipe_report_for_args(args):
+    """Return conservative active recipe guidance for target-id plan/propose flows."""
+
+    if not getattr(args, "target_id", None):
+        return None
+    try:
+        report = RecipeSuggestionService(
+            registry=DiscoveryTargetRegistry(args.registry_path),
+            learning_root=DEFAULT_LEARNING_ROOT,
+            report_root=DEFAULT_LEARNING_REPORT_ROOT,
+        ).suggest(
+            args.target_id,
+            args.feature_description,
+            allowed_statuses={"active"},
+            min_structural_confidence=0.6,
+        )
+    except Exception:
+        return None
+    if not report.matched_recipes and not report.suggestions:
+        return None
+    return report
+
+
+def _recipe_evidence_for_args(args, *, recipe_report=None) -> dict[str, object]:
     """Return compact learned recipe evidence for explain-feature output."""
+
+    if recipe_report is not None:
+        return {
+            "available": True,
+            "recipe_count": len(recipe_report.matched_recipes),
+            "matching_recipe_count": len(recipe_report.matched_recipes),
+            "top_matches": [
+                {
+                    "recipe_id": recipe.recipe_id,
+                    "recipe_type": recipe.recipe_type,
+                    "status": "active",
+                    "structural_confidence": recipe.structural_confidence,
+                    "planner_effectiveness": recipe.planner_effectiveness,
+                    "score": recipe.score,
+                    "why_matched": recipe.why_matched[:5],
+                }
+                for recipe in recipe_report.matched_recipes[:5]
+            ],
+        }
 
     try:
         service = RepoLearningService(

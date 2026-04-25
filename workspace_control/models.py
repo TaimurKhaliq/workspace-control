@@ -85,6 +85,9 @@ class FeaturePlan(BaseModel):
     validation_commands: list[str] = Field(default_factory=list)
     ordered_steps: list[str] = Field(default_factory=list)
     requires_human_approval: bool = False
+    matched_recipes: list["PlanRecipeMatch"] = Field(default_factory=list)
+    recipe_guidance: list["PlanRecipeGuidance"] = Field(default_factory=list)
+    recipe_confidence_summary: dict[str, object] = Field(default_factory=dict)
 
 
 class FilePlan(BaseModel):
@@ -94,6 +97,41 @@ class FilePlan(BaseModel):
     action: Literal["modify", "create", "inspect", "inspect-only"]
     confidence: Literal["high", "medium", "low"]
     reason: str
+
+
+class PlanRecipeMatch(BaseModel):
+    """Compact recipe match evidence included in a feature plan."""
+
+    recipe_id: str
+    recipe_type: str
+    structural_confidence: float
+    planner_effectiveness: float
+    score: int
+    why_matched: list[str] = Field(default_factory=list)
+
+
+class PlanRecipeGuidance(BaseModel):
+    """Recipe-derived guidance that stays separate from native plan steps."""
+
+    matched_recipe_id: str
+    node_type: str
+    action: Literal["create", "modify", "inspect"]
+    path: str | None = None
+    folder: str | None = None
+    confidence: Literal["high", "medium", "low"]
+    evidence: list[str] = Field(default_factory=list)
+
+
+class CombinedRecommendation(BaseModel):
+    """File-level recommendation with planner/recipe provenance."""
+
+    repo_name: str
+    path: str
+    action: Literal["modify", "create", "inspect", "inspect-only"]
+    confidence: Literal["high", "medium", "low"]
+    source: Literal["planner", "recipe", "both"]
+    evidence: list[str] = Field(default_factory=list)
+    matched_recipe_id: str | None = None
 
 
 class ChangeProposalItem(BaseModel):
@@ -164,3 +202,8 @@ class ChangeProposal(BaseModel):
     implementation_owner: str | None = None
     domain_owner: str | None = None
     proposed_changes: list[ChangeProposalItem] = Field(default_factory=list)
+    recipe_suggestions: list[CombinedRecommendation] = Field(default_factory=list)
+    combined_recommendations: list[CombinedRecommendation] = Field(default_factory=list)
+
+
+FeaturePlan.model_rebuild()

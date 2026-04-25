@@ -97,9 +97,17 @@ class RecipeSuggestionService:
         self.learning_root = learning_root
         self.report_root = report_root
 
-    def suggest(self, target_id: str, feature_request: str) -> RecipeSuggestionReport:
+    def suggest(
+        self,
+        target_id: str,
+        feature_request: str,
+        *,
+        allowed_statuses: set[str] | None = None,
+        min_structural_confidence: float = 0.0,
+    ) -> RecipeSuggestionReport:
         """Return deterministic recipe-informed suggestions for one target."""
 
+        statuses = allowed_statuses or ACTIVE_RECIPE_STATUSES
         learning = RepoLearningService(
             registry=self.registry,
             learning_root=self.learning_root,
@@ -108,14 +116,15 @@ class RecipeSuggestionService:
         recipes = [
             recipe
             for recipe in learning.recipes_for_target(target_id)
-            if recipe.status in ACTIVE_RECIPE_STATUSES
+            if recipe.status in statuses
+            and recipe.structural_confidence >= min_structural_confidence
         ]
         record = self.registry.get(target_id)
         snapshot = ArchitectureDiscoveryService().discover(record.to_target())
         graph = snapshot.source_graph
         missing_evidence: list[str] = []
         caveats: list[str] = [
-            "Recipe suggestions are sidecar guidance only; plan-feature and propose-changes are unchanged.",
+            "Recipe suggestions are deterministic repo-local guidance; planner-native output remains visible separately.",
         ]
         if not recipes:
             missing_evidence.append(f"no active or candidate recipes found for target {target_id}")
