@@ -159,6 +159,7 @@ def _collect_grounding_terms(
         repo_path = workspace_root / repo.repo_name
         _add_discovery_terms(terms, repo, repo_path)
         _add_source_terms(terms, repo_path, repo.repo_name)
+    _add_source_graph_terms(terms, discovery_snapshot)
 
     return terms
 
@@ -215,6 +216,26 @@ def _add_source_terms(
             continue
         text = path.read_text(encoding="utf-8", errors="ignore")[:100000]
         _add_terms(terms, _symbols_from_text(text), source)
+
+
+def _add_source_graph_terms(
+    terms: dict[str, set[str]], discovery_snapshot: DiscoverySnapshot
+) -> None:
+    graph = discovery_snapshot.source_graph
+    if graph is None:
+        return
+
+    for node in graph.nodes:
+        _add_terms(
+            terms,
+            [
+                node.path,
+                node.node_type,
+                *node.domain_tokens,
+                *node.symbols,
+            ],
+            f"source_graph:{node.repo_name}:{node.path}",
+        )
 
 
 def _symbols_from_text(text: str) -> list[str]:

@@ -23,6 +23,14 @@ from app.services.repo_profile_bootstrap import (
 
 from .analyze import analyze_feature, format_feature_analysis
 from .explain import create_feature_explanation, format_feature_explanation
+from .graph import (
+    explain_graph_node,
+    filter_source_graph,
+    format_graph_node_explanation,
+    format_source_graph_json,
+    format_source_graph_mermaid,
+    format_source_graph_text,
+)
 from .inventory import format_inventory_table
 from .manifests import build_inventory
 from .plan import create_feature_plan, format_feature_plan
@@ -60,6 +68,65 @@ def run(argv: list[str] | None = None) -> int:
         type=Path,
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
+    )
+    graph_parser = subparsers.add_parser(
+        "discover-graph",
+        help="Discover normalized source graph nodes and edges",
+    )
+    graph_parser.add_argument(
+        "--scan-root",
+        type=Path,
+        default=default_scan_root,
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    graph_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to graph instead of --scan-root",
+    )
+    graph_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    graph_parser.add_argument(
+        "--format",
+        choices=["text", "json", "mermaid"],
+        default="text",
+        help="Output format for the source graph",
+    )
+    graph_parser.add_argument("--node-type", help="Filter graph nodes by node_type")
+    graph_parser.add_argument("--token", help="Filter graph nodes by domain token")
+    graph_parser.add_argument(
+        "--limit",
+        type=int,
+        default=20,
+        help="Limit nodes/edges shown in text or mermaid output",
+    )
+    explain_node_parser = subparsers.add_parser(
+        "explain-graph-node",
+        help="Explain one source graph node and its connected edges",
+    )
+    explain_node_parser.add_argument(
+        "--scan-root",
+        type=Path,
+        default=default_scan_root,
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    explain_node_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to graph instead of --scan-root",
+    )
+    explain_node_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    explain_node_parser.add_argument(
+        "--path",
+        required=True,
+        help="Repo-relative node path to explain, such as client/src/components/App.tsx",
     )
     bootstrap_parser = subparsers.add_parser(
         "bootstrap-repo-profile",
@@ -226,6 +293,8 @@ def run(argv: list[str] | None = None) -> int:
     if args.command not in {
         "inventory",
         "discover-architecture",
+        "discover-graph",
+        "explain-graph-node",
         "bootstrap-repo-profile",
         "register-discovery-target",
         "list-discovery-targets",
@@ -278,6 +347,56 @@ def run(argv: list[str] | None = None) -> int:
             return 1
 
         print(format_discovery_snapshot(snapshot))
+        return 0
+
+    if args.command == "discover-graph":
+        try:
+            snapshot = _discover_snapshot_for_args(args)
+            graph = snapshot.source_graph
+            if graph is None:
+                raise ValueError("Source graph was not built for this target")
+            graph = filter_source_graph(
+                graph,
+                node_type=args.node_type,
+                token=args.token,
+                limit=args.limit if args.format != "json" else None,
+            )
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        if args.format == "json":
+            print(format_source_graph_json(graph))
+        elif args.format == "mermaid":
+            print(format_source_graph_mermaid(graph, limit=args.limit))
+        else:
+            print(format_source_graph_text(graph, limit=args.limit))
+        return 0
+
+    if args.command == "explain-graph-node":
+        try:
+            snapshot = _discover_snapshot_for_args(args)
+            graph = snapshot.source_graph
+            if graph is None:
+                raise ValueError("Source graph was not built for this target")
+            explanation = explain_graph_node(graph, args.path)
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        print(format_graph_node_explanation(explanation))
         return 0
 
     if args.command == "bootstrap-repo-profile":

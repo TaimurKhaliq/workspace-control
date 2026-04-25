@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 
 from .evidence import Evidence
 from .framework_descriptor import FrameworkDescriptor
+from .source_graph import SourceGraph
 
 
 class DiscoveryTarget(BaseModel):
@@ -115,3 +116,4 @@ class DiscoverySnapshot(BaseModel):
     detected_frameworks: list[FrameworkDescriptor] = Field(default_factory=list)
     loaded_framework_packs: list[str] = Field(default_factory=list)
     framework_hints: dict[str, list[str]] = Field(default_factory=dict)
+    source_graph: SourceGraph | None = None

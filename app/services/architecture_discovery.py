@@ -11,6 +11,7 @@ from app.adapters.react import ReactAdapter
 from app.adapters.spring_boot import SpringBootAdapter
 from app.discovery.services.framework_detector import FrameworkDetector
 from app.discovery.services.framework_pack_loader import FrameworkPackLoader
+from app.graph.source_graph_builder import SourceGraphBuilder
 from app.models.discovery import (
     AdapterDiscovery,
     ArchitectureDiscoveryReport,
@@ -73,6 +74,7 @@ class ArchitectureDiscoveryService:
         providers: Sequence[DiscoveryProvider] | None = None,
         framework_detector: FrameworkDetector | None = None,
         framework_pack_loader: FrameworkPackLoader | None = None,
+        source_graph_builder: SourceGraphBuilder | None = None,
     ):
         self._adapters = tuple(
             adapters
@@ -95,6 +97,7 @@ class ArchitectureDiscoveryService:
         )
         self._framework_detector = framework_detector or FrameworkDetector()
         self._framework_pack_loader = framework_pack_loader or FrameworkPackLoader()
+        self._source_graph_builder = source_graph_builder or SourceGraphBuilder()
 
     def discover(self, target: DiscoveryTarget) -> DiscoverySnapshot:
         """Materialize a target and return its source-agnostic discovery snapshot."""
@@ -115,7 +118,7 @@ class ArchitectureDiscoveryService:
             for repo in report.repos
             if repo.framework_hints
         }
-        return DiscoverySnapshot(
+        snapshot = DiscoverySnapshot(
             target=target,
             workspace=workspace,
             report=report,
@@ -123,6 +126,8 @@ class ArchitectureDiscoveryService:
             loaded_framework_packs=loaded_framework_packs,
             framework_hints=framework_hints,
         )
+        source_graph = self._source_graph_builder.build(snapshot)
+        return snapshot.model_copy(update={"source_graph": source_graph})
 
     def snapshot(self, target: DiscoveryTarget) -> DiscoverySnapshot:
         """Compatibility alias for source-agnostic discovery snapshots."""

@@ -97,7 +97,16 @@ def create_feature_explanation(
             "domain_owner": plan.domain_owner,
         },
         "analysis": _compact_impacts(impacts),
-        "top_proposed_files": _top_proposed_files(proposal),
+        "graph_summary": _graph_summary(snapshot),
+        "relevant_graph_nodes": _relevant_graph_nodes(snapshot, proposal, plan),
+        "relevant_graph_edges": _relevant_graph_edges(snapshot, proposal, plan),
+        "top_proposed_files": _top_proposed_files(
+            proposal,
+            snapshot,
+            profiles_by_repo,
+            repos,
+            plan,
+        ),
         "missing_evidence": list(plan.missing_evidence),
         "evidence_sources": _evidence_sources(
             repos,
@@ -175,7 +184,92 @@ def _compact_impacts(impacts: Sequence[FeatureImpact]) -> list[dict[str, Any]]:
     ]
 
 
-def _top_proposed_files(proposal: ChangeProposal) -> list[dict[str, Any]]:
+def _graph_summary(snapshot: DiscoverySnapshot | None) -> dict[str, Any]:
+    graph = snapshot.source_graph if snapshot is not None else None
+    if graph is None:
+        return {"node_count": 0, "edge_count": 0, "node_types": {}}
+    counts: dict[str, int] = {}
+    for node in graph.nodes:
+        counts[node.node_type] = counts.get(node.node_type, 0) + 1
+    return {
+        "node_count": len(graph.nodes),
+        "edge_count": len(graph.edges),
+        "node_types": dict(sorted(counts.items())),
+    }
+
+
+def _relevant_graph_nodes(
+    snapshot: DiscoverySnapshot | None,
+    proposal: ChangeProposal,
+    plan: FeaturePlan,
+) -> list[dict[str, Any]]:
+    graph = snapshot.source_graph if snapshot is not None else None
+    if graph is None:
+        return []
+    proposal_paths = {
+        (item.repo_name, file_plan.path)
+        for item in proposal.proposed_changes
+        for file_plan in item.files
+    }
+    target_tokens = _feature_tokens(plan)
+    relevant = [
+        node
+        for node in graph.nodes
+        if (node.repo_name, node.path) in proposal_paths
+        or bool(set(node.domain_tokens) & target_tokens)
+    ]
+    relevant.sort(key=lambda node: (0 if (node.repo_name, node.path) in proposal_paths else 1, node.repo_name, node.node_type, node.path))
+    return [
+        {
+            "id": node.id,
+            "repo_name": node.repo_name,
+            "path": node.path,
+            "node_type": node.node_type,
+            "domain_tokens": node.domain_tokens[:8],
+            "confidence": node.confidence,
+            "evidence_sources": node.evidence_sources,
+        }
+        for node in relevant[:20]
+    ]
+
+
+def _relevant_graph_edges(
+    snapshot: DiscoverySnapshot | None,
+    proposal: ChangeProposal,
+    plan: FeaturePlan,
+) -> list[dict[str, Any]]:
+    graph = snapshot.source_graph if snapshot is not None else None
+    if graph is None:
+        return []
+    relevant_node_ids = {
+        node["id"]
+        for node in _relevant_graph_nodes(snapshot, proposal, plan)
+    }
+    edges = [
+        edge
+        for edge in graph.edges
+        if edge.source_id in relevant_node_ids or edge.target_id in relevant_node_ids
+    ]
+    edges.sort(key=lambda edge: (edge.edge_type, edge.source_id, edge.target_id))
+    return [
+        {
+            "source_id": edge.source_id,
+            "target_id": edge.target_id,
+            "edge_type": edge.edge_type,
+            "confidence": edge.confidence,
+            "reason": edge.reason,
+        }
+        for edge in edges[:20]
+    ]
+
+
+def _top_proposed_files(
+    proposal: ChangeProposal,
+    snapshot: DiscoverySnapshot | None,
+    profiles_by_repo: dict[str, Any],
+    repos: Sequence[RepoDiscovery],
+    plan: FeaturePlan,
+) -> list[dict[str, Any]]:
     files: list[dict[str, Any]] = []
     for item in proposal.proposed_changes:
         for file_plan in item.files:
@@ -186,11 +280,74 @@ def _top_proposed_files(proposal: ChangeProposal) -> list[dict[str, Any]]:
                     "action": file_plan.action,
                     "confidence": file_plan.confidence,
                     "reason": file_plan.reason,
+                    "evidence_sources": _file_evidence_sources(
+                        item.repo_name,
+                        file_plan.path,
+                        snapshot,
+                        profiles_by_repo,
+                        repos,
+                        plan,
+                    ),
                 }
             )
             if len(files) >= MAX_PROPOSED_FILES:
                 return files
     return files
+
+
+def _file_evidence_sources(
+    repo_name: str,
+    path: str,
+    snapshot: DiscoverySnapshot | None,
+    profiles_by_repo: dict[str, Any],
+    repos: Sequence[RepoDiscovery],
+    plan: FeaturePlan,
+) -> list[str]:
+    sources: list[str] = []
+    graph = snapshot.source_graph if snapshot is not None else None
+    if graph is not None and any(
+        node.repo_name == repo_name and node.path == path for node in graph.nodes
+    ):
+        sources.append("source_graph")
+    repo = next((item for item in repos if item.repo_name == repo_name), None)
+    if repo is not None and repo.loaded_framework_packs:
+        sources.append("framework_pack")
+    profile = profiles_by_repo.get(repo_name)
+    if profile is not None and "inferred" in getattr(profile, "metadata_mode", ""):
+        sources.append("inferred_metadata")
+    if _path_in_concept_grounding(repo_name, path, plan):
+        sources.append("concept_grounding")
+    if repo is not None and _path_from_discovery(repo, path):
+        sources.append("path_discovery")
+    return sources or ["deterministic_planner"]
+
+
+def _path_in_concept_grounding(repo_name: str, path: str, plan: FeaturePlan) -> bool:
+    target = f":{repo_name}:{path}"
+    return any(
+        any(source.endswith(target) for source in grounding.sources)
+        for grounding in plan.concept_grounding
+    )
+
+
+def _path_from_discovery(repo: RepoDiscovery, path: str) -> bool:
+    paths = [
+        *repo.likely_api_locations,
+        *repo.likely_service_locations,
+        *repo.likely_persistence_locations,
+        *repo.likely_ui_locations,
+        *repo.likely_event_locations,
+    ]
+    return any(path == candidate or path.startswith(f"{candidate}/") for candidate in paths)
+
+
+def _feature_tokens(plan: FeaturePlan) -> set[str]:
+    tokens: set[str] = set()
+    for grounding in plan.concept_grounding:
+        if grounding.status in {"direct_match", "alias_match"}:
+            for value in [grounding.concept, *grounding.matched_terms]:
+                tokens.update(token for token in value.lower().replace("_", " ").split() if len(token) > 1)
+    return tokens
 
 
 def _evidence_sources(

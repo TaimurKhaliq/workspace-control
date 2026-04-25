@@ -168,7 +168,11 @@ class RepoProfileBootstrapService:
     ) -> InferredRepoProfile:
         repo_path = snapshot.workspace.root_path / discovery.repo_name
         explicit_metadata = (repo_path / MANIFEST_FILENAME).is_file()
-        profile_terms = self._collect_profile_terms(repo_path, discovery)
+        profile_terms = self._collect_profile_terms(
+            repo_path,
+            discovery,
+            snapshot.source_graph,
+        )
         repo_type = _repo_type(discovery, repo_path)
         role_hints = _role_hints(discovery, repo_type)
         language = _language(discovery, repo_path)
@@ -220,6 +224,7 @@ class RepoProfileBootstrapService:
         self,
         repo_path: Path,
         discovery: RepoDiscovery,
+        source_graph=None,
     ) -> list[str]:
         paths = merge_paths(
             discovery.likely_api_locations,
@@ -238,6 +243,10 @@ class RepoProfileBootstrapService:
         token_groups.extend(_package_name_tokens(repo_path))
         token_groups.extend(_tokens_from_paths_and_files(repo_path, paths))
         token_groups.extend(_openapi_tokens(repo_path, discovery.likely_api_locations))
+        if source_graph is not None:
+            token_groups.extend(
+                _graph_token_groups(source_graph, discovery.repo_name)
+            )
         return _keywords_from_token_groups(token_groups)
 
     def _row_from_profile(self, profile: InferredRepoProfile) -> InventoryRow:
@@ -486,6 +495,17 @@ def _openapi_tokens(repo_path: Path, api_paths: Sequence[str]) -> list[list[str]
         if not text:
             continue
         token_groups.append(_domain_tokens(text))
+    return token_groups
+
+
+def _graph_token_groups(source_graph, repo_name: str) -> list[list[str]]:
+    token_groups: list[list[str]] = []
+    for node in source_graph.nodes:
+        if node.repo_name != repo_name:
+            continue
+        token_groups.append(list(node.domain_tokens))
+        token_groups.append(_domain_tokens(node.path))
+        token_groups.append([node.node_type])
     return token_groups
 
 
