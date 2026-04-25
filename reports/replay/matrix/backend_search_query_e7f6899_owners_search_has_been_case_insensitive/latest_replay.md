@@ -12,6 +12,7 @@
 - commands succeeded: True
 - actual files: 1
 - recipe helped: True (improved_recall)
+- combined worse than planner: False (-)
 - recipe matched files: `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 - static asset misses: 0
 

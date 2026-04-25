@@ -4,6 +4,7 @@
     "succeeded": 8,
     "failed": 0,
     "recipe_helped_cases": 5,
+    "combined_worse_than_planner_cases": 0,
     "average_planner_exact_precision": 0.3771,
     "average_planner_exact_recall": 0.2924,
     "average_planner_category_precision": 0.5,
@@ -16,11 +17,11 @@
     "average_recipe_category_recall": 0.8375,
     "average_recipe_high_signal_precision": 0.366,
     "average_recipe_high_signal_recall": 0.7102,
-    "average_combined_exact_precision": 0.3554,
+    "average_combined_exact_precision": 0.4649,
     "average_combined_exact_recall": 0.6466,
-    "average_combined_category_precision": 0.5074,
-    "average_combined_category_recall": 0.8375,
-    "average_combined_high_signal_precision": 0.3554,
+    "average_combined_category_precision": 0.625,
+    "average_combined_category_recall": 0.7125,
+    "average_combined_high_signal_precision": 0.4649,
     "average_combined_high_signal_recall": 0.7216,
     "average_exact_precision": 0.3771,
     "average_exact_recall": 0.2924,
@@ -112,6 +113,8 @@
       "recipe_matched_files": [
         "spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql"
       ],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/backend_search_query_e7f6899_owners_search_has_been_case_insensitive"
     },
     {
@@ -148,19 +151,21 @@
       "recipe_category_recall": 1.0,
       "recipe_high_signal_precision": 0.0769,
       "recipe_high_signal_recall": 1.0,
-      "combined_predicted_file_count": 17,
+      "combined_predicted_file_count": 7,
       "combined_matched_file_count": 1,
-      "combined_exact_precision": 0.0588,
+      "combined_exact_precision": 0.1429,
       "combined_exact_recall": 1.0,
-      "combined_category_precision": 0.1429,
+      "combined_category_precision": 0.25,
       "combined_category_recall": 1.0,
-      "combined_high_signal_precision": 0.0588,
+      "combined_high_signal_precision": 0.1429,
       "combined_high_signal_recall": 1.0,
       "recipe_helped": true,
       "recipe_help_type": "improved_recall",
       "recipe_matched_files": [
         "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
       ],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/backend_validation_change_af31104_add_max_range_and_not_null_validation_for_adding_new_pet"
     },
     {
@@ -197,17 +202,19 @@
       "recipe_category_recall": 1.0,
       "recipe_high_signal_precision": 0.0,
       "recipe_high_signal_recall": 0.0,
-      "combined_predicted_file_count": 15,
+      "combined_predicted_file_count": 7,
       "combined_matched_file_count": 0,
       "combined_exact_precision": 0.0,
       "combined_exact_recall": 0.0,
-      "combined_category_precision": 0.1667,
-      "combined_category_recall": 1.0,
+      "combined_category_precision": 0.0,
+      "combined_category_recall": 0.0,
       "combined_high_signal_precision": 0.0,
       "combined_high_signal_recall": 0.0,
       "recipe_helped": false,
       "recipe_help_type": "same",
       "recipe_matched_files": [],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/backend_validation_change_c758321_add_regex_validation_for_string_input"
     },
     {
@@ -244,13 +251,13 @@
       "recipe_category_recall": 0.4,
       "recipe_high_signal_precision": 0.25,
       "recipe_high_signal_recall": 0.1818,
-      "combined_predicted_file_count": 9,
+      "combined_predicted_file_count": 4,
       "combined_matched_file_count": 3,
-      "combined_exact_precision": 0.3333,
+      "combined_exact_precision": 0.75,
       "combined_exact_recall": 0.2727,
-      "combined_category_precision": 0.5,
+      "combined_category_precision": 1.0,
       "combined_category_recall": 0.4,
-      "combined_high_signal_precision": 0.3333,
+      "combined_high_signal_precision": 0.75,
       "combined_high_signal_recall": 0.2727,
       "recipe_helped": false,
       "recipe_help_type": "worse",
@@ -258,6 +265,8 @@
         "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
         "spring-petclinic-reactjs/client/src/types/index.ts"
       ],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/full_stack_ui_api_49ca65b_add_newownerpage_missing_error_handling"
     },
     {
@@ -294,13 +303,13 @@
       "recipe_category_recall": 1.0,
       "recipe_high_signal_precision": 0.375,
       "recipe_high_signal_recall": 1.0,
-      "combined_predicted_file_count": 8,
+      "combined_predicted_file_count": 4,
       "combined_matched_file_count": 3,
-      "combined_exact_precision": 0.375,
+      "combined_exact_precision": 0.75,
       "combined_exact_recall": 1.0,
-      "combined_category_precision": 0.5,
+      "combined_category_precision": 1.0,
       "combined_category_recall": 1.0,
-      "combined_high_signal_precision": 0.375,
+      "combined_high_signal_precision": 0.75,
       "combined_high_signal_recall": 1.0,
       "recipe_helped": true,
       "recipe_help_type": "improved_recall",
@@ -309,6 +318,8 @@
         "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
         "spring-petclinic-reactjs/client/src/types/index.ts"
       ],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/ui_form_validation_339ee36_add_error_handling_to_newownerpage"
     },
     {
@@ -358,6 +369,8 @@
       "recipe_matched_files": [
         "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx"
       ],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/ui_form_validation_6e73c96_add_visual_feedback_for_invalid_fields"
     },
     {
@@ -409,6 +422,8 @@
         "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
         "spring-petclinic-reactjs/client/src/types/index.ts"
       ],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/ui_page_add_0a36a33_add_ownerspage_no_actions_yet"
     },
     {
@@ -461,6 +476,8 @@
         "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
         "spring-petclinic-reactjs/client/src/main.tsx"
       ],
+      "combined_worse_than_planner": false,
+      "combined_worse_reason": null,
       "report_dir": "reports/replay/matrix/ui_shell_f710ba8_add_layout_and_welcome_page"
     }
   ],

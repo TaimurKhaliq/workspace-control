@@ -178,6 +178,8 @@ UNRELATED_DOMAIN_TOKENS = {
     "visit",
     "visits",
 }
+COMBINED_RECOMMENDATION_LIMIT = 8
+STRONG_PLANNER_RECIPE_ADDITION_LIMIT = 3
 
 
 def create_change_proposal(
@@ -289,6 +291,8 @@ def create_change_proposal(
     combined_recommendations = _combine_recommendations(
         planner_recommendations,
         recipe_suggestions,
+        plan=plan,
+        recipe_report=recipe_report,
     )
     missing_evidence = list(plan.missing_evidence)
     if not planner_recommendations and recipe_suggestions:
@@ -409,24 +413,48 @@ def _repo_name_for_recipe_suggestion(
 def _combine_recommendations(
     planner: Sequence[CombinedRecommendation],
     recipe: Sequence[CombinedRecommendation],
+    *,
+    plan: FeaturePlan | None = None,
+    recipe_report: RecipeSuggestionReport | None = None,
 ) -> list[CombinedRecommendation]:
-    by_key: dict[tuple[str, str, str], CombinedRecommendation] = {}
-    ordered_keys: list[tuple[str, str, str]] = []
-    for item in [*planner, *recipe]:
-        key = (item.repo_name, item.path, item.action)
+    recipe_meta = _recipe_match_metadata(recipe_report)
+    primary_recipe_ids = _primary_recipe_ids(recipe_report)
+    planner_strong = _planner_recommendations_are_strong(planner, plan)
+    by_key: dict[tuple[str, str], CombinedRecommendation] = {}
+    ordered_keys: list[tuple[str, str]] = []
+
+    for item in planner:
+        key = (item.repo_name, item.path)
+        by_key[key] = item
+        ordered_keys.append(key)
+
+    recipe_only_additions = 0
+    for item in recipe:
+        key = (item.repo_name, item.path)
         existing = by_key.get(key)
-        if existing is None:
-            by_key[key] = item
-            ordered_keys.append(key)
+        if existing is not None:
+            by_key[key] = existing.model_copy(
+                update={
+                    "source": "both",
+                    "action": _merge_actions(existing.action, item.action),
+                    "confidence": _boost_confidence(existing.confidence, item.confidence),
+                    "evidence": _dedupe_preserve_order([*existing.evidence, *item.evidence]),
+                    "matched_recipe_id": existing.matched_recipe_id or item.matched_recipe_id,
+                }
+            )
             continue
-        by_key[key] = existing.model_copy(
-            update={
-                "source": "both",
-                "confidence": _boost_confidence(existing.confidence, item.confidence),
-                "evidence": _dedupe_preserve_order([*existing.evidence, *item.evidence]),
-                "matched_recipe_id": existing.matched_recipe_id or item.matched_recipe_id,
-            }
-        )
+        if planner_strong and not _allow_recipe_only_addition(
+            item,
+            recipe_meta=recipe_meta,
+            primary_recipe_ids=primary_recipe_ids,
+            recipe_only_addition_count=recipe_only_additions,
+        ):
+            continue
+        by_key[key] = item
+        ordered_keys.append(key)
+        if planner_strong:
+            recipe_only_additions += 1
+
     combined = [by_key[key] for key in ordered_keys]
     return sorted(
         combined,
@@ -436,17 +464,110 @@ def _combine_recommendations(
             item.path,
             item.action,
         ),
+    )[:COMBINED_RECOMMENDATION_LIMIT]
+
+
+def _merge_actions(left: str, right: str) -> str:
+    order = {"create": 0, "modify": 1, "inspect": 2, "inspect-only": 3}
+    return min((left, right), key=lambda item: order.get(item, 3))
+
+
+def _recipe_match_metadata(
+    recipe_report: RecipeSuggestionReport | None,
+) -> dict[str, dict[str, float | str]]:
+    if recipe_report is None:
+        return {}
+    return {
+        match.recipe_id: {
+            "recipe_type": match.recipe_type,
+            "structural_confidence": match.structural_confidence,
+            "planner_effectiveness": match.planner_effectiveness,
+        }
+        for match in recipe_report.matched_recipes
+    }
+
+
+def _primary_recipe_ids(recipe_report: RecipeSuggestionReport | None) -> set[str]:
+    if recipe_report is None or not recipe_report.matched_recipes:
+        return set()
+    return {recipe_report.matched_recipes[0].recipe_id}
+
+
+def _planner_recommendations_are_strong(
+    planner: Sequence[CombinedRecommendation],
+    plan: FeaturePlan | None,
+) -> bool:
+    if not planner:
+        return False
+    concrete = [
+        item
+        for item in planner
+        if item.action != "inspect-only" and item.confidence in {"high", "medium"}
+    ]
+    if not concrete:
+        return False
+    if plan is None:
+        return True
+    return plan.confidence in {"high", "medium"} and plan.implementation_owner is not None
+
+
+def _allow_recipe_only_addition(
+    item: CombinedRecommendation,
+    *,
+    recipe_meta: dict[str, dict[str, float | str]],
+    primary_recipe_ids: set[str],
+    recipe_only_addition_count: int,
+) -> bool:
+    if recipe_only_addition_count >= STRONG_PLANNER_RECIPE_ADDITION_LIMIT:
+        return False
+    if item.matched_recipe_id and primary_recipe_ids and item.matched_recipe_id not in primary_recipe_ids:
+        return False
+    meta = recipe_meta.get(item.matched_recipe_id or "", {})
+    structural_confidence = float(meta.get("structural_confidence", 0.0) or 0.0)
+    if structural_confidence < 0.6:
+        return False
+    if item.confidence == "high":
+        return True
+    return item.confidence == "medium" and _recipe_supporting_recommendation(item)
+
+
+def _recipe_supporting_recommendation(item: CombinedRecommendation) -> bool:
+    evidence_text = " | ".join(item.evidence).lower()
+    path_tokens = _path_all_tokens(item.path)
+    return (
+        "route_config" in evidence_text
+        or "frontend_type" in evidence_text
+        or "frontend type" in evidence_text
+        or bool(path_tokens & FRONTEND_SUPPORT_FILE_TOKENS)
+        or "request explicitly names a page/component identifier" in evidence_text
+    )
+
+
+def _merge_duplicate_recommendations(
+    existing: CombinedRecommendation,
+    item: CombinedRecommendation,
+) -> CombinedRecommendation:
+    source = existing.source if existing.source == item.source else "both"
+    return existing.model_copy(
+        update={
+            "source": source,
+            "action": _merge_actions(existing.action, item.action),
+            "confidence": _boost_confidence(existing.confidence, item.confidence),
+            "evidence": _dedupe_preserve_order([*existing.evidence, *item.evidence]),
+            "matched_recipe_id": existing.matched_recipe_id or item.matched_recipe_id,
+        }
     )
 
 
 def _dedupe_recommendations(
     recommendations: Sequence[CombinedRecommendation],
 ) -> list[CombinedRecommendation]:
-    by_key: dict[tuple[str, str, str], CombinedRecommendation] = {}
-    ordered_keys: list[tuple[str, str, str]] = []
+    by_key: dict[tuple[str, str], CombinedRecommendation] = {}
+    ordered_keys: list[tuple[str, str]] = []
     for item in recommendations:
-        key = (item.repo_name, item.path, item.action)
+        key = (item.repo_name, item.path)
         if key in by_key:
+            by_key[key] = _merge_duplicate_recommendations(by_key[key], item)
             continue
         by_key[key] = item
         ordered_keys.append(key)
@@ -467,25 +588,40 @@ def _confidence_rank(value: str) -> int:
 def _combined_recommendation_rank(item: CombinedRecommendation) -> tuple[int, int, int, int]:
     evidence_text = " | ".join(item.evidence).lower()
     path_tokens = _path_all_tokens(item.path)
+    if item.source == "both":
+        source_tier = 0
+    elif item.source == "planner" and item.confidence == "high" and item.action in {"create", "modify"}:
+        source_tier = 1
+    elif item.source == "recipe" and item.confidence == "high" and item.action in {"create", "modify"}:
+        source_tier = 2
+    elif item.source == "planner" and item.confidence == "medium":
+        source_tier = 3
+    elif item.source == "recipe" and item.confidence == "medium":
+        source_tier = 4
+    elif item.source == "planner":
+        source_tier = 5
+    else:
+        source_tier = 6
+
     if "requested page/component" in evidence_text or "request explicitly names a page/component identifier" in evidence_text:
-        tier = 0
-    elif item.source in {"recipe", "both"} and (item.action == "modify" or "route_config" in evidence_text):
-        tier = 1
-    elif item.source in {"recipe", "both"} and (
+        purpose_tier = 0
+    elif "route_config" in evidence_text:
+        purpose_tier = 1
+    elif (
         "frontend_type" in evidence_text
         or "frontend type" in evidence_text
         or path_tokens & FRONTEND_SUPPORT_FILE_TOKENS
     ):
-        tier = 2
-    elif item.source in {"recipe", "both"}:
-        tier = 3
+        purpose_tier = 2
+    elif item.action in {"create", "modify"}:
+        purpose_tier = 3
     else:
-        tier = 4
+        purpose_tier = 4
     return (
-        tier,
+        source_tier,
+        purpose_tier,
         _confidence_rank(item.confidence),
         0 if item.action in {"create", "modify"} else 1,
-        0 if item.source == "both" else 1 if item.source == "recipe" else 2,
     )
 
 

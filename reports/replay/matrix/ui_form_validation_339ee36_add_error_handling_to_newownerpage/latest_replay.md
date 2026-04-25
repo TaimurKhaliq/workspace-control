@@ -12,6 +12,7 @@
 - commands succeeded: True
 - actual files: 3
 - recipe helped: True (improved_recall)
+- combined worse than planner: False (-)
 - recipe matched files: `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`, `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`, `spring-petclinic-reactjs/client/src/types/index.ts`
 - static asset misses: 0
 
@@ -21,7 +22,7 @@
 |---|---:|---:|---|---|---|
 | planner/propose only | 3 | 2 | 0.67/0.67 | 1.00/0.50 | 0.67/0.67 |
 | recipe suggestions only | 8 | 3 | 0.38/1.00 | 0.50/1.00 | 0.38/1.00 |
-| combined | 8 | 3 | 0.38/1.00 | 0.50/1.00 | 0.38/1.00 |
+| combined | 4 | 3 | 0.75/1.00 | 1.00/1.00 | 0.75/1.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -65,15 +66,15 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Combined Predictions
 
-- predicted files: 8
+- predicted files: 4
 - matched files: 3
 - missed files: 0
-- extra predicted files: 5
-- exact precision: 0.38
+- extra predicted files: 1
+- exact precision: 0.75
 - exact recall: 1.00
-- high-signal precision: 0.38
+- high-signal precision: 0.75
 - high-signal recall: 1.00
-- category precision: 0.50
+- category precision: 1.00
 - category recall: 1.00
 - folder-level matched actual files: 0
 

@@ -12,6 +12,7 @@
 - commands succeeded: True
 - actual files: 1
 - recipe helped: True (improved_recall)
+- combined worse than planner: False (-)
 - recipe matched files: `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java`
 - static asset misses: 0
 
@@ -21,7 +22,7 @@
 |---|---:|---:|---|---|---|
 | planner/propose only | 5 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
 | recipe suggestions only | 13 | 1 | 0.08/1.00 | 0.17/1.00 | 0.08/1.00 |
-| combined | 17 | 1 | 0.06/1.00 | 0.14/1.00 | 0.06/1.00 |
+| combined | 7 | 1 | 0.14/1.00 | 0.25/1.00 | 0.14/1.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -65,15 +66,15 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Combined Predictions
 
-- predicted files: 17
+- predicted files: 7
 - matched files: 1
 - missed files: 0
-- extra predicted files: 16
-- exact precision: 0.06
+- extra predicted files: 6
+- exact precision: 0.14
 - exact recall: 1.00
-- high-signal precision: 0.06
+- high-signal precision: 0.14
 - high-signal recall: 1.00
-- category precision: 0.14
+- category precision: 0.25
 - category recall: 1.00
 - folder-level matched actual files: 0
 

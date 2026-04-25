@@ -356,6 +356,116 @@ def test_recipe_help_summary_flags_improved_recall() -> None:
     ]
 
 
+def test_combined_predictions_guard_strong_planner_from_broad_recipes() -> None:
+    planner = {
+        "predicted_files": [
+            {"path": "repo/client/src/components/owners/NewOwnerPage.tsx", "action": "modify", "confidence": "high"},
+            {"path": "repo/client/src/components/owners/FindOwnersPage.tsx", "action": "inspect", "confidence": "medium"},
+        ],
+        "predicted_reference_files": [],
+        "predicted_repos": ["repo"],
+    }
+    recipe = {
+        "predicted_files": [
+            {
+                "path": "repo/client/src/components/owners/FindOwnersPage.tsx",
+                "action": "modify",
+                "confidence": "medium",
+                "matched_recipe_id": "recipe_ui_validation",
+            },
+            {
+                "path": "repo/client/src/types/index.ts",
+                "action": "inspect",
+                "confidence": "medium",
+                "matched_recipe_id": "recipe_ui_validation",
+                "node_type": "frontend_type",
+            },
+            {
+                "path": "repo/src/main/java/example/GenericErrorController.java",
+                "action": "modify",
+                "confidence": "high",
+                "matched_recipe_id": "recipe_full_stack",
+            },
+        ],
+        "predicted_reference_files": [],
+        "predicted_repos": ["repo"],
+    }
+
+    combined = replay.combined_predictions_from_modes(
+        planner,
+        recipe,
+        proposal_payload={"confidence": "high", "implementation_owner": "repo"},
+        recipe_payload={
+            "matched_recipes": [
+                {"recipe_id": "recipe_ui_validation", "structural_confidence": 0.95},
+                {"recipe_id": "recipe_full_stack", "structural_confidence": 0.9},
+            ]
+        },
+    )
+
+    paths = [item["path"] for item in combined["predicted_files"]]
+    assert paths[0] == "repo/client/src/components/owners/FindOwnersPage.tsx"
+    assert "repo/client/src/types/index.ts" in paths
+    assert "repo/src/main/java/example/GenericErrorController.java" not in paths
+    overlap = next(item for item in combined["predicted_files"] if item["path"].endswith("FindOwnersPage.tsx"))
+    assert overlap["source"] == "both"
+
+
+def test_combined_predictions_use_recipe_fallback_when_planner_empty() -> None:
+    combined = replay.combined_predictions_from_modes(
+        {"predicted_files": [], "predicted_reference_files": [], "predicted_repos": []},
+        {
+            "predicted_files": [
+                {
+                    "path": "repo/src/main/resources/db/hsqldb/initDB.sql",
+                    "action": "modify",
+                    "confidence": "high",
+                    "matched_recipe_id": "recipe_search",
+                }
+            ],
+            "predicted_reference_files": [],
+            "predicted_repos": ["repo"],
+        },
+        proposal_payload={"confidence": "low", "implementation_owner": None},
+        recipe_payload={
+            "matched_recipes": [
+                {"recipe_id": "recipe_search", "structural_confidence": 0.48},
+            ]
+        },
+    )
+
+    assert [item["path"] for item in combined["predicted_files"]] == [
+        "repo/src/main/resources/db/hsqldb/initDB.sql"
+    ]
+
+
+def test_combined_worse_diagnostic_flags_recipe_overexpansion() -> None:
+    planner = replay.compare_predictions(
+        predicted_files=[{"path": "repo/a.py"}],
+        actual_files=["repo/a.py"],
+    )
+    recipe = replay.compare_predictions(
+        predicted_files=[{"path": f"repo/extra_{index}.py"} for index in range(5)],
+        actual_files=["repo/a.py"],
+    )
+    combined = replay.compare_predictions(
+        predicted_files=[
+            {"path": "repo/a.py"},
+            *[{"path": f"repo/extra_{index}.py"} for index in range(5)],
+        ],
+        actual_files=["repo/a.py"],
+    )
+
+    result = replay.combined_worse_than_planner(
+        planner_comparison=planner,
+        recipe_comparison=recipe,
+        combined_comparison=combined,
+    )
+
+    assert result["combined_worse_than_planner"] is True
+    assert result["combined_worse_reason"] == "recipe_overexpanded"
+
+
 def test_surface_category_classification_uses_replay_schema_names() -> None:
     assert replay.classify_surface("repo/client/src/main.tsx") == "frontend_entrypoint"
     assert replay.classify_surface("repo/client/src/components/App.tsx") == "app_shell"

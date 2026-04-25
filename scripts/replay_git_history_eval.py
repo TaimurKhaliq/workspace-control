@@ -50,6 +50,8 @@ SURFACE_CATEGORIES = (
     "migration",
     "unknown",
 )
+COMBINED_REPLAY_FILE_LIMIT = 8
+STRONG_PLANNER_RECIPE_ADDITION_LIMIT = 3
 
 CANDIDATE_HELP = """How to find candidate commits for replay evals
 
@@ -195,17 +197,12 @@ def run_replay_eval(
         predicted_files=recipe_predicted["predicted_files"],
         actual_files=actual_files,
     )
-    combined_predicted = {
-        "predicted_files": dedupe_records(
-            [*predicted["predicted_files"], *recipe_predicted["predicted_files"]]
-        ),
-        "predicted_reference_files": dedupe_records(
-            [*predicted["predicted_reference_files"], *recipe_predicted["predicted_reference_files"]]
-        ),
-        "predicted_repos": sorted(
-            set(predicted["predicted_repos"]) | set(recipe_predicted["predicted_repos"])
-        ),
-    }
+    combined_predicted = combined_predictions_from_modes(
+        predicted,
+        recipe_predicted,
+        proposal_payload=proposal_payload,
+        recipe_payload=recipe_payload,
+    )
     combined_comparison = compare_predictions(
         predicted_files=combined_predicted["predicted_files"],
         actual_files=actual_files,
@@ -329,6 +326,11 @@ def recipe_help_summary(
     recipe_exact_precision = float(recipe_comparison["exact_file"]["precision"])
     combined_exact_precision = float(combined_comparison["exact_file"]["precision"])
     recipe_matched_files = list(recipe_comparison["matched_files"])
+    combined_worse = combined_worse_than_planner(
+        planner_comparison=planner_comparison,
+        recipe_comparison=recipe_comparison,
+        combined_comparison=combined_comparison,
+    )
 
     if recipe_exact_recall > planner_exact_recall or combined_exact_recall > planner_exact_recall:
         help_type = "improved_recall"
@@ -348,6 +350,47 @@ def recipe_help_summary(
         "recipe_helped": help_type in {"improved_recall", "improved_precision"},
         "recipe_help_type": help_type,
         "recipe_matched_files": recipe_matched_files,
+        **combined_worse,
+    }
+
+
+def combined_worse_than_planner(
+    *,
+    planner_comparison: dict[str, Any],
+    recipe_comparison: dict[str, Any],
+    combined_comparison: dict[str, Any],
+) -> dict[str, Any]:
+    """Flag cases where recipe combination reduces planner/propose quality."""
+
+    planner_precision = float(planner_comparison["exact_file"]["precision"])
+    planner_recall = float(planner_comparison["exact_file"]["recall"])
+    combined_precision = float(combined_comparison["exact_file"]["precision"])
+    combined_recall = float(combined_comparison["exact_file"]["recall"])
+    planner_high_precision = float(planner_comparison["high_signal"]["precision"])
+    planner_high_recall = float(planner_comparison["high_signal"]["recall"])
+    combined_high_precision = float(combined_comparison["high_signal"]["precision"])
+    combined_high_recall = float(combined_comparison["high_signal"]["recall"])
+    worse = (
+        combined_precision < planner_precision
+        and combined_recall <= planner_recall
+    ) or (
+        combined_high_precision < planner_high_precision
+        and combined_high_recall <= planner_high_recall
+    )
+    reason = None
+    if worse:
+        recipe_count = len(recipe_comparison["predicted_files"])
+        planner_count = len(planner_comparison["predicted_files"])
+        recipe_precision = float(recipe_comparison["exact_file"]["precision"])
+        if recipe_count > max(3, planner_count * 2):
+            reason = "recipe_overexpanded"
+        elif recipe_precision < planner_precision:
+            reason = "low_precision_recipe"
+        else:
+            reason = "weak_recipe_match"
+    return {
+        "combined_worse_than_planner": worse,
+        "combined_worse_reason": reason,
     }
 
 
@@ -664,6 +707,266 @@ def predicted_files_from_recipe_suggestions(
         "predicted_files": dedupe_records(predicted_files),
         "predicted_reference_files": dedupe_records(reference_files),
     }
+
+
+def combined_predictions_from_modes(
+    planner_predicted: dict[str, list[Any]],
+    recipe_predicted: dict[str, list[Any]],
+    *,
+    proposal_payload: dict[str, Any] | None = None,
+    recipe_payload: dict[str, Any] | None = None,
+) -> dict[str, list[Any]]:
+    """Combine planner and recipe predictions without letting recipes overexpand."""
+
+    planner_files = list(planner_predicted.get("predicted_files", []))
+    recipe_files = list(recipe_predicted.get("predicted_files", []))
+    recipe_meta = recipe_match_metadata_from_payload(recipe_payload)
+    primary_recipe_ids = primary_recipe_ids_from_payload(recipe_payload)
+    planner_strong = replay_planner_predictions_are_strong(
+        planner_files,
+        proposal_payload=proposal_payload,
+    )
+    combined_files = combine_prediction_records(
+        planner_files,
+        recipe_files,
+        planner_strong=planner_strong,
+        recipe_meta=recipe_meta,
+        primary_recipe_ids=primary_recipe_ids,
+    )
+    reference_files = dedupe_records(
+        [
+            *planner_predicted.get("predicted_reference_files", []),
+            *recipe_predicted.get("predicted_reference_files", []),
+        ]
+    )
+    repos = {
+        *(str(item) for item in planner_predicted.get("predicted_repos", [])),
+        *(str(item) for item in recipe_predicted.get("predicted_repos", [])),
+    }
+    return {
+        "predicted_files": combined_files,
+        "predicted_reference_files": reference_files,
+        "predicted_repos": sorted(repos),
+    }
+
+
+def combine_prediction_records(
+    planner_files: Sequence[dict[str, Any]],
+    recipe_files: Sequence[dict[str, Any]],
+    *,
+    planner_strong: bool,
+    recipe_meta: dict[str, dict[str, Any]] | None = None,
+    primary_recipe_ids: set[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Apply the replay combination policy to file prediction records."""
+
+    recipe_meta = recipe_meta or {}
+    primary_recipe_ids = primary_recipe_ids or set()
+    by_path: dict[str, dict[str, Any]] = {}
+    ordered_paths: list[str] = []
+    for item in planner_files:
+        path = str(item.get("path") or "")
+        if not path:
+            continue
+        record = dict(item)
+        record.setdefault("source", "planner_propose")
+        by_path[path] = record
+        ordered_paths.append(path)
+
+    recipe_only_additions = 0
+    for item in recipe_files:
+        path = str(item.get("path") or "")
+        if not path:
+            continue
+        record = dict(item)
+        record.setdefault("source", "recipe_suggestion")
+        existing = by_path.get(path)
+        if existing is not None:
+            by_path[path] = merge_prediction_records(existing, record)
+            continue
+        if planner_strong and not allow_recipe_prediction_for_strong_planner(
+            record,
+            recipe_meta=recipe_meta,
+            primary_recipe_ids=primary_recipe_ids,
+            recipe_only_addition_count=recipe_only_additions,
+        ):
+            continue
+        by_path[path] = record
+        ordered_paths.append(path)
+        if planner_strong:
+            recipe_only_additions += 1
+
+    combined = [by_path[path] for path in ordered_paths]
+    return sorted(combined, key=prediction_record_rank)[:COMBINED_REPLAY_FILE_LIMIT]
+
+
+def merge_prediction_records(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    """Merge planner and recipe records for the same file path."""
+
+    merged = dict(left)
+    merged["source"] = "both"
+    merged["action"] = merge_actions(str(left.get("action") or "inspect"), str(right.get("action") or "inspect"))
+    merged["confidence"] = boost_confidence(
+        str(left.get("confidence") or "medium"),
+        str(right.get("confidence") or "medium"),
+    )
+    reasons = [
+        str(left.get("reason") or ""),
+        str(right.get("reason") or ""),
+    ]
+    merged["reason"] = "; ".join(item for item in reasons if item)
+    if not merged.get("matched_recipe_id") and right.get("matched_recipe_id"):
+        merged["matched_recipe_id"] = right.get("matched_recipe_id")
+    return merged
+
+
+def replay_planner_predictions_are_strong(
+    planner_files: Sequence[dict[str, Any]],
+    *,
+    proposal_payload: dict[str, Any] | None,
+) -> bool:
+    """Return whether planner/propose has enough concrete signal to guard it."""
+
+    concrete = [
+        item
+        for item in planner_files
+        if str(item.get("action") or "inspect") != "inspect-only"
+        and str(item.get("confidence") or "medium") in {"high", "medium"}
+    ]
+    if not concrete:
+        return False
+    if not isinstance(proposal_payload, dict):
+        return True
+    return (
+        proposal_payload.get("confidence") in {"high", "medium"}
+        and bool(proposal_payload.get("implementation_owner"))
+    )
+
+
+def recipe_match_metadata_from_payload(payload: dict[str, Any] | None) -> dict[str, dict[str, Any]]:
+    """Return recipe metadata keyed by recipe id from suggest-from-recipes output."""
+
+    matches = payload.get("matched_recipes", []) if isinstance(payload, dict) else []
+    if not isinstance(matches, list):
+        return {}
+    metadata: dict[str, dict[str, Any]] = {}
+    for match in matches:
+        if not isinstance(match, dict):
+            continue
+        recipe_id = str(match.get("recipe_id") or "")
+        if not recipe_id:
+            continue
+        metadata[recipe_id] = {
+            "recipe_type": str(match.get("recipe_type") or ""),
+            "structural_confidence": float(match.get("structural_confidence") or 0.0),
+            "planner_effectiveness": float(match.get("planner_effectiveness") or 0.0),
+        }
+    return metadata
+
+
+def primary_recipe_ids_from_payload(payload: dict[str, Any] | None) -> set[str]:
+    matches = payload.get("matched_recipes", []) if isinstance(payload, dict) else []
+    if not isinstance(matches, list) or not matches:
+        return set()
+    first = matches[0]
+    if not isinstance(first, dict) or not first.get("recipe_id"):
+        return set()
+    return {str(first["recipe_id"])}
+
+
+def allow_recipe_prediction_for_strong_planner(
+    record: dict[str, Any],
+    *,
+    recipe_meta: dict[str, dict[str, Any]],
+    primary_recipe_ids: set[str],
+    recipe_only_addition_count: int,
+) -> bool:
+    if recipe_only_addition_count >= STRONG_PLANNER_RECIPE_ADDITION_LIMIT:
+        return False
+    recipe_id = str(record.get("matched_recipe_id") or "")
+    if recipe_id and primary_recipe_ids and recipe_id not in primary_recipe_ids:
+        return False
+    structural_confidence = float(recipe_meta.get(recipe_id, {}).get("structural_confidence") or 0.0)
+    if structural_confidence < 0.6:
+        return False
+    confidence = str(record.get("confidence") or "medium")
+    if confidence == "high":
+        return True
+    return confidence == "medium" and recipe_prediction_is_supporting(record)
+
+
+def recipe_prediction_is_supporting(record: dict[str, Any]) -> bool:
+    text = " ".join(
+        str(record.get(key) or "")
+        for key in ("path", "reason", "node_type")
+    ).lower()
+    return any(
+        marker in text
+        for marker in (
+            "route_config",
+            "configure",
+            "routes",
+            "frontend_type",
+            "types/index",
+            "request explicitly names a page/component identifier",
+        )
+    )
+
+
+def prediction_record_rank(record: dict[str, Any]) -> tuple[int, int, int, str]:
+    source = str(record.get("source") or "")
+    confidence = str(record.get("confidence") or "medium")
+    action = str(record.get("action") or "inspect")
+    text = " ".join(
+        str(record.get(key) or "")
+        for key in ("path", "reason", "node_type")
+    ).lower()
+    if source == "both":
+        source_tier = 0
+    elif source == "planner_propose" and confidence == "high" and action in {"create", "modify"}:
+        source_tier = 1
+    elif source == "recipe_suggestion" and confidence == "high" and action in {"create", "modify"}:
+        source_tier = 2
+    elif source == "planner_propose" and confidence == "medium":
+        source_tier = 3
+    elif source == "recipe_suggestion" and confidence == "medium":
+        source_tier = 4
+    elif source == "planner_propose":
+        source_tier = 5
+    else:
+        source_tier = 6
+    if "request explicitly names a page/component identifier" in text:
+        purpose_tier = 0
+    elif "route_config" in text or "configure" in text or "routes" in text:
+        purpose_tier = 1
+    elif "frontend_type" in text or "types/index" in text:
+        purpose_tier = 2
+    elif action in {"create", "modify"}:
+        purpose_tier = 3
+    else:
+        purpose_tier = 4
+    return (
+        source_tier,
+        purpose_tier,
+        confidence_rank(confidence),
+        str(record.get("path") or ""),
+    )
+
+
+def merge_actions(left: str, right: str) -> str:
+    order = {"create": 0, "modify": 1, "inspect": 2, "inspect-only": 3}
+    return min((left, right), key=lambda item: order.get(item, 3))
+
+
+def boost_confidence(left: str, right: str) -> str:
+    rank = min(confidence_rank(left), confidence_rank(right))
+    if rank > 0:
+        rank -= 1
+    return {0: "high", 1: "medium", 2: "low"}[rank]
+
+
+def confidence_rank(value: str) -> int:
+    return {"high": 0, "medium": 1, "low": 2}.get(value, 2)
 
 
 def recipe_diagnostics_from_suggestions(
@@ -1040,6 +1343,7 @@ def format_markdown_report(report: dict[str, Any]) -> str:
         f"- commands succeeded: {summary['commands_succeeded']}",
         f"- actual files: {summary['actual_file_count']}",
         f"- recipe helped: {summary.get('recipe_helped')} ({summary.get('recipe_help_type')})",
+        f"- combined worse than planner: {summary.get('combined_worse_than_planner')} ({summary.get('combined_worse_reason') or '-'})",
         f"- recipe matched files: {format_inline_values(summary.get('recipe_matched_files', []))}",
         f"- static asset misses: {len(comparison['static_assets']['missed_files'])}",
         "",
@@ -1255,6 +1559,7 @@ def print_replay_summary(report: dict[str, Any]) -> None:
     print(f"target: {report['git']['target_commit']}")
     print(f"actual files: {summary['actual_file_count']}")
     print(f"recipe helped: {summary.get('recipe_helped')} ({summary.get('recipe_help_type')})")
+    print(f"combined worse than planner: {summary.get('combined_worse_than_planner')} ({summary.get('combined_worse_reason') or '-'})")
     print(f"recipe matched files: {', '.join(summary.get('recipe_matched_files', [])) or '-'}")
     print(f"planner predicted files: {summary['predicted_file_count']}")
     print(f"planner exact precision: {summary['exact_file_precision']:.2f}")

@@ -127,6 +127,18 @@ def _write_recipes(learning_root: Path) -> None:
             planner_effectiveness=0.1,
             support_count=2,
         ),
+        ChangeRecipe(
+            id="petclinic_test_full_stack_ui_api",
+            target_id="petclinic-test",
+            recipe_type="full_stack_ui_api",
+            status="active",
+            trigger_terms=["error", "handling", "missing"],
+            changed_node_types=["page_component", "frontend_type", "api_controller", "service_layer"],
+            modified_node_types=["page_component", "frontend_type", "api_controller", "service_layer"],
+            structural_confidence=0.92,
+            planner_effectiveness=0.31,
+            support_count=2,
+        ),
     ]
     path = learning_root / "petclinic-test/change_recipes.json"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -214,6 +226,35 @@ def test_existing_requested_page_semantics_are_explicit(tmp_path: Path) -> None:
     assert owners_page.action == "inspect"
     evidence = " | ".join(owners_page.evidence)
     assert "file already exists in current source graph; inspect/modify rather than create" in evidence
+
+
+def test_overlapping_planner_and_recipe_file_is_marked_both(tmp_path: Path) -> None:
+    prompt = "Add OwnersPage (no actions yet)"
+    workspace, snapshot, report = _recipe_report(tmp_path, prompt, include_owners_page=True)
+    proposal = create_change_proposal(prompt, [], scan_root=workspace, discovery_snapshot=snapshot, recipe_report=report)
+
+    owners_page = next(
+        item
+        for item in proposal.combined_recommendations
+        if item.path == "client/src/components/owners/OwnersPage.tsx"
+    )
+    assert owners_page.source == "both"
+    assert owners_page.confidence == "high"
+
+
+def test_strong_planner_limits_broad_secondary_recipe_additions(tmp_path: Path) -> None:
+    prompt = "Add NewOwnerPage missing error handling"
+    workspace, snapshot, report = _recipe_report(tmp_path, prompt, include_owners_page=True)
+    proposal = create_change_proposal(prompt, [], scan_root=workspace, discovery_snapshot=snapshot, recipe_report=report)
+
+    assert {recipe.recipe_type for recipe in report.matched_recipes} >= {
+        "ui_form_validation",
+        "full_stack_ui_api",
+    }
+    combined_paths = [item.path for item in proposal.combined_recommendations]
+    assert len(combined_paths) <= 8
+    assert "src/main/java/example/service/ClinicService.java" not in combined_paths
+    assert "client/src/components/owners/NewOwnerPage.tsx" in combined_paths
 
 
 def test_propose_ui_form_validation_uses_recipe_fallback_surfaces(tmp_path: Path) -> None:

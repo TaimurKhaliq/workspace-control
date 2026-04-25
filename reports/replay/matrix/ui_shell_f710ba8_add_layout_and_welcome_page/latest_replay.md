@@ -12,6 +12,7 @@
 - commands succeeded: True
 - actual files: 10
 - recipe helped: False (same)
+- combined worse than planner: False (-)
 - recipe matched files: `spring-petclinic-reactjs/client/public/index.html`, `spring-petclinic-reactjs/client/src/components/App.tsx`, `spring-petclinic-reactjs/client/src/components/WelcomePage.tsx`, `spring-petclinic-reactjs/client/src/main.tsx`
 - static asset misses: 6
 

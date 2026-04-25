@@ -12,6 +12,7 @@
 - commands succeeded: True
 - actual files: 1
 - recipe helped: False (same)
+- combined worse than planner: False (-)
 - recipe matched files: -
 - static asset misses: 0
 
@@ -21,7 +22,7 @@
 |---|---:|---:|---|---|---|
 | planner/propose only | 6 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
 | recipe suggestions only | 13 | 0 | 0.00/0.00 | 0.17/1.00 | 0.00/0.00 |
-| combined | 15 | 0 | 0.00/0.00 | 0.17/1.00 | 0.00/0.00 |
+| combined | 7 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
 
 The planner/propose, recipe-only, and combined rows are intentionally separate so recipe-assisted success is not hidden by planner-only misses.
 
@@ -65,16 +66,16 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 ## Combined Predictions
 
-- predicted files: 15
+- predicted files: 7
 - matched files: 0
 - missed files: 1
-- extra predicted files: 15
+- extra predicted files: 7
 - exact precision: 0.00
 - exact recall: 0.00
 - high-signal precision: 0.00
 - high-signal recall: 0.00
-- category precision: 0.17
-- category recall: 1.00
+- category precision: 0.00
+- category recall: 0.00
 - folder-level matched actual files: 0
 
 ## Recipe Suggestions

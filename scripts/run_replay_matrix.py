@@ -134,6 +134,9 @@ def build_matrix_report(case_results: Sequence[dict[str, Any]], *, output_dir: P
         "succeeded": len(succeeded),
         "failed": len(case_results) - len(succeeded),
         "recipe_helped_cases": sum(1 for summary in succeeded if summary.get("recipe_helped")),
+        "combined_worse_than_planner_cases": sum(
+            1 for summary in succeeded if summary.get("combined_worse_than_planner")
+        ),
     }
     for mode in ("planner", "recipe", "combined"):
         for family in ("exact", "category", "high_signal"):
@@ -214,6 +217,8 @@ def case_summary(result: dict[str, Any]) -> dict[str, Any]:
         "recipe_helped": bool(summary.get("recipe_helped", False)),
         "recipe_help_type": summary.get("recipe_help_type", "same"),
         "recipe_matched_files": summary.get("recipe_matched_files", []),
+        "combined_worse_than_planner": bool(summary.get("combined_worse_than_planner", False)),
+        "combined_worse_reason": summary.get("combined_worse_reason"),
         "report_dir": result["report_dir"],
     }
 
@@ -302,6 +307,7 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
         f"- succeeded: {summary['succeeded']}",
         f"- failed: {summary['failed']}",
         f"- recipe helped cases: {summary['recipe_helped_cases']}",
+        f"- combined worse than planner cases: {summary['combined_worse_than_planner_cases']}",
         "",
         "## Average Metrics By Prediction Mode",
         "",
@@ -336,8 +342,8 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
         "",
         "## Cases",
         "",
-        "| id | archetype | quality | commit | succeeded | actual | planner exact P/R | recipe exact P/R | combined exact P/R | planner category P/R | recipe category P/R | combined category P/R | planner high-signal P/R | recipe high-signal P/R | combined high-signal P/R | recipe helped | recipe matched files |",
-        "|---|---|---|---|---:|---:|---|---|---|---|---|---|---|---|---|---|---|",
+        "| id | archetype | quality | commit | succeeded | actual | planner exact P/R | recipe exact P/R | combined exact P/R | planner category P/R | recipe category P/R | combined category P/R | planner high-signal P/R | recipe high-signal P/R | combined high-signal P/R | recipe helped | combined worse | recipe matched files |",
+        "|---|---|---|---|---:|---:|---|---|---|---|---|---|---|---|---|---|---|---|",
     ])
     for case in report["cases"]:
         lines.append(
@@ -360,6 +366,7 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
                     f"{format_metric(case['recipe_high_signal_precision'])}/{format_metric(case['recipe_high_signal_recall'])}",
                     f"{format_metric(case['combined_high_signal_precision'])}/{format_metric(case['combined_high_signal_recall'])}",
                     f"{case.get('recipe_helped')} ({case.get('recipe_help_type')})",
+                    f"{case.get('combined_worse_than_planner')} ({case.get('combined_worse_reason') or '-'})",
                     format_path_list(case.get("recipe_matched_files", [])),
                 ]
             )
@@ -378,6 +385,7 @@ def print_matrix_summary(report: dict[str, Any]) -> None:
     print(f"succeeded: {summary['succeeded']}")
     print(f"failed: {summary['failed']}")
     print(f"recipe helped cases: {summary['recipe_helped_cases']}")
+    print(f"combined worse than planner cases: {summary['combined_worse_than_planner_cases']}")
     print(f"average planner exact precision: {format_metric(summary['average_planner_exact_precision'])}")
     print(f"average planner exact recall: {format_metric(summary['average_planner_exact_recall'])}")
     print(f"average recipe exact precision: {format_metric(summary['average_recipe_exact_precision'])}")

@@ -12,6 +12,7 @@
 - commands succeeded: True
 - actual files: 3
 - recipe helped: True (improved_precision)
+- combined worse than planner: False (-)
 - recipe matched files: `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`, `spring-petclinic-reactjs/client/src/configureRoutes.tsx`, `spring-petclinic-reactjs/client/src/types/index.ts`
 - static asset misses: 0
 

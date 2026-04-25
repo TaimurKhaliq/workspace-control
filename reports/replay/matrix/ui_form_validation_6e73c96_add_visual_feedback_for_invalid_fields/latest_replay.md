@@ -12,6 +12,7 @@
 - commands succeeded: True
 - actual files: 2
 - recipe helped: True (improved_recall)
+- combined worse than planner: False (-)
 - recipe matched files: `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - static asset misses: 0
 
