@@ -22,6 +22,7 @@ from app.services.repo_profile_bootstrap import (
 )
 
 from .analyze import analyze_feature, format_feature_analysis
+from .explain import create_feature_explanation, format_feature_explanation
 from .inventory import format_inventory_table
 from .manifests import build_inventory
 from .plan import create_feature_plan, format_feature_plan
@@ -195,6 +196,30 @@ def run(argv: list[str] | None = None) -> int:
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
     )
+    explain_parser = subparsers.add_parser(
+        "explain-feature",
+        help="Explain deterministic feature analysis, planning, and proposal evidence",
+    )
+    explain_parser.add_argument(
+        "feature_description",
+        help='Feature description, for example: "Add Layout and Welcome page"',
+    )
+    explain_parser.add_argument(
+        "--scan-root",
+        type=Path,
+        default=default_scan_root,
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    explain_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to explain instead of --scan-root",
+    )
+    explain_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
 
     args = parser.parse_args(argv)
 
@@ -207,6 +232,7 @@ def run(argv: list[str] | None = None) -> int:
         "analyze-feature",
         "plan-feature",
         "propose-changes",
+        "explain-feature",
     }:
         parser.print_help()
         return 1
@@ -273,7 +299,12 @@ def run(argv: list[str] | None = None) -> int:
 
     discovery_snapshot = None
     effective_scan_root = args.scan_root
-    if args.command in {"analyze-feature", "plan-feature", "propose-changes"}:
+    if args.command in {
+        "analyze-feature",
+        "plan-feature",
+        "propose-changes",
+        "explain-feature",
+    }:
         try:
             discovery_snapshot = _discover_snapshot_for_args(args)
             effective_scan_root = discovery_snapshot.workspace.root_path
@@ -295,6 +326,16 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.command == "inventory":
         print(format_inventory_table(rows))
+        return 0
+
+    if args.command == "explain-feature":
+        explanation = create_feature_explanation(
+            args.feature_description,
+            rows,
+            scan_root=effective_scan_root,
+            discovery_snapshot=discovery_snapshot,
+        )
+        print(format_feature_explanation(explanation))
         return 0
 
     impacts = analyze_feature(
