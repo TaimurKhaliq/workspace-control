@@ -1,28 +1,33 @@
 # Replay Matrix
 
-- total cases: 12
-- succeeded: 12
+- total cases: 8
+- succeeded: 8
 - failed: 0
-- average exact precision: 0.13
-- average exact recall: 0.08
-- average category precision: 0.20
-- average category recall: 0.23
-- average high-signal precision: 0.13
-- average high-signal recall: 0.13
+- average exact precision: 0.22
+- average exact recall: 0.16
+- average category precision: 0.26
+- average category recall: 0.34
+- average high-signal precision: 0.22
+- average high-signal recall: 0.23
+
+## Archetype Summary
+
+- backend_api: total=1, succeeded=1, failed=0
+- full_stack_ui_api: total=1, succeeded=1, failed=0
+- persistence_data: total=2, succeeded=2, failed=0
+- ui_form_validation: total=2, succeeded=2, failed=0
+- ui_page_add: total=1, succeeded=1, failed=0
+- ui_shell: total=1, succeeded=1, failed=0
 
 ## Cases
 
-| id | archetype | commit | succeeded | predicted | actual | matched | exact P/R | high-signal P/R | category P/R |
-|---|---|---|---:|---:|---:|---:|---|---|---|
-| `backend_api_only_202ddf7_move_resources_to_api_endpoint` | backend_api_only | `202ddf7` | True | 5 | 3 | 1 | 0.20/0.33 | 0.20/0.33 | 0.50/1.00 |
-| `backend_api_only_bf56f15_move_resource_restcontroller_to_web_api_package` | backend_api_only | `bf56f15` | True | 5 | 5 | 0 | 0.00/0.00 | 0.00/0.00 | 0.50/0.50 |
-| `full_stack_49ca65b_add_newownerpage_missing_error_handling` | full_stack | `49ca65b` | True | 6 | 11 | 2 | 0.33/0.18 | 0.33/0.18 | 0.40/0.40 |
-| `full_stack_ab702ea_add_visitspage` | full_stack | `ab702ea` | True | 0 | 5 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `mixed_other_cb0504e_92_add_some_comments_to_switch_from_hsqldb_to_mysql` | mixed_other | `cb0504e` | True | 0 | 3 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `mixed_other_d6697d8_add_maven_wrapper_with_mvn_n_io_takari_maven_wrapper` | mixed_other | `d6697d8` | True | 0 | 4 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `persistence_or_data_beb46b2_support_switching_db_init_script_at_deployment` | persistence_or_data | `beb46b2` | True | 0 | 5 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `persistence_or_data_fb64465_add_some_javadoc` | persistence_or_data | `fb64465` | True | 0 | 2 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `ui_only_0a36a33_add_ownerspage_no_actions_yet` | ui_only | `0a36a33` | True | 0 | 3 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `ui_only_6e73c96_add_visual_feedback_for_invalid_fields` | ui_only | `6e73c96` | True | 0 | 2 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `ui_shell_1d8e94e_add_prod_build_make_api_url_configurable_in_webpack` | ui_shell | `1d8e94e` | True | 6 | 5 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
-| `ui_shell_f710ba8_add_layout_and_welcome_page` | ui_shell | `f710ba8` | True | 4 | 10 | 4 | 1.00/0.40 | 1.00/1.00 | 1.00/0.80 |
+| id | archetype | quality | commit | succeeded | predicted | actual | matched | exact P/R | high-signal P/R | category P/R |
+|---|---|---|---|---:|---:|---:|---:|---|---|---|
+| `backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet` | backend_api | good | `af31104` | True | 4 | 1 | 0 | 0.00/0.00 | 0.00/0.00 | 0.33/1.00 |
+| `full_stack_ui_api_49ca65b_add_newownerpage_missing_error_handling` | full_stack_ui_api | good | `49ca65b` | True | 6 | 11 | 2 | 0.33/0.18 | 0.33/0.18 | 0.40/0.40 |
+| `persistence_data_c758321_add_regex_validation_for_string_input` | persistence_data | good | `c758321` | True | 4 | 1 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| `persistence_data_e7f6899_owners_search_has_been_case_insensitive` | persistence_data | good | `e7f6899` | True | 0 | 1 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| `ui_form_validation_339ee36_add_error_handling_to_newownerpage` | ui_form_validation | good | `339ee36` | True | 5 | 3 | 2 | 0.40/0.67 | 0.40/0.67 | 0.33/0.50 |
+| `ui_form_validation_6e73c96_add_visual_feedback_for_invalid_fields` | ui_form_validation | good | `6e73c96` | True | 0 | 2 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| `ui_page_add_0a36a33_add_ownerspage_no_actions_yet` | ui_page_add | good | `0a36a33` | True | 0 | 3 | 0 | 0.00/0.00 | 0.00/0.00 | 0.00/0.00 |
+| `ui_shell_f710ba8_add_layout_and_welcome_page` | ui_shell | good | `f710ba8` | True | 4 | 10 | 4 | 1.00/0.40 | 1.00/1.00 | 1.00/0.80 |

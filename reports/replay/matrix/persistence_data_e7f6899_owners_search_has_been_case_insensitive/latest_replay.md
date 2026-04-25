@@ -2,18 +2,18 @@
 
 - repo: `spring-petclinic-reactjs`
 - repo path: `eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs`
-- parent commit: `e0be3a39b6bbeced1ee94b93b4dfcf40bc9acfbb`
-- target commit: `cb0504ee976720d6759b91b747ea4cd88f9ba9ab`
-- prompt: #92 add some comments to switch from HSQLDB to MySQL
+- parent commit: `df4e3a5541be895ff479c5a1e851f300cd8f8881`
+- target commit: `e7f68999bfa947cfb39601502da8c15e83285196`
+- prompt: owners search has been case insensitive
 - source repo mode: read-only; parent snapshot was materialized from `git archive` into a temporary workspace
 
 ## Summary
 
 - commands succeeded: True
 - predicted files: 0
-- actual files: 3
+- actual files: 1
 - matched files: 0
-- missed files: 3
+- missed files: 1
 - extra predicted files: 0
 - exact file precision: 0.00
 - exact file recall: 0.00
@@ -39,9 +39,7 @@
 
 ## Actual Files
 
-- `spring-petclinic-reactjs/pom.xml`
-- `spring-petclinic-reactjs/readme.md`
-- `spring-petclinic-reactjs/src/main/resources/spring/data-access.properties`
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
 ## Matched Files
 
@@ -49,9 +47,7 @@
 
 ## Missed Files
 
-- `spring-petclinic-reactjs/pom.xml`
-- `spring-petclinic-reactjs/readme.md`
-- `spring-petclinic-reactjs/src/main/resources/spring/data-access.properties`
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
 ## Extra Predicted Files
 
@@ -66,7 +62,7 @@
 - precision: 0.00
 - recall: 0.00
 - matched: -
-- missed: `unknown`
+- missed: `migration`
 - extra predicted: -
 
 ## Exact File Scoring
@@ -74,9 +70,9 @@
 - precision: 0.00
 - recall: 0.00
 - predicted count: 0
-- actual count: 3
+- actual count: 1
 - matched count: 0
-- missed count: 3
+- missed count: 1
 - extra predicted count: 0
 
 ## High-Signal File Scoring
@@ -84,9 +80,9 @@
 - precision: 0.00
 - recall: 0.00
 - predicted count: 0
-- actual count: 3
+- actual count: 1
 - matched count: 0
-- missed count: 3
+- missed count: 1
 - extra predicted count: 0
 
 ## High-Signal Matched Files
@@ -95,9 +91,7 @@
 
 ## High-Signal Missed Files
 
-- `spring-petclinic-reactjs/pom.xml`
-- `spring-petclinic-reactjs/readme.md`
-- `spring-petclinic-reactjs/src/main/resources/spring/data-access.properties`
+- `spring-petclinic-reactjs/src/main/resources/db/hsqldb/initDB.sql`
 
 ## Static Asset Misses
 

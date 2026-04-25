@@ -17,18 +17,18 @@ DEFAULT_OUTPUT_DIR = REPO_ROOT / "reports" / "replay" / "candidates"
 DEFAULT_CASES_OUTPUT = REPO_ROOT / "tests" / "replay_cases" / "auto_replay_cases.json"
 USEFUL_ARCHETYPES = (
     "ui_shell",
-    "ui_only",
-    "backend_api_only",
-    "persistence_or_data",
-    "full_stack",
-    "mixed_other",
+    "ui_page_add",
+    "ui_form_validation",
+    "backend_api",
+    "full_stack_ui_api",
+    "persistence_data",
 )
 SKIPPED_ARCHETYPES = {
-    "docs_only",
-    "test_only",
-    "config_or_dependency",
-    "too_large",
-    "asset_only",
+    "config_build",
+    "docs_comments",
+    "refactor_move",
+    "infra_deployment",
+    "reject",
 }
 FEATURE_WORDS = {
     "add",
@@ -57,15 +57,24 @@ VAGUE_SUBJECTS = {
 }
 LOW_VALUE_SUBJECT_WORDS = {
     "comment",
+    "comments",
+    "config",
+    "configurable",
     "docs",
     "documentation",
     "enzyme",
+    "deployment",
     "javadoc",
     "jest",
+    "instruction",
+    "instructions",
+    "maven",
     "minor",
     "readme",
     "test",
     "tests",
+    "webpack",
+    "wrapper",
 }
 UI_SHELL_SUBJECT_WORDS = {
     "home",
@@ -73,6 +82,58 @@ UI_SHELL_SUBJECT_WORDS = {
     "layout",
     "shell",
     "welcome",
+}
+PAGE_ADD_SUBJECT_WORDS = {
+    "page",
+    "ownerspage",
+    "visitspage",
+    "newownerpage",
+}
+FORM_VALIDATION_SUBJECT_WORDS = {
+    "error",
+    "errors",
+    "feedback",
+    "field",
+    "fields",
+    "form",
+    "handling",
+    "invalid",
+    "validation",
+}
+REFACTOR_MOVE_WORDS = {
+    "move",
+    "moved",
+    "rename",
+    "renamed",
+    "refactor",
+    "relocate",
+    "package",
+}
+INFRA_DEPLOY_WORDS = {
+    "deployment",
+    "deploy",
+    "docker",
+    "helm",
+    "k8s",
+    "kubernetes",
+}
+CONFIG_BUILD_WORDS = {
+    "config",
+    "configurable",
+    "maven",
+    "webpack",
+    "wrapper",
+}
+DOC_COMMENT_WORDS = {
+    "comment",
+    "comments",
+    "doc",
+    "docs",
+    "documentation",
+    "javadoc",
+    "readme",
+    "instruction",
+    "instructions",
 }
 LOCK_FILE_NAMES = {
     "package-lock.json",
@@ -107,13 +168,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--per-archetype", type=int, default=2, help="Cases to select per useful archetype.")
     parser.add_argument("--include-archetypes", help="Comma-separated archetypes to include for case writing.")
     parser.add_argument("--exclude-archetypes", help="Comma-separated archetypes to exclude for case writing.")
+    parser.add_argument("--include-questionable", action="store_true", help="Include questionable candidates in generated cases.")
     args = parser.parse_args(argv)
 
     repo_path = resolve_git_root(args.repo_path)
     candidates = find_candidates(repo_path, limit=args.limit, max_files=args.max_files)
-    report = build_candidate_report(repo_path, candidates, max_files=args.max_files)
-    output_dir = args.output_dir.resolve()
-    write_candidate_reports(report, output_dir)
 
     cases: list[dict[str, Any]] = []
     if args.write_cases:
@@ -123,12 +182,29 @@ def main(argv: Sequence[str] | None = None) -> int:
             per_archetype=args.per_archetype,
             include_archetypes=parse_archetype_list(args.include_archetypes),
             exclude_archetypes=parse_archetype_list(args.exclude_archetypes),
+            include_questionable=args.include_questionable,
         )
         write_cases(cases, args.cases_output.resolve())
+
+    report = build_candidate_report(
+        repo_path,
+        candidates,
+        max_files=args.max_files,
+        included_case_ids={case["id"] for case in cases},
+    )
+    output_dir = args.output_dir.resolve()
+    write_candidate_reports(report, output_dir)
 
     print("Replay candidate summary")
     print(f"repo: {display_path(repo_path)}")
     print(f"candidates found: {len(candidates)}")
+    quality_counts = report["candidate_quality_counts"]
+    print(
+        "candidate quality: "
+        f"good={quality_counts.get('good', 0)}, "
+        f"questionable={quality_counts.get('questionable', 0)}, "
+        f"reject={quality_counts.get('reject', 0)}"
+    )
     print(f"candidate json: {display_path(output_dir / 'latest_candidates.json')}")
     print(f"candidate md: {display_path(output_dir / 'latest_candidates.md')}")
     if args.write_cases:
@@ -183,8 +259,9 @@ def build_candidate(repo_path: Path, commit: dict[str, str], *, max_files: int) 
     changed_files = changed_files_for_commit(repo_path, commit["parent_sha"], commit["sha"])
     categories = sorted({category for path in changed_files for category in classify_file_categories(path)})
     flags = candidate_flags(changed_files, categories, max_files=max_files)
-    archetype = classify_archetype(changed_files, categories, flags)
+    archetype = classify_archetype(changed_files, categories, flags, subject=commit["subject"])
     prompt, needs_manual_prompt = generate_prompt(commit["subject"])
+    prompt_quality, prompt_quality_reason = classify_prompt_quality(commit["subject"], archetype)
     needs_manual_prompt = needs_manual_prompt or flags["too_large"]
     candidate: dict[str, Any] = {
         "sha": commit["sha"],
@@ -202,9 +279,13 @@ def build_candidate(repo_path: Path, commit: dict[str, str], *, max_files: int) 
         "asset_only": flags["asset_only"],
         "needs_manual_prompt": needs_manual_prompt,
         "prompt": prompt,
+        "prompt_quality": prompt_quality,
+        "prompt_quality_reason": prompt_quality_reason,
     }
+    candidate["candidate_quality"], candidate["candidate_quality_reason"] = classify_candidate_quality(candidate)
     candidate["score"] = score_candidate(candidate)
     candidate["case_id"] = stable_case_id(candidate)
+    candidate["included_in_generated_cases"] = False
     return candidate
 
 
@@ -303,7 +384,7 @@ def is_config_build_path(lowered: str, name: str) -> bool:
 
 
 def is_docs_path(lowered: str) -> bool:
-    return Path(lowered).name.startswith("readme") or lowered.startswith("docs/") or "/docs/" in lowered or lowered.endswith(('.md', '.adoc', '.rst'))
+    return Path(lowered).name.startswith("readme") or lowered.startswith("docs/") or "/docs/" in lowered or lowered.endswith(('.md', '.adoc', '.rst', '.txt'))
 
 
 def is_test_path(lowered: str, parts: set[str]) -> bool:
@@ -332,36 +413,57 @@ def candidate_flags(changed_files: Sequence[str], categories: Sequence[str], *, 
     }
 
 
-def classify_archetype(changed_files: Sequence[str], categories: Sequence[str], flags: dict[str, bool]) -> str:
+def classify_archetype(
+    changed_files: Sequence[str],
+    categories: Sequence[str],
+    flags: dict[str, bool],
+    *,
+    subject: str = "",
+) -> str:
     """Classify a candidate into a replay archetype."""
 
     category_set = set(categories)
+    subject_hint = f"{subject} {' '.join(changed_files)}".lower()
     if flags["too_large"]:
-        return "too_large"
+        return "reject"
     if flags["docs_only"]:
-        return "docs_only"
+        return "docs_comments"
     if flags["test_only"]:
-        return "test_only"
+        return "reject"
     if flags["asset_only"]:
-        return "asset_only"
+        return "reject"
     if flags["dependency_only"]:
-        return "config_or_dependency"
+        return "config_build"
 
     frontend = bool(category_set & {"frontend_ui", "frontend_public"})
     backend = bool(category_set & {"backend_api", "backend_service", "persistence"})
+    words = subject_words(subject_hint)
+    if words & REFACTOR_MOVE_WORDS:
+        return "refactor_move"
+    if words & INFRA_DEPLOY_WORDS:
+        return "infra_deployment"
+    if category_set <= {"config_build", "other", "docs"} and words & CONFIG_BUILD_WORDS:
+        return "config_build"
+    if category_set <= {"docs", "persistence", "other"} and words & DOC_COMMENT_WORDS:
+        return "docs_comments"
+
     if is_ui_shell_change(changed_files) and frontend and not backend:
         return "ui_shell"
+    if frontend and subject_words(subject_hint) & FORM_VALIDATION_SUBJECT_WORDS:
+        return "full_stack_ui_api" if backend else "ui_form_validation"
+    if frontend and is_page_add_change(changed_files):
+        return "full_stack_ui_api" if backend else "ui_page_add"
     if frontend and backend:
-        return "full_stack"
+        return "full_stack_ui_api"
     if frontend and not backend:
-        return "ui_only"
+        return "ui_page_add"
     if category_set & {"persistence"} and not frontend:
-        return "persistence_or_data"
+        return "persistence_data"
     if category_set & {"backend_api", "backend_service"} and not frontend:
-        return "backend_api_only"
-    if category_set and category_set <= {"config_build", "other"}:
-        return "config_or_dependency"
-    return "mixed_other"
+        return "backend_api"
+    if category_set and category_set <= {"config_build", "other", "docs"}:
+        return "config_build"
+    return "reject"
 
 
 def is_ui_shell_change(changed_files: Sequence[str]) -> bool:
@@ -376,6 +478,16 @@ def is_ui_shell_change(changed_files: Sequence[str]) -> bool:
         if any(term in lowered for term in shell_terms):
             return True
         if is_static_asset(path) and is_frontend_public_path(lowered):
+            return True
+    return False
+
+
+def is_page_add_change(changed_files: Sequence[str]) -> bool:
+    """Return whether paths look like a new page/screen surface."""
+
+    for path in changed_files:
+        stem = Path(path).stem.lower()
+        if stem.endswith("page") or "page" in stem:
             return True
     return False
 
@@ -428,6 +540,10 @@ def score_candidate(candidate: dict[str, Any]) -> int:
         score -= 8
     if subject_words(normalized_subject) & LOW_VALUE_SUBJECT_WORDS:
         score -= 15
+    if candidate.get("candidate_quality") == "reject":
+        score -= 40
+    if candidate.get("prompt_quality") == "low":
+        score -= 15
     if is_vague_subject(normalized_subject):
         score -= 20
     return score
@@ -450,6 +566,51 @@ def generate_prompt(subject: str) -> tuple[str, bool]:
 
     prompt = normalize_subject(subject)
     return prompt, is_vague_subject(prompt.lower())
+
+
+def classify_prompt_quality(subject: str, archetype: str) -> tuple[str, str]:
+    """Classify whether a commit subject is useful as a replay prompt."""
+
+    normalized = normalize_subject(subject)
+    words = subject_words(normalized)
+    if is_vague_subject(normalized) or archetype in {"config_build", "docs_comments", "refactor_move", "infra_deployment", "reject"}:
+        return "low", "Subject is vague or describes config/docs/refactor/infra work rather than a product feature."
+    if re.search(r"\.(java|kt|ts|tsx|js|jsx|txt|xml|ya?ml|properties|gradle|json)\b", normalized.lower()):
+        return "low", "Subject appears to describe a file/config/document update rather than product behavior."
+    if words & LOW_VALUE_SUBJECT_WORDS:
+        return "low", "Subject focuses on tests, docs, comments, or build tooling."
+    if words & FEATURE_WORDS and len(words) >= 3:
+        return "high", "Subject is descriptive and feature-like."
+    return "medium", "Subject is usable but not strongly feature-like."
+
+
+def classify_candidate_quality(candidate: dict[str, Any]) -> tuple[str, str]:
+    """Assign a deterministic replay-benchmark quality label."""
+
+    archetype = str(candidate["archetype"])
+    if candidate["too_large"]:
+        return "reject", "Commit changes too many files for a focused replay case."
+    if candidate["docs_only"] or archetype == "docs_comments":
+        return "reject", "Docs, comments, or Javadoc changes are not product-feature planning cases."
+    if candidate["test_only"]:
+        return "reject", "Test-only changes are not product-feature planning cases."
+    if candidate["dependency_only"] or archetype == "config_build":
+        return "reject", "Build/dependency/config-only changes are excluded by default."
+    if candidate["asset_only"]:
+        return "reject", "Asset-only changes are excluded by default."
+    if archetype == "refactor_move":
+        return "reject", "Package moves and refactors are not feature-planning replay cases."
+    if archetype == "infra_deployment":
+        return "reject", "Deployment or infrastructure changes are excluded by default."
+    if archetype == "reject":
+        return "reject", "Candidate does not match a useful product-feature archetype."
+    if candidate["prompt_quality"] == "low":
+        return "reject", "Prompt quality is too low for an automatic replay benchmark case."
+    if archetype in USEFUL_ARCHETYPES:
+        if candidate["prompt_quality"] == "medium":
+            return "questionable", "Candidate is feature-like but the generated prompt may need review."
+        return "good", "Candidate has a useful feature archetype and descriptive prompt."
+    return "questionable", "Candidate is not rejected but does not map cleanly to a preferred archetype."
 
 
 def normalize_subject(subject: str) -> str:
@@ -494,11 +655,13 @@ def select_replay_cases(
     per_archetype: int = 2,
     include_archetypes: set[str] | None = None,
     exclude_archetypes: set[str] | None = None,
+    include_questionable: bool = False,
 ) -> list[dict[str, Any]]:
     """Select top replay cases per archetype and return matrix-compatible records."""
 
     allowed = set(include_archetypes) if include_archetypes else set(USEFUL_ARCHETYPES)
     excluded = set(exclude_archetypes or set())
+    explicit_archetypes = include_archetypes is not None
     if include_archetypes is None:
         excluded |= SKIPPED_ARCHETYPES
     allowed -= excluded
@@ -506,6 +669,13 @@ def select_replay_cases(
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for candidate in sorted(candidates, key=candidate_sort_key):
         if candidate["archetype"] not in allowed:
+            continue
+        quality = candidate.get("candidate_quality", "reject")
+        if quality == "reject" and not explicit_archetypes:
+            continue
+        if quality == "questionable" and not (include_questionable or explicit_archetypes):
+            continue
+        if candidate.get("prompt_quality") == "low" and not explicit_archetypes:
             continue
         grouped[candidate["archetype"]].append(candidate)
 
@@ -529,22 +699,41 @@ def candidate_to_case(candidate: dict[str, Any], *, repo_path: Path) -> dict[str
         "changed_file_count": candidate["changed_file_count"],
         "categories": candidate["categories"],
         "needs_manual_prompt": candidate["needs_manual_prompt"],
+        "candidate_quality": candidate["candidate_quality"],
+        "candidate_quality_reason": candidate["candidate_quality_reason"],
+        "prompt_quality": candidate["prompt_quality"],
+        "prompt_quality_reason": candidate["prompt_quality_reason"],
     }
 
 
-def build_candidate_report(repo_path: Path, candidates: Sequence[dict[str, Any]], *, max_files: int) -> dict[str, Any]:
+def build_candidate_report(
+    repo_path: Path,
+    candidates: Sequence[dict[str, Any]],
+    *,
+    max_files: int,
+    included_case_ids: set[str] | None = None,
+) -> dict[str, Any]:
     """Build a deterministic candidate report payload."""
 
     grouped: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    quality_counts: dict[str, int] = defaultdict(int)
+    included = included_case_ids or set()
+    report_candidates: list[dict[str, Any]] = []
     for candidate in candidates:
         grouped[candidate["archetype"]].append(candidate)
+        quality_counts[candidate["candidate_quality"]] += 1
+        report_candidate = dict(candidate)
+        report_candidate["included_in_generated_cases"] = candidate["case_id"] in included
+        report_candidates.append(report_candidate)
     return {
         "repo_path": display_path(repo_path),
         "limit_note": "Recent non-merge commits; deterministic git log order before scoring.",
         "max_files": max_files,
         "candidate_count": len(candidates),
         "archetype_counts": {key: len(grouped[key]) for key in sorted(grouped)},
-        "candidates": list(candidates),
+        "candidate_quality_counts": {key: quality_counts.get(key, 0) for key in ("good", "questionable", "reject")},
+        "included_case_count": len(included),
+        "candidates": report_candidates,
     }
 
 
@@ -572,11 +761,20 @@ def format_candidate_markdown(report: dict[str, Any]) -> str:
         "",
         f"- repo: `{report['repo_path']}`",
         f"- candidates found: {report['candidate_count']}",
+        f"- included cases: {report['included_case_count']}",
         f"- max files: {report['max_files']}",
+        "",
+        "## Candidate Quality Counts",
+        "",
+    ]
+    for quality, count in report["candidate_quality_counts"].items():
+        lines.append(f"- {quality}: {count}")
+
+    lines.extend([
         "",
         "## Archetype Counts",
         "",
-    ]
+    ])
     for archetype, count in report["archetype_counts"].items():
         lines.append(f"- {archetype}: {count}")
 
@@ -594,6 +792,12 @@ def candidate_markdown_block(candidate: dict[str, Any], *, repo_path: str) -> li
         f"### `{candidate['short_sha']}` {candidate['subject']}",
         "",
         f"- score: {candidate['score']}",
+        f"- archetype: {candidate['archetype']}",
+        f"- candidate quality: {candidate['candidate_quality']}",
+        f"- candidate quality reason: {candidate['candidate_quality_reason']}",
+        f"- prompt quality: {candidate['prompt_quality']}",
+        f"- prompt quality reason: {candidate['prompt_quality_reason']}",
+        f"- included in generated cases: {candidate['included_in_generated_cases']}",
         f"- changed files: {candidate['changed_file_count']}",
         f"- categories: {', '.join(candidate['categories']) or '-'}",
         f"- prompt: {candidate['prompt']}",

@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
+from collections import Counter
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
@@ -60,6 +62,7 @@ def run_replay_matrix(
     """Run replay eval for each case and write aggregate reports."""
 
     resolved_python = python_executable or default_python_executable()
+    reset_output_dir(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     case_results: list[dict[str, Any]] = []
     for case in cases:
@@ -72,6 +75,18 @@ def run_replay_matrix(
     report = build_matrix_report(case_results, output_dir=output_dir)
     write_matrix_reports(report, output_dir)
     return report
+
+
+def reset_output_dir(output_dir: Path) -> None:
+    """Clear stale matrix report artifacts before a fresh deterministic run."""
+
+    if not output_dir.exists():
+        return
+    for child in output_dir.iterdir():
+        if child.is_dir():
+            shutil.rmtree(child)
+        elif child.name.startswith("latest_matrix."):
+            child.unlink()
 
 
 def run_case(case: dict[str, Any], *, case_dir: Path, python_executable: str) -> dict[str, Any]:
@@ -127,6 +142,8 @@ def build_matrix_report(case_results: Sequence[dict[str, Any]], *, output_dir: P
     }
     return {
         "summary": summary,
+        "archetype_summary": archetype_summary(summaries),
+        "candidate_quality_summary": dict(sorted(Counter(summary.get("candidate_quality", "unknown") for summary in summaries).items())),
         "cases": summaries,
         "reports": {
             "json": display_path(output_dir / "latest_matrix.json"),
@@ -145,6 +162,8 @@ def case_summary(result: dict[str, Any]) -> dict[str, Any]:
         "archetype": result.get("archetype", "unknown"),
         "commit": result["commit"],
         "prompt": result["prompt"],
+        "candidate_quality": result.get("case", {}).get("candidate_quality", "unknown"),
+        "prompt_quality": result.get("case", {}).get("prompt_quality", "unknown"),
         "succeeded": bool(result["succeeded"]),
         "exit_code": result["exit_code"],
         "predicted_file_count": summary.get("predicted_file_count", 0),
@@ -167,6 +186,21 @@ def average_metric(summaries: Sequence[dict[str, Any]], key: str) -> float | Non
     if not values:
         return None
     return round(sum(values) / len(values), 4)
+
+
+def archetype_summary(summaries: Sequence[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Return per-archetype case totals and success/failure counts."""
+
+    grouped: dict[str, dict[str, int]] = {}
+    for summary in summaries:
+        archetype = str(summary.get("archetype", "unknown"))
+        grouped.setdefault(archetype, {"total": 0, "succeeded": 0, "failed": 0})
+        grouped[archetype]["total"] += 1
+        if summary.get("succeeded"):
+            grouped[archetype]["succeeded"] += 1
+        else:
+            grouped[archetype]["failed"] += 1
+    return dict(sorted(grouped.items()))
 
 
 def write_matrix_reports(report: dict[str, Any], output_dir: Path) -> None:
@@ -194,11 +228,19 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
         f"- average high-signal precision: {format_metric(summary['average_high_signal_precision'])}",
         f"- average high-signal recall: {format_metric(summary['average_high_signal_recall'])}",
         "",
+        "## Archetype Summary",
+        "",
+    ]
+    for archetype, counts in report["archetype_summary"].items():
+        lines.append(f"- {archetype}: total={counts['total']}, succeeded={counts['succeeded']}, failed={counts['failed']}")
+
+    lines.extend([
+        "",
         "## Cases",
         "",
-        "| id | archetype | commit | succeeded | predicted | actual | matched | exact P/R | high-signal P/R | category P/R |",
-        "|---|---|---|---:|---:|---:|---:|---|---|---|",
-    ]
+        "| id | archetype | quality | commit | succeeded | predicted | actual | matched | exact P/R | high-signal P/R | category P/R |",
+        "|---|---|---|---|---:|---:|---:|---:|---|---|---|",
+    ])
     for case in report["cases"]:
         lines.append(
             "| "
@@ -206,6 +248,7 @@ def format_matrix_markdown(report: dict[str, Any]) -> str:
                 [
                     f"`{case['id']}`",
                     str(case["archetype"]),
+                    str(case["candidate_quality"]),
                     f"`{case['commit']}`",
                     str(case["succeeded"]),
                     str(case["predicted_file_count"]),
@@ -236,6 +279,7 @@ def print_matrix_summary(report: dict[str, Any]) -> None:
     print(f"average category recall: {format_metric(summary['average_category_recall'])}")
     print(f"average high-signal precision: {format_metric(summary['average_high_signal_precision'])}")
     print(f"average high-signal recall: {format_metric(summary['average_high_signal_recall'])}")
+    print("archetypes: " + ", ".join(f"{key}={value['total']}" for key, value in report["archetype_summary"].items()))
     print(f"report json: {report['reports']['json']}")
     print(f"report md: {report['reports']['markdown']}")
 

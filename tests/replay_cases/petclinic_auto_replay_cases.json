@@ -1,37 +1,27 @@
 [
   {
-    "id": "backend_api_only_202ddf7_move_resources_to_api_endpoint",
+    "id": "backend_api_af31104_add_max_range_and_not_null_validation_for_adding_new_pet",
     "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "202ddf7",
-    "prompt": "Move Resources to /api/* endpoint",
-    "archetype": "backend_api_only",
+    "commit": "af31104",
+    "prompt": "add max range and not null validation for adding new pet",
+    "archetype": "backend_api",
     "source": "auto_candidate_finder",
-    "changed_file_count": 3,
+    "changed_file_count": 1,
     "categories": [
       "backend_api"
     ],
-    "needs_manual_prompt": false
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
   },
   {
-    "id": "backend_api_only_bf56f15_move_resource_restcontroller_to_web_api_package",
-    "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "bf56f15",
-    "prompt": "Move Resource RestController to web.api package",
-    "archetype": "backend_api_only",
-    "source": "auto_candidate_finder",
-    "changed_file_count": 5,
-    "categories": [
-      "backend_api",
-      "tests"
-    ],
-    "needs_manual_prompt": false
-  },
-  {
-    "id": "full_stack_49ca65b_add_newownerpage_missing_error_handling",
+    "id": "full_stack_ui_api_49ca65b_add_newownerpage_missing_error_handling",
     "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
     "commit": "49ca65b",
     "prompt": "Add NewOwnerPage (missing error handling)",
-    "archetype": "full_stack",
+    "archetype": "full_stack_ui_api",
     "source": "auto_candidate_finder",
     "changed_file_count": 11,
     "categories": [
@@ -39,121 +29,97 @@
       "docs",
       "frontend_ui"
     ],
-    "needs_manual_prompt": false
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
   },
   {
-    "id": "full_stack_ab702ea_add_visitspage",
+    "id": "persistence_data_c758321_add_regex_validation_for_string_input",
     "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "ab702ea",
-    "prompt": "Add VisitsPage",
-    "archetype": "full_stack",
+    "commit": "c758321",
+    "prompt": "add regex validation for string input",
+    "archetype": "persistence_data",
     "source": "auto_candidate_finder",
-    "changed_file_count": 5,
-    "categories": [
-      "backend_api",
-      "frontend_ui",
-      "persistence"
-    ],
-    "needs_manual_prompt": false
-  },
-  {
-    "id": "mixed_other_cb0504e_92_add_some_comments_to_switch_from_hsqldb_to_mysql",
-    "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "cb0504e",
-    "prompt": "#92 add some comments to switch from HSQLDB to MySQL",
-    "archetype": "mixed_other",
-    "source": "auto_candidate_finder",
-    "changed_file_count": 3,
-    "categories": [
-      "config_build",
-      "docs",
-      "other"
-    ],
-    "needs_manual_prompt": false
-  },
-  {
-    "id": "mixed_other_d6697d8_add_maven_wrapper_with_mvn_n_io_takari_maven_wrapper",
-    "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "d6697d8",
-    "prompt": "Add Maven Wrapper with mvn -N io.takari:maven:wrapper",
-    "archetype": "mixed_other",
-    "source": "auto_candidate_finder",
-    "changed_file_count": 4,
-    "categories": [
-      "config_build",
-      "docs",
-      "other"
-    ],
-    "needs_manual_prompt": false
-  },
-  {
-    "id": "persistence_or_data_beb46b2_support_switching_db_init_script_at_deployment",
-    "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "beb46b2",
-    "prompt": "support switching db init script at deployment",
-    "archetype": "persistence_or_data",
-    "source": "auto_candidate_finder",
-    "changed_file_count": 5,
-    "categories": [
-      "other",
-      "persistence"
-    ],
-    "needs_manual_prompt": false
-  },
-  {
-    "id": "persistence_or_data_fb64465_add_some_javadoc",
-    "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "fb64465",
-    "prompt": "Add some javadoc",
-    "archetype": "persistence_or_data",
-    "source": "auto_candidate_finder",
-    "changed_file_count": 2,
+    "changed_file_count": 1,
     "categories": [
       "persistence"
     ],
-    "needs_manual_prompt": false
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
   },
   {
-    "id": "ui_only_0a36a33_add_ownerspage_no_actions_yet",
+    "id": "persistence_data_e7f6899_owners_search_has_been_case_insensitive",
     "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "0a36a33",
-    "prompt": "Add OwnersPage (no actions yet)",
-    "archetype": "ui_only",
+    "commit": "e7f6899",
+    "prompt": "owners search has been case insensitive",
+    "archetype": "persistence_data",
+    "source": "auto_candidate_finder",
+    "changed_file_count": 1,
+    "categories": [
+      "persistence"
+    ],
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
+  },
+  {
+    "id": "ui_form_validation_339ee36_add_error_handling_to_newownerpage",
+    "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
+    "commit": "339ee36",
+    "prompt": "Add error handling to NewOwnerPage",
+    "archetype": "ui_form_validation",
     "source": "auto_candidate_finder",
     "changed_file_count": 3,
     "categories": [
       "frontend_ui"
     ],
-    "needs_manual_prompt": false
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
   },
   {
-    "id": "ui_only_6e73c96_add_visual_feedback_for_invalid_fields",
+    "id": "ui_form_validation_6e73c96_add_visual_feedback_for_invalid_fields",
     "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
     "commit": "6e73c96",
     "prompt": "Add visual feedback for invalid fields",
-    "archetype": "ui_only",
+    "archetype": "ui_form_validation",
     "source": "auto_candidate_finder",
     "changed_file_count": 2,
     "categories": [
       "docs",
       "frontend_ui"
     ],
-    "needs_manual_prompt": false
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
   },
   {
-    "id": "ui_shell_1d8e94e_add_prod_build_make_api_url_configurable_in_webpack",
+    "id": "ui_page_add_0a36a33_add_ownerspage_no_actions_yet",
     "repo_path": "eval_repos/spring-petclinic-reactjs/spring-petclinic-reactjs",
-    "commit": "1d8e94e",
-    "prompt": "Add prod build, make Api-URL configurable in webpack",
-    "archetype": "ui_shell",
+    "commit": "0a36a33",
+    "prompt": "Add OwnersPage (no actions yet)",
+    "archetype": "ui_page_add",
     "source": "auto_candidate_finder",
-    "changed_file_count": 5,
+    "changed_file_count": 3,
     "categories": [
-      "config_build",
-      "frontend_ui",
-      "other"
+      "frontend_ui"
     ],
-    "needs_manual_prompt": false
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
   },
   {
     "id": "ui_shell_f710ba8_add_layout_and_welcome_page",
@@ -167,6 +133,10 @@
       "frontend_public",
       "frontend_ui"
     ],
-    "needs_manual_prompt": false
+    "needs_manual_prompt": false,
+    "candidate_quality": "good",
+    "candidate_quality_reason": "Candidate has a useful feature archetype and descriptive prompt.",
+    "prompt_quality": "high",
+    "prompt_quality_reason": "Subject is descriptive and feature-like."
   }
 ]
