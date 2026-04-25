@@ -11,6 +11,8 @@ from app.models.discovery import (
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.concept_grounding import ConceptGroundingService
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
+from app.services.text_normalization import normalize_text as normalize_request_text
+from app.services.text_normalization import tokenize_text
 
 from .analyze import analyze_feature
 from .models import ConceptGrounding, FeatureImpact, FeaturePlan, InventoryRow
@@ -268,11 +270,11 @@ DOWNSTREAM_PATH_CANDIDATES = [
 
 
 def _normalize_text(text: str) -> str:
-    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+    return normalize_request_text(text)
 
 
 def _tokenize(text: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9]+", text.lower()))
+    return tokenize_text(text)
 
 
 def _phrase_matches(normalized_text: str, phrases: Sequence[str]) -> list[str]:

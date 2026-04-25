@@ -11,6 +11,8 @@ from app.models.discovery import (
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
+from app.services.text_normalization import normalize_text as normalize_request_text
+from app.services.text_normalization import tokenize_text
 
 from .analyze import analyze_feature
 from .models import (
@@ -98,6 +100,7 @@ CREATE_FLOW_REQUEST_TOKENS = {"add", "create", "new"}
 EDIT_FLOW_FILE_TOKENS = {"edit", "editor", "info", "view"}
 CREATE_FLOW_FILE_TOKENS = {"create", "new"}
 FRONTEND_SUPPORT_FILE_TOKENS = {"type", "types"}
+PAGE_ADD_ROUTE_TOKENS = {"config", "configure", "route", "routes", "router"}
 BACKEND_FOCUS_TOKENS = {
     "controller": 5,
     "request": 4,
@@ -242,6 +245,7 @@ def create_change_proposal(
             role,
             inspect_paths,
             discovery,
+            repo_dir,
         )
         file_plans = _build_file_plans(
             plan,
@@ -360,10 +364,14 @@ def _likely_files_to_inspect(
         ui_paths = _merge_paths(
             _discovery_paths(discovery, "ui"),
             _matching_paths(planned_paths, FRONTEND_PATH_MARKERS),
-            [] if ui_shell_change else _discovery_paths(discovery, "api"),
+            []
+            if (ui_shell_change or _ui_page_add_requested(plan.feature_request))
+            else _discovery_paths(discovery, "api"),
         )
         if allow_concrete_files and not shell_paths:
             files.extend(_existing_files_for_category(repo_dir, ui_paths, plan, row, "frontend"))
+            if _ui_page_add_requested(plan.feature_request):
+                files.extend(_page_add_existing_support_files(repo_dir, plan))
         if not shell_paths:
             folders.extend(ui_paths)
 
@@ -425,7 +433,12 @@ def _likely_files_to_inspect(
         folders.extend(planned_paths)
 
     if allow_concrete_files:
-        files.extend(_grounded_source_files_for_repo(plan, row.repo_name, repo_dir))
+        grounded_files = _grounded_source_files_for_repo(plan, row.repo_name, repo_dir)
+        if _ui_only_change(plan) and frontend:
+            grounded_files = [
+                path for path in grounded_files if _inspect_path_group(path) == "frontend"
+            ]
+        files.extend(grounded_files)
 
     return _narrow_inspect_paths_for_grounded_concepts(
         plan,
@@ -507,6 +520,19 @@ def _existing_file_plan(
     elif not _path_looks_like_file(path):
         action = "inspect"
         confidence = "medium" if concept_match else "low"
+    elif group == "frontend" and _ui_page_add_requested(plan.feature_request):
+        if _frontend_route_config_file(path):
+            action = "modify"
+            confidence = "high"
+        elif _requested_page_component_file(path, plan):
+            action = "modify"
+            confidence = "high"
+        elif concept_match or tokens & FRONTEND_SUPPORT_FILE_TOKENS:
+            action = "inspect"
+            confidence = "medium"
+        else:
+            action = "inspect-only"
+            confidence = "low"
     elif group == "frontend":
         if _same_domain_different_flow(path, plan, target_tokens):
             action = "inspect"
@@ -538,7 +564,13 @@ def _existing_file_plan(
             action = "inspect-only"
             confidence = "low"
 
-    if action == "modify" and confidence == "high" and not path_target_match:
+    if (
+        action == "modify"
+        and confidence == "high"
+        and not path_target_match
+        and not direct_grounded
+        and not _frontend_route_config_file(path)
+    ):
         action = "inspect"
         confidence = "medium"
 
@@ -587,6 +619,13 @@ def _new_file_plan(
         reason = "Event flow likely needs a new publisher or producer implementation."
     elif "consumer" in lowered or "handler" in lowered:
         reason = "Downstream event flow may need a new consumer or handler."
+    elif (
+        _ui_page_add_requested(plan.feature_request)
+        and _inspect_path_group(path) == "frontend"
+        and _requested_page_component_file(path, plan)
+    ):
+        reason = "Feature explicitly names this page component, and nearby frontend paths indicate the folder convention."
+        confidence = "high"
     elif _path_looks_like_file(path):
         reason = "Strong naming evidence suggests this new file may be required."
         confidence = "high"
@@ -805,6 +844,15 @@ def _existing_file_reason(
         return "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
     if _same_domain_secondary_frontend(path, plan, target_tokens):
         return "Same owner domain and may display the telephone field after update, but the request specifically targets the edit screen."
+    if _ui_page_add_requested(plan.feature_request):
+        if _frontend_route_config_file(path):
+            return "Route/config file likely needs wiring for the new page."
+        if _requested_page_component_file(path, plan):
+            return "Requested page component directly matches the UI page-add request."
+        if tokens & FRONTEND_SUPPORT_FILE_TOKENS and _inspect_path_group(path) == "frontend":
+            return "Shared frontend types may need review for the new page surface."
+        if _inspect_path_group(path) == "frontend" and (tokens & target_tokens):
+            return "Nearby same-domain frontend file can provide the page and routing pattern."
     if shell_kind == "landing_page":
         return "Welcome or landing page component directly matches the requested page addition."
     if shell_kind == "app_shell":
@@ -922,12 +970,20 @@ def _likely_changes(plan: FeaturePlan, row: InventoryRow, role: str) -> list[str
             ]
         )
     elif frontend and plan.ui_change_needed:
-        changes.extend(
-            [
-                "Update the relevant page/form UI and validation states.",
-                "Update client API request wiring and submit/error handling.",
-            ]
-        )
+        if _ui_page_add_requested(plan.feature_request):
+            changes.extend(
+                [
+                    "Scaffold the requested page component in the matching frontend domain folder.",
+                    "Wire the page into the existing route/config surface without adding backend actions.",
+                ]
+            )
+        else:
+            changes.extend(
+                [
+                    "Update the relevant page/form UI and validation states.",
+                    "Update client API request wiring and submit/error handling.",
+                ]
+            )
 
     if backend and plan.api_change_needed:
         changes.extend(
@@ -957,6 +1013,7 @@ def _possible_new_files(
     role: str,
     inspect_paths: Sequence[str],
     discovery: RepoDiscovery | None,
+    repo_dir: Path | None,
 ) -> list[str]:
     files: list[str] = []
     backend = _row_is_backend(row)
@@ -972,6 +1029,8 @@ def _possible_new_files(
         return []
     if frontend and plan.ui_change_needed and ui_shell_requested(plan.feature_request):
         return []
+    if frontend and plan.ui_change_needed and _ui_page_add_requested(plan.feature_request):
+        return _page_add_new_files(plan, row, inspect_paths, discovery, repo_dir)
 
     new_surface_likely = _new_file_surface_likely(plan)
 
@@ -1000,6 +1059,160 @@ def _possible_new_files(
 def _new_file_surface_likely(plan: FeaturePlan) -> bool:
     request_tokens = _tokenize_with_camel_case(plan.feature_request)
     return plan.db_change_needed or _create_flow_requested(request_tokens)
+
+
+def _ui_page_add_requested(feature_request: str) -> bool:
+    """Return whether the request is a simple UI page/component addition."""
+
+    if ui_shell_requested(feature_request):
+        return False
+    tokens = _tokenize_with_camel_case(feature_request)
+    return bool(tokens & CREATE_FLOW_REQUEST_TOKENS and "page" in tokens)
+
+
+def _ui_only_change(plan: FeaturePlan) -> bool:
+    return plan.ui_change_needed and not (
+        plan.api_change_needed
+        or plan.db_change_needed
+        or "event_integration" in plan.feature_intents
+    )
+
+
+def _page_add_new_files(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    inspect_paths: Sequence[str],
+    discovery: RepoDiscovery | None,
+    repo_dir: Path | None,
+) -> list[str]:
+    if repo_dir is None or not repo_dir.is_dir():
+        return []
+
+    files: list[str] = []
+    existing = set(inspect_paths)
+    for stem in _requested_page_component_stems(plan.feature_request):
+        base = _page_add_base_folder(plan, row, stem, inspect_paths, discovery, repo_dir)
+        if base is None:
+            continue
+        candidate = f"{base}/{stem}{_frontend_source_suffix(repo_dir, base)}"
+        if candidate in existing or (repo_dir / candidate).exists():
+            continue
+        files.append(candidate)
+    return _dedupe_preserve_order(files)
+
+
+def _page_add_existing_support_files(
+    repo_dir: Path | None,
+    plan: FeaturePlan,
+) -> list[str]:
+    if repo_dir is None or not repo_dir.is_dir():
+        return []
+
+    frontend_roots = [
+        repo_dir / root / "src"
+        for root in ("client", "frontend", "web", "ui")
+        if (repo_dir / root / "src").is_dir()
+    ]
+    if (repo_dir / "src").is_dir():
+        frontend_roots.append(repo_dir / "src")
+
+    files: list[str] = []
+    for src in frontend_roots:
+        for child in sorted(src.iterdir(), key=lambda item: item.as_posix()):
+            if not child.is_file() or child.suffix.lower() not in {".ts", ".tsx", ".js", ".jsx"}:
+                continue
+            relative = child.relative_to(repo_dir).as_posix()
+            if _page_add_support_file(relative, plan):
+                files.append(relative)
+    return _dedupe_preserve_order(files)
+
+
+def _requested_page_component_stems(feature_request: str) -> list[str]:
+    stems = [
+        match.group(1)
+        for match in re.finditer(
+            r"\b([A-Z][A-Za-z0-9]*(?:Page|View|Screen))\b",
+            feature_request,
+        )
+    ]
+    if stems:
+        return _dedupe_preserve_order(stems)
+
+    tokens = list(re.findall(r"[a-z0-9]+", normalize_request_text(feature_request)))
+    for index, token in enumerate(tokens):
+        if token != "page" or index == 0:
+            continue
+        previous = tokens[index - 1]
+        if previous in GENERIC_STOPWORDS or previous in {"welcome", "landing", "home", "layout"}:
+            continue
+        stems.append(f"{previous.capitalize()}Page")
+    return _dedupe_preserve_order(stems)
+
+
+def _page_add_base_folder(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    stem: str,
+    inspect_paths: Sequence[str],
+    discovery: RepoDiscovery | None,
+    repo_dir: Path,
+) -> str | None:
+    target_tokens = _expand_token_variants(
+        {
+            token
+            for token in _tokenize_with_camel_case(stem)
+            if token not in {"page", "view", "screen"}
+        }
+    )
+    path_candidates = _dedupe_preserve_order(
+        [
+            *[
+                str(Path(path).parent) if _path_looks_like_file(path) else path
+                for path in inspect_paths
+                if _inspect_path_group(path) == "frontend"
+            ],
+            *_discovery_paths(discovery, "ui"),
+            *plan.likely_paths_by_repo.get(row.repo_name, []),
+        ]
+    )
+
+    ranked: list[tuple[int, str]] = []
+    for path in path_candidates:
+        absolute = repo_dir / path
+        if not absolute.is_dir():
+            continue
+        tokens = _path_all_tokens(path)
+        score = len(tokens & target_tokens) * 10
+        if any(token in tokens for token in ("components", "pages", "routes", "views")):
+            score += 4
+        if Path(path).name.lower() in target_tokens:
+            score += 8
+        if score > 0:
+            ranked.append((score, path))
+
+    if ranked:
+        ranked.sort(key=lambda item: (-item[0], len(item[1]), item[1]))
+        return ranked[0][1]
+
+    for fallback in path_candidates:
+        if not (repo_dir / fallback).is_dir():
+            continue
+        lowered = fallback.lower()
+        if any(
+            marker in lowered
+            for marker in ("/components", "/pages", "/routes", "src/components", "src/pages")
+        ):
+            return fallback
+    return None
+
+
+def _frontend_source_suffix(repo_dir: Path, base: str) -> str:
+    base_path = repo_dir / base
+    if any(base_path.glob("*.tsx")) or any((repo_dir / "client").rglob("*.tsx")):
+        return ".tsx"
+    if any(base_path.glob("*.jsx")):
+        return ".jsx"
+    return ".tsx"
 
 
 def _rationale(
@@ -1495,6 +1708,14 @@ def _existing_files_for_category(
         ):
             scored.append((_file_score(relative_path, signal_tokens, category), relative_path))
             continue
+        if (
+            absolute_path.is_file()
+            and category == "frontend"
+            and _ui_page_add_requested(plan.feature_request)
+            and _page_add_support_file(relative_path, plan)
+        ):
+            scored.append((_page_add_file_score(relative_path, plan), relative_path))
+            continue
 
         if not absolute_path.is_dir():
             continue
@@ -1504,6 +1725,13 @@ def _existing_files_for_category(
                 if not match.is_file():
                     continue
                 candidate = match.relative_to(repo_dir).as_posix()
+                if (
+                    category == "frontend"
+                    and _ui_page_add_requested(plan.feature_request)
+                    and _page_add_support_file(candidate, plan)
+                ):
+                    scored.append((_page_add_file_score(candidate, plan), candidate))
+                    continue
                 if _file_matches_category(candidate, signal_tokens, category):
                     scored.append((_file_score(candidate, signal_tokens, category), candidate))
 
@@ -1523,6 +1751,48 @@ def _file_score(path: str, signal_tokens: set[str], category: str) -> int:
     if _suffix_matches_category(path, category):
         score += 5
     return score
+
+
+def _page_add_support_file(path: str, plan: FeaturePlan) -> bool:
+    if not _path_looks_like_file(path):
+        return False
+    if _frontend_route_config_file(path):
+        return True
+    tokens = _path_all_tokens(path)
+    target_tokens = _grounded_target_tokens(plan)
+    if tokens & FRONTEND_SUPPORT_FILE_TOKENS:
+        return True
+    return bool(target_tokens and tokens & target_tokens and "page" in tokens)
+
+
+def _page_add_file_score(path: str, plan: FeaturePlan) -> int:
+    tokens = _path_all_tokens(path)
+    score = 0
+    if _frontend_route_config_file(path):
+        score += 25
+    if _requested_page_component_file(path, plan):
+        score += 30
+    target_tokens = _grounded_target_tokens(plan)
+    score += len(tokens & target_tokens) * 6
+    if "page" in tokens:
+        score += 4
+    if tokens & FRONTEND_SUPPORT_FILE_TOKENS:
+        score += 3
+    return score
+
+
+def _frontend_route_config_file(path: str) -> bool:
+    if _inspect_path_group(path) != "frontend":
+        return False
+    tokens = _path_all_tokens(path)
+    return bool(tokens & PAGE_ADD_ROUTE_TOKENS)
+
+
+def _requested_page_component_file(path: str, plan: FeaturePlan) -> bool:
+    if _inspect_path_group(path) != "frontend":
+        return False
+    stem = Path(path).stem
+    return stem in _requested_page_component_stems(plan.feature_request)
 
 
 def _suffix_matches_category(path: str, category: str) -> bool:
@@ -1575,8 +1845,7 @@ def _path_tokens(path: str) -> set[str]:
 
 
 def _tokenize_with_camel_case(text: str) -> set[str]:
-    split_camel = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
-    return set(re.findall(r"[a-z0-9]+", split_camel.lower()))
+    return tokenize_text(text)
 
 
 def _strongest_signals(
@@ -1673,7 +1942,7 @@ def _row_is_backend(row: InventoryRow) -> bool:
 
 
 def _tokenize(text: str) -> set[str]:
-    return set(re.findall(r"[a-z0-9]+", text.lower()))
+    return tokenize_text(text)
 
 
 def _dedupe_preserve_order(items: Sequence[str]) -> list[str]:

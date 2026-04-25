@@ -16,17 +16,17 @@
   },
   "summary": {
     "commands_succeeded": true,
-    "predicted_file_count": 5,
+    "predicted_file_count": 3,
     "actual_file_count": 3,
     "matched_file_count": 2,
     "missed_file_count": 1,
-    "extra_predicted_file_count": 3,
-    "exact_file_precision": 0.4,
+    "extra_predicted_file_count": 1,
+    "exact_file_precision": 0.6667,
     "exact_file_recall": 0.6667,
     "folder_level_matched_file_count": 0,
-    "category_precision": 0.3333,
+    "category_precision": 1.0,
     "category_recall": 0.5,
-    "high_signal_precision": 0.4,
+    "high_signal_precision": 0.6667,
     "high_signal_recall": 0.6667,
     "static_asset_miss_count": 0
   },
@@ -37,37 +37,23 @@
     {
       "path": "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
       "repo_name": "spring-petclinic-reactjs",
-      "action": "inspect",
-      "confidence": "medium",
-      "reason": "Frontend page component is related to the requested UI change."
+      "action": "modify",
+      "confidence": "high",
+      "reason": "Requested page component directly matches the UI page-add request."
     },
     {
       "path": "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
       "repo_name": "spring-petclinic-reactjs",
       "action": "inspect",
       "confidence": "medium",
-      "reason": "Frontend page component is related to the requested UI change."
+      "reason": "Nearby same-domain frontend file can provide the page and routing pattern."
     },
     {
       "path": "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
       "repo_name": "spring-petclinic-reactjs",
       "action": "inspect",
       "confidence": "medium",
-      "reason": "Frontend page component is related to the requested UI change."
-    },
-    {
-      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java",
-      "repo_name": "spring-petclinic-reactjs",
-      "action": "inspect",
-      "confidence": "medium",
-      "reason": "Likely owner domain model related to the update flow; inspect before changing."
-    },
-    {
-      "path": "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java",
-      "repo_name": "spring-petclinic-reactjs",
-      "action": "inspect",
-      "confidence": "medium",
-      "reason": "Owner telephone may already exist on the domain model; inspect for validation or serialization behavior."
+      "reason": "Nearby same-domain frontend file can provide the page and routing pattern."
     }
   ],
   "predicted_reference_files": [],
@@ -80,9 +66,7 @@
     "predicted_files": [
       "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
       "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
-      "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java"
+      "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
@@ -97,20 +81,18 @@
       "spring-petclinic-reactjs/client/src/types/index.ts"
     ],
     "extra_predicted_files": [
-      "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java"
+      "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx"
     ],
-    "precision": 0.4,
+    "precision": 0.6667,
     "recall": 0.6667,
     "exact_file": {
-      "precision": 0.4,
+      "precision": 0.6667,
       "recall": 0.6667,
-      "predicted_count": 5,
+      "predicted_count": 3,
       "actual_count": 3,
       "matched_count": 2,
       "missed_count": 1,
-      "extra_predicted_count": 3
+      "extra_predicted_count": 1
     },
     "folder_level": {
       "matches": [],
@@ -123,9 +105,7 @@
     },
     "category_level": {
       "predicted_categories": [
-        "domain_model",
-        "frontend_component",
-        "repository"
+        "frontend_component"
       ],
       "actual_categories": [
         "frontend_component",
@@ -137,17 +117,14 @@
       "missed_categories": [
         "frontend_type"
       ],
-      "extra_predicted_categories": [
-        "domain_model",
-        "repository"
-      ],
-      "precision": 0.3333,
+      "extra_predicted_categories": [],
+      "precision": 1.0,
       "recall": 0.5,
-      "predicted_count": 3,
+      "predicted_count": 1,
       "actual_count": 2,
       "matched_count": 1,
       "missed_count": 1,
-      "extra_predicted_count": 2,
+      "extra_predicted_count": 0,
       "predicted_by_category": {
         "frontend_entrypoint": [],
         "app_shell": [],
@@ -163,12 +140,8 @@
         "api_contract": [],
         "api_controller": [],
         "service_layer": [],
-        "domain_model": [
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java"
-        ],
-        "repository": [
-          "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java"
-        ],
+        "domain_model": [],
+        "repository": [],
         "migration": [],
         "unknown": []
       },
@@ -198,9 +171,7 @@
       "predicted_files": [
         "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
         "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
-        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java"
+        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx"
       ],
       "actual_files": [
         "spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx",
@@ -215,17 +186,15 @@
         "spring-petclinic-reactjs/client/src/types/index.ts"
       ],
       "extra_predicted_files": [
-        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java",
-        "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java"
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx"
       ],
-      "precision": 0.4,
+      "precision": 0.6667,
       "recall": 0.6667,
-      "predicted_count": 5,
+      "predicted_count": 3,
       "actual_count": 3,
       "matched_count": 2,
       "missed_count": 1,
-      "extra_predicted_count": 3
+      "extra_predicted_count": 1
     },
     "static_assets": {
       "predicted_files": [],
@@ -242,27 +211,27 @@
   },
   "commands": {
     "discover_architecture": {
-      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-kbz33ub3/discovery_targets.json",
+      "command": "python3 main.py discover-architecture --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-byarkpq2/discovery_targets.json",
       "exit_code": 0,
       "stdout": "Architecture Discovery\n\nrepo: spring-petclinic-reactjs\n  mode: source-discovered\n  confidence: high\n  discovered frameworks: react, spring_boot\n  hinted frameworks: -\n  framework detections: react ^15.0.0 (detected, high, client/package.json), spring_boot 1.4.0.RELEASE (detected, high, pom.xml)\n  framework packs loaded: react (detected), spring_boot (detected)\n  framework-derived hints: react node kinds: page, editor, form, detail, list, component, react path categories: api, service, ui, react validation hints: npm test, npm run build, spring_boot node kinds: controller, service, repository, entity, model, dto, spring_boot path categories: api, event, persistence, service, spring_boot validation hints: mvn test, gradle test\n  discovered api: src/main/java/org/springframework/samples/petclinic/web, src/main/java/org/springframework/samples/petclinic/web/api\n  discovered service/business logic: src/main/java/org/springframework/samples/petclinic/service\n  discovered persistence/migration: src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model\n  discovered ui/components: client/src/components, client/src/types, client/src/components/owners, client/src/components/vets\n  hinted locations:\n    api: src/main/java/**/controller, src/main/java/**/dto\n    service/business logic: src/main/java/**/service\n    persistence/migration: -\n    ui/components: -\n",
       "stderr": ""
     },
     "analyze_feature": {
-      "command": "python3 main.py analyze-feature \"Add error handling to NewOwnerPage\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-kbz33ub3/discovery_targets.json",
+      "command": "python3 main.py analyze-feature \"Add error handling to NewOwnerPage\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-byarkpq2/discovery_targets.json",
       "exit_code": 0,
-      "stdout": "Feature: \"Add error handling to NewOwnerPage\"\nrepo                     | role          | score | reason                                                                                                                                                                                                                                                                                                                        \n-------------------------+---------------+-------+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nspring-petclinic-reactjs | primary-owner | 46    | inferred_metadata: domain match (error); backend ownership (inferred_metadata: owns_fields: error; tokens: custom error | inferred_metadata: api_keywords: error; tokens: custom error | adapter_discovery: source-backed ownership (owns_fields: error, custom error; discovered controller/dto, service, entity/repository))\n",
+      "stdout": "Feature: \"Add error handling to NewOwnerPage\"\nrepo                     | role          | score | reason                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           \n-------------------------+---------------+-------+----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nspring-petclinic-reactjs | primary-owner | 125   | inferred_metadata: domain match (error); deterministic_intent: frontend signals (keywords: page; repo type; manifest: frontend, react, ui, web); adapter_discovery: adapter discovery (react, spring_boot; paths: client/src/components, client/src/types, client/src/components/owners); backend ownership (inferred_metadata: owns_entities: owner | inferred_metadata: owns_fields: error, owner; tokens: custom error | inferred_metadata: owns_tables: owner | inferred_metadata: api_keywords: error, owner; tokens: api owner candidate, custom error, domain service owner candidate | adapter_discovery: source-backed ownership (owns_entities: owner; owns_fields: error, owner, custom error; owns_tables: owner; discovered controller/dto, service, entity/repository)); inferred_metadata: keyword overlap (owner)\n",
       "stderr": ""
     },
     "plan_feature": {
-      "command": "python3 main.py plan-feature \"Add error handling to NewOwnerPage\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-kbz33ub3/discovery_targets.json",
+      "command": "python3 main.py plan-feature \"Add error handling to NewOwnerPage\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-byarkpq2/discovery_targets.json",
       "exit_code": 0,
-      "stdout": "{\n  \"feature_request\": \"Add error handling to NewOwnerPage\",\n  \"feature_intents\": [],\n  \"unsupported_intents\": [],\n  \"concept_grounding\": [\n    {\n      \"concept\": \"owner\",\n      \"status\": \"direct_match\",\n      \"matched_terms\": [\n        \"owner\",\n        \"i owner\",\n        \"or owner\",\n        \"owner id\",\n        \"new owner\",\n        \"owner jsp\",\n        \"owner tsx\",\n        \"web owner\"\n      ],\n      \"sources\": [\n        \"inferred_metadata:spring-petclinic-reactjs\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/FindOwnersPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/NewOwnerPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/OwnersPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/types/index.ts\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/model/Owner.java\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/model/Pet.java\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java\"\n      ]\n    }\n  ],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"primary_owner\": \"spring-petclinic-reactjs\",\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": null,\n  \"direct_dependents\": [],\n  \"possible_downstreams\": [],\n  \"db_change_needed\": false,\n  \"api_change_needed\": false,\n  \"ui_change_needed\": false,\n  \"likely_paths_by_repo\": {\n    \"spring-petclinic-reactjs\": [\n      \"src/main/java/org/springframework/samples/petclinic/web\",\n      \"src/main/java/org/springframework/samples/petclinic/web/api\",\n      \"src/main/java/org/springframework/samples/petclinic/service\",\n      \"src/main/java/org/springframework/samples/petclinic/repository\"\n    ]\n  },\n  \"validation_commands\": [\n    \"./mvnw test\"\n  ],\n  \"ordered_steps\": [\n    \"In spring-petclinic-reactjs (primary-owner, score=46), implement service-level feature logic and review entity/repository mappings for impact using discovered service/data paths: src/main/java/org/springframework/samples/petclinic/service, src/main/java/org/springframework/samples/petclinic/repository, src/main/java/org/springframework/samples/petclinic/model.\",\n    \"Run validation commands in impacted repos: ./mvnw test.\"\n  ],\n  \"requires_human_approval\": false\n}\n",
+      "stdout": "{\n  \"feature_request\": \"Add error handling to NewOwnerPage\",\n  \"feature_intents\": [\n    \"ui\"\n  ],\n  \"unsupported_intents\": [],\n  \"concept_grounding\": [\n    {\n      \"concept\": \"owner\",\n      \"status\": \"direct_match\",\n      \"matched_terms\": [\n        \"owner\",\n        \"i owner\",\n        \"or owner\",\n        \"owner id\",\n        \"new owner\",\n        \"owner jsp\",\n        \"owner tsx\",\n        \"web owner\"\n      ],\n      \"sources\": [\n        \"inferred_metadata:spring-petclinic-reactjs\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/FindOwnersPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/NewOwnerPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/components/owners/OwnersPage.tsx\",\n        \"source:spring-petclinic-reactjs:client/src/types/index.ts\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/model/Owner.java\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/model/Pet.java\",\n        \"source:spring-petclinic-reactjs:src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java\"\n      ]\n    }\n  ],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"primary_owner\": \"spring-petclinic-reactjs\",\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"direct_dependents\": [],\n  \"possible_downstreams\": [],\n  \"db_change_needed\": false,\n  \"api_change_needed\": false,\n  \"ui_change_needed\": true,\n  \"likely_paths_by_repo\": {\n    \"spring-petclinic-reactjs\": [\n      \"client/src/components/owners\",\n      \"client/src/types\"\n    ]\n  },\n  \"validation_commands\": [\n    \"./mvnw test\"\n  ],\n  \"ordered_steps\": [\n    \"In spring-petclinic-reactjs (primary-owner, score=125), update the requested UI page, layout, route, and component composition using discovered UI paths: client/src/components, client/src/types, client/src/components/owners.\",\n    \"Run validation commands in impacted repos: ./mvnw test.\"\n  ],\n  \"requires_human_approval\": false\n}\n",
       "stderr": ""
     },
     "propose_changes": {
-      "command": "python3 main.py propose-changes \"Add error handling to NewOwnerPage\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-kbz33ub3/discovery_targets.json",
+      "command": "python3 main.py propose-changes \"Add error handling to NewOwnerPage\" --target-id replay-spring-petclinic-reactjs --registry-path /var/folders/wt/gmpw8c9128d41nf22h03h24r0000gn/T/stackpilot-replay-byarkpq2/discovery_targets.json",
       "exit_code": 0,
-      "stdout": "{\n  \"feature_request\": \"Add error handling to NewOwnerPage\",\n  \"feature_intents\": [],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": null,\n  \"proposed_changes\": [\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"role\": \"primary-owner\",\n      \"likely_files_to_inspect\": [\n        \"client/src/components/owners/NewOwnerPage.tsx\",\n        \"client/src/components/owners/FindOwnersPage.tsx\",\n        \"client/src/components/owners/OwnersPage.tsx\",\n        \"src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java\",\n        \"src/main/java/org/springframework/samples/petclinic/model/Owner.java\"\n      ],\n      \"files\": [\n        {\n          \"path\": \"client/src/components/owners/NewOwnerPage.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Frontend page component is related to the requested UI change.\"\n        },\n        {\n          \"path\": \"client/src/components/owners/FindOwnersPage.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Frontend page component is related to the requested UI change.\"\n        },\n        {\n          \"path\": \"client/src/components/owners/OwnersPage.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Frontend page component is related to the requested UI change.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Likely owner domain model related to the update flow; inspect before changing.\"\n        },\n        {\n          \"path\": \"src/main/java/org/springframework/samples/petclinic/model/Owner.java\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Owner telephone may already exist on the domain model; inspect for validation or serialization behavior.\"\n        }\n      ],\n      \"likely_changes\": [\n        \"Inspect planned paths and update only if the feature evidence applies.\"\n      ],\n      \"possible_new_files\": [],\n      \"rationale\": \"Role: primary-owner. Intents: none. Evidence: ranked by deterministic feature analysis, inferred ownership from discovered source names, analysis role: primary owner, discovered frameworks: react, spring_boot, source discovered architecture evidence. Path confidence: Concrete files were inferred from discovered naming conventions. Overall confidence: high.\"\n    }\n  ]\n}\n",
+      "stdout": "{\n  \"feature_request\": \"Add error handling to NewOwnerPage\",\n  \"feature_intents\": [\n    \"ui\"\n  ],\n  \"confidence\": \"high\",\n  \"missing_evidence\": [],\n  \"implementation_owner\": \"spring-petclinic-reactjs\",\n  \"domain_owner\": \"spring-petclinic-reactjs\",\n  \"proposed_changes\": [\n    {\n      \"repo_name\": \"spring-petclinic-reactjs\",\n      \"role\": \"primary-owner\",\n      \"likely_files_to_inspect\": [\n        \"client/src/components/owners/NewOwnerPage.tsx\",\n        \"client/src/components/owners/FindOwnersPage.tsx\",\n        \"client/src/components/owners/OwnersPage.tsx\"\n      ],\n      \"files\": [\n        {\n          \"path\": \"client/src/components/owners/NewOwnerPage.tsx\",\n          \"action\": \"modify\",\n          \"confidence\": \"high\",\n          \"reason\": \"Requested page component directly matches the UI page-add request.\"\n        },\n        {\n          \"path\": \"client/src/components/owners/FindOwnersPage.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Nearby same-domain frontend file can provide the page and routing pattern.\"\n        },\n        {\n          \"path\": \"client/src/components/owners/OwnersPage.tsx\",\n          \"action\": \"inspect\",\n          \"confidence\": \"medium\",\n          \"reason\": \"Nearby same-domain frontend file can provide the page and routing pattern.\"\n        }\n      ],\n      \"likely_changes\": [\n        \"Scaffold the requested page component in the matching frontend domain folder.\",\n        \"Wire the page into the existing route/config surface without adding backend actions.\"\n      ],\n      \"possible_new_files\": [],\n      \"rationale\": \"Role: primary-owner. Intents: ui. Evidence: ranked by deterministic feature analysis, inferred ownership from discovered source names, analysis role: primary owner, discovered frameworks: react, spring_boot, source discovered architecture evidence. Path confidence: Concrete files were inferred from discovered naming conventions. Overall confidence: high.\"\n    }\n  ]\n}\n",
       "stderr": ""
     }
   },

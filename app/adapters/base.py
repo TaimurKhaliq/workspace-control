@@ -1,6 +1,5 @@
 """Base repository adapter interface and deterministic discovery helpers."""
 
-import re
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -8,6 +7,7 @@ from pathlib import Path
 from app.models.discovery import AdapterDiscovery
 from app.models.evidence import Evidence
 from app.models.repo_manifest import RepoManifest
+from app.services.text_normalization import normalize_text as normalize_request_text
 
 
 class RepoAdapter(ABC):
@@ -55,7 +55,7 @@ ArchitectureAdapter = RepoAdapter
 def normalize_text(values: Sequence[str]) -> str:
     """Normalize arbitrary text values into a lowercase token-safe string."""
 
-    return " ".join(re.findall(r"[a-z0-9]+", " ".join(values).lower()))
+    return normalize_request_text(" ".join(values))
 
 
 def manifest_hint_text(manifest: RepoManifest, agents_text: str = "") -> str:

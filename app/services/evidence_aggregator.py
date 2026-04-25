@@ -1,6 +1,5 @@
 """Aggregate deterministic evidence for feature analysis."""
 
-import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
@@ -13,6 +12,8 @@ from app.models.discovery import (
 from app.models.evidence import Evidence
 from app.models.repo_manifest import RepoManifest
 from app.services.architecture_discovery import ArchitectureDiscoveryService
+from app.services.text_normalization import normalize_text as normalize_request_text
+from app.services.text_normalization import tokenize_text
 from workspace_control.models import InventoryRow
 
 STOPWORDS = {
@@ -127,17 +128,13 @@ ALL_HINT_KEYWORDS = {
 def tokenize(text: str) -> set[str]:
     """Tokenize text with the same stopword rules used for feature matching."""
 
-    return {
-        token
-        for token in re.findall(r"[a-z0-9]+", text.lower())
-        if token and token not in STOPWORDS
-    }
+    return tokenize_text(text, stopwords=STOPWORDS)
 
 
 def normalize_text(text: str) -> str:
     """Normalize text for deterministic phrase matching."""
 
-    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+    return normalize_request_text(text)
 
 
 def phrase_matches(normalized_text: str, phrases: set[str]) -> list[str]:

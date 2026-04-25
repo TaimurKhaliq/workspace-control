@@ -10,18 +10,18 @@
 ## Summary
 
 - commands succeeded: True
-- predicted files: 6
+- predicted files: 4
 - actual files: 11
-- matched files: 2
-- missed files: 9
-- extra predicted files: 4
-- exact file precision: 0.33
-- exact file recall: 0.18
+- matched files: 3
+- missed files: 8
+- extra predicted files: 1
+- exact file precision: 0.75
+- exact file recall: 0.27
 - folder-level matched actual files: 0
-- category precision: 0.40
+- category precision: 1.00
 - category recall: 0.40
-- high-signal exact precision: 0.33
-- high-signal exact recall: 0.18
+- high-signal exact precision: 0.75
+- high-signal exact recall: 0.27
 - static asset misses: 0
 
 ## Command Results
@@ -36,11 +36,9 @@
 ## Predicted Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
 - `spring-petclinic-reactjs/client/src/types/index.ts`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java`
 
 ## Actual Files
 
@@ -59,12 +57,12 @@
 ## Matched Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## Missed Files
 
 - `spring-petclinic-reactjs/client/TODO.md`
-- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
 - `spring-petclinic-reactjs/client/src/util/index.tsx`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java`
@@ -76,9 +74,6 @@
 ## Extra Predicted Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicServiceImpl.java`
 
 ## Folder-Level Matches
 
@@ -86,41 +81,41 @@
 
 ## Category-Level Matches
 
-- precision: 0.40
+- precision: 1.00
 - recall: 0.40
 - matched: `frontend_component`, `frontend_type`
 - missed: `api_controller`, `frontend_entrypoint`, `unknown`
-- extra predicted: `domain_model`, `repository`, `service_layer`
+- extra predicted: -
 
 ## Exact File Scoring
 
-- precision: 0.33
-- recall: 0.18
-- predicted count: 6
+- precision: 0.75
+- recall: 0.27
+- predicted count: 4
 - actual count: 11
-- matched count: 2
-- missed count: 9
-- extra predicted count: 4
+- matched count: 3
+- missed count: 8
+- extra predicted count: 1
 
 ## High-Signal File Scoring
 
-- precision: 0.33
-- recall: 0.18
-- predicted count: 6
+- precision: 0.75
+- recall: 0.27
+- predicted count: 4
 - actual count: 11
-- matched count: 2
-- missed count: 9
-- extra predicted count: 4
+- matched count: 3
+- missed count: 8
+- extra predicted count: 1
 
 ## High-Signal Matched Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## High-Signal Missed Files
 
 - `spring-petclinic-reactjs/client/TODO.md`
-- `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
 - `spring-petclinic-reactjs/client/src/util/index.tsx`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ApiExceptionHandler.java`

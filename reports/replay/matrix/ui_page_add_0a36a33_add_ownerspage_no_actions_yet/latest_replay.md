@@ -10,18 +10,18 @@
 ## Summary
 
 - commands succeeded: True
-- predicted files: 0
+- predicted files: 5
 - actual files: 3
-- matched files: 0
-- missed files: 3
-- extra predicted files: 0
-- exact file precision: 0.00
-- exact file recall: 0.00
+- matched files: 3
+- missed files: 0
+- extra predicted files: 2
+- exact file precision: 0.60
+- exact file recall: 1.00
 - folder-level matched actual files: 0
-- category precision: 0.00
-- category recall: 0.00
-- high-signal exact precision: 0.00
-- high-signal exact recall: 0.00
+- category precision: 1.00
+- category recall: 1.00
+- high-signal exact precision: 0.60
+- high-signal exact recall: 1.00
 - static asset misses: 0
 
 ## Command Results
@@ -35,7 +35,11 @@
 
 ## Predicted Files
 
--
+- `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/types.ts`
+- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## Actual Files
 
@@ -45,17 +49,18 @@
 
 ## Matched Files
 
--
-
-## Missed Files
-
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
 - `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
 - `spring-petclinic-reactjs/client/src/types/index.ts`
 
-## Extra Predicted Files
+## Missed Files
 
 -
+
+## Extra Predicted Files
+
+- `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/types.ts`
 
 ## Folder-Level Matches
 
@@ -63,41 +68,41 @@
 
 ## Category-Level Matches
 
-- precision: 0.00
-- recall: 0.00
-- matched: -
-- missed: `frontend_component`, `frontend_type`
+- precision: 1.00
+- recall: 1.00
+- matched: `frontend_component`, `frontend_type`
+- missed: -
 - extra predicted: -
 
 ## Exact File Scoring
 
-- precision: 0.00
-- recall: 0.00
-- predicted count: 0
+- precision: 0.60
+- recall: 1.00
+- predicted count: 5
 - actual count: 3
-- matched count: 0
-- missed count: 3
-- extra predicted count: 0
+- matched count: 3
+- missed count: 0
+- extra predicted count: 2
 
 ## High-Signal File Scoring
 
-- precision: 0.00
-- recall: 0.00
-- predicted count: 0
+- precision: 0.60
+- recall: 1.00
+- predicted count: 5
 - actual count: 3
-- matched count: 0
-- missed count: 3
-- extra predicted count: 0
+- matched count: 3
+- missed count: 0
+- extra predicted count: 2
 
 ## High-Signal Matched Files
-
--
-
-## High-Signal Missed Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
 - `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
 - `spring-petclinic-reactjs/client/src/types/index.ts`
+
+## High-Signal Missed Files
+
+-
 
 ## Static Asset Misses
 

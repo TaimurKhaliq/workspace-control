@@ -7,6 +7,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from app.models.discovery import DiscoverySnapshot, RepoDiscovery
+from app.services.text_normalization import normalize_text
 from workspace_control.manifests import MANIFEST_FILENAME
 from workspace_control.models import ConceptGrounding, InventoryRow
 
@@ -24,6 +25,14 @@ KNOWN_CONCEPTS = (
     "customer",
     "owner",
     "owners",
+    "pet",
+    "pets",
+    "visit",
+    "visits",
+    "vet",
+    "vets",
+    "specialty",
+    "specialties",
     "email",
 )
 CONCEPT_ALIASES = {
@@ -34,6 +43,8 @@ CONCEPT_ALIASES = {
     "customer": ("owner",),
     "owner": ("customer",),
     "owners": ("customer",),
+    "pet": ("animal",),
+    "pets": ("animal",),
     "email address": ("email",),
     "email": ("email address",),
     "marketing opt in": ("marketing opt-in", "marketing optin", "opt in"),
@@ -67,6 +78,22 @@ GENERIC_CONCEPT_TOKENS = {
     "rename",
     "persist",
     "store",
+    "actions",
+    "action",
+}
+UI_SURFACE_TOKENS = {
+    "details",
+    "detail",
+    "editor",
+    "form",
+    "page",
+    "screen",
+}
+NON_DOMAIN_UI_SURFACE_PREFIXES = {
+    "home",
+    "landing",
+    "layout",
+    "welcome",
 }
 
 
@@ -109,15 +136,36 @@ def _extract_concepts(feature_request: str) -> list[str]:
             continue
         concepts = [current for current in concepts if not _concept_subsumes(current, canonical)]
         concepts.append(canonical)
+
+    for concept in _ui_surface_concepts(normalized):
+        canonical = _canonical_concept(concept)
+        if _concept_is_subsumed(canonical, concepts):
+            continue
+        concepts.append(canonical)
     return concepts
 
 
 def _canonical_concept(concept: str) -> str:
-    if concept == "owners":
-        return "owner"
+    if concept in {"owners", "pets", "visits", "vets"}:
+        return concept[:-1]
+    if concept == "specialties":
+        return "specialty"
     if concept == "marketing opt-in":
         return "marketing opt in"
     return concept
+
+
+def _ui_surface_concepts(normalized: str) -> list[str]:
+    tokens = normalized.split()
+    concepts: list[str] = []
+    for index, token in enumerate(tokens):
+        if token not in UI_SURFACE_TOKENS or index == 0:
+            continue
+        previous = tokens[index - 1]
+        if previous in GENERIC_CONCEPT_TOKENS or previous in NON_DOMAIN_UI_SURFACE_PREFIXES:
+            continue
+        concepts.append(previous)
+    return _dedupe(concepts)
 
 
 def _concept_is_subsumed(concept: str, concepts: Sequence[str]) -> bool:
@@ -342,9 +390,7 @@ def _record(
 
 
 def _normalize_text(text: str) -> str:
-    split_camel = re.sub(r"([a-z0-9])([A-Z])", r"\1 \2", text)
-    split_initialism = re.sub(r"([A-Z]+)([A-Z][a-z])", r"\1 \2", split_camel)
-    return " ".join(re.findall(r"[a-z0-9]+", split_initialism.lower()))
+    return normalize_text(text)
 
 
 def _dedupe(values: Iterable[str]) -> list[str]:

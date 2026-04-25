@@ -1,7 +1,8 @@
 """Deterministic feature intent classification using phrase matching only."""
 
-import re
 from typing import Literal
+
+from app.services.text_normalization import normalize_text
 
 FeatureIntent = Literal["ui", "persistence", "api", "event_integration"]
 
@@ -36,17 +37,13 @@ _INTENT_PHRASES: dict[FeatureIntent, tuple[str, ...]] = {
 }
 
 
-def _normalize_text(text: str) -> str:
-    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
-
-
 class FeatureIntentClassifier:
     """Classifies feature intents with deterministic phrase checks."""
 
     def classify(self, feature_request: str) -> list[FeatureIntent]:
         """Return intent labels in stable order when matched."""
 
-        normalized = _normalize_text(feature_request)
+        normalized = normalize_text(feature_request)
         wrapped = f" {normalized} "
         intents: list[FeatureIntent] = []
 

@@ -83,16 +83,65 @@
     ]
   },
   "planner_outputs": {
-    "predicted_files": [],
-    "predicted_file_paths": [],
+    "predicted_files": [
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Nearby same-domain frontend file can provide the page and routing pattern."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/types.ts",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Shared frontend types may need review for the new page surface."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/types/index.ts",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Shared frontend types may need review for the new page surface."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "Route/config file likely needs wiring for the new page."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "create",
+        "confidence": "high",
+        "reason": "Feature explicitly names this page component, and nearby frontend paths indicate the folder convention."
+      }
+    ],
+    "predicted_file_paths": [
+      "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+      "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+      "spring-petclinic-reactjs/client/src/components/owners/types.ts",
+      "spring-petclinic-reactjs/client/src/configureRoutes.tsx",
+      "spring-petclinic-reactjs/client/src/types/index.ts"
+    ],
     "predicted_categories": {
       "frontend_entrypoint": [],
       "app_shell": [],
       "landing_page": [],
       "public_html": [],
       "static_asset": [],
-      "frontend_component": [],
-      "frontend_type": [],
+      "frontend_component": [
+        "spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx",
+        "spring-petclinic-reactjs/client/src/configureRoutes.tsx"
+      ],
+      "frontend_type": [
+        "spring-petclinic-reactjs/client/src/components/owners/types.ts",
+        "spring-petclinic-reactjs/client/src/types/index.ts"
+      ],
       "api_contract": [],
       "api_controller": [],
       "service_layer": [],
@@ -101,36 +150,125 @@
       "migration": [],
       "unknown": []
     },
-    "proposed_files": [],
-    "predicted_reference_files": [],
+    "proposed_files": [
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/ErrorPage.tsx",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain UI file; useful only as a UI pattern reference."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/NotFoundPage.tsx",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain UI file; useful only as a UI pattern reference."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/WelcomePage.tsx",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain UI file; useful only as a UI pattern reference."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/owners/FindOwnersPage.tsx",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Nearby same-domain frontend file can provide the page and routing pattern."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/owners/types.ts",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Shared frontend types may need review for the new page surface."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/types/index.ts",
+        "action": "inspect",
+        "confidence": "medium",
+        "reason": "Shared frontend types may need review for the new page surface."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/configureRoutes.tsx",
+        "action": "modify",
+        "confidence": "high",
+        "reason": "Route/config file likely needs wiring for the new page."
+      },
+      {
+        "repo_name": "spring-petclinic-reactjs",
+        "path": "client/src/components/owners/OwnersPage.tsx",
+        "action": "create",
+        "confidence": "high",
+        "reason": "Feature explicitly names this page component, and nearby frontend paths indicate the folder convention."
+      }
+    ],
+    "predicted_reference_files": [
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/ErrorPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain UI file; useful only as a UI pattern reference."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/NotFoundPage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain UI file; useful only as a UI pattern reference."
+      },
+      {
+        "path": "spring-petclinic-reactjs/client/src/components/WelcomePage.tsx",
+        "repo_name": "spring-petclinic-reactjs",
+        "action": "inspect-only",
+        "confidence": "low",
+        "reason": "Different domain UI file; useful only as a UI pattern reference."
+      }
+    ],
     "metrics": {
-      "exact_precision": 0.0,
-      "exact_recall": 0.0,
-      "category_precision": 0.0,
-      "category_recall": 0.0,
-      "high_signal_precision": 0.0,
-      "high_signal_recall": 0.0
+      "exact_precision": 0.6,
+      "exact_recall": 1.0,
+      "category_precision": 1.0,
+      "category_recall": 1.0,
+      "high_signal_precision": 0.6,
+      "high_signal_recall": 1.0
     },
     "plan": {
-      "primary_owner": null,
-      "implementation_owner": null,
+      "primary_owner": "spring-petclinic-reactjs",
+      "implementation_owner": "spring-petclinic-reactjs",
       "domain_owner": null,
-      "feature_intents": [],
-      "unsupported_intents": [],
-      "missing_evidence": [
-        "no primary owner identified from strong evidence"
+      "feature_intents": [
+        "ui"
       ],
-      "likely_paths_by_repo": {},
-      "ordered_steps": []
+      "unsupported_intents": [],
+      "missing_evidence": [],
+      "likely_paths_by_repo": {
+        "spring-petclinic-reactjs": [
+          "client/src/components/owners",
+          "client/src/types"
+        ]
+      },
+      "ordered_steps": [
+        "In spring-petclinic-reactjs (primary-owner, score=23), update the requested UI page, layout, route, and component composition using discovered UI paths: client/src/components, client/src/types, client/src/components/owners.",
+        "Run validation commands in impacted repos: ./mvnw test."
+      ]
     },
     "propose": {
-      "implementation_owner": null,
+      "implementation_owner": "spring-petclinic-reactjs",
       "domain_owner": null,
-      "feature_intents": [],
+      "feature_intents": [
+        "ui"
+      ],
       "unsupported_intents": [],
-      "proposed_change_count": 0
+      "proposed_change_count": 1
     },
-    "analyze_output_excerpt": "Feature: \"Add OwnersPage (no actions yet)\"\nNo likely impacted repos found from current stackpilot.yml metadata.\n"
+    "analyze_output_excerpt": "Feature: \"Add OwnersPage (no actions yet)\"\nrepo                     | role             | score | reason                                                                                                                                                                                                                                         \n-------------------------+------------------+-------+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------\nspring-petclinic-reactjs | direct-dependent | 23    | deterministic_intent: frontend signals (keywords: page; repo type; manifest: frontend, react, ui, web); adapter_discovery: adapter discovery (react, spring_boot; paths: client/src/components, client/src/types, client/src/components/owners)\n"
   },
   "discovery_source_graph_evidence": {
     "detected_frameworks": [
@@ -456,24 +594,18 @@
   },
   "failure_classification": {
     "labels": [
-      "graph_found_surface_but_proposal_missed",
       "new_file_hard_to_predict",
-      "planner_underpredicted",
-      "prompt_too_vague"
+      "planner_overpredicted"
     ],
     "reasons": [
-      "Prompt did not produce clear feature intents or ownership.",
-      "No predicted files were emitted.",
-      "Plan produced null primary and implementation owners.",
-      "propose-changes emitted no proposed changes.",
-      "At least one actual changed file did not exist in the parent snapshot.",
-      "Source graph found relevant surfaces, but propose-changes emitted no files."
+      "Predicted more files than actually changed.",
+      "At least one actual changed file did not exist in the parent snapshot."
     ]
   },
   "diagnosis_summary": {
-    "likely_cause": "The prompt did not provide enough actionable product/surface intent.",
-    "recommended_fix_area": "prompt generation",
-    "why": "Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. At least one actual changed file did not exist in the parent snapshot. Source graph found relevant surfaces, but propose-changes emitted no files."
+    "likely_cause": "Planner predicted the actual high-signal changed files; remaining labels reflect conservative references or new-file difficulty.",
+    "recommended_fix_area": "none",
+    "why": "Predicted more files than actually changed. At least one actual changed file did not exist in the parent snapshot."
   },
   "reports": {
     "json": "reports/replay/debug/ui_page_add_0a36a33_add_ownerspage_no_actions_yet.json",

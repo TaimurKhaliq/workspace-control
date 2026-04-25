@@ -430,7 +430,7 @@
           "path": "ordered_steps",
           "passed": true,
           "actual": [
-            "In service-a (primary-owner, score=42), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility.",
+            "In service-a (primary-owner, score=76), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility.",
             "In web-ui (direct-dependent, score=17), update pages/components/forms, client request payload handling, and submission/error states.",
             "Run validation commands in impacted repos: ./gradlew build ; ./gradlew test ; npm run build ; npm test."
           ],
@@ -609,7 +609,7 @@
           "path": "ordered_steps",
           "passed": true,
           "actual": [
-            "In service-a (primary-owner, score=102), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility using discovered controller/dto/service paths: src/main/resources/openapi.yaml, src/main/java/com/example/servicea/controller, src/main/java/com/example/servicea/dto.",
+            "In service-a (primary-owner, score=131), update API request/response contracts, implement controller/service validation flow, and verify DTO mapping compatibility using discovered controller/dto/service paths: src/main/resources/openapi.yaml, src/main/java/com/example/servicea/controller, src/main/java/com/example/servicea/dto.",
             "In web-ui (direct-dependent, score=28), update pages/components/forms, client request payload handling, and submission/error states using discovered UI/client paths: src/pages, src/components, src/forms.",
             "Run validation commands in impacted repos: ./gradlew build ; ./gradlew test ; npm run build ; npm test."
           ],

@@ -10,15 +10,15 @@
 ## Summary
 
 - commands succeeded: True
-- predicted files: 4
+- predicted files: 11
 - actual files: 1
 - matched files: 0
 - missed files: 1
-- extra predicted files: 4
+- extra predicted files: 11
 - exact file precision: 0.00
 - exact file recall: 0.00
 - folder-level matched actual files: 1
-- category precision: 0.33
+- category precision: 0.25
 - category recall: 1.00
 - high-signal exact precision: 0.00
 - high-signal exact recall: 0.00
@@ -35,6 +35,13 @@
 
 ## Predicted Files
 
+- `spring-petclinic-reactjs/Run PetClinicApplication.launch`
+- `spring-petclinic-reactjs/client/src/components/owners/PetsTable.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/NewPetPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/PetEditor.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/createPetEditorModel.ts`
+- `spring-petclinic-reactjs/client/src/components/visits/PetDetails.tsx`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
@@ -54,6 +61,13 @@
 
 ## Extra Predicted Files
 
+- `spring-petclinic-reactjs/Run PetClinicApplication.launch`
+- `spring-petclinic-reactjs/client/src/components/owners/PetsTable.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/NewPetPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/PetEditor.tsx`
+- `spring-petclinic-reactjs/client/src/components/pets/createPetEditorModel.ts`
+- `spring-petclinic-reactjs/client/src/components/visits/PetDetails.tsx`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service`
 - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web`
@@ -68,31 +82,31 @@
 
 ## Category-Level Matches
 
-- precision: 0.33
+- precision: 0.25
 - recall: 1.00
 - matched: `unknown`
 - missed: -
-- extra predicted: `repository`, `service_layer`
+- extra predicted: `frontend_component`, `repository`, `service_layer`
 
 ## Exact File Scoring
 
 - precision: 0.00
 - recall: 0.00
-- predicted count: 4
+- predicted count: 11
 - actual count: 1
 - matched count: 0
 - missed count: 1
-- extra predicted count: 4
+- extra predicted count: 11
 
 ## High-Signal File Scoring
 
 - precision: 0.00
 - recall: 0.00
-- predicted count: 4
+- predicted count: 11
 - actual count: 1
 - matched count: 0
 - missed count: 1
-- extra predicted count: 4
+- extra predicted count: 11
 
 ## High-Signal Matched Files
 

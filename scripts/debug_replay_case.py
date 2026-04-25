@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import tempfile
 from collections import Counter
@@ -352,9 +353,19 @@ def classify_failure(
     if case.get("prompt_quality") == "low":
         labels.add("bad_prompt")
         reasons.append("Prompt quality is low.")
-    if prompt_too_vague(str(case.get("prompt", "")), plan):
+    if prompt_too_vague(
+        str(case.get("prompt", "")),
+        plan,
+        prompt_quality=str(case.get("prompt_quality", "")),
+    ):
         labels.add("prompt_too_vague")
         reasons.append("Prompt did not produce clear feature intents or ownership.")
+    if _identifier_page_prompt(str(case.get("prompt", ""))) and not plan.get("feature_intents"):
+        labels.add("identifier_normalization_gap")
+        reasons.append("Prompt contains an identifier-style page name that did not become UI intent.")
+    if case.get("archetype") == "ui_page_add" and "ui" not in plan.get("feature_intents", []):
+        labels.add("ui_page_add_archetype_gap")
+        reasons.append("UI page-add archetype did not produce UI intent.")
     if case.get("archetype") in {"config_build", "docs_comments", "refactor_move", "infra_deployment", "reject"}:
         labels.add("unsupported_change_type")
         reasons.append("Archetype is not a product-feature planning case.")
@@ -388,6 +399,9 @@ def classify_failure(
     if discovery_evidence.get("relevant_graph_nodes") and predicted_count == 0:
         labels.add("graph_found_surface_but_proposal_missed")
         reasons.append("Source graph found relevant surfaces, but propose-changes emitted no files.")
+        if case.get("archetype") == "ui_page_add":
+            labels.add("new_file_prediction_gap")
+            reasons.append("Relevant page surfaces were found, but no new page file was proposed.")
     if not discovery_evidence.get("detected_frameworks"):
         labels.add("source_discovery_gap")
         reasons.append("Discovery did not report framework evidence.")
@@ -405,9 +419,18 @@ def build_diagnosis_summary(
     """Build a short deterministic diagnosis summary."""
 
     labels = set(failure["labels"])
+    metrics = planner_outputs.get("metrics", {})
+    exact_recall = float(metrics.get("exact_recall") or 0.0)
+    high_signal_recall = float(metrics.get("high_signal_recall") or 0.0)
     if "bad_candidate" in labels or "unsupported_change_type" in labels:
         fix_area = "candidate classification"
         cause = "The case appears to be outside the default product-feature replay benchmark."
+    elif "identifier_normalization_gap" in labels or "ui_page_add_archetype_gap" in labels:
+        fix_area = "planner"
+        cause = "The prompt names a UI page surface, but intent/ownership did not recognize it."
+    elif "new_file_prediction_gap" in labels:
+        fix_area = "propose-changes"
+        cause = "The planner found relevant UI page surfaces but did not propose the new file."
     elif "bad_prompt" in labels or "prompt_too_vague" in labels:
         fix_area = "prompt generation"
         cause = "The prompt did not provide enough actionable product/surface intent."
@@ -423,6 +446,9 @@ def build_diagnosis_summary(
     elif "exact_match_miss_but_category_match" in labels or "static_asset_heavy" in labels:
         fix_area = "replay scoring"
         cause = "Exact-file scoring is harsher than surface/category scoring for this change."
+    elif exact_recall >= 1.0 or high_signal_recall >= 1.0:
+        fix_area = "none"
+        cause = "Planner predicted the actual high-signal changed files; remaining labels reflect conservative references or new-file difficulty."
     else:
         fix_area = "none"
         cause = "No major deterministic failure label was assigned."
@@ -434,9 +460,20 @@ def build_diagnosis_summary(
     }
 
 
-def prompt_too_vague(prompt: str, plan: dict[str, Any]) -> bool:
+def prompt_too_vague(
+    prompt: str,
+    plan: dict[str, Any],
+    *,
+    prompt_quality: str = "",
+) -> bool:
+    if prompt_quality == "high" and _identifier_page_prompt(prompt):
+        return False
     words = [word for word in prompt.split() if word.strip()]
     return len(words) <= 2 or (not plan.get("feature_intents") and not plan.get("primary_owner") and not plan.get("implementation_owner"))
+
+
+def _identifier_page_prompt(prompt: str) -> bool:
+    return bool(re.search(r"\b[A-Z][A-Za-z0-9]*(?:Page|View|Screen)\b", prompt))
 
 
 def extract_proposed_files(propose_output: dict[str, Any]) -> list[dict[str, Any]]:

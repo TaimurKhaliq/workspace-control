@@ -267,6 +267,51 @@ def _seed_petclinic_like_ui_shell_workspace(tmp_path: Path) -> None:
         (repo / relative).write_text(text, encoding="utf-8")
 
 
+def _seed_petclinic_like_page_add_workspace(tmp_path: Path) -> None:
+    repo = tmp_path / "spring-petclinic-reactjs"
+    for path in [
+        "client/src/components/owners",
+        "client/src/types",
+        "src/main/java/org/springframework/samples/petclinic/owner",
+    ]:
+        (repo / path).mkdir(parents=True, exist_ok=True)
+
+    (repo / "pom.xml").write_text(
+        "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>",
+        encoding="utf-8",
+    )
+    (repo / "client/package.json").write_text(
+        json.dumps(
+            {
+                "name": "petclinic-client",
+                "dependencies": {"react": "18.2.0", "typescript": "5.0.0"},
+                "scripts": {"test": "vitest", "build": "vite build"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    (repo / "client/src/configureRoutes.tsx").write_text(
+        "const ownerRoutes = [{ path: '/owners', component: 'FindOwnersPage' }];\n",
+        encoding="utf-8",
+    )
+    (repo / "client/src/components/owners/FindOwnersPage.tsx").write_text(
+        "export function FindOwnersPage() { return null; }\n",
+        encoding="utf-8",
+    )
+    (repo / "client/src/types/index.ts").write_text(
+        "export interface Owner { id: string }\n",
+        encoding="utf-8",
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/owner/OwnerRestController.java").write_text(
+        "class OwnerRestController {}\n",
+        encoding="utf-8",
+    )
+    (repo / "src/main/java/org/springframework/samples/petclinic/owner/Owner.java").write_text(
+        "class Owner {}\n",
+        encoding="utf-8",
+    )
+
+
 def _proposal_by_repo(proposal):
     return {item.repo_name: item for item in proposal.proposed_changes}
 
@@ -664,6 +709,43 @@ def test_ui_shell_landing_page_request_prefers_shell_entrypoint_and_public_files
     assert files["client/public/index.html"].action == "inspect"
     assert files["client/public/images"].action == "inspect-only"
     assert item.possible_new_files == []
+
+
+def test_ui_page_add_identifier_request_proposes_new_page_and_route_wiring(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    _seed_petclinic_like_page_add_workspace(tmp_path)
+
+    feature_request = "Add OwnersPage (no actions yet)"
+    exit_code = run(["plan-feature", feature_request, "--scan-root", str(tmp_path)])
+    captured = capsys.readouterr()
+    plan = json.loads(captured.out)
+    repo_name = "spring-petclinic-reactjs"
+
+    assert exit_code == 0
+    assert "ui" in plan["feature_intents"]
+    assert plan["implementation_owner"] == repo_name
+    assert plan["ui_change_needed"] is True
+    assert plan["api_change_needed"] is False
+    assert plan["db_change_needed"] is False
+    assert not any(
+        path.startswith("src/main/java")
+        for path in plan["likely_paths_by_repo"][repo_name]
+    )
+
+    rows = build_inventory(tmp_path)
+    proposal = create_change_proposal(feature_request, rows, scan_root=tmp_path)
+    item = _proposal_by_repo(proposal)[repo_name]
+    files = _file_by_path(item)
+
+    assert "client/src/components/owners/OwnersPage.tsx" in files
+    assert files["client/src/components/owners/OwnersPage.tsx"].action == "create"
+    assert "client/src/components/owners/OwnersPage.tsx" in item.possible_new_files
+    assert "client/src/configureRoutes.tsx" in item.likely_files_to_inspect
+    assert files["client/src/configureRoutes.tsx"].action in {"modify", "inspect"}
+    assert not any(path.startswith("src/main/java") for path in item.likely_files_to_inspect)
+    assert item.possible_new_files == ["client/src/components/owners/OwnersPage.tsx"]
 
 
 def test_change_proposal_item_normalizes_legacy_file_strings_into_file_objects() -> None:

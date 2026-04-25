@@ -10,17 +10,17 @@
 ## Summary
 
 - commands succeeded: True
-- predicted files: 5
+- predicted files: 3
 - actual files: 3
 - matched files: 2
 - missed files: 1
-- extra predicted files: 3
-- exact file precision: 0.40
+- extra predicted files: 1
+- exact file precision: 0.67
 - exact file recall: 0.67
 - folder-level matched actual files: 0
-- category precision: 0.33
+- category precision: 1.00
 - category recall: 0.50
-- high-signal exact precision: 0.40
+- high-signal exact precision: 0.67
 - high-signal exact recall: 0.67
 - static asset misses: 0
 
@@ -38,8 +38,6 @@
 - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/owners/NewOwnerPage.tsx`
 - `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java`
 
 ## Actual Files
 
@@ -59,8 +57,6 @@
 ## Extra Predicted Files
 
 - `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Owner.java`
-- `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java`
 
 ## Folder-Level Matches
 
@@ -68,31 +64,31 @@
 
 ## Category-Level Matches
 
-- precision: 0.33
+- precision: 1.00
 - recall: 0.50
 - matched: `frontend_component`
 - missed: `frontend_type`
-- extra predicted: `domain_model`, `repository`
+- extra predicted: -
 
 ## Exact File Scoring
 
-- precision: 0.40
+- precision: 0.67
 - recall: 0.67
-- predicted count: 5
+- predicted count: 3
 - actual count: 3
 - matched count: 2
 - missed count: 1
-- extra predicted count: 3
+- extra predicted count: 1
 
 ## High-Signal File Scoring
 
-- precision: 0.40
+- precision: 0.67
 - recall: 0.67
-- predicted count: 5
+- predicted count: 3
 - actual count: 3
 - matched count: 2
 - missed count: 1
-- extra predicted count: 3
+- extra predicted count: 1
 
 ## High-Signal Matched Files
 

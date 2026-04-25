@@ -9,23 +9,27 @@
 
 ## Diagnosis
 
-- labels: `graph_found_surface_but_proposal_missed`, `new_file_hard_to_predict`, `planner_underpredicted`, `prompt_too_vague`
-- likely cause: The prompt did not provide enough actionable product/surface intent.
-- recommended fix area: `prompt generation`
-- why: Prompt did not produce clear feature intents or ownership. No predicted files were emitted. Plan produced null primary and implementation owners. propose-changes emitted no proposed changes. At least one actual changed file did not exist in the parent snapshot. Source graph found relevant surfaces, but propose-changes emitted no files.
+- labels: `new_file_hard_to_predict`, `planner_overpredicted`
+- likely cause: Planner predicted the actual high-signal changed files; remaining labels reflect conservative references or new-file difficulty.
+- recommended fix area: `none`
+- why: Predicted more files than actually changed. At least one actual changed file did not exist in the parent snapshot.
 
 ## Metrics
 
-- exact_precision: 0.0
-- exact_recall: 0.0
-- category_precision: 0.0
-- category_recall: 0.0
-- high_signal_precision: 0.0
-- high_signal_recall: 0.0
+- exact_precision: 0.6
+- exact_recall: 1.0
+- category_precision: 1.0
+- category_recall: 1.0
+- high_signal_precision: 0.6
+- high_signal_recall: 1.0
 
 ## Predicted Files
 
--
+- `spring-petclinic-reactjs/client/src/components/owners/FindOwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/OwnersPage.tsx`
+- `spring-petclinic-reactjs/client/src/components/owners/types.ts`
+- `spring-petclinic-reactjs/client/src/configureRoutes.tsx`
+- `spring-petclinic-reactjs/client/src/types/index.ts`
 
 ## Actual Files
 
@@ -45,13 +49,13 @@
 
 ## Plan/Proposal
 
-- plan primary_owner: `None`
-- plan implementation_owner: `None`
+- plan primary_owner: `spring-petclinic-reactjs`
+- plan implementation_owner: `spring-petclinic-reactjs`
 - plan domain_owner: `None`
-- plan feature_intents: `[]`
+- plan feature_intents: `['ui']`
 - plan unsupported_intents: `[]`
-- plan missing_evidence: `['no primary owner identified from strong evidence']`
-- proposed change count: 0
+- plan missing_evidence: `[]`
+- proposed change count: 1
 
 ## Discovery / Source Graph
 
