@@ -1,0 +1,78 @@
+{
+  "name": "react",
+  "version": null,
+  "backend_node_kinds": [],
+  "frontend_node_kinds": [
+    "page",
+    "editor",
+    "form",
+    "detail",
+    "list",
+    "component",
+    "client-api",
+    "type"
+  ],
+  "common_path_roots": {
+    "ui": [
+      "src/pages",
+      "src/app",
+      "src/components",
+      "src/forms",
+      "src/features",
+      "src/containers",
+      "src/routes",
+      "src/views",
+      "src/types",
+      "client/src/pages",
+      "client/src/app",
+      "client/src/components",
+      "client/src/forms",
+      "client/src/features",
+      "client/src/containers",
+      "client/src/routes",
+      "client/src/views",
+      "client/src/types",
+      "frontend/src/pages",
+      "frontend/src/components",
+      "frontend/src/forms",
+      "web/src/pages",
+      "web/src/components",
+      "ui/src/pages",
+      "ui/src/components"
+    ],
+    "api": [
+      "src/api",
+      "src/services",
+      "src/lib/api",
+      "src/clients",
+      "client/src/api",
+      "client/src/services",
+      "client/src/lib/api",
+      "client/src/clients",
+      "frontend/src/api",
+      "frontend/src/services",
+      "web/src/api",
+      "web/src/services",
+      "ui/src/api",
+      "ui/src/services"
+    ],
+    "service": [
+      "src/services",
+      "src/hooks",
+      "src/state",
+      "src/store",
+      "client/src/services",
+      "client/src/hooks",
+      "client/src/state",
+      "client/src/store",
+      "frontend/src/services",
+      "web/src/services",
+      "ui/src/services"
+    ]
+  },
+  "naming_patterns": {
+    "ui": ["*.tsx", "*.jsx"],
+    "api": ["*Client.ts", "*Api.ts", "*Service.ts"]
+  },
+  "validation_command_hints": ["npm test", "npm run build"]
+}

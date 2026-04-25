@@ -6,6 +6,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from .evidence import Evidence
+from .framework_descriptor import FrameworkDescriptor
 
 
 class DiscoveryTarget(BaseModel):
@@ -83,6 +84,9 @@ class RepoDiscovery(BaseModel):
     missing_evidence: list[str] = Field(default_factory=list)
     detected_frameworks: list[str] = Field(default_factory=list)
     hinted_frameworks: list[str] = Field(default_factory=list)
+    framework_detections: list[FrameworkDescriptor] = Field(default_factory=list)
+    loaded_framework_packs: list[str] = Field(default_factory=list)
+    framework_hints: list[str] = Field(default_factory=list)
     likely_api_locations: list[str] = Field(default_factory=list)
     likely_service_locations: list[str] = Field(default_factory=list)
     likely_persistence_locations: list[str] = Field(default_factory=list)
@@ -108,3 +112,6 @@ class DiscoverySnapshot(BaseModel):
     target: DiscoveryTarget
     workspace: MaterializedWorkspace
     report: ArchitectureDiscoveryReport
+    detected_frameworks: list[FrameworkDescriptor] = Field(default_factory=list)
+    loaded_framework_packs: list[str] = Field(default_factory=list)
+    framework_hints: dict[str, list[str]] = Field(default_factory=dict)

@@ -9,6 +9,8 @@ from app.adapters.flyway import FlywayAdapter
 from app.adapters.openapi import OpenAPIAdapter
 from app.adapters.react import ReactAdapter
 from app.adapters.spring_boot import SpringBootAdapter
+from app.discovery.services.framework_detector import FrameworkDetector
+from app.discovery.services.framework_pack_loader import FrameworkPackLoader
 from app.models.discovery import (
     AdapterDiscovery,
     ArchitectureDiscoveryReport,
@@ -18,6 +20,8 @@ from app.models.discovery import (
     RepoDiscovery,
 )
 from app.models.evidence import Evidence
+from app.models.framework_descriptor import FrameworkDescriptor
+from app.models.framework_pack import FrameworkPack
 from app.models.repo_manifest import RepoManifest
 from app.providers import (
     DiscoveryProvider,
@@ -67,6 +71,8 @@ class ArchitectureDiscoveryService:
         self,
         adapters: Sequence[RepoAdapter] | None = None,
         providers: Sequence[DiscoveryProvider] | None = None,
+        framework_detector: FrameworkDetector | None = None,
+        framework_pack_loader: FrameworkPackLoader | None = None,
     ):
         self._adapters = tuple(
             adapters
@@ -87,13 +93,36 @@ class ArchitectureDiscoveryService:
                 RemoteAgentProvider(),
             )
         )
+        self._framework_detector = framework_detector or FrameworkDetector()
+        self._framework_pack_loader = framework_pack_loader or FrameworkPackLoader()
 
     def discover(self, target: DiscoveryTarget) -> DiscoverySnapshot:
         """Materialize a target and return its source-agnostic discovery snapshot."""
 
         workspace = self._provider_for(target).materialize(target)
-        report = self._scan_materialized_workspace(workspace)
-        return DiscoverySnapshot(target=target, workspace=workspace, report=report)
+        framework_detections = self._framework_detector.detect(workspace)
+        report = self._scan_materialized_workspace(workspace, framework_detections)
+        flat_detections = [
+            descriptor
+            for repo_name in sorted(framework_detections)
+            for descriptor in framework_detections[repo_name]
+        ]
+        loaded_framework_packs = merge_paths(
+            *(repo.loaded_framework_packs for repo in report.repos)
+        )
+        framework_hints = {
+            repo.repo_name: repo.framework_hints
+            for repo in report.repos
+            if repo.framework_hints
+        }
+        return DiscoverySnapshot(
+            target=target,
+            workspace=workspace,
+            report=report,
+            detected_frameworks=flat_detections,
+            loaded_framework_packs=loaded_framework_packs,
+            framework_hints=framework_hints,
+        )
 
     def snapshot(self, target: DiscoveryTarget) -> DiscoverySnapshot:
         """Compatibility alias for source-agnostic discovery snapshots."""
@@ -112,10 +141,13 @@ class ArchitectureDiscoveryService:
         raise ValueError(f"No discovery provider supports target source {target.source}")
 
     def _scan_materialized_workspace(
-        self, workspace: MaterializedWorkspace
+        self,
+        workspace: MaterializedWorkspace,
+        framework_detections: dict[str, list[FrameworkDescriptor]] | None = None,
     ) -> ArchitectureDiscoveryReport:
         """Discover adapter findings for a materialized local workspace path."""
 
+        framework_detections = framework_detections or {}
         repos: list[RepoDiscovery] = []
         for repo_path in self._repo_dirs(workspace.root_path):
             manifest = self._load_manifest_hint(repo_path)
@@ -125,7 +157,14 @@ class ArchitectureDiscoveryService:
             if not discoveries and not (repo_path / MANIFEST_FILENAME).is_file():
                 continue
 
-            repos.append(self._build_repo_discovery(repo_path, manifest, discoveries))
+            repos.append(
+                self._build_repo_discovery(
+                    repo_path,
+                    manifest,
+                    discoveries,
+                    framework_detections.get(repo_path.name, []),
+                )
+            )
 
         repos.sort(key=lambda item: item.repo_name)
         return ArchitectureDiscoveryReport(repos=repos)
@@ -167,29 +206,52 @@ class ArchitectureDiscoveryService:
         repo_path: Path,
         manifest: RepoManifest,
         discoveries: Sequence[AdapterDiscovery],
+        framework_descriptors: Sequence[FrameworkDescriptor] = (),
     ) -> RepoDiscovery:
         adapter_frameworks = merge_paths(*(item.frameworks for item in discoveries))
         hinted_frameworks = _hinted_frameworks(manifest, self._read_agents_hint(repo_path))
+        packs_by_name = self._framework_pack_loader.load_for_descriptors(
+            list(framework_descriptors),
+            hinted_frameworks,
+        )
         discovered_frameworks = [
             framework
             for framework in adapter_frameworks
             if _framework_is_discovered(repo_path, framework)
         ]
+        detected_frameworks = merge_paths(
+            discovered_frameworks,
+            [descriptor.name for descriptor in framework_descriptors],
+        )
         hinted_frameworks = merge_paths(
             hinted_frameworks,
             [
                 framework
                 for framework in adapter_frameworks
-                if framework not in discovered_frameworks
+                if framework not in detected_frameworks
             ],
         )
-        api_locations = merge_paths(*(item.api_locations for item in discoveries))
-        service_locations = merge_paths(*(item.service_locations for item in discoveries))
-        persistence_locations = merge_paths(
-            *(item.persistence_locations for item in discoveries)
+        api_locations = merge_paths(
+            *(item.api_locations for item in discoveries),
+            _pack_locations(repo_path, packs_by_name.values(), "api"),
         )
-        ui_locations = merge_paths(*(item.ui_locations for item in discoveries))
-        event_locations = merge_paths(*(item.event_locations for item in discoveries))
+        service_locations = merge_paths(*(item.service_locations for item in discoveries))
+        service_locations = merge_paths(
+            service_locations,
+            _pack_locations(repo_path, packs_by_name.values(), "service"),
+        )
+        persistence_locations = merge_paths(
+            *(item.persistence_locations for item in discoveries),
+            _pack_locations(repo_path, packs_by_name.values(), "persistence"),
+        )
+        ui_locations = merge_paths(
+            *(item.ui_locations for item in discoveries),
+            _pack_locations(repo_path, packs_by_name.values(), "ui"),
+        )
+        event_locations = merge_paths(
+            *(item.event_locations for item in discoveries),
+            _pack_locations(repo_path, packs_by_name.values(), "event"),
+        )
         hinted_locations = _hinted_locations(manifest, self._read_agents_hint(repo_path))
         missing_evidence = _missing_evidence(
             manifest,
@@ -224,6 +286,21 @@ class ArchitectureDiscoveryService:
             for item in discoveries
             for framework in item.frameworks
         ]
+        evidence.extend(
+            Evidence(
+                repo_name=repo_path.name,
+                source="framework_detector",
+                category="framework",
+                signal=descriptor.name,
+                weight=2 if descriptor.confidence == "high" else 1,
+                details={
+                    "source": descriptor.source,
+                    "confidence": descriptor.confidence,
+                    "version": descriptor.version or "",
+                },
+            )
+            for descriptor in framework_descriptors
+        )
 
         return RepoDiscovery(
             repo_name=repo_path.name,
@@ -233,8 +310,11 @@ class ArchitectureDiscoveryService:
             evidence_mode=evidence_mode,
             confidence=confidence,
             missing_evidence=missing_evidence,
-            detected_frameworks=discovered_frameworks,
+            detected_frameworks=detected_frameworks,
             hinted_frameworks=hinted_frameworks,
+            framework_detections=list(framework_descriptors),
+            loaded_framework_packs=merge_paths(list(packs_by_name)),
+            framework_hints=_framework_hints_from_packs(packs_by_name.values()),
             likely_api_locations=api_locations,
             likely_service_locations=service_locations,
             likely_persistence_locations=persistence_locations,
@@ -265,6 +345,21 @@ def format_architecture_discovery(report: ArchitectureDiscoveryReport) -> str:
             lines.append(f"  missing_evidence: {_format_values(repo.missing_evidence)}")
         lines.append(f"  discovered frameworks: {_format_values(repo.detected_frameworks)}")
         lines.append(f"  hinted frameworks: {_format_values(repo.hinted_frameworks)}")
+        if repo.framework_detections:
+            lines.append(
+                "  framework detections: "
+                + _format_framework_descriptors(repo.framework_detections)
+            )
+        if repo.loaded_framework_packs:
+            lines.append(
+                "  framework packs loaded: "
+                + _format_framework_pack_sources(repo)
+            )
+        if repo.framework_hints:
+            lines.append(
+                "  framework-derived hints: "
+                + _format_values(repo.framework_hints)
+            )
         lines.append(f"  discovered api: {_format_values(repo.likely_api_locations)}")
         lines.append(
             "  discovered service/business logic: "
@@ -311,6 +406,58 @@ def _format_values(values: Sequence[str]) -> str:
     if not values:
         return "-"
     return ", ".join(values)
+
+
+def _format_framework_descriptors(values: Sequence[FrameworkDescriptor]) -> str:
+    if not values:
+        return "-"
+    parts: list[str] = []
+    for descriptor in values:
+        version = f" {descriptor.version}" if descriptor.version else ""
+        parts.append(
+            f"{descriptor.name}{version} "
+            f"({descriptor.origin}, {descriptor.confidence}, {descriptor.source})"
+        )
+    return ", ".join(parts)
+
+
+def _format_framework_pack_sources(repo: RepoDiscovery) -> str:
+    parts: list[str] = []
+    detected = set(repo.detected_frameworks)
+    for pack_name in repo.loaded_framework_packs:
+        origin = "detected" if pack_name in detected else "inferred"
+        parts.append(f"{pack_name} ({origin})")
+    return ", ".join(parts) if parts else "-"
+
+
+def _pack_locations(
+    repo_path: Path,
+    packs: Sequence[FrameworkPack],
+    category: str,
+) -> list[str]:
+    locations: list[str] = []
+    for pack in packs:
+        for candidate in pack.common_path_roots.get(category, []):
+            if (repo_path / candidate).exists():
+                locations.append(candidate)
+    return merge_paths(locations)
+
+
+def _framework_hints_from_packs(packs: Sequence[FrameworkPack]) -> list[str]:
+    hints: list[str] = []
+    for pack in packs:
+        node_kinds = merge_paths(pack.backend_node_kinds, pack.frontend_node_kinds)
+        if node_kinds:
+            hints.append(f"{pack.name} node kinds: {', '.join(node_kinds[:6])}")
+        categories = sorted(pack.common_path_roots)
+        if categories:
+            hints.append(f"{pack.name} path categories: {', '.join(categories)}")
+        if pack.validation_command_hints:
+            hints.append(
+                f"{pack.name} validation hints: "
+                + ", ".join(pack.validation_command_hints[:3])
+            )
+    return merge_paths(hints)
 
 
 def _hinted_locations(manifest: RepoManifest, agents_text: str) -> dict[str, list[str]]:

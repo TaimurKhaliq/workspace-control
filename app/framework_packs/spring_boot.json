@@ -1,0 +1,50 @@
+{
+  "name": "spring_boot",
+  "version": null,
+  "backend_node_kinds": [
+    "controller",
+    "service",
+    "repository",
+    "entity",
+    "model",
+    "dto"
+  ],
+  "frontend_node_kinds": [],
+  "common_path_roots": {
+    "api": [
+      "src/main/java/controller",
+      "src/main/java/controllers",
+      "src/main/java/rest",
+      "src/main/java/api"
+    ],
+    "service": [
+      "src/main/java/service",
+      "src/main/java/services",
+      "src/main/java/domain",
+      "src/main/java/application"
+    ],
+    "persistence": [
+      "src/main/java/repository",
+      "src/main/java/repositories",
+      "src/main/java/entity",
+      "src/main/java/entities",
+      "src/main/java/model",
+      "src/main/java/models",
+      "src/main/resources/db/migration",
+      "src/main/resources/db/changelog"
+    ],
+    "event": [
+      "src/main/java/events",
+      "src/main/java/event",
+      "src/main/java/integration",
+      "src/main/java/integrations"
+    ]
+  },
+  "naming_patterns": {
+    "api": ["*Controller.java", "*Resource.java"],
+    "service": ["*Service.java"],
+    "persistence": ["*Repository.java", "*Entity.java"],
+    "event": ["*Event*.java", "*Publisher.java", "*Producer.java", "*Listener.java", "*Consumer.java"]
+  },
+  "validation_command_hints": ["mvn test", "gradle test"]
+}

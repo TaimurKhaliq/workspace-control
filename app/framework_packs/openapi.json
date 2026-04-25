@@ -1,0 +1,24 @@
+{
+  "name": "openapi",
+  "version": null,
+  "backend_node_kinds": ["contract", "schema", "operation"],
+  "frontend_node_kinds": [],
+  "common_path_roots": {
+    "api": [
+      "openapi.yaml",
+      "openapi.yml",
+      "openapi.json",
+      "swagger.yaml",
+      "swagger.yml",
+      "swagger.json",
+      "docs/openapi.yaml",
+      "docs/openapi.yml",
+      "src/main/resources/openapi.yaml",
+      "src/main/resources/openapi.yml"
+    ]
+  },
+  "naming_patterns": {
+    "api": ["openapi.yaml", "openapi.yml", "swagger.yaml", "swagger.yml"]
+  },
+  "validation_command_hints": []
+}

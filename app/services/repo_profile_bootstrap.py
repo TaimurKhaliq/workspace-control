@@ -172,7 +172,11 @@ class RepoProfileBootstrapService:
         repo_type = _repo_type(discovery, repo_path)
         role_hints = _role_hints(discovery, repo_type)
         language = _language(discovery, repo_path)
-        frameworks = merge_paths(discovery.detected_frameworks, discovery.hinted_frameworks)
+        frameworks = merge_paths(
+            discovery.detected_frameworks,
+            discovery.hinted_frameworks,
+            discovery.loaded_framework_packs,
+        )
         validation_commands = _validation_commands(repo_path)
         if "backend-service" in repo_type:
             entities, fields, tables, api_keywords = _ownership_terms(
@@ -365,6 +369,8 @@ def _role_hints(discovery: RepoDiscovery, repo_type: str) -> list[str]:
         hints.append("persistence owner candidate")
     if discovery.likely_event_locations:
         hints.extend(["event integration candidate", "downstream integration"])
+    for framework_pack in discovery.loaded_framework_packs:
+        hints.append(f"{framework_pack} framework pack available")
     return merge_paths(hints)
 
 
