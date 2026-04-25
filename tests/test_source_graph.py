@@ -4,6 +4,7 @@ from pathlib import Path
 from app.models.discovery import DiscoveryTarget, DiscoveryTargetRecord
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.discovery_target_registry import DiscoveryTargetRegistry
+from workspace_control.graph import build_graph_quality_report
 from workspace_control.cli import run
 
 
@@ -64,6 +65,19 @@ def test_source_graph_spring_pack_classifies_backend_surfaces(tmp_path: Path) ->
     assert "repository" in node_types
 
 
+def test_source_graph_spring_pack_does_not_classify_mappers_as_domain_models(tmp_path: Path) -> None:
+    repo = tmp_path / "clinic-service"
+    _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")
+    _write(repo / "src/main/java/com/example/clinic/OwnerMapper.java", "class OwnerMapper {}\n")
+    _write(repo / "src/main/java/com/example/clinic/Owner.java", "class Owner {}\n")
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    nodes = _nodes_by_path(snapshot, "clinic-service")
+
+    assert nodes["src/main/java/com/example/clinic/OwnerMapper.java"] == "mapper"
+    assert nodes["src/main/java/com/example/clinic/Owner.java"] == "domain_model"
+
+
 def test_source_graph_openapi_pack_classifies_contract(tmp_path: Path) -> None:
     repo = tmp_path / "api"
     _write(repo / "openapi.yml", "openapi: 3.0.0\npaths:\n  /owners: {}\n")
@@ -100,12 +114,49 @@ def test_source_graph_petclinic_like_full_stack_edges(tmp_path: Path) -> None:
     )
 
 
+def test_source_graph_preserves_frontend_structural_edges(tmp_path: Path) -> None:
+    repo = tmp_path / "web-ui"
+    _write(repo / "client/package.json", json.dumps({"dependencies": {"react": "18.2.0"}}))
+    _write(repo / "client/src/main.tsx", "import App from './components/App';\n")
+    _write(repo / "client/src/components/App.tsx", "import { WelcomePage } from './WelcomePage';\n")
+    _write(repo / "client/src/components/WelcomePage.tsx", "export function WelcomePage() { return null; }\n")
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    assert snapshot.source_graph is not None
+    edges = snapshot.source_graph.edges
+
+    assert any(edge.edge_type == "route_or_entrypoint_link" for edge in edges)
+    assert any(edge.edge_type == "renders_or_composes" for edge in edges)
+
+
+def test_source_graph_generic_tokens_do_not_create_shares_domain_token_edges(tmp_path: Path) -> None:
+    repo = tmp_path / "backend"
+    _write(repo / "pom.xml", "<project><dependencies><dependency><artifactId>spring-boot-starter-web</artifactId></dependency></dependencies></project>")
+    _write(repo / "src/main/java/com/example/backend/CustomerInfoController.java", "class CustomerInfoController {}\n")
+    _write(repo / "src/main/java/com/example/backend/OrderInfoController.java", "class OrderInfoController {}\n")
+    _write(repo / "src/main/java/com/example/backend/CustomerBase.java", "class CustomerBase {}\n")
+    _write(repo / "src/main/java/com/example/backend/OrderBase.java", "class OrderBase {}\n")
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(tmp_path))
+    assert snapshot.source_graph is not None
+
+    noisy_medium_or_high_edges = [
+        edge
+        for edge in snapshot.source_graph.edges
+        if edge.edge_type == "shares_domain_token"
+        and edge.confidence in {"medium", "high"}
+        and set(edge.metadata.get("tokens", "").split(",")) & {"info", "infos", "base", "bases"}
+    ]
+    assert noisy_medium_or_high_edges == []
+
+
 def test_source_graph_cli_json_text_and_explain_node(tmp_path: Path, capsys) -> None:
     workspace = tmp_path / "workspace"
     repo = workspace / "web-ui"
     _write(repo / "client/package.json", json.dumps({"dependencies": {"react": "18.2.0"}}))
     _write(repo / "client/src/main.tsx", "import App from './components/App';\n")
     _write(repo / "client/src/components/App.tsx", "export default function App() { return null; }\n")
+    _write(repo / "client/src/components/WelcomePage.tsx", "export function WelcomePage() { return null; }\n")
     registry_path = tmp_path / "registry.json"
     DiscoveryTargetRegistry(registry_path).register(
         DiscoveryTargetRecord(id="graph-fixture", source_type="local_path", locator=str(workspace))
@@ -133,11 +184,16 @@ def test_source_graph_cli_json_text_and_explain_node(tmp_path: Path, capsys) -> 
         str(registry_path),
         "--format",
         "text",
+        "--limit",
+        "1",
     ])
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "Source Graph" in captured.out
-    assert "app_shell" in captured.out
+    assert "total nodes: 3" in captured.out
+    assert "showing nodes: 1" in captured.out
+    assert "total edges: 2" in captured.out
+    assert "showing edges: 1" in captured.out
 
     exit_code = run([
         "explain-graph-node",
@@ -153,3 +209,35 @@ def test_source_graph_cli_json_text_and_explain_node(tmp_path: Path, capsys) -> 
     assert exit_code == 0
     assert explanation["node"]["node_type"] == "app_shell"
     assert "classification_reason" in explanation
+
+
+def test_source_graph_quality_report_and_cli_output(tmp_path: Path, capsys) -> None:
+    workspace = tmp_path / "workspace"
+    repo = workspace / "web-ui"
+    _write(repo / "client/package.json", json.dumps({"dependencies": {"react": "18.2.0"}}))
+    _write(repo / "client/src/main.tsx", "import App from './components/App';\n")
+    _write(repo / "client/src/components/App.tsx", "export default function App() { return null; }\n")
+    _write(repo / "client/src/components/WelcomePage.tsx", "export function WelcomePage() { return null; }\n")
+    registry_path = tmp_path / "registry.json"
+    DiscoveryTargetRegistry(registry_path).register(
+        DiscoveryTargetRecord(id="quality-fixture", source_type="local_path", locator=str(workspace))
+    )
+
+    snapshot = ArchitectureDiscoveryService().discover(DiscoveryTarget.local_path(workspace))
+    assert snapshot.source_graph is not None
+    report = build_graph_quality_report(snapshot.source_graph)
+    assert report["total_nodes"] >= 3
+    assert report["node_counts_by_node_type"]["app_shell"] == 1
+    assert "edges_grouped_by_confidence" in report
+
+    exit_code = run([
+        "graph-quality",
+        "--target-id",
+        "quality-fixture",
+        "--registry-path",
+        str(registry_path),
+    ])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Graph Quality" in captured.out
+    assert "Node counts by node_type:" in captured.out

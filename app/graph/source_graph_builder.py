@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 
-from app.graph.pattern_packs.base import dedupe
+from app.graph.pattern_packs.base import compact_tokens, dedupe
 from app.graph.pattern_packs.openapi_contracts import OpenApiContractPack
 from app.graph.pattern_packs.react_components import ReactComponentPack
 from app.graph.pattern_packs.spring_mvc import SpringMvcPack
@@ -38,20 +38,41 @@ BACKEND_NODE_TYPES = {
     "event_consumer",
 }
 EDGE_STOP_TOKENS = {
+    "app",
+    "apps",
+    "base",
+    "bases",
     "clinic",
     "clinics",
+    "data",
     "date",
     "dates",
+    "description",
+    "descriptions",
     "error",
     "errors",
+    "example",
+    "examples",
     "field",
     "fields",
     "http",
     "https",
     "id",
     "ids",
+    "index",
+    "indexes",
+    "info",
+    "infos",
+    "impl",
+    "impls",
+    "jdbc",
+    "jdbcs",
+    "jpa",
+    "jpas",
     "localhost",
     "localhosts",
+    "main",
+    "mains",
     "mapper",
     "mappers",
     "message",
@@ -62,6 +83,9 @@ EDGE_STOP_TOKENS = {
     "roots",
     "sample",
     "samples",
+    "spring",
+    "springdata",
+    "springdatajpa",
     "springframework",
     "type",
     "types",
@@ -202,6 +226,8 @@ def _token_edges(nodes: Sequence[GraphNode]) -> list[GraphEdge]:
             if not overlap:
                 continue
             if left.node_type in FRONTEND_NODE_TYPES and right.node_type in BACKEND_NODE_TYPES:
+                if not _path_token_overlap(left, right, overlap):
+                    continue
                 edges.append(
                     _edge(
                         left,
@@ -214,6 +240,8 @@ def _token_edges(nodes: Sequence[GraphNode]) -> list[GraphEdge]:
                     )
                 )
             elif left.node_type == "api_controller" and right.node_type == "domain_model":
+                if not _path_token_overlap(left, right, overlap):
+                    continue
                 edges.append(
                     _edge(
                         left,
@@ -238,6 +266,8 @@ def _token_edges(nodes: Sequence[GraphNode]) -> list[GraphEdge]:
                     )
                 )
             elif left.node_type == "domain_model" and right.node_type == "repository":
+                if not _path_token_overlap(left, right, overlap):
+                    continue
                 edges.append(
                     _edge(
                         left,
@@ -262,7 +292,7 @@ def _token_edges(nodes: Sequence[GraphNode]) -> list[GraphEdge]:
                     )
                 )
             elif left.node_type in BACKEND_NODE_TYPES and right.node_type in BACKEND_NODE_TYPES:
-                if left.id > right.id or len(overlap) < 2:
+                if left.id > right.id or _semantic_root_count(overlap) < 2:
                     continue
                 edges.append(
                     _edge(
@@ -280,6 +310,27 @@ def _token_edges(nodes: Sequence[GraphNode]) -> list[GraphEdge]:
 
 def _token_overlap(left: GraphNode, right: GraphNode) -> list[str]:
     return sorted((set(left.domain_tokens) & set(right.domain_tokens)) - EDGE_STOP_TOKENS)
+
+
+def _path_token_overlap(left: GraphNode, right: GraphNode, overlap: Sequence[str]) -> list[str]:
+    overlap_tokens = set(overlap)
+    return sorted((_path_tokens(left) & _path_tokens(right)) & overlap_tokens)
+
+
+def _path_tokens(node: GraphNode) -> set[str]:
+    return set(compact_tokens([node.path]))
+
+
+def _semantic_root_count(tokens: Sequence[str]) -> int:
+    return len({_semantic_root(token) for token in tokens})
+
+
+def _semantic_root(token: str) -> str:
+    if token.endswith("ies") and len(token) > 3:
+        return f"{token[:-3]}y"
+    if token.endswith("s") and len(token) > 3:
+        return token[:-1]
+    return token
 
 
 def _edge(

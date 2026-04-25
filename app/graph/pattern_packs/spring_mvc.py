@@ -52,6 +52,8 @@ class SpringMvcPack(SourcePatternPack):
 def _classify_java_file(relative: str, stem: str) -> tuple[str, str]:
     lowered = relative.lower()
     lowered_stem = stem.lower()
+    if lowered_stem.endswith("mapper") or "/mapper/" in lowered or "/mappers/" in lowered:
+        return "mapper", "mapper file detected by name or mapper path"
     if lowered_stem.endswith("controller") or lowered_stem.endswith("resource") or "/rest/controller/" in lowered or "/controller/" in lowered:
         return "api_controller", "Spring controller/resource file detected by name or controller path"
     if lowered_stem.endswith("service") or "/service/" in lowered or "/services/" in lowered:

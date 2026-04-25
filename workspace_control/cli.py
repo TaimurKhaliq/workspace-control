@@ -24,8 +24,10 @@ from app.services.repo_profile_bootstrap import (
 from .analyze import analyze_feature, format_feature_analysis
 from .explain import create_feature_explanation, format_feature_explanation
 from .graph import (
+    build_graph_quality_report,
     explain_graph_node,
     filter_source_graph,
+    format_graph_quality_report,
     format_graph_node_explanation,
     format_source_graph_json,
     format_source_graph_mermaid,
@@ -102,6 +104,26 @@ def run(argv: list[str] | None = None) -> int:
         type=int,
         default=20,
         help="Limit nodes/edges shown in text or mermaid output",
+    )
+    graph_quality_parser = subparsers.add_parser(
+        "graph-quality",
+        help="Report source graph quality diagnostics",
+    )
+    graph_quality_parser.add_argument(
+        "--scan-root",
+        type=Path,
+        default=default_scan_root,
+        help="Directory whose child folders are scanned when --target-id is not provided",
+    )
+    graph_quality_parser.add_argument(
+        "--target-id",
+        help="Registered discovery target id to inspect instead of --scan-root",
+    )
+    graph_quality_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
     )
     explain_node_parser = subparsers.add_parser(
         "explain-graph-node",
@@ -294,6 +316,7 @@ def run(argv: list[str] | None = None) -> int:
         "inventory",
         "discover-architecture",
         "discover-graph",
+        "graph-quality",
         "explain-graph-node",
         "bootstrap-repo-profile",
         "register-discovery-target",
@@ -359,7 +382,7 @@ def run(argv: list[str] | None = None) -> int:
                 graph,
                 node_type=args.node_type,
                 token=args.token,
-                limit=args.limit if args.format != "json" else None,
+                limit=args.limit if args.format == "mermaid" else None,
             )
         except (
             NotImplementedError,
@@ -377,6 +400,26 @@ def run(argv: list[str] | None = None) -> int:
             print(format_source_graph_mermaid(graph, limit=args.limit))
         else:
             print(format_source_graph_text(graph, limit=args.limit))
+        return 0
+
+    if args.command == "graph-quality":
+        try:
+            snapshot = _discover_snapshot_for_args(args)
+            graph = snapshot.source_graph
+            if graph is None:
+                raise ValueError("Source graph was not built for this target")
+            report = build_graph_quality_report(graph)
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
+        print(format_graph_quality_report(report))
         return 0
 
     if args.command == "explain-graph-node":

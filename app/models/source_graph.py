@@ -23,6 +23,7 @@ NodeType = Literal[
     "service_layer",
     "domain_model",
     "repository",
+    "mapper",
     "migration",
     "event_publisher",
     "event_consumer",
