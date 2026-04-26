@@ -1,0 +1,145 @@
+export type Workspace = {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type RepoTarget = {
+  id: string;
+  workspace_id: string;
+  target_id: string;
+  repo_name: string;
+  source_type: 'local_path' | 'git_url';
+  locator: string;
+  ref: string | null;
+  status: string;
+  last_discovered_at: string | null;
+  last_learned_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PlanBundle = {
+  schema_version: string;
+  feature_request: string;
+  target: {
+    target_id: string | null;
+    repo_count: number;
+    repos: Array<{
+      repo_name: string;
+      metadata_mode: string;
+      evidence_mode: string;
+      detected_frameworks: string[];
+      framework_packs: string[];
+    }>;
+  };
+  summary: {
+    title: string;
+    detected_intents: string[];
+    confidence: 'high' | 'medium' | 'low';
+    planning_mode: string;
+    planner_native_available: boolean;
+    recipe_assisted: boolean;
+  };
+  ownership: {
+    primary_owner: string | null;
+    implementation_owner: string | null;
+    domain_owner: string | null;
+    direct_dependents: string[];
+    possible_downstreams: string[];
+  };
+  recommended_change_set: Array<{
+    repo_name: string;
+    path: string;
+    action: string;
+    priority: number;
+    confidence: string;
+    source: string;
+    node_type: string;
+    reason: string;
+  }>;
+  matched_recipes: Array<{
+    recipe_id: string;
+    recipe_type: string;
+    structural_confidence: number;
+    planner_effectiveness: number;
+    why_matched: string[];
+  }>;
+  validation: {
+    commands: string[];
+    notes: string[];
+  };
+  risks_and_caveats: Array<{
+    severity: string;
+    message: string;
+    source: string;
+  }>;
+  handoff_prompts: Array<{
+    repo_name: string;
+    title: string;
+    prompt: string;
+    recommended_files: string[];
+    validation_commands: string[];
+  }>;
+};
+
+export type PlanBundleResponse = {
+  run_id: string;
+  plan_bundle: PlanBundle;
+};
+
+const API_BASE = import.meta.env.VITE_API_BASE ?? '';
+
+async function request<T>(path: string, options?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(options?.headers ?? {}) },
+    ...options
+  });
+  if (!response.ok) {
+    const detail = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(detail.detail ?? response.statusText);
+  }
+  return response.json() as Promise<T>;
+}
+
+export function listWorkspaces() {
+  return request<Workspace[]>('/api/workspaces');
+}
+
+export function createWorkspace(name: string) {
+  return request<Workspace>('/api/workspaces', {
+    method: 'POST',
+    body: JSON.stringify({ name })
+  });
+}
+
+export function listRepos(workspaceId: string) {
+  return request<RepoTarget[]>(`/api/workspaces/${workspaceId}/repos`);
+}
+
+export function addRepo(workspaceId: string, payload: { target_id: string; source_type: 'local_path' | 'git_url'; locator: string; ref?: string }) {
+  return request<RepoTarget>(`/api/workspaces/${workspaceId}/repos`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function discoverRepo(targetId: string) {
+  return request(`/api/repos/${targetId}/discover`, { method: 'POST' });
+}
+
+export function learningStatus(targetId: string) {
+  return request<{ target_id: string; status: string; recipe_count: number }>(`/api/repos/${targetId}/learning-status`);
+}
+
+export function refreshLearning(targetId: string) {
+  return request(`/api/repos/${targetId}/refresh-learning`, { method: 'POST' });
+}
+
+export function generatePlanBundle(workspaceId: string, featureRequest: string, targetIds: string[]) {
+  return request<PlanBundleResponse>(`/api/workspaces/${workspaceId}/plan-bundles`, {
+    method: 'POST',
+    body: JSON.stringify({ feature_request: featureRequest, target_ids: targetIds })
+  });
+}

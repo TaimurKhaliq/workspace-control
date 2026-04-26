@@ -465,6 +465,24 @@ python3 scripts/save_baseline.py \
   --target-id petclinic-react
 ```
 
+### Local API / Web UI
+
+Backend:
+
+```bash
+python3 -m uvicorn server.app:app --reload --port 8000
+```
+
+Frontend:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+The local API stores workspaces, repo targets, and plan runs in SQLite. The React UI renders the Plan Bundle JSON contract and repo-specific handoff prompts. `local_path` repo targets are working in this vertical slice; `git_url` targets can be stored but discovery/learning is still stubbed for later.
+
 ## 9. Current PetClinic Baseline
 
 The current saved PetClinic recipe-assisted baseline is:
@@ -656,6 +674,14 @@ The main repo structure is:
 │   ├── demo/
 │   ├── learning/
 │   └── replay/
+├── server/
+│   ├── app.py
+│   ├── db.py
+│   ├── schemas.py
+│   └── routes/
+├── web/
+│   ├── package.json
+│   └── src/
 └── data/
     └── learning/
 ```
@@ -669,6 +695,8 @@ Important areas:
 - `app/framework_packs/`: local framework priors.
 - `app/providers/`: discovery providers.
 - `scripts/`: eval, replay, learning, demo, and baseline utilities.
+- `server/`: local FastAPI + SQLite API for workspaces, repo targets, plan runs, discovery, learning, and Plan Bundle generation.
+- `web/`: minimal React + Vite + TypeScript UI for the local API.
 - `tests/`: unit tests, fixture workspaces, eval cases, and replay cases.
 - `reports/`: generated eval, replay, learning, demo, and baseline artifacts.
 - `data/learning/`: repo-local learned recipe catalogs and state.

@@ -8,3 +8,10 @@ __pycache__/
 eval_repos/
 reports/public_repo_probes/*
 !reports/public_repo_probes/README.md
+
+# Local API/frontend runtime artifacts
+data/*.db
+data/*.sqlite
+web/node_modules/
+web/dist/
+*.tsbuildinfo
