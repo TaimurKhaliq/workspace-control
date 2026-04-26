@@ -18,6 +18,26 @@ describe('classifyRuntimeIssues', () => {
 
     expect(issues.map((issue) => issue.type)).toEqual(expect.arrayContaining(['console_error', 'api_error']))
   })
+
+  it('groups repeated learning-status endpoint failures', () => {
+    const issues = classifyRuntimeIssues(sourceGraph(), {
+      startUrl: 'http://localhost:3000',
+      title: 'Demo',
+      finalUrl: 'http://localhost:3000',
+      states: [{ url: 'http://localhost:3000', title: 'Demo', hash: 'x', visible: [] }],
+      actions: [],
+      consoleErrors: [
+        { text: 'Failed to load resource: 500', location: 'http://localhost/api/repos/petclinic-react/learning-status' },
+        { text: 'Failed to load resource: 500', location: 'http://localhost/api/repos/spring-petclinic-react/learning-status' }
+      ],
+      networkFailures: [],
+      screenshots: ['/tmp/screen.png'],
+      generatedAt: new Date().toISOString()
+    })
+
+    expect(issues.filter((issue) => issue.title.includes('Learning status endpoint'))).toHaveLength(1)
+    expect(issues[0].evidence).toEqual(expect.arrayContaining(['count: 2']))
+  })
 })
 
 function sourceGraph(): SourceGraph {

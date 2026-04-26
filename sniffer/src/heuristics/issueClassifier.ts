@@ -1,10 +1,24 @@
 import type { CrawlGraph, Issue, RuntimeWorkflowVerification, SourceGraph, TestRunResult } from '../types.js'
 import { matchRuntimeSurfaces } from './runtimeSurfaceMatcher.js'
+import { groupedEndpointIssues } from './endpointGrouping.js'
 
 export function classifyRuntimeIssues(sourceGraph: SourceGraph, crawlGraph: CrawlGraph, workflowVerifications: RuntimeWorkflowVerification[] = []): Issue[] {
   const issues: Issue[] = []
 
+  const groupedApiIssues = groupedEndpointIssues({
+    consoleErrors: dedupeBy(crawlGraph.consoleErrors, (item) => `${item.text}:${item.location ?? ''}`),
+    networkFailures: dedupeBy(crawlGraph.networkFailures, (item) => `${item.method}:${item.url}:${item.failureText}`),
+    sourceGraph,
+    screenshotPath: crawlGraph.screenshots.at(-1),
+    finalUrl: crawlGraph.finalUrl
+  })
+  issues.push(...groupedApiIssues)
+  const groupedEvidenceUrls = new Set(groupedApiIssues.flatMap((issue) =>
+    issue.evidence.filter((item) => item.startsWith('url: ')).map((item) => item.slice('url: '.length))
+  ))
+
   for (const error of dedupeBy(crawlGraph.consoleErrors, (item) => `${item.text}:${item.location ?? ''}`)) {
+    if (error.location && groupedEvidenceUrls.has(error.location)) continue
     issues.push({
       severity: 'medium',
       type: 'console_error',
@@ -17,6 +31,7 @@ export function classifyRuntimeIssues(sourceGraph: SourceGraph, crawlGraph: Craw
   }
 
   for (const failure of dedupeBy(crawlGraph.networkFailures, (item) => `${item.method}:${item.url}:${item.failureText}`)) {
+    if (groupedEvidenceUrls.has(failure.url)) continue
     issues.push({
       severity: failure.failureText.includes('5') || failure.url.includes('/api/') ? 'high' : 'medium',
       type: failure.url.includes('/api/') ? 'api_error' : 'network_error',

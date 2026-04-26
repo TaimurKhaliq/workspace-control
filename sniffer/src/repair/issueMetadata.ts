@@ -1,5 +1,6 @@
 import crypto from 'node:crypto'
 import type { CrawlGraph, Issue, SourceGraph } from '../types.js'
+import { evidenceHasGroupedEndpoint, normalizeEndpoint } from '../heuristics/endpointGrouping.js'
 
 export function enrichIssues(issues: Issue[], sourceGraph: SourceGraph, crawlGraph: CrawlGraph): Issue[] {
   return issues.map((issue, index) => {
@@ -23,6 +24,7 @@ export function enrichIssues(issues: Issue[], sourceGraph: SourceGraph, crawlGra
 export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): string[] {
   const evidence = issue.evidence.join('\n')
   const files = new Set<string>()
+  const normalizedPatterns = normalizedEvidencePatterns(issue)
 
   for (const surface of sourceGraph.uiSurfaces) {
     if (issue.description.includes(surface.display_name) || issue.evidence.some((item) => item.includes(surface.surface_type) || item.includes(surface.display_name))) {
@@ -38,13 +40,11 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
 
   for (const apiCall of sourceGraph.apiCalls) {
     const endpointRegex = endpointToRegex(apiCall.endpoint)
-    if (endpointRegex.test(evidence) || evidence.includes(apiCall.endpoint)) {
+    const normalizedApiPattern = normalizeSourceEndpointPattern(apiCall.endpoint)
+    if (endpointRegex.test(evidence) || evidence.includes(apiCall.endpoint) || normalizedPatterns.includes(normalizedApiPattern)) {
       files.add(apiCall.sourceFile)
       if (apiCall.endpoint.includes('/api/repos/') && apiCall.endpoint.includes('learning-status')) {
-        files.add('../server/routes/semantic.py')
-        files.add('../server/app.py')
-        files.add('src/api.ts')
-        files.add('src/App.tsx')
+        addLearningStatusSuspects(files, sourceGraph, issue)
       } else if (apiCall.endpoint.includes('/api/repos/validate-target') || apiCall.endpoint.includes('/api/workspaces')) {
         files.add('src/api.ts')
         files.add('src/App.tsx')
@@ -62,6 +62,18 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
   return [...files].sort()
 }
 
+function addLearningStatusSuspects(files: Set<string>, sourceGraph: SourceGraph, issue: Issue): void {
+  files.add('src/api.ts')
+  const learningWorkflow = sourceGraph.sourceWorkflows.find((workflow) => workflow.name === 'Refresh learning')
+  if (learningWorkflow) learningWorkflow.sourceFiles.forEach((file) => files.add(file))
+  files.add('../server/routes/learning.py')
+  files.add('../server/routes/repos.py')
+  files.add('../server/app.py')
+  if (issue.evidence.some((item) => /semantic/i.test(item))) {
+    files.add('../server/routes/semantic.py')
+  }
+}
+
 function makeIssueId(issue: Issue, index: number): string {
   const slug = issue.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '').slice(0, 48) || 'issue'
   const digest = crypto.createHash('sha1').update(`${issue.type}:${issue.title}:${issue.description}:${issue.evidence.join('|')}:${index}`).digest('hex').slice(0, 8)
@@ -69,6 +81,31 @@ function makeIssueId(issue: Issue, index: number): string {
 }
 
 function buildFixPrompt(issue: Issue, suspectedFiles: string[]): string {
+  if (evidenceHasGroupedEndpoint(issue, '/api/repos/{targetId}/learning-status')) {
+    return [
+      'Fix grouped Sniffer issue: Learning status endpoint returns 500 for multiple repo targets.',
+      '',
+      `Title: ${issue.title}`,
+      `Type: ${issue.type}`,
+      `Severity: ${issue.severity}`,
+      '',
+      issue.description,
+      '',
+      `Evidence:\n${issue.evidence.map((item) => `- ${item}`).join('\n')}`,
+      '',
+      'Expected behavior:',
+      '- learning-status should return controlled JSON for missing, stale, or error state, not 500.',
+      '- unknown target may return controlled 404.',
+      '- registered target with missing learning data should return status=missing, recipe_count=0.',
+      '',
+      `Suspected files:\n${suspectedFiles.map((file) => `- ${file}`).join('\n') || '- unknown'}`,
+      '',
+      'Constraints:',
+      '- Do not delete workspaces, repos, baselines, reports, or user data.',
+      '- Keep changes scoped to learning-status handling unless investigation proves another file is required.',
+      '- Add or update focused tests for the endpoint behavior.'
+    ].join('\n')
+  }
   return [
     `Fix Sniffer issue ${issue.issue_id || issue.title}.`,
     '',
@@ -88,6 +125,21 @@ function buildFixPrompt(issue: Issue, suspectedFiles: string[]): string {
     '- Preserve existing public behavior unless fixing the reported issue requires changing it.',
     '- Add or update focused tests when the fix changes logic.'
   ].join('\n')
+}
+
+function normalizedEvidencePatterns(issue: Issue): string[] {
+  const explicit = issue.evidence
+    .filter((item) => item.startsWith('endpoint_pattern: '))
+    .map((item) => item.replace(/^endpoint_pattern:\s+[A-Z]+\s+/, ''))
+  const fromUrls = issue.evidence
+    .filter((item) => item.startsWith('url: '))
+    .map((item) => normalizeEndpoint({ url: item.slice('url: '.length) })?.pattern)
+    .filter(Boolean) as string[]
+  return [...new Set([...explicit, ...fromUrls])]
+}
+
+function normalizeSourceEndpointPattern(endpoint: string): string {
+  return endpoint.replace(/\$\{[^}]+\}/g, '{targetId}')
 }
 
 function buildVerificationSteps(issue: Issue, crawlGraph: CrawlGraph): string[] {
