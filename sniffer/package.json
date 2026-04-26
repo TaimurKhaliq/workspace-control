@@ -1,0 +1,28 @@
+{
+  "name": "sniffer",
+  "version": "0.1.0",
+  "description": "Context-aware UI QA agent for source discovery, Playwright crawling, test generation, and evidence-backed reports.",
+  "type": "module",
+  "bin": {
+    "sniffer": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "sniffer": "tsx src/cli/index.ts"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "@playwright/test": "^1.44.0",
+    "playwright": "^1.44.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.5",
+    "vitest": "^1.6.0"
+  }
+}
