@@ -28,9 +28,25 @@ export type RepoTargetValidation = {
   warnings: string[];
 };
 
+export type PlanBundleChangeItem = {
+  repo_name: string;
+  path: string;
+  action: 'modify' | 'create' | 'inspect' | 'inspect-only' | string;
+  priority: number;
+  confidence: 'high' | 'medium' | 'low' | string;
+  source: 'planner' | 'recipe' | 'both' | string;
+  node_type: string;
+  reason: string;
+  evidence: string[];
+  matched_recipe_id: string | null;
+  exists_in_current_source: boolean;
+  ui_section: 'frontend' | 'backend' | 'api' | 'persistence' | 'config' | 'unknown' | string;
+};
+
 export type PlanBundle = {
   schema_version: string;
   feature_request: string;
+  generated_at: string;
   target: {
     target_id: string | null;
     repo_count: number;
@@ -49,6 +65,7 @@ export type PlanBundle = {
   };
   summary: {
     title: string;
+    short_description?: string;
     detected_intents: string[];
     confidence: 'high' | 'medium' | 'low';
     planning_mode: string;
@@ -66,28 +83,32 @@ export type PlanBundle = {
     direct_dependents: string[];
     possible_downstreams: string[];
   };
-  recommended_change_set: Array<{
-    repo_name: string;
-    path: string;
-    action: string;
-    priority: number;
-    confidence: string;
-    source: string;
-    node_type: string;
-    reason: string;
-  }>;
+  recommended_change_set: PlanBundleChangeItem[];
   matched_recipes: Array<{
     recipe_id: string;
     recipe_type: string;
     structural_confidence: number;
     planner_effectiveness: number;
     why_matched: string[];
+    learned_patterns?: {
+      created_node_types: string[];
+      modified_node_types: string[];
+      cochange_patterns: string[];
+    };
   }>;
   concept_grounding: Array<{
     concept: string;
     status: string;
     matched_terms: string[];
     sources: string[];
+  }>;
+  source_graph_evidence: Array<{
+    repo_name: string;
+    path: string;
+    node_type: string;
+    domain_tokens: string[];
+    confidence: 'high' | 'medium' | 'low';
+    reason: string;
   }>;
   validation: {
     commands: string[];
@@ -105,6 +126,7 @@ export type PlanBundle = {
     recommended_files: string[];
     validation_commands: string[];
   }>;
+  debug?: unknown;
 };
 
 export type PlanBundleResponse = {
