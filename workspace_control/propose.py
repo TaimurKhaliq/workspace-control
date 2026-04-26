@@ -12,6 +12,7 @@ from app.models.discovery import (
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.repo_paths import repo_path_for
 from app.models.recipe_suggestion import RecipeSuggestionReport
+from app.models.semantic_enrichment import SemanticEnrichmentResult
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 from app.services.text_normalization import normalize_text as normalize_request_text
 from app.services.text_normalization import tokenize_text
@@ -27,6 +28,7 @@ from .models import (
     InventoryRow,
 )
 from .plan import create_feature_plan
+from .semantic import apply_semantic_to_plan, apply_semantic_to_proposal
 from .ui_shell import ui_shell_path_kind, ui_shell_paths, ui_shell_requested
 
 FRONTEND_PATH_MARKERS = ("pages", "components", "forms", "services", "api", "public")
@@ -191,6 +193,7 @@ def create_change_proposal(
     scan_root: Path | None = None,
     discovery_snapshot: DiscoverySnapshot | None = None,
     recipe_report: RecipeSuggestionReport | None = None,
+    semantic_result: SemanticEnrichmentResult | None = None,
 ) -> ChangeProposal:
     """Create deterministic read-only change proposals from a feature plan."""
 
@@ -227,6 +230,7 @@ def create_change_proposal(
         discovery_snapshot=effective_snapshot,
         recipe_report=recipe_report,
     )
+    plan = apply_semantic_to_plan(plan, semantic_result)
     by_repo = {row.repo_name: row for row in effective_rows}
     impact_by_repo = {impact.repo_name: impact for impact in resolved_impacts}
     discovery_by_repo = _architecture_by_repo(effective_scan_root, effective_snapshot)
@@ -304,7 +308,7 @@ def create_change_proposal(
             ]
         )
 
-    return ChangeProposal(
+    proposal = ChangeProposal(
         feature_request=plan.feature_request,
         feature_intents=plan.feature_intents,
         confidence=plan.confidence,
@@ -315,6 +319,7 @@ def create_change_proposal(
         recipe_suggestions=recipe_suggestions,
         combined_recommendations=combined_recommendations,
     )
+    return apply_semantic_to_proposal(proposal, semantic_result)
 
 
 def format_change_proposal(proposal: ChangeProposal) -> str:

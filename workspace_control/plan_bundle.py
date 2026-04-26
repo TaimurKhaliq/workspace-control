@@ -82,7 +82,7 @@ class PlanBundleChangeItem(BaseModel):
     action: Literal["modify", "inspect", "create", "inspect-only"]
     priority: int
     confidence: Literal["high", "medium", "low"]
-    source: Literal["planner", "recipe", "both"]
+    source: Literal["planner", "recipe", "semantic_enrichment", "both"]
     node_type: str = "unknown"
     reason: str
     evidence: list[str] = Field(default_factory=list)
@@ -920,6 +920,8 @@ def _reason_for_recommendation(item: CombinedRecommendation) -> str:
         return "Planner and recipe evidence both point to this path."
     if item.source == "recipe":
         return "Recipe evidence points to this path."
+    if item.source == "semantic_enrichment":
+        return "Semantic enrichment evidence points to this path."
     return "Planner evidence points to this path."
 
 

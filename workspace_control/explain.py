@@ -9,6 +9,7 @@ from typing import Any
 
 from app.models.discovery import DiscoverySnapshot, DiscoveryTarget, RepoDiscovery
 from app.models.recipe_suggestion import RecipeSuggestionReport
+from app.models.semantic_enrichment import SemanticEnrichmentResult
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 
@@ -17,6 +18,7 @@ from .manifests import build_inventory
 from .models import ChangeProposal, ConceptGrounding, FeatureImpact, FeaturePlan, InventoryRow
 from .plan import create_feature_plan
 from .propose import create_change_proposal
+from .semantic import apply_semantic_to_plan, semantic_explanation_payload
 
 MAX_MATCHED_TERMS = 6
 MAX_SOURCES = 6
@@ -30,6 +32,7 @@ def create_feature_explanation(
     scan_root: Path | None = None,
     discovery_snapshot: DiscoverySnapshot | None = None,
     recipe_report: RecipeSuggestionReport | None = None,
+    semantic_result: SemanticEnrichmentResult | None = None,
 ) -> dict[str, Any]:
     """Create a deterministic debug explanation from existing pipeline outputs."""
 
@@ -68,6 +71,7 @@ def create_feature_explanation(
         discovery_snapshot=snapshot,
         recipe_report=recipe_report,
     )
+    plan = apply_semantic_to_plan(plan, semantic_result)
     proposal = create_change_proposal(
         feature_request,
         effective_rows,
@@ -75,6 +79,7 @@ def create_feature_explanation(
         scan_root=effective_scan_root,
         discovery_snapshot=snapshot,
         recipe_report=recipe_report,
+        semantic_result=semantic_result,
     )
 
     profiles_by_repo = {
@@ -112,6 +117,7 @@ def create_feature_explanation(
             plan,
         ),
         "recipe_guidance": _recipe_guidance(plan, proposal),
+        "semantic_enrichment": semantic_explanation_payload(semantic_result),
         "missing_evidence": list(plan.missing_evidence),
         "evidence_sources": _evidence_sources(
             repos,

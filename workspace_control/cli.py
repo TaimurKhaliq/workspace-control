@@ -29,6 +29,14 @@ from app.services.repo_learning import (
     RepoLearningService,
 )
 from app.services.recipe_suggester import RecipeSuggestionService, format_recipe_suggestion_report
+from app.services.semantic_enrichment import (
+    DEFAULT_SEMANTIC_ROOT,
+    SemanticEnrichmentService,
+    format_semantic_enrichment_json,
+    load_latest_semantic_enrichment,
+    provider_for_name,
+    save_semantic_enrichment,
+)
 from app.services.text_normalization import tokenize_text
 
 from .analyze import analyze_feature, format_feature_analysis
@@ -54,6 +62,7 @@ from .plan_bundle import (
     load_recipe_catalog_for_bundle,
 )
 from .propose import create_change_proposal, format_change_proposal
+from .semantic import apply_semantic_to_plan
 
 
 def run(argv: list[str] | None = None) -> int:
@@ -278,6 +287,17 @@ def run(argv: list[str] | None = None) -> int:
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
     )
+    plan_parser.add_argument(
+        "--use-semantic",
+        action="store_true",
+        help="Load latest semantic enrichment as supplemental evidence when available",
+    )
+    plan_parser.add_argument(
+        "--semantic-root",
+        type=Path,
+        default=DEFAULT_SEMANTIC_ROOT,
+        help="Root directory for latest semantic enrichment artifacts",
+    )
     propose_parser = subparsers.add_parser(
         "propose-changes",
         help="Suggest deterministic read-only change hints for a feature request",
@@ -302,6 +322,17 @@ def run(argv: list[str] | None = None) -> int:
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
     )
+    propose_parser.add_argument(
+        "--use-semantic",
+        action="store_true",
+        help="Load latest semantic enrichment as supplemental evidence when available",
+    )
+    propose_parser.add_argument(
+        "--semantic-root",
+        type=Path,
+        default=DEFAULT_SEMANTIC_ROOT,
+        help="Root directory for latest semantic enrichment artifacts",
+    )
     explain_parser = subparsers.add_parser(
         "explain-feature",
         help="Explain deterministic feature analysis, planning, and proposal evidence",
@@ -325,6 +356,51 @@ def run(argv: list[str] | None = None) -> int:
         type=Path,
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
+    )
+    explain_parser.add_argument(
+        "--use-semantic",
+        action="store_true",
+        help="Include latest semantic enrichment evidence when available",
+    )
+    explain_parser.add_argument(
+        "--semantic-root",
+        type=Path,
+        default=DEFAULT_SEMANTIC_ROOT,
+        help="Root directory for latest semantic enrichment artifacts",
+    )
+    enrich_parser = subparsers.add_parser(
+        "enrich-discovery",
+        help="Run optional semantic enrichment over source graph evidence",
+    )
+    enrich_parser.add_argument(
+        "feature_description",
+        help='Feature description, for example: "upload a picture of your pet"',
+    )
+    enrich_parser.add_argument("--target-id", required=True)
+    enrich_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
+    enrich_parser.add_argument(
+        "--provider",
+        choices=["mock", "openai-compatible"],
+        default="openai-compatible",
+        help="Semantic provider to use. openai-compatible requires STACKPILOT_SEMANTIC_* env vars.",
+    )
+    enrich_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Optional path to write semantic enrichment JSON in addition to the latest cache",
+    )
+    enrich_parser.add_argument("--max-nodes", type=int, default=20)
+    enrich_parser.add_argument("--include-snippets", action="store_true")
+    enrich_parser.add_argument(
+        "--semantic-root",
+        type=Path,
+        default=DEFAULT_SEMANTIC_ROOT,
+        help="Root directory for latest semantic enrichment artifacts",
     )
     intake_parser = subparsers.add_parser(
         "intake-feature",
@@ -513,6 +589,7 @@ def run(argv: list[str] | None = None) -> int:
         "plan-feature",
         "propose-changes",
         "explain-feature",
+        "enrich-discovery",
         "intake-feature",
         "generate-plan-bundle",
         "refresh-learning",
@@ -712,6 +789,7 @@ def run(argv: list[str] | None = None) -> int:
         "plan-feature",
         "propose-changes",
         "explain-feature",
+        "enrich-discovery",
         "intake-feature",
         "generate-plan-bundle",
     }:
@@ -748,14 +826,51 @@ def run(argv: list[str] | None = None) -> int:
         print(format_feature_intake_json(intake))
         return 0
 
+    if args.command == "enrich-discovery":
+        try:
+            recipe_report = _integrated_recipe_report_for_args(args)
+            result = SemanticEnrichmentService(
+                provider_for_name(args.provider)
+            ).enrich(
+                target_id=args.target_id,
+                feature_request=args.feature_description,
+                rows=rows,
+                discovery_snapshot=discovery_snapshot,
+                recipe_report=recipe_report,
+                max_nodes=args.max_nodes,
+                include_snippets=args.include_snippets,
+            )
+            latest_path = save_semantic_enrichment(
+                result,
+                semantic_root=args.semantic_root,
+            )
+            output = format_semantic_enrichment_json(result)
+            if args.output:
+                args.output.parent.mkdir(parents=True, exist_ok=True)
+                args.output.write_text(output + "\n", encoding="utf-8")
+            print(output)
+            print(f"Saved semantic enrichment: {latest_path}", file=sys.stderr)
+            return 0
+        except (
+            NotImplementedError,
+            OSError,
+            yaml.YAMLError,
+            ValidationError,
+            ValueError,
+        ) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return 1
+
     if args.command == "explain-feature":
         recipe_report = _integrated_recipe_report_for_args(args)
+        semantic_result = _semantic_result_for_args(args)
         explanation = create_feature_explanation(
             args.feature_description,
             rows,
             scan_root=effective_scan_root,
             discovery_snapshot=discovery_snapshot,
             recipe_report=recipe_report,
+            semantic_result=semantic_result,
         )
         if args.target_id:
             explanation["recipe_evidence"] = _recipe_evidence_for_args(args, recipe_report=recipe_report)
@@ -774,6 +889,7 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.command == "propose-changes":
         recipe_report = _integrated_recipe_report_for_args(args)
+        semantic_result = _semantic_result_for_args(args)
         proposal = create_change_proposal(
             args.feature_description,
             rows,
@@ -781,11 +897,13 @@ def run(argv: list[str] | None = None) -> int:
             scan_root=effective_scan_root,
             discovery_snapshot=discovery_snapshot,
             recipe_report=recipe_report,
+            semantic_result=semantic_result,
         )
         print(format_change_proposal(proposal))
         return 0
 
     recipe_report = _integrated_recipe_report_for_args(args)
+    semantic_result = _semantic_result_for_args(args)
     plan = create_feature_plan(
         args.feature_description,
         rows,
@@ -794,6 +912,7 @@ def run(argv: list[str] | None = None) -> int:
         discovery_snapshot=discovery_snapshot,
         recipe_report=recipe_report,
     )
+    plan = apply_semantic_to_plan(plan, semantic_result)
     if args.command == "generate-plan-bundle":
         proposal = create_change_proposal(
             args.feature_description,
@@ -802,6 +921,7 @@ def run(argv: list[str] | None = None) -> int:
             scan_root=effective_scan_root,
             discovery_snapshot=discovery_snapshot,
             recipe_report=recipe_report,
+            semantic_result=semantic_result,
         )
         registry = DiscoveryTargetRegistry(args.registry_path)
         recipe_catalog = load_recipe_catalog_for_bundle(args.target_id, registry)
@@ -919,3 +1039,20 @@ def _recipe_evidence_for_args(args, *, recipe_report=None) -> dict[str, object]:
             for recipe in matching[:5]
         ],
     }
+
+
+def _semantic_result_for_args(args):
+    """Load latest semantic enrichment only when explicitly requested."""
+
+    if not getattr(args, "use_semantic", False):
+        return None
+    target_id = getattr(args, "target_id", None)
+    if not target_id:
+        return None
+    try:
+        return load_latest_semantic_enrichment(
+            target_id,
+            semantic_root=getattr(args, "semantic_root", DEFAULT_SEMANTIC_ROOT),
+        )
+    except (OSError, ValidationError, ValueError):
+        return None

@@ -135,7 +135,7 @@ class CombinedRecommendation(BaseModel):
     path: str
     action: Literal["modify", "create", "inspect", "inspect-only"]
     confidence: Literal["high", "medium", "low"]
-    source: Literal["planner", "recipe", "both"]
+    source: Literal["planner", "recipe", "semantic_enrichment", "both"]
     evidence: list[str] = Field(default_factory=list)
     matched_recipe_id: str | None = None
 
