@@ -1,4 +1,5 @@
 export type Severity = 'critical' | 'high' | 'medium' | 'low'
+export type IssueStatus = 'open' | 'fixing' | 'fixed' | 'failed' | 'inconclusive'
 
 export type IssueType =
   | 'functional_bug'
@@ -167,11 +168,18 @@ export interface Workflow {
 }
 
 export interface Issue {
+  issue_id?: string
   severity: Severity
   type: IssueType
   title: string
   description: string
   evidence: string[]
+  suspected_files?: string[]
+  fix_prompt?: string
+  verification_steps?: string[]
+  pass_conditions?: string[]
+  status?: IssueStatus
+  attempts?: number
   screenshotPath?: string
   tracePath?: string
   suggestedFixPrompt: string
@@ -236,4 +244,45 @@ export interface ClassifiedFailure {
   reason: string
   tracePath?: string
   screenshotPath?: string
+}
+
+export interface FixPacket {
+  issue_id: string
+  title: string
+  repo_path: string
+  working_directory: string
+  evidence_paths: string[]
+  suspected_files: string[]
+  prompt: string
+  constraints: string[]
+  verification_command: string
+  pass_conditions: string[]
+}
+
+export interface AgentResult {
+  agent: string
+  status: 'not_run' | 'applied' | 'failed' | 'unsafe_blocked'
+  stdout: string
+  stderr: string
+  commandsRun: string[]
+  modifiedFiles: string[]
+}
+
+export interface VerificationResult {
+  issue_id: string
+  status: 'fixed' | 'still_failing' | 'inconclusive'
+  beforeEvidence: string[]
+  afterEvidence: string[]
+  verificationCommand: string
+  reportPath: string
+}
+
+export interface RepairAttempt {
+  issue_id: string
+  iteration: number
+  agentResult: AgentResult
+  gitStatusBefore: string
+  gitDiffAfter: string
+  verification?: VerificationResult
+  createdAt: string
 }

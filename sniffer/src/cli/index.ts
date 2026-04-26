@@ -11,6 +11,10 @@ import { writeAuditReports } from '../reporting/reportWriter.js'
 import { generatePlaywrightSpecs, writeGeneratedSpecs } from '../testgen/specWriter.js'
 import { runGeneratedTests } from '../runtime/testRunner.js'
 import { verifyRuntimeIntent } from '../runtime/workflowVerifier.js'
+import { generateFixPackets } from '../repair/fixPackets.js'
+import { applyFix } from '../repair/applyFix.js'
+import { verifyIssue } from '../repair/verify.js'
+import { runRepairLoop } from '../repair/repairLoop.js'
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2)
@@ -74,6 +78,50 @@ async function main(): Promise<void> {
     return
   }
 
+  if (command === 'generate-fixes') {
+    const report = requireArg(args, 'report')
+    const packets = await generateFixPackets(report, boolArg(args, 'allow-destructive'))
+    console.log(`Wrote ${packets.length} fix packet(s)`)
+    return
+  }
+
+  if (command === 'apply-fix') {
+    const issueId = requireArg(args, 'issue')
+    const report = requireArg(args, 'report')
+    const result = await applyFix({
+      issueId,
+      reportPath: report,
+      agentName: typeof args.agent === 'string' ? args.agent : undefined,
+      allowDestructive: boolArg(args, 'allow-destructive')
+    })
+    console.log(result.agentResult.stdout || `Agent ${result.agentResult.agent} returned ${result.agentResult.status}`)
+    return
+  }
+
+  if (command === 'verify') {
+    const issueId = requireArg(args, 'issue')
+    const report = requireArg(args, 'report')
+    const url = requireArg(args, 'url')
+    const result = await verifyIssue({ issueId, reportPath: report, url })
+    console.log(`Verification ${result.status} for ${issueId}. Wrote ${result.reportPath}`)
+    return
+  }
+
+  if (command === 'repair-loop') {
+    const repo = requireArg(args, 'repo')
+    const url = requireArg(args, 'url')
+    const maxIterations = Number(typeof args['max-iterations'] === 'string' ? args['max-iterations'] : 3)
+    const result = await runRepairLoop({
+      repo,
+      url,
+      maxIterations,
+      agentName: typeof args.agent === 'string' ? args.agent : undefined,
+      allowDestructive: boolArg(args, 'allow-destructive')
+    })
+    console.log(`Repair loop ran ${result.iterations} iteration(s). Fixed: ${result.fixed.length}. Remaining: ${result.remaining.length}. Report: ${result.reportPath}`)
+    return
+  }
+
   printHelp()
   process.exitCode = command ? 1 : 0
 }
@@ -101,6 +149,11 @@ function requireArg(args: Record<string, string | boolean>, key: string): string
   return value
 }
 
+function boolArg(args: Record<string, string | boolean>, key: string): boolean {
+  const value = args[key]
+  return value === true || value === 'true'
+}
+
 function printHelp(): void {
   console.log(`sniffer
 
@@ -108,6 +161,10 @@ Commands:
   sniffer discover --repo <path>
   sniffer crawl --url <url>
   sniffer audit --repo <path> --url <url> [--use-llm]
+  sniffer generate-fixes --report <path>
+  sniffer apply-fix --issue <issue_id> --report <path> [--agent manual|mock|codex]
+  sniffer verify --issue <issue_id> --url <url> --report <path>
+  sniffer repair-loop --repo <path> --url <url> [--agent manual|mock|codex] [--max-iterations 3]
   sniffer generate-tests --repo <path> --url <url> [--use-llm]
   sniffer run-tests [--use-llm]
 `)

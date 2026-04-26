@@ -3,6 +3,7 @@ import path from 'node:path'
 import type { AppIntent, CrawlGraph, Issue, RuntimeWorkflowVerification, SnifferReport, SourceGraph } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
+import { enrichIssues } from '../repair/issueMetadata.js'
 
 export async function writeAuditReports(reportDir: string, input: {
   sourceGraph: SourceGraph
@@ -12,8 +13,10 @@ export async function writeAuditReports(reportDir: string, input: {
   issues: Issue[]
 }): Promise<SnifferReport> {
   await mkdir(reportDir, { recursive: true })
+  const enrichedIssues = enrichIssues(input.issues, input.sourceGraph, input.crawlGraph)
   const report: SnifferReport = {
     ...input,
+    issues: enrichedIssues,
     runtimeSurfaceMatches: matchRuntimeSurfaces(input.sourceGraph, input.crawlGraph),
     generatedAt: new Date().toISOString()
   }
@@ -22,7 +25,7 @@ export async function writeAuditReports(reportDir: string, input: {
   await writeJson(path.join(reportDir, 'crawl_graph.json'), input.crawlGraph)
   await writeJson(path.join(reportDir, 'latest_report.json'), report)
   await writeFile(path.join(reportDir, 'latest_report.md'), renderMarkdown(report), 'utf8')
-  await writeFile(path.join(reportDir, 'fix_prompts.md'), renderFixPrompts(input.issues), 'utf8')
+  await writeFile(path.join(reportDir, 'fix_prompts.md'), renderFixPrompts(enrichedIssues), 'utf8')
   return report
 }
 
@@ -34,8 +37,11 @@ export function renderMarkdown(report: SnifferReport): string {
       '',
       `- Severity: ${issue.severity}`,
       `- Type: ${issue.type}`,
+      `- Issue ID: ${issue.issue_id ?? 'unknown'}`,
+      `- Status: ${issue.status ?? 'open'}`,
       `- Description: ${issue.description}`,
       `- Evidence: ${issue.evidence.join('; ')}`,
+      `- Suspected files: ${issue.suspected_files?.join(', ') || 'unknown'}`,
       issue.screenshotPath ? `- Screenshot: ${issue.screenshotPath}` : undefined,
       issue.tracePath ? `- Trace: ${issue.tracePath}` : undefined,
       '',
@@ -70,11 +76,26 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderWorkflowSummary(report),
     '',
+    '## Actionable Fix Packets',
+    '',
+    renderFixPacketSummary(report),
+    '',
     '## Issues',
     '',
     issues,
     ''
   ].join('\n')
+}
+
+function renderFixPacketSummary(report: SnifferReport): string {
+  const actionable = report.issues.filter((issue) => issue.status !== 'fixed' && !['test_bug', 'inconclusive'].includes(issue.type))
+  if (actionable.length === 0) return 'No actionable fix packets suggested.'
+  return actionable.map((issue) => [
+    `- ${issue.issue_id}: ${issue.title}`,
+    `  - Prompt: ${issue.fix_prompt?.split('\n')[0] ?? issue.suggestedFixPrompt}`,
+    `  - Verification: ${issue.verification_steps?.join(' ') ?? 'Run audit again.'}`,
+    `  - Repair status: ${issue.status ?? 'open'}`
+  ].join('\n')).join('\n')
 }
 
 function renderSurfaceSummary(report: SnifferReport): string {

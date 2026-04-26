@@ -24,6 +24,10 @@ npm run build
 npm run sniffer -- discover --repo ../web
 npm run sniffer -- crawl --url http://localhost:3000
 npm run sniffer -- audit --repo ../web --url http://localhost:3000
+npm run sniffer -- generate-fixes --report reports/sniffer/latest/latest_report.json
+npm run sniffer -- apply-fix --issue <issue_id> --report reports/sniffer/latest/latest_report.json --agent manual
+npm run sniffer -- verify --issue <issue_id> --url http://localhost:3000 --report reports/sniffer/latest/latest_report.json
+npm run sniffer -- repair-loop --repo ../web --url http://localhost:3000 --agent manual --max-iterations 3
 npm run sniffer -- generate-tests --repo ../web --url http://localhost:3000
 npm run sniffer -- run-tests
 ```
@@ -46,6 +50,9 @@ reports/sniffer/latest/
   latest_report.md
   latest_report.json
   fix_prompts.md
+  fix_packets/
+  repair_attempts/
+  verification/
   screenshots/
   traces/
   generated_tests/
@@ -85,6 +92,75 @@ Runtime crawling opens the app with Playwright and collects:
 - safe navigation and tab/dialog interactions
 - visited states, state hashes, actions, and screenshots
 
+## Repair Loop
+
+Sniffer can turn audit issues into structured fix packets, but it does not blindly edit code itself.
+
+The loop is:
+
+```text
+audit -> issue diagnosis -> fix packet -> agent/manual fix -> verify -> fixed or still failing
+```
+
+Generate fix packets after an audit:
+
+```bash
+npm run sniffer -- generate-fixes --report reports/sniffer/latest/latest_report.json
+```
+
+This writes:
+
+```text
+reports/sniffer/latest/fix_packets/<issue_id>.md
+reports/sniffer/latest/fix_packets/<issue_id>.json
+```
+
+Apply a fix manually:
+
+```bash
+npm run sniffer -- apply-fix \
+  --issue <issue_id> \
+  --report reports/sniffer/latest/latest_report.json \
+  --agent manual
+```
+
+Manual mode prints the Codex-ready packet and does not modify files.
+
+Use Codex mode only when configured:
+
+```bash
+export SNIFFER_AGENT=codex
+export SNIFFER_CODEX_COMMAND="codex"
+npm run sniffer -- apply-fix \
+  --issue <issue_id> \
+  --report reports/sniffer/latest/latest_report.json \
+  --agent codex
+```
+
+If `SNIFFER_CODEX_COMMAND` is missing, Sniffer prints clear instructions and does not run Codex.
+
+Verify an issue after a fix:
+
+```bash
+npm run sniffer -- verify \
+  --issue <issue_id> \
+  --url http://localhost:3000 \
+  --report reports/sniffer/latest/latest_report.json
+```
+
+Run the full repair loop:
+
+```bash
+npm run sniffer -- repair-loop \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --agent manual \
+  --max-iterations 3 \
+  --allow-destructive false
+```
+
+Repair attempts record git status before, git diff after, commands run, agent output, and verification results under `reports/sniffer/latest/repair_attempts/`.
+
 ## Generated Tests
 
 Generated Playwright specs are written to:
@@ -110,6 +186,14 @@ Unsafe unless explicitly allowed in a future implementation:
 - destructive repo operations
 - permanent data mutation
 - filesystem changes outside Sniffer reports and generated tests
+
+Repair safety:
+
+- fix packets include constraints and pass conditions
+- destructive protected-data language is blocked unless `--allow-destructive true`
+- manual mode never modifies files
+- codex mode only runs when `SNIFFER_CODEX_COMMAND` is configured
+- every repair attempt records git status, git diff, commands run, and verification results
 
 ## Limitations
 
