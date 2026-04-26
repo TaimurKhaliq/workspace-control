@@ -157,10 +157,26 @@ class FrameworkDetector:
 def _repo_dirs(base_dir: Path) -> list[Path]:
     if not base_dir.exists():
         return []
+    if _looks_like_repo_root(base_dir.resolve()):
+        return [base_dir.resolve()]
     return sorted(
         [child for child in base_dir.resolve().iterdir() if child.is_dir()],
         key=lambda item: item.name,
     )
+
+
+def _looks_like_repo_root(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    if any((path / build_file).is_file() for build_file in BUILD_FILES):
+        return True
+    if (path / "package.json").is_file():
+        return True
+    if (path / "src/main/java").is_dir():
+        return True
+    if any((path / root / "package.json").is_file() for root in ("client", "frontend", "ui", "web")):
+        return True
+    return False
 
 
 def _spring_boot_version(filename: str, text: str) -> str | None:

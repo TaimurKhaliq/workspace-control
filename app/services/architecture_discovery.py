@@ -176,6 +176,8 @@ class ArchitectureDiscoveryService:
 
     def _repo_dirs(self, base_dir: Path) -> list[Path]:
         base = base_dir.resolve()
+        if _looks_like_repo_root(base):
+            return [base]
         return sorted(
             [child for child in base.iterdir() if child.is_dir()],
             key=lambda item: item.name,
@@ -604,6 +606,22 @@ def _framework_is_discovered(repo_path: Path, framework: str) -> bool:
                 "src/main/resources/openapi.yml",
             )
         )
+    return False
+
+
+def _looks_like_repo_root(path: Path) -> bool:
+    if not path.is_dir():
+        return False
+    if (path / MANIFEST_FILENAME).is_file():
+        return True
+    if any((path / build_file).is_file() for build_file in BUILD_FILES):
+        return True
+    if (path / "package.json").is_file():
+        return True
+    if (path / "src/main/java").is_dir():
+        return True
+    if any((path / root / "package.json").is_file() for root in ("client", "frontend", "web", "ui")):
+        return True
     return False
 
 

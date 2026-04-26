@@ -338,7 +338,8 @@
           "passed": true,
           "actual": [
             "no API contract file found",
-            "UI intent came from request text, but no UI/component paths were discovered"
+            "UI intent came from request text, but no UI/component paths were discovered",
+            "Backend/API work requested but no backend-capable target is registered. Register the monorepo root or backend repo."
           ],
           "expected": "nonempty list"
         }
@@ -407,7 +408,8 @@
           "passed": true,
           "actual": [
             "no API contract file found",
-            "UI intent came from request text, but no UI/component paths were discovered"
+            "UI intent came from request text, but no UI/component paths were discovered",
+            "Backend/API work requested but no backend-capable target is registered. Register the monorepo root or backend repo."
           ],
           "expected": "contains 'no API contract file found'"
         },

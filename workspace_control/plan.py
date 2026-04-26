@@ -10,6 +10,7 @@ from app.models.discovery import (
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.concept_grounding import ConceptGroundingService
+from app.services.repo_paths import repo_path_for
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 from app.services.text_normalization import normalize_text as normalize_request_text
 from app.services.text_normalization import tokenize_text
@@ -43,6 +44,7 @@ INTENT_PHRASES = {
     "persistence": (
         "persist",
         "store",
+        "save",
         "field",
         "column",
         "table",
@@ -51,11 +53,19 @@ INTENT_PHRASES = {
     ),
     "api": (
         "api",
+        "backend",
         "endpoint",
+        "object",
+        "objects",
+        "model",
         "request",
         "response",
         "controller",
         "validation",
+        "retrieve",
+        "read",
+        "list",
+        "query",
     ),
     "event_integration": (
         "publish event",
@@ -128,6 +138,31 @@ REQUEST_ACTION_TOKENS = {
     "store",
     "sync",
     "update",
+}
+NEW_DOMAIN_CREATE_TOKENS = {"add", "build", "create", "new"}
+NEW_DOMAIN_PERSISTENCE_TOKENS = {
+    "list",
+    "persist",
+    "query",
+    "read",
+    "retrieve",
+    "save",
+    "store",
+}
+NEW_DOMAIN_UI_TOKENS = {"form", "page", "screen"}
+NEW_DOMAIN_BACKEND_TOKENS = {
+    "api",
+    "backend",
+    "controller",
+    "dto",
+    "endpoint",
+    "model",
+    "object",
+    "objects",
+    "request",
+    "resource",
+    "response",
+    "service",
 }
 SPECIFIC_FEATURE_TOKENS = {
     "address",
@@ -291,6 +326,12 @@ def _classify_feature_intents(feature_request: str) -> list[str]:
     for intent in INTENT_ORDER:
         if _phrase_matches(normalized_feature, INTENT_PHRASES[intent]):
             intents.append(intent)
+    if _new_persisted_ui_flow_requested(feature_request):
+        for intent in ("ui", "persistence", "api"):
+            intents = _with_feature_intent(intents, intent)
+    elif _new_backend_object_ui_flow_requested(feature_request):
+        for intent in ("ui", "api"):
+            intents = _with_feature_intent(intents, intent)
     return intents
 
 
@@ -303,6 +344,24 @@ def _with_feature_intent(feature_intents: Sequence[str], intent: str) -> list[st
     intent_set = set(feature_intents)
     intent_set.add(intent)
     return [current for current in INTENT_ORDER if current in intent_set]
+
+
+def _new_persisted_ui_flow_requested(feature_request: str) -> bool:
+    tokens = _tokenize(feature_request)
+    return bool(
+        tokens & NEW_DOMAIN_CREATE_TOKENS
+        and tokens & NEW_DOMAIN_PERSISTENCE_TOKENS
+        and tokens & NEW_DOMAIN_UI_TOKENS
+    )
+
+
+def _new_backend_object_ui_flow_requested(feature_request: str) -> bool:
+    tokens = _tokenize(feature_request)
+    return bool(
+        tokens & NEW_DOMAIN_CREATE_TOKENS
+        and tokens & NEW_DOMAIN_UI_TOKENS
+        and tokens & NEW_DOMAIN_BACKEND_TOKENS
+    )
 
 
 def _mutable_domain_field_update_requested(feature_request: str) -> bool:
@@ -348,6 +407,23 @@ def _row_is_frontend(row: InventoryRow) -> bool:
 def _row_is_backend(row: InventoryRow) -> bool:
     row_tokens = _tokenize(row.type)
     return bool({"backend", "service", "api", "server"} & row_tokens)
+
+
+def _row_is_persistence_capable(
+    row: InventoryRow,
+    discovery: RepoDiscovery | None,
+) -> bool:
+    if not _row_is_backend(row):
+        return False
+    if discovery is None:
+        return True
+    return bool(
+        discovery.likely_api_locations
+        or discovery.likely_service_locations
+        or discovery.likely_persistence_locations
+        or "spring_boot" in discovery.detected_frameworks
+        or "openapi" in discovery.detected_frameworks
+    )
 
 
 def _dedupe_preserve_order(items: Sequence[str]) -> list[str]:
@@ -446,6 +522,90 @@ def _strong_backend_domain_owner(
         return None
     candidates.sort(key=lambda impact: (-impact.score, impact.repo_name))
     return candidates[0]
+
+
+def _new_domain_backend_owner(
+    impacts: Sequence[FeatureImpact],
+    by_repo: dict[str, InventoryRow],
+    architecture_by_repo: dict[str, RepoDiscovery],
+) -> FeatureImpact | None:
+    """Pick the best backend/API/persistence-capable repo for a new domain concept."""
+
+    impact_by_repo = {impact.repo_name: impact for impact in impacts}
+    candidates: list[tuple[int, str, FeatureImpact]] = []
+    for repo_name, row in by_repo.items():
+        discovery = architecture_by_repo.get(repo_name)
+        if not _row_is_persistence_capable(row, discovery):
+            continue
+        capability_score = 0
+        if discovery is not None:
+            if discovery.likely_api_locations:
+                capability_score += 8
+            if discovery.likely_service_locations:
+                capability_score += 6
+            if discovery.likely_persistence_locations:
+                capability_score += 8
+            if "spring_boot" in discovery.detected_frameworks:
+                capability_score += 4
+            if "openapi" in discovery.detected_frameworks:
+                capability_score += 3
+        else:
+            capability_score += 4
+
+        current = impact_by_repo.get(repo_name)
+        base_score = current.score if current is not None else 0
+        reason = (
+            current.reason if current is not None else "no direct feature evidence"
+        )
+        candidates.append(
+            (
+                base_score + capability_score,
+                repo_name,
+                FeatureImpact(
+                    repo_name=repo_name,
+                    role="primary-owner",
+                    score=max(base_score, capability_score, MIN_RELEVANT_SCORE),
+                    reason=(
+                        f"{reason}; selected as backend/API/persistence-capable owner "
+                        "for ungrounded new domain concept"
+                    ),
+                ),
+            )
+        )
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (-item[0], item[1]))
+    return candidates[0][2]
+
+
+def _with_new_domain_backend_owner(
+    impacts: Sequence[FeatureImpact],
+    backend_owner: FeatureImpact | None,
+) -> list[FeatureImpact]:
+    if backend_owner is None:
+        return list(impacts)
+    updated: list[FeatureImpact] = []
+    found = False
+    for impact in impacts:
+        if impact.repo_name == backend_owner.repo_name:
+            updated.append(backend_owner)
+            found = True
+        elif impact.role == "primary-owner":
+            updated.append(
+                impact.model_copy(
+                    update={
+                        "role": "direct-dependent",
+                        "reason": f"{impact.reason}; demoted because new persisted domain requires backend owner",
+                    }
+                )
+            )
+        else:
+            updated.append(impact)
+    if not found:
+        updated.append(backend_owner)
+    updated.sort(key=lambda impact: (-impact.score, impact.repo_name))
+    return updated
 
 
 def _frontend_implementation_owner(
@@ -796,6 +956,21 @@ def _missing_evidence_for_plan(
     return _dedupe_preserve_order(missing)
 
 
+def _backend_required_missing(
+    rows: Sequence[InventoryRow],
+    architecture_by_repo: dict[str, RepoDiscovery],
+    *,
+    api_change_needed: bool,
+    db_change_needed: bool,
+) -> bool:
+    if not (api_change_needed or db_change_needed):
+        return False
+    return not any(
+        _row_is_persistence_capable(row, architecture_by_repo.get(row.repo_name))
+        for row in rows
+    )
+
+
 def _concept_missing_evidence(grounding: Sequence[ConceptGrounding]) -> list[str]:
     missing: list[str] = []
     for item in grounding:
@@ -803,11 +978,23 @@ def _concept_missing_evidence(grounding: Sequence[ConceptGrounding]) -> list[str
             missing.append(
                 f"requested concept '{item.concept}' was not grounded in discovered source or metadata"
             )
+        elif item.status == "ungrounded_new_domain_candidate":
+            missing.append(
+                f"requested concept '{item.concept}' appears to be a new domain concept; no existing source or metadata grounding was found"
+            )
     return missing
 
 
 def _ungrounded_concepts(grounding: Sequence[ConceptGrounding]) -> list[str]:
     return [item.concept for item in grounding if item.status == "ungrounded"]
+
+
+def _new_domain_candidate_concepts(grounding: Sequence[ConceptGrounding]) -> list[str]:
+    return [
+        item.concept
+        for item in grounding
+        if item.status == "ungrounded_new_domain_candidate"
+    ]
 
 
 def _unsupported_intents_for_plan(
@@ -974,6 +1161,7 @@ def _confidence_for_plan(
         for item in missing_evidence
     )
     has_ungrounded_concept = bool(_ungrounded_concepts(concept_grounding))
+    has_new_domain_candidate = bool(_new_domain_candidate_concepts(concept_grounding))
 
     if (
         weak_concrete_evidence
@@ -984,6 +1172,8 @@ def _confidence_for_plan(
         or score_gap <= 2
     ):
         return "low"
+    if has_new_domain_candidate:
+        return "medium" if not missing_evidence and score_gap >= 8 else "low"
     if uncertain_ui_evidence or missing_evidence or score_gap < 8:
         return "medium"
     return "high"
@@ -1298,8 +1488,15 @@ def _primary_owner_step(
                 "UI copy, label text, and presentation on the profile screen"
                 f"{_path_note(' using discovered UI paths', _ui_paths(discovery))}."
             )
+        if "api" in feature_intents or "persistence" in feature_intents:
+            return (
+                f"In {repo_name} (primary-owner, score={score}), scaffold the requested UI page/form, "
+                "wire client API submit/retrieve behavior, and stop at the frontend boundary until a "
+                "backend/API/persistence-capable repo is available"
+                f"{_path_note(' using discovered UI/client paths', _ui_and_client_paths(discovery))}."
+            )
         return (
-            f"In {repo_name} (primary-owner, score={score}), update profile page/form state handling, "
+            f"In {repo_name} (primary-owner, score={score}), update page/form state handling, "
             "UI copy, validation messaging, and client service wiring"
             f"{_path_note(' using discovered UI/client paths', _ui_and_client_paths(discovery))}."
         )
@@ -1546,10 +1743,23 @@ def create_feature_plan(
         scan_root=scan_root,
         discovery_snapshot=discovery_snapshot,
     )
+    new_domain_candidate = bool(_new_domain_candidate_concepts(concept_grounding))
     mutable_domain_update = _mutable_domain_field_update_requested(feature_request)
     domain_owner_impact = _strong_backend_domain_owner(resolved_impacts, by_repo)
+    new_domain_backend_owner = (
+        _new_domain_backend_owner(resolved_impacts, by_repo, discovery_by_repo)
+        if new_domain_candidate
+        and any(intent in feature_intents for intent in ("api", "persistence"))
+        else None
+    )
+    planning_impacts = _with_new_domain_backend_owner(
+        resolved_impacts,
+        new_domain_backend_owner,
+    )
+    if new_domain_backend_owner is not None:
+        domain_owner_impact = new_domain_backend_owner
     implementation_owner_impact = (
-        _frontend_implementation_owner(resolved_impacts, by_repo)
+        _frontend_implementation_owner(planning_impacts, by_repo)
         if "ui" in feature_intents
         else None
     )
@@ -1583,11 +1793,17 @@ def create_feature_plan(
         and domain_owner_impact is not None
         and _has_discovered_contract_paths(domain_owner_discovery)
     )
+    inferred_api_for_new_persisted_domain = bool(
+        _new_persisted_ui_flow_requested(feature_request)
+        or _new_backend_object_ui_flow_requested(feature_request)
+        or (new_domain_candidate and "persistence" in feature_intents)
+    )
     if (
         inferred_api_for_mutable_field
         or inferred_api_for_ui_persistence
         or inferred_api_for_new_field_with_contract
         or inferred_api_for_new_persisted_field_with_contract
+        or inferred_api_for_new_persisted_domain
     ):
         feature_intents = _with_feature_intent(feature_intents, "api")
 
@@ -1602,7 +1818,7 @@ def create_feature_plan(
 
     filtered_impacts = _filter_impacts_for_plan(
         feature_request,
-        resolved_impacts,
+        planning_impacts,
         by_repo,
         feature_intents,
         discovery_by_repo,
@@ -1674,6 +1890,7 @@ def create_feature_plan(
         or inferred_api_for_ui_persistence
         or inferred_api_for_new_field_with_contract
         or inferred_api_for_new_persisted_field_with_contract
+        or inferred_api_for_new_persisted_domain
     )
 
     likely_paths_by_repo: dict[str, list[str]] = {}
@@ -1685,7 +1902,7 @@ def create_feature_plan(
             continue
 
         repo_dir = (
-            (workspace_root / impact.repo_name)
+            repo_path_for(workspace_root, impact.repo_name)
             if workspace_root is not None
             else None
         )
@@ -1796,6 +2013,7 @@ def create_feature_plan(
         or inferred_api_for_new_persisted_field_with_contract
         or api_surface_expansion
         or weak_evidence_request
+        or new_domain_candidate
     )
     missing_evidence = _missing_evidence_for_plan(
         primary_owner=primary_owner,
@@ -1812,6 +2030,18 @@ def create_feature_plan(
     missing_evidence = _dedupe_preserve_order(
         [*missing_evidence, *_concept_missing_evidence(concept_grounding)]
     )
+    if _backend_required_missing(
+        effective_rows,
+        discovery_by_repo,
+        api_change_needed=api_change_needed,
+        db_change_needed=db_change_needed,
+    ):
+        missing_evidence = _dedupe_preserve_order(
+            [
+                *missing_evidence,
+                "Backend/API work requested but no backend-capable target is registered. Register the monorepo root or backend repo.",
+            ]
+        )
     unsupported_intents = _unsupported_intents_for_plan(
         feature_intents,
         filtered_impacts,

@@ -10,6 +10,7 @@ from app.models.discovery import (
     RepoDiscovery,
 )
 from app.services.architecture_discovery import ArchitectureDiscoveryService
+from app.services.repo_paths import repo_path_for
 from app.models.recipe_suggestion import RecipeSuggestionReport
 from app.services.repo_profile_bootstrap import RepoProfileBootstrapService
 from app.services.text_normalization import normalize_text as normalize_request_text
@@ -240,7 +241,7 @@ def create_change_proposal(
 
         discovery = discovery_by_repo.get(repo_name)
         repo_dir = (
-            (workspace_root / repo_name)
+            repo_path_for(workspace_root, repo_name)
             if workspace_root is not None
             else None
         )
@@ -430,6 +431,12 @@ def _combine_recommendations(
 
     recipe_only_additions = 0
     for item in recipe:
+        if (
+            plan is not None
+            and _has_new_domain_candidate(plan)
+            and not _new_domain_recipe_recommendation_allowed(item)
+        ):
+            continue
         key = (item.repo_name, item.path)
         existing = by_key.get(key)
         if existing is not None:
@@ -574,6 +581,21 @@ def _recipe_supporting_recommendation(item: CombinedRecommendation) -> bool:
     )
 
 
+def _new_domain_recipe_recommendation_allowed(item: CombinedRecommendation) -> bool:
+    """For ungrounded new domains, keep recipe shape hints but drop unrelated examples."""
+
+    evidence_text = " | ".join(item.evidence).lower()
+    path_tokens = _path_all_tokens(item.path)
+    return (
+        "route_config" in evidence_text
+        or "frontend_type" in evidence_text
+        or "frontend type" in evidence_text
+        or bool(path_tokens & FRONTEND_SUPPORT_FILE_TOKENS)
+        or "request explicitly names a page/component identifier" in evidence_text
+        or "requested page/component already exists" in evidence_text
+    )
+
+
 def _merge_duplicate_recommendations(
     existing: CombinedRecommendation,
     item: CombinedRecommendation,
@@ -622,9 +644,13 @@ def _combined_recommendation_rank(item: CombinedRecommendation) -> tuple[int, in
     direct_requested = (
         "requested page/component" in evidence_text
         or "request explicitly names a page/component identifier" in evidence_text
+        or "directly implied by the requested ui surface" in evidence_text
+        or "likely needs a form component" in evidence_text
     )
     if item.source == "both":
         source_tier = 0
+    elif item.source == "planner" and direct_requested:
+        source_tier = 1
     elif item.source == "planner" and item.confidence == "high" and item.action in {"create", "modify"}:
         source_tier = 1
     elif item.source == "recipe" and item.confidence == "high" and item.action in {"create", "modify"}:
@@ -719,7 +745,8 @@ def _likely_files_to_inspect(
     planned_paths = plan.likely_paths_by_repo.get(row.repo_name, [])
     backend = _row_is_backend(row)
     frontend = _row_is_frontend(row)
-    allow_concrete_files = not _has_ungrounded_concepts(plan)
+    new_domain_candidate = _has_new_domain_candidate(plan)
+    allow_concrete_files = not _has_ungrounded_concepts(plan) and not new_domain_candidate
 
     if frontend and plan.ui_change_needed:
         ui_shell_change = ui_shell_requested(plan.feature_request)
@@ -741,6 +768,8 @@ def _likely_files_to_inspect(
             files.extend(_existing_files_for_category(repo_dir, ui_paths, plan, row, "frontend"))
             if _ui_page_add_requested(plan.feature_request):
                 files.extend(_page_add_existing_support_files(repo_dir, plan))
+        elif new_domain_candidate and _ui_page_add_requested(plan.feature_request):
+            files.extend(_page_add_existing_support_files(repo_dir, plan))
         if not shell_paths:
             folders.extend(ui_paths)
 
@@ -809,11 +838,30 @@ def _likely_files_to_inspect(
             ]
         files.extend(grounded_files)
 
+    inspect_paths = _final_inspect_paths(files, folders, discovery)
+    if new_domain_candidate:
+        inspect_paths = _filter_new_domain_inspect_paths(inspect_paths)
+
     return _narrow_inspect_paths_for_grounded_concepts(
         plan,
         row,
-        _final_inspect_paths(files, folders, discovery),
+        inspect_paths,
     )
+
+
+def _filter_new_domain_inspect_paths(paths: Sequence[str]) -> list[str]:
+    """Keep generic support paths but drop unrelated domain folders for new concepts."""
+
+    unrelated_tokens = UNRELATED_DOMAIN_TOKENS | {"owner", "owners"}
+    allowed: list[str] = []
+    for path in paths:
+        tokens = _path_all_tokens(path)
+        if not _path_looks_like_file(path) and tokens & unrelated_tokens:
+            continue
+        if _path_looks_like_file(path) and tokens & unrelated_tokens:
+            continue
+        allowed.append(path)
+    return _dedupe_preserve_order(allowed)
 
 
 def _build_file_plans(
@@ -967,6 +1015,19 @@ def _new_file_plan(
 ) -> FilePlan:
     lowered = path.lower()
     confidence = "medium"
+    if _has_new_domain_candidate(plan) and _path_looks_like_file(path):
+        reason = _new_domain_file_reason(plan, path)
+        if any(
+            token in lowered
+            for token in ("controller", "request", "response", "service", "repository")
+        ):
+            confidence = "high"
+        return FilePlan(
+            path=path,
+            action="create",
+            confidence=confidence,
+            reason=reason,
+        )
     if "migration" in lowered and plan.db_change_needed:
         confidence = "high"
     if any(token in lowered for token in ("request dto", "response dto")) and plan.api_change_needed:
@@ -1007,6 +1068,32 @@ def _new_file_plan(
         confidence=confidence,
         reason=reason,
     )
+
+
+def _new_domain_file_reason(plan: FeaturePlan, path: str) -> str:
+    concept = _new_domain_stem(plan) or "requested domain"
+    tokens = _path_all_tokens(path)
+    if "controller" in tokens:
+        return f"New {concept} domain flow likely needs an API controller or route surface."
+    if "request" in tokens:
+        return f"New {concept} API flow likely needs a request DTO for submitted fields."
+    if "response" in tokens:
+        return f"New {concept} API flow likely needs a response DTO for retrieval."
+    if "service" in tokens:
+        return f"New {concept} domain flow likely needs service/business logic."
+    if "repository" in tokens:
+        return f"New {concept} persisted data likely needs a repository/data-access surface."
+    if any(token in tokens for token in ("entity", "model")) or Path(path).stem == concept:
+        if not plan.db_change_needed:
+            return f"New {concept} backend object likely needs a domain model."
+        return f"New {concept} persisted data likely needs a domain model/entity."
+    if _inspect_path_group(path) == "frontend":
+        if "form" in tokens:
+            return f"New {concept} UI likely needs a form component for collecting fields."
+        if "api" in tokens or "service" in tokens:
+            return f"New {concept} UI likely needs a client API helper for submit/retrieve calls."
+        return f"New {concept} page is directly implied by the requested UI surface."
+    return f"New {concept} domain concept likely requires this file if the convention fits."
 
 
 def _concrete_new_file_path(path: str) -> bool:
@@ -1197,6 +1284,17 @@ def _existing_file_reason(
     request_tokens = _tokenize_with_camel_case(plan.feature_request)
     target_tokens = _grounded_target_tokens(plan)
     shell_kind = ui_shell_path_kind(path) if ui_shell_requested(plan.feature_request) else None
+    target_label = _target_label(plan)
+    owner_telephone = _owner_telephone_context(plan)
+    if _has_new_domain_candidate(plan):
+        concept = _new_domain_stem(plan) or "requested domain"
+        if action == "inspect-only":
+            return f"Reference-only file from a different domain; the requested {concept} concept is new."
+        if not _path_looks_like_file(path):
+            return f"Likely discovered area to inspect for the new {concept} API/persistence/UI surface."
+        if confidence == "high":
+            return f"File path aligns with the new {concept} domain surface and may need a targeted change."
+        return f"File may provide a useful convention for the new {concept} feature, but the concept is not yet grounded in source."
 
     if action == "inspect-only":
         if shell_kind == "static_assets":
@@ -1210,9 +1308,13 @@ def _existing_file_reason(
         return "Useful as nearby reference context, but the requested feature points elsewhere."
 
     if _same_domain_different_flow(path, plan, target_tokens):
-        return "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
+        if owner_telephone:
+            return "May share owner form behavior with the edit flow, but the feature specifically targets editing existing owners."
+        return f"May share {target_label} form behavior with the edit flow, but the feature targets a different flow."
     if _same_domain_secondary_frontend(path, plan, target_tokens):
-        return "Same owner domain and may display the telephone field after update, but the request specifically targets the edit screen."
+        if owner_telephone:
+            return "Same owner domain and may display the telephone field after update, but the request specifically targets the edit screen."
+        return f"Same {target_label} domain and may display updated data, but the request targets a more specific surface."
     if _ui_page_add_requested(plan.feature_request):
         if _frontend_route_config_file(path):
             return "Route/config file likely needs wiring for the new page."
@@ -1243,50 +1345,62 @@ def _existing_file_reason(
     if "page" in tokens and _inspect_path_group(path) == "frontend":
         return "Frontend page component is related to the requested UI change."
     if any(token in tokens for token in ("editor", "form")) and _inspect_path_group(path) == "frontend":
-        return "Likely owner form component where telephone input and validation are handled."
+        if owner_telephone:
+            return "Likely owner form component where telephone input and validation are handled."
+        return f"Likely {target_label} form component where requested input and validation are handled."
     if tokens & FRONTEND_SUPPORT_FILE_TOKENS and _inspect_path_group(path) == "frontend":
         if not target_tokens:
             return "Shared frontend type definitions may support the requested UI change."
-        return "Likely shared owner client types referenced by the edit flow and API payload."
+        if owner_telephone:
+            return "Likely shared owner client types referenced by the edit flow and API payload."
+        return f"Likely shared {target_label} client types referenced by the UI flow and API payload."
     if any(token in tokens for token in ("controller", "rest")) and concept_match:
-        return "Owner-specific REST controller likely handles update requests for owner fields."
+        if owner_telephone:
+            return "Owner-specific REST controller likely handles update requests for owner fields."
+        return f"{target_label.capitalize()} REST controller likely handles API requests for the requested fields."
     if any(token in tokens for token in ("request", "response", "dto")) and concept_match:
-        return "Likely owner API contract model carrying telephone data."
+        if owner_telephone:
+            return "Likely owner API contract model carrying telephone data."
+        return f"Likely {target_label} API contract model carrying request/response data."
     if "service" in tokens and concept_match:
-        return "Likely service-layer update flow for owner telephone changes."
+        if owner_telephone:
+            return "Likely service-layer update flow for owner telephone changes."
+        return f"Likely service-layer flow for {target_label} changes."
     if _same_domain_model_file(path, target_tokens):
-        return "Owner telephone may already exist on the domain model; inspect for validation or serialization behavior."
+        if owner_telephone:
+            return "Owner telephone may already exist on the domain model; inspect for validation or serialization behavior."
+        return f"{target_label.capitalize()} may already exist on the domain model; inspect for validation or serialization behavior."
     if any(token in tokens for token in ("entity", "repository")) and concept_match:
         if plan.db_change_needed:
-            return "Likely owner domain or persistence model touched by the requested field update."
-        return "Likely owner domain model related to the update flow; inspect before changing."
+            return f"Likely {target_label} domain or persistence model touched by the requested data change."
+        return f"Likely {target_label} domain model related to the update flow; inspect before changing."
     if _shared_path_is_strongly_justified(path, plan):
-        return "Likely API contract/spec reference for the requested owner update flow."
+        return f"Likely API contract/spec reference for the requested {target_label} flow."
     if not _path_looks_like_file(path):
         mode = "discovered" if discovery is not None else "planned"
         if not target_tokens:
             return f"Likely {mode} area to inspect before editing concrete files."
-        return f"Likely {mode} owner-related area to inspect before editing concrete files."
+        return f"Likely {mode} {target_label}-related area to inspect before editing concrete files."
     if confidence == "high":
         if _inspect_path_group(path) == "frontend":
             if not target_tokens:
                 return "Frontend file matches the requested UI flow and is likely to need a targeted change."
-            return "Frontend file matches the requested owner update flow and is likely to need a targeted UI change."
+            return f"Frontend file matches the requested {target_label} flow and is likely to need a targeted UI change."
         if _inspect_path_group(path) == "backend":
             if not target_tokens:
                 return "Backend file may support the requested flow and could need a targeted change."
-            return "Backend file matches the requested owner update flow and is likely to need a targeted API change."
+            return f"Backend file matches the requested {target_label} flow and is likely to need a targeted API change."
         if not target_tokens:
             return "Shared support file matches the requested flow and may need a targeted change."
-        return "Shared support file matches the requested owner update flow and may need a targeted change."
+        return f"Shared support file matches the requested {target_label} flow and may need a targeted change."
     if _inspect_path_group(path) == "frontend":
         if not target_tokens:
             return "Frontend file is related to the requested UI flow, but its exact edit responsibility is uncertain."
-        return "Frontend file is related to the owner update flow, but its exact edit responsibility is uncertain."
+        return f"Frontend file is related to the {target_label} flow, but its exact edit responsibility is uncertain."
     if _inspect_path_group(path) == "backend":
         if not target_tokens:
             return "Backend file may support the requested flow, but its exact edit responsibility is uncertain."
-        return "Backend file is related to the owner update flow, but its exact edit responsibility is uncertain."
+        return f"Backend file is related to the {target_label} flow, but its exact edit responsibility is uncertain."
     return "Shared support file is related to the requested flow, but the exact change is uncertain."
 
 
@@ -1340,12 +1454,20 @@ def _likely_changes(plan: FeaturePlan, row: InventoryRow, role: str) -> list[str
         )
     elif frontend and plan.ui_change_needed:
         if _ui_page_add_requested(plan.feature_request):
-            changes.extend(
-                [
-                    "Scaffold the requested page component in the matching frontend domain folder.",
-                    "Wire the page into the existing route/config surface without adding backend actions.",
-                ]
-            )
+            if plan.api_change_needed or plan.db_change_needed:
+                changes.extend(
+                    [
+                        "Scaffold the requested page and form surface in the matching frontend area.",
+                        "Wire submit/retrieve behavior through the client API/service layer once a backend endpoint exists.",
+                    ]
+                )
+            else:
+                changes.extend(
+                    [
+                        "Scaffold the requested page component in the matching frontend domain folder.",
+                        "Wire the page into the existing route/config surface without adding backend actions.",
+                    ]
+                )
         else:
             changes.extend(
                 [
@@ -1398,6 +1520,14 @@ def _possible_new_files(
         return []
     if frontend and plan.ui_change_needed and ui_shell_requested(plan.feature_request):
         return []
+    if _has_new_domain_candidate(plan):
+        if frontend and plan.ui_change_needed:
+            files.extend(
+                _new_domain_frontend_files(plan, row, inspect_paths, discovery, repo_dir)
+            )
+        if backend and (plan.api_change_needed or plan.db_change_needed):
+            files.extend(_new_domain_backend_files(plan, inspect_paths, discovery, repo_dir))
+        return _dedupe_preserve_order(files)
     if frontend and plan.ui_change_needed and _ui_page_add_requested(plan.feature_request):
         return _page_add_new_files(plan, row, inspect_paths, discovery, repo_dir)
 
@@ -1423,6 +1553,163 @@ def _possible_new_files(
         files.extend(_event_possible_new_files(role, inspect_paths))
 
     return _dedupe_preserve_order(files)
+
+
+def _new_domain_frontend_files(
+    plan: FeaturePlan,
+    row: InventoryRow,
+    inspect_paths: Sequence[str],
+    discovery: RepoDiscovery | None,
+    repo_dir: Path | None,
+) -> list[str]:
+    files = _page_add_new_files(plan, row, inspect_paths, discovery, repo_dir)
+    stem = _new_domain_stem(plan)
+    if stem is None or repo_dir is None or not repo_dir.is_dir():
+        return files
+
+    form_base = _first_existing_folder(
+        repo_dir,
+        [
+            *_matching_paths(inspect_paths, ("forms",)),
+            *_discovery_paths(discovery, "ui"),
+            *plan.likely_paths_by_repo.get(row.repo_name, []),
+        ],
+        preferred_markers=("forms", "components"),
+    )
+    if form_base is not None:
+        files.append(f"{form_base}/{stem}Form{_frontend_source_suffix(repo_dir, form_base)}")
+
+    client_base = _first_existing_folder(
+        repo_dir,
+        [
+            *_matching_paths(inspect_paths, ("api", "services")),
+            *_discovery_paths(discovery, "api"),
+            *_discovery_paths(discovery, "service"),
+            *plan.likely_paths_by_repo.get(row.repo_name, []),
+        ],
+        preferred_markers=("api", "services"),
+    )
+    if client_base is not None and plan.api_change_needed:
+        files.append(f"{client_base}/{stem.lower()}Api.ts")
+    return _dedupe_preserve_order(
+        [path for path in files if not (repo_dir / path).exists()]
+    )
+
+
+def _new_domain_backend_files(
+    plan: FeaturePlan,
+    inspect_paths: Sequence[str],
+    discovery: RepoDiscovery | None,
+    repo_dir: Path | None,
+) -> list[str]:
+    stem = _new_domain_stem(plan)
+    if stem is None or repo_dir is None or not repo_dir.is_dir():
+        return ["new request DTO", "new response DTO", "new migration file"]
+
+    files: list[str] = []
+    backend_api_paths = _backend_candidate_paths(
+        [*_discovery_paths(discovery, "api"), *inspect_paths]
+    )
+    backend_service_paths = _backend_candidate_paths(
+        [*_discovery_paths(discovery, "service"), *inspect_paths]
+    )
+    backend_persistence_paths = _backend_candidate_paths(
+        [*_discovery_paths(discovery, "persistence"), *inspect_paths]
+    )
+    controller_base = _first_existing_folder(
+        repo_dir,
+        backend_api_paths,
+        preferred_markers=("controller", "controllers", "rest", "api"),
+    )
+    dto_base = _first_existing_folder(
+        repo_dir,
+        backend_api_paths,
+        preferred_markers=("dto", "dtos"),
+    )
+    service_base = _first_existing_folder(
+        repo_dir,
+        backend_service_paths,
+        preferred_markers=("service", "services"),
+    )
+    entity_base = _first_existing_folder(
+        repo_dir,
+        backend_persistence_paths,
+        preferred_markers=("entity", "entities", "model", "models"),
+    )
+    repository_base = _first_existing_folder(
+        repo_dir,
+        backend_persistence_paths,
+        preferred_markers=("repository", "repositories"),
+    )
+    if controller_base is not None and plan.api_change_needed:
+        files.append(f"{controller_base}/{stem}Controller.java")
+    if dto_base is None and controller_base is not None and plan.api_change_needed:
+        dto_base = controller_base
+    if dto_base is not None and plan.api_change_needed:
+        files.extend([f"{dto_base}/{stem}Request.java", f"{dto_base}/{stem}Response.java"])
+    if service_base is not None:
+        files.append(f"{service_base}/{stem}Service.java")
+    if entity_base is not None and (plan.db_change_needed or _backend_objects_requested(plan.feature_request)):
+        files.append(f"{entity_base}/{stem}.java")
+    if repository_base is not None and plan.db_change_needed:
+        files.append(f"{repository_base}/{stem}Repository.java")
+    if plan.db_change_needed:
+        files.append("new migration file")
+    return _dedupe_preserve_order(
+        [path for path in files if not _path_looks_like_file(path) or not (repo_dir / path).exists()]
+    )
+
+
+def _backend_candidate_paths(paths: Sequence[str]) -> list[str]:
+    """Filter mixed full-stack paths down to backend-like Java/resource areas."""
+
+    backend_paths: list[str] = []
+    for path in paths:
+        lowered = path.lower()
+        if lowered.startswith(("client/", "frontend/", "web/", "ui/")):
+            continue
+        if "/src/" in lowered and not lowered.startswith("src/"):
+            continue
+        if any(marker in lowered for marker in ("src/main/java", "src/main/resources", "openapi", "swagger")):
+            backend_paths.append(path)
+            continue
+        if lowered.startswith(("controller", "controllers", "dto", "dtos", "service", "services", "entity", "entities", "model", "models", "repository", "repositories")):
+            backend_paths.append(path)
+    return _dedupe_preserve_order(backend_paths)
+
+
+def _backend_objects_requested(feature_request: str) -> bool:
+    tokens = _tokenize_with_camel_case(feature_request)
+    return bool(tokens & {"backend", "model", "object", "objects"})
+
+
+def _first_existing_folder(
+    repo_dir: Path,
+    paths: Sequence[str],
+    *,
+    preferred_markers: Sequence[str],
+) -> str | None:
+    candidates = _dedupe_preserve_order(
+        [
+            str(Path(path).parent) if _path_looks_like_file(path) else path
+            for path in paths
+        ]
+    )
+    ranked: list[tuple[int, str]] = []
+    for path in candidates:
+        if not path or not (repo_dir / path).is_dir():
+            continue
+        lowered = path.lower()
+        score = 0
+        for index, marker in enumerate(preferred_markers):
+            if marker in lowered:
+                score += 20 - index
+        if score > 0:
+            ranked.append((score, path))
+    if not ranked:
+        return None
+    ranked.sort(key=lambda item: (-item[0], len(item[1]), item[1]))
+    return ranked[0][1]
 
 
 def _new_file_surface_likely(plan: FeaturePlan) -> bool:
@@ -1511,11 +1798,20 @@ def _requested_page_component_stems(feature_request: str) -> list[str]:
     for index, token in enumerate(tokens):
         if token != "page" or index == 0:
             continue
-        previous = tokens[index - 1]
-        if previous in GENERIC_STOPWORDS or previous in {"welcome", "landing", "home", "layout"}:
+        name_tokens = _page_name_tokens_before_surface(tokens, index)
+        if not name_tokens:
             continue
-        stems.append(f"{previous.capitalize()}Page")
+        stems.append(f"{''.join(part.capitalize() for part in name_tokens)}Page")
     return _dedupe_preserve_order(stems)
+
+
+def _page_name_tokens_before_surface(tokens: Sequence[str], surface_index: int) -> list[str]:
+    previous = tokens[surface_index - 1]
+    if previous in GENERIC_STOPWORDS or previous in {"welcome", "landing", "home", "layout"}:
+        return []
+    if previous == "us" and surface_index >= 2 and tokens[surface_index - 2] == "contact":
+        return ["contact", "us"]
+    return [previous]
 
 
 def _page_add_base_folder(
@@ -1628,6 +1924,45 @@ def _has_ungrounded_concepts(plan: FeaturePlan) -> bool:
         item.status == "ungrounded"
         for item in getattr(plan, "concept_grounding", [])
     )
+
+
+def _has_new_domain_candidate(plan: FeaturePlan) -> bool:
+    return any(
+        item.status == "ungrounded_new_domain_candidate"
+        for item in getattr(plan, "concept_grounding", [])
+    )
+
+
+def _new_domain_stem(plan: FeaturePlan) -> str | None:
+    for grounding in getattr(plan, "concept_grounding", []):
+        if grounding.status != "ungrounded_new_domain_candidate":
+            continue
+        tokens = [
+            token
+            for token in _tokenize_with_camel_case(grounding.concept)
+            if _useful_grounding_token(token)
+        ]
+        if tokens:
+            return "".join(token.capitalize() for token in tokens)
+    stems = _requested_page_component_stems(plan.feature_request)
+    if stems:
+        return re.sub(r"(Page|View|Screen)$", "", stems[0]) or stems[0]
+    return None
+
+
+def _target_label(plan: FeaturePlan) -> str:
+    stem = _new_domain_stem(plan)
+    if stem is not None:
+        return " ".join(_tokenize_with_camel_case(stem)) or "requested"
+    tokens = sorted(_grounded_target_tokens(plan))
+    if tokens:
+        return "/".join(tokens[:2])
+    return "requested"
+
+
+def _owner_telephone_context(plan: FeaturePlan) -> bool:
+    tokens = _tokenize_with_camel_case(plan.feature_request) | _grounded_target_tokens(plan)
+    return bool(tokens & {"owner", "owners"} and tokens & {"phone", "telephone", "number"})
 
 
 def _grounded_source_files_for_repo(
@@ -1904,7 +2239,11 @@ def _grounded_target_tokens(plan: FeaturePlan) -> set[str]:
 
     tokens: set[str] = set()
     for grounding in getattr(plan, "concept_grounding", []):
-        if grounding.status not in {"direct_match", "alias_match"}:
+        if grounding.status not in {
+            "direct_match",
+            "alias_match",
+            "ungrounded_new_domain_candidate",
+        }:
             continue
 
         concept_tokens = {
@@ -1913,6 +2252,8 @@ def _grounded_target_tokens(plan: FeaturePlan) -> set[str]:
             if _useful_grounding_token(token)
         }
         tokens.update(concept_tokens)
+        if grounding.status == "ungrounded_new_domain_candidate":
+            continue
 
         for term in grounding.matched_terms:
             for token in _tokenize_with_camel_case(term):

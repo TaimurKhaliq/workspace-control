@@ -12,9 +12,16 @@ from pydantic import ValidationError
 from app.models.discovery import DiscoveryTargetRecord
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from app.services.discovery_target_registry import DiscoveryTargetRegistry
+from app.services.repo_target_validator import RepoTargetValidator
 from server.db import get_db, utc_now
 from server.routes.workspaces import require_workspace
-from server.schemas import DiscoverResponse, RepoTargetCreate, RepoTargetOut
+from server.schemas import (
+    DiscoverResponse,
+    RepoTargetCreate,
+    RepoTargetOut,
+    RepoTargetValidate,
+    RepoTargetValidationOut,
+)
 
 router = APIRouter(tags=["repos"])
 
@@ -34,6 +41,24 @@ def require_repo(db: sqlite3.Connection, target_id: str) -> sqlite3.Row:
     if row is None:
         raise HTTPException(status_code=404, detail="Repo target not found")
     return row
+
+
+@router.post("/api/repos/validate-target", response_model=RepoTargetValidationOut)
+def validate_repo_target(payload: RepoTargetValidate) -> RepoTargetValidationOut:
+    if payload.source_type != "local_path":
+        return RepoTargetValidationOut(
+            selected_path=payload.locator,
+            suggested_root_path=None,
+            detected_frameworks=[],
+            detected_repo_type="unknown",
+            warnings=["git_url validation is stored for later and not inspected locally yet."],
+        )
+
+    path = Path(payload.locator).expanduser().resolve()
+    if not path.exists():
+        raise HTTPException(status_code=400, detail="Local path does not exist")
+    result = RepoTargetValidator().validate_local_path(path)
+    return RepoTargetValidationOut(**result.model_dump(mode="python"))
 
 
 @router.get("/api/workspaces/{workspace_id}/repos", response_model=list[RepoTargetOut])

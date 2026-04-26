@@ -144,7 +144,23 @@ def repo_dirs(workspace: MaterializedWorkspace) -> list[Path]:
     root = workspace.root_path
     if not root.is_dir():
         return []
+    if looks_like_repo_root(root):
+        return [root]
     return sorted([child for child in root.iterdir() if child.is_dir()], key=lambda item: item.name)
+
+
+def looks_like_repo_root(path: Path) -> bool:
+    """Return true when the path itself appears to be the project root."""
+
+    if (path / "stackpilot.yml").is_file():
+        return True
+    if any((path / filename).is_file() for filename in ("pom.xml", "build.gradle", "build.gradle.kts", "package.json")):
+        return True
+    if (path / "src/main/java").is_dir():
+        return True
+    if any((path / root / "package.json").is_file() for root in ("client", "frontend", "web", "ui")):
+        return True
+    return False
 
 
 def repo_frameworks(snapshot: DiscoverySnapshot, repo_name: str) -> set[str]:

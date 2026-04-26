@@ -17,13 +17,29 @@ _INTENT_PHRASES: dict[FeatureIntent, tuple[str, ...]] = {
     "persistence": (
         "persist",
         "store",
+        "save",
         "field",
         "column",
         "table",
         "migration",
         "database",
     ),
-    "api": ("api", "endpoint", "request", "response", "controller", "validation"),
+    "api": (
+        "api",
+        "backend",
+        "endpoint",
+        "object",
+        "objects",
+        "model",
+        "request",
+        "response",
+        "controller",
+        "validation",
+        "retrieve",
+        "read",
+        "list",
+        "query",
+    ),
     "event_integration": (
         "publish event",
         "emit event",
@@ -52,4 +68,17 @@ class FeatureIntentClassifier:
             if any(f" {phrase} " in wrapped for phrase in phrases):
                 intents.append(intent)
 
+        if _new_persisted_ui_flow(normalized):
+            intent_set = set(intents)
+            intent_set.update({"ui", "persistence", "api"})
+            intents = [intent for intent in _INTENT_ORDER if intent in intent_set]
+
         return intents
+
+
+def _new_persisted_ui_flow(normalized_text: str) -> bool:
+    tokens = set(normalized_text.split())
+    create_terms = {"add", "build", "create", "new"}
+    storage_terms = {"persist", "store", "save", "retrieve", "read", "list", "query"}
+    ui_terms = {"page", "screen", "form"}
+    return bool(tokens & create_terms and tokens & storage_terms and tokens & ui_terms)

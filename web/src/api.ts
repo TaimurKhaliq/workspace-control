@@ -20,12 +20,25 @@ export type RepoTarget = {
   updated_at: string;
 };
 
+export type RepoTargetValidation = {
+  selected_path: string;
+  suggested_root_path: string | null;
+  detected_frameworks: string[];
+  detected_repo_type: string;
+  warnings: string[];
+};
+
 export type PlanBundle = {
   schema_version: string;
   feature_request: string;
   target: {
     target_id: string | null;
     repo_count: number;
+    selected_path: string | null;
+    suggested_root_path: string | null;
+    detected_repo_type: string | null;
+    detected_frameworks: string[];
+    warnings: string[];
     repos: Array<{
       repo_name: string;
       metadata_mode: string;
@@ -41,6 +54,10 @@ export type PlanBundle = {
     planning_mode: string;
     planner_native_available: boolean;
     recipe_assisted: boolean;
+    new_domain_candidates: string[];
+    backend_required: boolean;
+    backend_available: boolean;
+    missing_backend_required: boolean;
   };
   ownership: {
     primary_owner: string | null;
@@ -65,6 +82,12 @@ export type PlanBundle = {
     structural_confidence: number;
     planner_effectiveness: number;
     why_matched: string[];
+  }>;
+  concept_grounding: Array<{
+    concept: string;
+    status: string;
+    matched_terms: string[];
+    sources: string[];
   }>;
   validation: {
     commands: string[];
@@ -120,6 +143,13 @@ export function listRepos(workspaceId: string) {
 
 export function addRepo(workspaceId: string, payload: { target_id: string; source_type: 'local_path' | 'git_url'; locator: string; ref?: string }) {
   return request<RepoTarget>(`/api/workspaces/${workspaceId}/repos`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+}
+
+export function validateRepoTarget(payload: { source_type: 'local_path' | 'git_url'; locator: string }) {
+  return request<RepoTargetValidation>('/api/repos/validate-target', {
     method: 'POST',
     body: JSON.stringify(payload)
   });

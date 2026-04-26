@@ -10,7 +10,9 @@ import {
   learningStatus,
   listRepos,
   refreshLearning,
-  listWorkspaces
+  listWorkspaces,
+  validateRepoTarget,
+  RepoTargetValidation
 } from './api';
 
 const DEFAULT_PROMPT = 'Add OwnersPage (no actions yet)';
@@ -29,6 +31,7 @@ export default function App() {
   const [runId, setRunId] = useState('');
   const [recipeCounts, setRecipeCounts] = useState<Record<string, number>>({});
   const [learningStates, setLearningStates] = useState<Record<string, string>>({});
+  const [repoValidation, setRepoValidation] = useState<RepoTargetValidation | null>(null);
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
 
@@ -58,6 +61,19 @@ export default function App() {
         .catch(() => undefined);
     });
   }, [repos, selectedTargetId]);
+
+  useEffect(() => {
+    if (!locator.trim()) {
+      setRepoValidation(null);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      void validateRepoTarget({ source_type: sourceType, locator })
+        .then(setRepoValidation)
+        .catch(() => setRepoValidation(null));
+    }, 350);
+    return () => window.clearTimeout(timeout);
+  }, [sourceType, locator]);
 
   const selectedWorkspace = useMemo(
     () => workspaces.find((workspace) => workspace.id === selectedWorkspaceId) ?? null,
@@ -102,6 +118,12 @@ export default function App() {
   async function onAddRepo(event: FormEvent) {
     event.preventDefault();
     if (!selectedWorkspaceId) return;
+    const validation = await runTask('Validating repo target', () =>
+      validateRepoTarget({ source_type: sourceType, locator })
+    );
+    if (validation) {
+      setRepoValidation(validation);
+    }
     const repo = await runTask('Adding repo', () =>
       addRepo(selectedWorkspaceId, {
         target_id: repoTargetId,
@@ -200,6 +222,21 @@ export default function App() {
               Local path or Git URL
               <input value={locator} onChange={(event) => setLocator(event.target.value)} />
             </label>
+            {repoValidation && (
+              <div className="mini-card">
+                <strong>{repoValidation.detected_repo_type}</strong>
+                <p className="muted">Selected: {repoValidation.selected_path}</p>
+                {repoValidation.suggested_root_path && (
+                  <p className="risk">Suggested root: {repoValidation.suggested_root_path}</p>
+                )}
+                <p className="muted">
+                  Frameworks: {repoValidation.detected_frameworks.join(', ') || '-'}
+                </p>
+                {repoValidation.warnings.map((warning) => (
+                  <p className="risk" key={warning}>{warning}</p>
+                ))}
+              </div>
+            )}
             <button type="submit" disabled={!selectedWorkspaceId}>Add repo</button>
           </form>
         </Panel>
@@ -271,7 +308,14 @@ function PlanBundleView({ bundle }: { bundle: PlanBundle }) {
           <span>{bundle.summary.confidence} confidence</span>
           <span>{bundle.summary.planning_mode}</span>
           <span>{bundle.summary.detected_intents.join(', ') || 'no intents'}</span>
+          {bundle.summary.missing_backend_required && <span>backend required</span>}
         </div>
+        {bundle.target.detected_repo_type && (
+          <p className="muted">
+            Target: {bundle.target.detected_repo_type}
+            {bundle.target.suggested_root_path ? ` · suggested root: ${bundle.target.suggested_root_path}` : ''}
+          </p>
+        )}
       </div>
 
       <div className="grid three">
@@ -324,14 +368,34 @@ function PlanBundleView({ bundle }: { bundle: PlanBundle }) {
           ))}
         </Panel>
 
-        <Panel title="Validation & Caveats">
-          <h4>Commands</h4>
-          {bundle.validation.commands.length === 0 && <p className="muted">No validation commands discovered.</p>}
-          {bundle.validation.commands.map((command) => <code className="block" key={command}>{command}</code>)}
+        <Panel title="Concepts & Caveats">
+          <h4>Concept grounding</h4>
+          {bundle.summary.new_domain_candidates.length > 0 && (
+            <p className="risk">
+              New domain candidate: {bundle.summary.new_domain_candidates.join(', ')}
+            </p>
+          )}
+          {bundle.target.warnings.map((warning) => (
+            <p key={warning} className="risk">{warning}</p>
+          ))}
+          {bundle.concept_grounding.length === 0 && <p className="muted">No extracted concepts.</p>}
+          {bundle.concept_grounding.map((concept) => (
+            <p key={concept.concept} className="risk">
+              {concept.concept}: {concept.status}
+            </p>
+          ))}
           <h4>Risks</h4>
           {bundle.risks_and_caveats.map((risk, index) => (
             <p key={`${risk.source}-${index}`} className="risk">{risk.severity}: {risk.message}</p>
           ))}
+        </Panel>
+      </section>
+
+      <section className="grid two">
+        <Panel title="Validation">
+          <h4>Commands</h4>
+          {bundle.validation.commands.length === 0 && <p className="muted">No validation commands discovered.</p>}
+          {bundle.validation.commands.map((command) => <code className="block" key={command}>{command}</code>)}
         </Panel>
       </section>
 

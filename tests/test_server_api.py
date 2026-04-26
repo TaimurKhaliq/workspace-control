@@ -37,6 +37,39 @@ def test_create_workspace_and_add_local_repo(tmp_path: Path) -> None:
         assert [item["target_id"] for item in repos.json()] == ["fixture-stack"]
 
 
+def test_validate_local_frontend_subfolder_warns_about_parent_root(tmp_path: Path) -> None:
+    repo_root = tmp_path / "petclinic"
+    (repo_root / "src/main/java").mkdir(parents=True)
+    (repo_root / "client/src/components").mkdir(parents=True)
+    (repo_root / "pom.xml").write_text("<project />\n", encoding="utf-8")
+    (repo_root / "client/package.json").write_text(
+        '{"dependencies":{"react":"18.2.0"}}\n',
+        encoding="utf-8",
+    )
+    app = create_app(
+        db_path=tmp_path / "workspace_control.db",
+        registry_path=tmp_path / "discovery_targets.json",
+    )
+
+    with TestClient(app) as client:
+        response = client.post(
+            "/api/repos/validate-target",
+            json={
+                "source_type": "local_path",
+                "locator": str(repo_root / "client"),
+            },
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["selected_path"] == str((repo_root / "client").resolve())
+    assert body["suggested_root_path"] == str(repo_root.resolve())
+    assert body["detected_repo_type"] == "frontend-only"
+    assert "react" in body["detected_frameworks"]
+    assert any("frontend subfolder" in warning for warning in body["warnings"])
+    assert any("backend/API/persistence prompts" in warning for warning in body["warnings"])
+
+
 def test_discover_and_generate_plan_bundle(tmp_path: Path) -> None:
     app = create_app(
         db_path=tmp_path / "workspace_control.db",

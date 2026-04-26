@@ -33,6 +33,10 @@ def _seed_bundle_workspace(tmp_path: Path, *, include_owners_page: bool = True) 
     _write(repo / "client/src/main.tsx", "import './components/App';\n")
     _write(repo / "client/src/components/App.tsx", "export function App() { return null; }\n")
     _write(repo / "client/src/components/owners/FindOwnersPage.tsx", "export function FindOwnersPage() { return null; }\n")
+    _write(
+        repo / "client/src/components/owners/NewOwnerPage.tsx",
+        "export function NewOwnerPage() { return <form><input aria-invalid=\"true\" required /></form>; }\n",
+    )
     _write(repo / "client/src/configureRoutes.tsx", "export const routes = [];\n")
     _write(repo / "client/src/types/index.ts", "export interface Owner { id: string }\n")
     if include_owners_page:

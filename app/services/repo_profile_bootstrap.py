@@ -10,6 +10,7 @@ from pathlib import Path
 from app.adapters.base import merge_paths
 from app.models.discovery import DiscoverySnapshot, DiscoveryTarget, RepoDiscovery
 from app.models.repo_profile import InferredRepoProfile, RepoProfileBootstrapReport
+from app.services.repo_paths import repo_path_for
 from app.services.architecture_discovery import ArchitectureDiscoveryService
 from workspace_control.manifests import MANIFEST_FILENAME
 from workspace_control.models import InventoryRow
@@ -166,7 +167,7 @@ class RepoProfileBootstrapService:
         snapshot: DiscoverySnapshot,
         discovery: RepoDiscovery,
     ) -> InferredRepoProfile:
-        repo_path = snapshot.workspace.root_path / discovery.repo_name
+        repo_path = repo_path_for(snapshot.workspace.root_path, discovery.repo_name)
         explicit_metadata = (repo_path / MANIFEST_FILENAME).is_file()
         profile_terms = self._collect_profile_terms(
             repo_path,

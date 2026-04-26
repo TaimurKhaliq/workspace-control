@@ -26,17 +26,28 @@ REQUEST_STOPWORDS = {
     "a",
     "action",
     "actions",
+    "add",
     "allow",
     "and",
     "been",
+    "build",
+    "create",
     "for",
     "from",
     "has",
     "in",
+    "field",
+    "fields",
+    "list",
     "new",
     "no",
     "of",
     "on",
+    "persist",
+    "query",
+    "read",
+    "retrieve",
+    "save",
     "the",
     "to",
     "yet",
@@ -45,7 +56,9 @@ NOISY_TRIGGER_TERMS = {"action", "actions", "been", "has", "yet"}
 PAGE_SUFFIXES = ("Page", "Form", "Editor", "Details", "Detail", "List", "Table")
 UI_PAGE_TERMS = {"page", "screen", "view"}
 UI_CREATE_TERMS = {"add", "create", "new"}
-UI_FORM_VALIDATION_TERMS = {"error", "errors", "feedback", "field", "fields", "invalid", "required", "validation", "validate"}
+# "field"/"fields" alone is too broad for validation recipes; new-domain
+# form creation prompts often mention fields without implying validation work.
+UI_FORM_VALIDATION_TERMS = {"error", "errors", "feedback", "invalid", "required", "validation", "validate"}
 UI_SHELL_TERMS = {"app", "assets", "home", "landing", "layout", "shell", "welcome"}
 BACKEND_API_TERMS = {"api", "controller", "endpoint", "rest", "search"}
 BACKEND_VALIDATION_TERMS = {
@@ -147,12 +160,17 @@ class RecipeSuggestionService:
 
         suggestions: list[RecipeLikelyAction] = []
         if graph is not None:
+            actionable_matches: list[MatchedRecipe] = []
             for match in matched:
                 recipe = next(recipe for recipe in recipes if recipe.id == match.recipe_id)
-                suggestions.extend(actions_for_recipe(feature_request, recipe, match, snapshot, graph))
+                recipe_actions = actions_for_recipe(feature_request, recipe, match, snapshot, graph)
+                if recipe_actions:
+                    actionable_matches.append(match)
+                    suggestions.extend(recipe_actions)
+            if matched and not actionable_matches:
+                missing_evidence.append("matched recipes did not map to concrete current source graph surfaces")
+            matched = actionable_matches
         suggestions = _dedupe_actions(suggestions)
-        if matched and not suggestions:
-            missing_evidence.append("matched recipes did not map to concrete current source graph surfaces")
 
         return RecipeSuggestionReport(
             feature_request=feature_request,

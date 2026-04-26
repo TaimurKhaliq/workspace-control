@@ -28,6 +28,19 @@ class RepoTargetCreate(BaseModel):
     ref: str | None = None
 
 
+class RepoTargetValidate(BaseModel):
+    source_type: SourceType
+    locator: str = Field(min_length=1)
+
+
+class RepoTargetValidationOut(BaseModel):
+    selected_path: str
+    suggested_root_path: str | None = None
+    detected_frameworks: list[str] = Field(default_factory=list)
+    detected_repo_type: str
+    warnings: list[str] = Field(default_factory=list)
+
+
 class RepoTargetOut(BaseModel):
     id: str
     workspace_id: str

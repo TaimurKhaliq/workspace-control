@@ -7,6 +7,7 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 
 from app.models.discovery import DiscoverySnapshot, RepoDiscovery
+from app.services.repo_paths import repo_path_for
 from app.services.text_normalization import normalize_text
 from workspace_control.manifests import MANIFEST_FILENAME
 from workspace_control.models import ConceptGrounding, InventoryRow
@@ -78,6 +79,11 @@ GENERIC_CONCEPT_TOKENS = {
     "rename",
     "persist",
     "store",
+    "save",
+    "retrieve",
+    "read",
+    "list",
+    "query",
     "actions",
     "action",
 }
@@ -94,6 +100,30 @@ NON_DOMAIN_UI_SURFACE_PREFIXES = {
     "landing",
     "layout",
     "welcome",
+}
+NEW_DOMAIN_CREATE_TOKENS = {"add", "build", "create", "new"}
+NEW_DOMAIN_PERSISTENCE_TOKENS = {
+    "list",
+    "persist",
+    "query",
+    "read",
+    "retrieve",
+    "save",
+    "store",
+}
+NEW_DOMAIN_BACKEND_TOKENS = {
+    "api",
+    "backend",
+    "controller",
+    "dto",
+    "endpoint",
+    "model",
+    "object",
+    "objects",
+    "request",
+    "resource",
+    "response",
+    "service",
 }
 
 
@@ -119,7 +149,15 @@ class ConceptGroundingService:
             scan_root=scan_root,
             discovery_snapshot=discovery_snapshot,
         )
-        return [_ground_concept(concept, terms_by_value) for concept in concepts]
+        new_domain_candidate = _new_domain_candidate_request(feature_request)
+        return [
+            _ground_concept(
+                concept,
+                terms_by_value,
+                new_domain_candidate=new_domain_candidate,
+            )
+            for concept in concepts
+        ]
 
 
 def _extract_concepts(feature_request: str) -> list[str]:
@@ -162,6 +200,9 @@ def _ui_surface_concepts(normalized: str) -> list[str]:
         if token not in UI_SURFACE_TOKENS or index == 0:
             continue
         previous = tokens[index - 1]
+        if previous == "us" and index >= 2 and tokens[index - 2] == "contact":
+            concepts.append("contact")
+            continue
         if previous in GENERIC_CONCEPT_TOKENS or previous in NON_DOMAIN_UI_SURFACE_PREFIXES:
             continue
         concepts.append(previous)
@@ -204,7 +245,7 @@ def _collect_grounding_terms(
 
     workspace_root = discovery_snapshot.workspace.root_path
     for repo in discovery_snapshot.report.repos:
-        repo_path = workspace_root / repo.repo_name
+        repo_path = repo_path_for(workspace_root, repo.repo_name)
         _add_discovery_terms(terms, repo, repo_path)
         _add_source_terms(terms, repo_path, repo.repo_name)
     _add_source_graph_terms(terms, discovery_snapshot)
@@ -331,6 +372,8 @@ def _candidate_terms(value: str) -> list[str]:
 def _ground_concept(
     concept: str,
     terms_by_value: dict[str, set[str]],
+    *,
+    new_domain_candidate: bool = False,
 ) -> ConceptGrounding:
     direct = _matching_terms(concept, terms_by_value)
     if direct:
@@ -347,7 +390,24 @@ def _ground_concept(
     if weak:
         return _record(concept, "weak_match", weak[:6], terms_by_value)
 
-    return ConceptGrounding(concept=concept, status="ungrounded")
+    status = (
+        "ungrounded_new_domain_candidate"
+        if new_domain_candidate
+        else "ungrounded"
+    )
+    return ConceptGrounding(concept=concept, status=status)
+
+
+def _new_domain_candidate_request(feature_request: str) -> bool:
+    tokens = set(_normalize_text(feature_request).split())
+    retrieval_or_ui_terms = {"form", "list", "page", "query", "read", "retrieve", "screen"}
+    return bool(
+        tokens & NEW_DOMAIN_CREATE_TOKENS
+        and (
+            (tokens & NEW_DOMAIN_PERSISTENCE_TOKENS and tokens & retrieval_or_ui_terms)
+            or (tokens & NEW_DOMAIN_BACKEND_TOKENS and tokens & {"form", "page", "screen"})
+        )
+    )
 
 
 def _matching_terms(concept: str, terms_by_value: dict[str, set[str]]) -> list[str]:

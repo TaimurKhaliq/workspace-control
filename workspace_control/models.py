@@ -55,7 +55,13 @@ class ConceptGrounding(BaseModel):
     """Grounding result for one feature-request concept."""
 
     concept: str
-    status: Literal["direct_match", "alias_match", "weak_match", "ungrounded"]
+    status: Literal[
+        "direct_match",
+        "alias_match",
+        "weak_match",
+        "ungrounded",
+        "ungrounded_new_domain_candidate",
+    ]
     matched_terms: list[str] = Field(default_factory=list)
     sources: list[str] = Field(default_factory=list)
 

@@ -15,6 +15,8 @@ from app.models.recipe_suggestion import RecipeSuggestionReport
 from app.models.repo_learning import ChangeRecipe
 from app.models.source_graph import GraphNode
 from app.services.repo_learning import DEFAULT_LEARNING_REPORT_ROOT, DEFAULT_LEARNING_ROOT, RepoLearningService
+from app.services.repo_paths import repo_path_for
+from app.services.repo_target_validator import RepoTargetValidator
 
 from .models import ChangeProposal, CombinedRecommendation, FeatureImpact, FeaturePlan, InventoryRow
 
@@ -38,6 +40,11 @@ class PlanBundleTarget(BaseModel):
 
     target_id: str | None = None
     repo_count: int
+    selected_path: str | None = None
+    suggested_root_path: str | None = None
+    detected_repo_type: str | None = None
+    detected_frameworks: list[str] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
     repos: list[PlanBundleRepo] = Field(default_factory=list)
 
 
@@ -51,6 +58,10 @@ class PlanBundleSummary(BaseModel):
     planning_mode: str
     planner_native_available: bool
     recipe_assisted: bool
+    new_domain_candidates: list[str] = Field(default_factory=list)
+    backend_required: bool = False
+    backend_available: bool = True
+    missing_backend_required: bool = False
 
 
 class PlanBundleOwnership(BaseModel):
@@ -110,6 +121,15 @@ class PlanBundleGraphEvidence(BaseModel):
     reason: str
 
 
+class PlanBundleConceptGrounding(BaseModel):
+    """Compact concept grounding row for UI/debug rendering."""
+
+    concept: str
+    status: str
+    matched_terms: list[str] = Field(default_factory=list)
+    sources: list[str] = Field(default_factory=list)
+
+
 class PlanBundleValidation(BaseModel):
     """Validation commands and supporting notes."""
 
@@ -154,6 +174,7 @@ class PlanBundle(BaseModel):
     ownership: PlanBundleOwnership
     recommended_change_set: list[PlanBundleChangeItem] = Field(default_factory=list)
     matched_recipes: list[PlanBundleRecipe] = Field(default_factory=list)
+    concept_grounding: list[PlanBundleConceptGrounding] = Field(default_factory=list)
     source_graph_evidence: list[PlanBundleGraphEvidence] = Field(default_factory=list)
     validation: PlanBundleValidation = Field(default_factory=PlanBundleValidation)
     risks_and_caveats: list[PlanBundleRisk] = Field(default_factory=list)
@@ -223,6 +244,7 @@ def create_plan_bundle(
         ),
         recommended_change_set=change_set,
         matched_recipes=matched_recipes,
+        concept_grounding=_concept_grounding(plan),
         source_graph_evidence=graph_evidence,
         validation=validation,
         risks_and_caveats=risks,
@@ -264,12 +286,19 @@ def format_plan_bundle_markdown(bundle: PlanBundle) -> str:
         "",
         "## Summary",
         f"- detected intents: {_comma(bundle.summary.detected_intents)}",
+        f"- new domain candidates: {_comma(bundle.summary.new_domain_candidates)}",
         f"- implementation owner: `{bundle.ownership.implementation_owner or '-'}`",
         f"- domain owner: `{bundle.ownership.domain_owner or '-'}`",
         f"- confidence: `{bundle.summary.confidence}`",
         f"- planning mode: `{bundle.summary.planning_mode}`",
         f"- planner native available: `{bundle.summary.planner_native_available}`",
         f"- recipe assisted: `{bundle.summary.recipe_assisted}`",
+        f"- backend required: `{bundle.summary.backend_required}`",
+        f"- backend available: `{bundle.summary.backend_available}`",
+        f"- missing backend required: `{bundle.summary.missing_backend_required}`",
+        f"- selected path: `{bundle.target.selected_path or '-'}`",
+        f"- suggested root path: `{bundle.target.suggested_root_path or '-'}`",
+        f"- detected repo type: `{bundle.target.detected_repo_type or '-'}`",
         "",
         "## Ownership",
         f"- primary owner: `{bundle.ownership.primary_owner or '-'}`",
@@ -374,7 +403,19 @@ def _target_summary(
             )
             for row in rows
         ]
-    return PlanBundleTarget(target_id=target_id, repo_count=len(repo_items), repos=repo_items)
+    validation = None
+    if snapshot is not None and snapshot.target.source == "local_path":
+        validation = RepoTargetValidator().validate_local_path(snapshot.workspace.root_path)
+    return PlanBundleTarget(
+        target_id=target_id,
+        repo_count=len(repo_items),
+        selected_path=validation.selected_path if validation is not None else None,
+        suggested_root_path=validation.suggested_root_path if validation is not None else None,
+        detected_repo_type=validation.detected_repo_type if validation is not None else None,
+        detected_frameworks=validation.detected_frameworks if validation is not None else [],
+        warnings=validation.warnings if validation is not None else [],
+        repos=repo_items,
+    )
 
 
 def _repo_summary(repo: RepoDiscovery) -> PlanBundleRepo:
@@ -412,6 +453,10 @@ def _summary(
         planning_mode=planning_mode,
         planner_native_available=planner_native_available,
         recipe_assisted=recipe_assisted,
+        new_domain_candidates=_new_domain_candidates(plan),
+        backend_required=_backend_required(plan),
+        backend_available=not _missing_backend_required(plan),
+        missing_backend_required=_missing_backend_required(plan),
     )
 
 
@@ -497,6 +542,18 @@ def _source_graph_evidence(
     return evidence
 
 
+def _concept_grounding(plan: FeaturePlan) -> list[PlanBundleConceptGrounding]:
+    return [
+        PlanBundleConceptGrounding(
+            concept=item.concept,
+            status=item.status,
+            matched_terms=list(item.matched_terms[:6]),
+            sources=list(item.sources[:6]),
+        )
+        for item in plan.concept_grounding
+    ]
+
+
 def _risks_and_caveats(
     plan: FeaturePlan,
     proposal: ChangeProposal,
@@ -504,7 +561,13 @@ def _risks_and_caveats(
 ) -> list[PlanBundleRisk]:
     risks: list[PlanBundleRisk] = []
     for message in plan.missing_evidence:
-        risks.append(PlanBundleRisk(severity="warning", message=message, source="planner"))
+        risks.append(
+            PlanBundleRisk(
+                severity=_risk_severity(message),
+                message=message,
+                source="planner",
+            )
+        )
     for message in proposal.missing_evidence:
         if message not in {risk.message for risk in risks}:
             risks.append(PlanBundleRisk(severity="warning", message=message, source="planner"))
@@ -525,6 +588,35 @@ def _risks_and_caveats(
         for message in recipe_report.missing_evidence[:4]:
             risks.append(PlanBundleRisk(severity="warning", message=message, source="recipe"))
     return _dedupe_risks(risks)
+
+
+def _risk_severity(message: str) -> str:
+    if (
+        "No backend/API/persistence-capable repo" in message
+        or "Backend/API work requested but no backend-capable target is registered" in message
+    ):
+        return "high"
+    return "warning"
+
+
+def _missing_backend_required(plan: FeaturePlan) -> bool:
+    return any(
+        "No backend/API/persistence-capable repo" in message
+        or "Backend/API work requested but no backend-capable target is registered" in message
+        for message in plan.missing_evidence
+    )
+
+
+def _backend_required(plan: FeaturePlan) -> bool:
+    return bool(plan.api_change_needed or plan.db_change_needed)
+
+
+def _new_domain_candidates(plan: FeaturePlan) -> list[str]:
+    return [
+        item.concept
+        for item in plan.concept_grounding
+        if item.status == "ungrounded_new_domain_candidate"
+    ]
 
 
 def _handoff_prompts(
@@ -607,6 +699,11 @@ def _handoff_prompt_text(
             "- Treat inspect-only or low-confidence files as reference material unless code evidence says otherwise.",
         ]
     )
+    if any(
+        "Backend/API work requested but no backend-capable target is registered" in risk.message
+        for risk in risks
+    ):
+        lines.append("- Do not attempt backend implementation in this repo; register the monorepo root or backend repo for complete implementation.")
     lines.extend(["", "Validation:"])
     if validation_commands:
         lines.extend(f"- {command}" for command in validation_commands)
@@ -624,6 +721,13 @@ def _expected_changes(
     matched_recipes: Sequence[PlanBundleRecipe],
 ) -> list[str]:
     lines: list[str] = []
+    if _new_domain_candidates(plan):
+        frontend_paths = [item.path for item in items if item.ui_section == "frontend" and item.action == "create"][:3]
+        backend_paths = [item.path for item in items if item.ui_section in {"api", "backend", "persistence"} and item.action == "create"][:5]
+        if frontend_paths:
+            lines.append(f"Frontend: add the new domain page/form surface such as {_join_paths(frontend_paths)}.")
+        if backend_paths:
+            lines.append(f"Backend/API: add the new domain API/object surfaces such as {_join_paths(backend_paths)}.")
     recipe_types = {recipe.recipe_type for recipe in matched_recipes}
     if "ui_page_add" in recipe_types:
         lines.extend(_ui_page_add_expected_changes(items))
@@ -786,7 +890,7 @@ def _graph_nodes_by_repo_path(snapshot: DiscoverySnapshot | None) -> dict[tuple[
 def _exists_in_current_source(snapshot: DiscoverySnapshot | None, item: CombinedRecommendation) -> bool:
     if snapshot is None:
         return False
-    candidate = snapshot.workspace.root_path / item.repo_name / item.path
+    candidate = repo_path_for(snapshot.workspace.root_path, item.repo_name) / item.path
     return candidate.exists()
 
 

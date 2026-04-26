@@ -220,6 +220,17 @@ def test_ui_form_validation_deprioritizes_route_error_pages(tmp_path: Path) -> N
     assert all("ErrorPage" not in str(path) and "NotFoundPage" not in str(path) for path in paths)
 
 
+def test_fields_alone_does_not_match_ui_form_validation_recipe(tmp_path: Path) -> None:
+    report = _service(tmp_path).suggest(
+        "petclinic-test",
+        "create a contact page and persist the fields so we can retrieve them later",
+    )
+
+    recipe_types = [recipe.recipe_type for recipe in report.matched_recipes]
+    assert "ui_page_add" in recipe_types
+    assert "ui_form_validation" not in recipe_types
+
+
 def test_recipe_matching_for_ui_shell_layout(tmp_path: Path) -> None:
     report = _service(tmp_path).suggest("petclinic-test", "Add Layout and Welcome page")
 

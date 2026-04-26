@@ -82,7 +82,7 @@ The planner/propose, recipe-only, and combined rows are intentionally separate s
 
 - matched recipes:
   - `petclinic_react_backend_search_query` (backend_search_query, structural=0.48, planner=0.00)
-    - why: matched recipe trigger terms: case, insensitive, owners, search; source graph contains related domain token(s): owner, owners, query, search; request mentions search/query behavior
+    - why: matched recipe trigger terms: case, insensitive, owners, search; source graph contains related domain token(s): owner, owners, search; request mentions search/query behavior
 
 - suggested actions:
   - `spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository/OwnerRepository.java` (modify, high, node=repository, exists_in_parent=True, matched_actual=no)
