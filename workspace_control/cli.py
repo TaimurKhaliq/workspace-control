@@ -36,6 +36,7 @@ from app.services.semantic_enrichment import (
     load_latest_semantic_enrichment,
     provider_for_name,
     save_semantic_enrichment,
+    semantic_intent_labels_for_result,
 )
 from app.services.text_normalization import tokenize_text
 
@@ -456,6 +457,17 @@ def run(argv: list[str] | None = None) -> int:
         action="store_true",
         help="Include compact raw pipeline excerpts under debug",
     )
+    bundle_parser.add_argument(
+        "--use-semantic",
+        action="store_true",
+        help="Include latest semantic enrichment evidence when available",
+    )
+    bundle_parser.add_argument(
+        "--semantic-root",
+        type=Path,
+        default=DEFAULT_SEMANTIC_ROOT,
+        help="Root directory for latest semantic enrichment artifacts",
+    )
     refresh_learning_parser = subparsers.add_parser(
         "refresh-learning",
         help="Refresh deterministic repo-local change recipe learning state",
@@ -830,7 +842,7 @@ def run(argv: list[str] | None = None) -> int:
         try:
             recipe_report = _integrated_recipe_report_for_args(args)
             result = SemanticEnrichmentService(
-                provider_for_name(args.provider)
+                provider_for_name(args.provider, semantic_root=args.semantic_root)
             ).enrich(
                 target_id=args.target_id,
                 feature_request=args.feature_description,
@@ -873,7 +885,11 @@ def run(argv: list[str] | None = None) -> int:
             semantic_result=semantic_result,
         )
         if args.target_id:
-            explanation["recipe_evidence"] = _recipe_evidence_for_args(args, recipe_report=recipe_report)
+            explanation["recipe_evidence"] = _recipe_evidence_for_args(
+                args,
+                recipe_report=recipe_report,
+                semantic_result=semantic_result,
+            )
         print(format_feature_explanation(explanation))
         return 0
 
@@ -936,6 +952,7 @@ def run(argv: list[str] | None = None) -> int:
             recipe_report=recipe_report,
             include_debug=args.include_debug,
             recipe_catalog=recipe_catalog,
+            semantic_result=semantic_result,
         )
         output = (
             format_plan_bundle_json(bundle)
@@ -983,14 +1000,15 @@ def _integrated_recipe_report_for_args(args):
     return report
 
 
-def _recipe_evidence_for_args(args, *, recipe_report=None) -> dict[str, object]:
+def _recipe_evidence_for_args(args, *, recipe_report=None, semantic_result=None) -> dict[str, object]:
     """Return compact learned recipe evidence for explain-feature output."""
 
     if recipe_report is not None:
+        matched = _semantic_filtered_recipe_matches(recipe_report.matched_recipes, semantic_result)
         return {
             "available": True,
             "recipe_count": len(recipe_report.matched_recipes),
-            "matching_recipe_count": len(recipe_report.matched_recipes),
+            "matching_recipe_count": len(matched),
             "top_matches": [
                 {
                     "recipe_id": recipe.recipe_id,
@@ -1001,7 +1019,7 @@ def _recipe_evidence_for_args(args, *, recipe_report=None) -> dict[str, object]:
                     "score": recipe.score,
                     "why_matched": recipe.why_matched[:5],
                 }
-                for recipe in recipe_report.matched_recipes[:5]
+                for recipe in matched[:5]
             ],
         }
 
@@ -1022,6 +1040,12 @@ def _recipe_evidence_for_args(args, *, recipe_report=None) -> dict[str, object]:
         if feature_tokens & set(recipe.trigger_terms)
     ]
     matching.sort(key=lambda recipe: (-recipe.structural_confidence, -recipe.planner_effectiveness, recipe.recipe_type, recipe.id))
+    if semantic_result is not None and {"file_upload", "media_upload"} & set(semantic_intent_labels_for_result(semantic_result)):
+        matching = [
+            recipe
+            for recipe in matching
+            if any(token in recipe.recipe_type for token in ("upload", "media", "picture", "photo", "image"))
+        ]
     return {
         "available": bool(recipes),
         "recipe_count": len(recipes),
@@ -1039,6 +1063,22 @@ def _recipe_evidence_for_args(args, *, recipe_report=None) -> dict[str, object]:
             for recipe in matching[:5]
         ],
     }
+
+
+def _semantic_filtered_recipe_matches(matches, semantic_result):
+    if semantic_result is None:
+        return list(matches)
+    labels = set(semantic_intent_labels_for_result(semantic_result))
+    if not ({"file_upload", "media_upload"} & labels):
+        return list(matches)
+    return [
+        recipe
+        for recipe in matches
+        if (
+            any(token in recipe.recipe_type for token in ("upload", "media", "picture", "photo", "image"))
+            or recipe.score >= 70
+        )
+    ]
 
 
 def _semantic_result_for_args(args):

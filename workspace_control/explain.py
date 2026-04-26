@@ -118,6 +118,9 @@ def create_feature_explanation(
         ),
         "recipe_guidance": _recipe_guidance(plan, proposal),
         "semantic_enrichment": semantic_explanation_payload(semantic_result),
+        "semantic_missing_details": list(plan.semantic_missing_details),
+        "semantic_clarifying_questions": list(plan.semantic_clarifying_questions),
+        "semantic_caveats": list(plan.semantic_caveats),
         "missing_evidence": list(plan.missing_evidence),
         "evidence_sources": _evidence_sources(
             repos,
@@ -282,6 +285,27 @@ def _top_proposed_files(
     plan: FeaturePlan,
 ) -> list[dict[str, Any]]:
     files: list[dict[str, Any]] = []
+    if proposal.combined_recommendations:
+        for recommendation in proposal.combined_recommendations[:MAX_PROPOSED_FILES]:
+            files.append(
+                {
+                    "repo_name": recommendation.repo_name,
+                    "path": recommendation.path,
+                    "action": recommendation.action,
+                    "confidence": recommendation.confidence,
+                    "source": recommendation.source,
+                    "reason": recommendation.evidence[0] if recommendation.evidence else "Combined recommendation.",
+                    "evidence_sources": _file_evidence_sources(
+                        recommendation.repo_name,
+                        recommendation.path,
+                        snapshot,
+                        profiles_by_repo,
+                        repos,
+                        plan,
+                    ),
+                }
+            )
+        return files
     for item in proposal.proposed_changes:
         for file_plan in item.files:
             files.append(

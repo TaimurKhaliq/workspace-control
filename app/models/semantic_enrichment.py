@@ -1,6 +1,6 @@
 """Typed models for optional LLM semantic graph enrichment."""
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +23,7 @@ class SemanticFeatureSpec(BaseModel):
     normalized_request: str
     domain_concepts: list[str] = Field(default_factory=list)
     technical_intents: list[str] = Field(default_factory=list)
+    technical_intent_labels: list[str] = Field(default_factory=list)
     new_domain_candidates: list[str] = Field(default_factory=list)
     missing_details: list[str] = Field(default_factory=list)
     clarifying_questions: list[str] = Field(default_factory=list)
@@ -41,7 +42,7 @@ class SemanticGraphAnnotation(BaseModel):
     domain_concepts: list[str] = Field(default_factory=list)
     capabilities: list[str] = Field(default_factory=list)
     relevant_feature_intents: list[str] = Field(default_factory=list)
-    relevance_score: int = 0
+    relevance_score: float = Field(default=0.0, ge=0.0, le=1.0)
     confidence: Literal["high", "medium", "low"] = "medium"
     evidence: list[SemanticEvidence] = Field(default_factory=list)
 
@@ -83,4 +84,4 @@ class SemanticEnrichmentResult(BaseModel):
     feature_spec: SemanticFeatureSpec
     annotations: list[SemanticGraphAnnotation] = Field(default_factory=list)
     caveats: list[str] = Field(default_factory=list)
-    model_info: dict[str, str] = Field(default_factory=dict)
+    model_info: dict[str, Any] = Field(default_factory=dict)

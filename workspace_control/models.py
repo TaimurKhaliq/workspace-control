@@ -66,16 +66,29 @@ class ConceptGrounding(BaseModel):
     sources: list[str] = Field(default_factory=list)
 
 
+FeatureIntent = Literal[
+    "ui",
+    "persistence",
+    "api",
+    "event_integration",
+    "storage",
+    "file_upload",
+    "media_upload",
+    "retrieval",
+    "display",
+    "validation",
+    "backend_model",
+    "new_domain",
+    "unknown",
+]
+
+
 class FeaturePlan(BaseModel):
     """Deterministic execution plan derived from feature analysis."""
 
     feature_request: str
-    feature_intents: list[
-        Literal["ui", "persistence", "api", "event_integration"]
-    ] = Field(default_factory=list)
-    unsupported_intents: list[
-        Literal["ui", "persistence", "api", "event_integration"]
-    ] = Field(default_factory=list)
+    feature_intents: list[FeatureIntent] = Field(default_factory=list)
+    unsupported_intents: list[FeatureIntent] = Field(default_factory=list)
     concept_grounding: list[ConceptGrounding] = Field(default_factory=list)
     confidence: Literal["high", "medium", "low"] = "medium"
     missing_evidence: list[str] = Field(default_factory=list)
@@ -94,6 +107,9 @@ class FeaturePlan(BaseModel):
     matched_recipes: list["PlanRecipeMatch"] = Field(default_factory=list)
     recipe_guidance: list["PlanRecipeGuidance"] = Field(default_factory=list)
     recipe_confidence_summary: dict[str, object] = Field(default_factory=dict)
+    semantic_missing_details: list[str] = Field(default_factory=list)
+    semantic_clarifying_questions: list[str] = Field(default_factory=list)
+    semantic_caveats: list[str] = Field(default_factory=list)
 
 
 class FilePlan(BaseModel):
@@ -200,11 +216,12 @@ class ChangeProposal(BaseModel):
     """Deterministic read-only change proposal derived from a feature plan."""
 
     feature_request: str
-    feature_intents: list[
-        Literal["ui", "persistence", "api", "event_integration"]
-    ] = Field(default_factory=list)
+    feature_intents: list[FeatureIntent] = Field(default_factory=list)
     confidence: Literal["high", "medium", "low"] = "medium"
     missing_evidence: list[str] = Field(default_factory=list)
+    semantic_missing_details: list[str] = Field(default_factory=list)
+    semantic_clarifying_questions: list[str] = Field(default_factory=list)
+    semantic_caveats: list[str] = Field(default_factory=list)
     implementation_owner: str | None = None
     domain_owner: str | None = None
     proposed_changes: list[ChangeProposalItem] = Field(default_factory=list)

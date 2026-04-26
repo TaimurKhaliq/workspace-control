@@ -13,10 +13,12 @@ from pydantic import BaseModel, Field
 from app.models.discovery import DiscoverySnapshot, RepoDiscovery
 from app.models.recipe_suggestion import RecipeSuggestionReport
 from app.models.repo_learning import ChangeRecipe
+from app.models.semantic_enrichment import SemanticEnrichmentResult
 from app.models.source_graph import GraphNode
 from app.services.repo_learning import DEFAULT_LEARNING_REPORT_ROOT, DEFAULT_LEARNING_ROOT, RepoLearningService
 from app.services.repo_paths import repo_path_for
 from app.services.repo_target_validator import RepoTargetValidator
+from app.services.semantic_enrichment import semantic_intent_labels_for_result
 
 from .models import ChangeProposal, CombinedRecommendation, FeatureImpact, FeaturePlan, InventoryRow
 
@@ -142,7 +144,7 @@ class PlanBundleRisk(BaseModel):
 
     severity: Literal["info", "warning", "high"] = "info"
     message: str
-    source: Literal["planner", "recipe", "discovery", "graph"] = "planner"
+    source: Literal["planner", "recipe", "discovery", "graph", "semantic_enrichment"] = "planner"
 
 
 class PlanBundleHandoffPrompt(BaseModel):
@@ -176,6 +178,9 @@ class PlanBundle(BaseModel):
     matched_recipes: list[PlanBundleRecipe] = Field(default_factory=list)
     concept_grounding: list[PlanBundleConceptGrounding] = Field(default_factory=list)
     source_graph_evidence: list[PlanBundleGraphEvidence] = Field(default_factory=list)
+    semantic_missing_details: list[str] = Field(default_factory=list)
+    semantic_clarifying_questions: list[str] = Field(default_factory=list)
+    semantic_caveats: list[str] = Field(default_factory=list)
     validation: PlanBundleValidation = Field(default_factory=PlanBundleValidation)
     risks_and_caveats: list[PlanBundleRisk] = Field(default_factory=list)
     handoff_prompts: list[PlanBundleHandoffPrompt] = Field(default_factory=list)
@@ -195,6 +200,7 @@ def create_plan_bundle(
     include_debug: bool = False,
     generated_at: datetime | None = None,
     recipe_catalog: Sequence[ChangeRecipe] | None = None,
+    semantic_result: SemanticEnrichmentResult | None = None,
 ) -> PlanBundle:
     """Create a UI-friendly Plan Bundle from existing pipeline outputs."""
 
@@ -205,7 +211,7 @@ def create_plan_bundle(
         discovery_snapshot=discovery_snapshot,
         graph_nodes=graph_nodes,
     )
-    matched_recipes = _matched_recipes(recipe_report, recipes_by_id)
+    matched_recipes = _matched_recipes(recipe_report, recipes_by_id, semantic_result=semantic_result)
     risks = _risks_and_caveats(plan, proposal, recipe_report)
     target = _target_summary(target_id, rows, discovery_snapshot)
     summary = _summary(feature_request, plan, proposal, recipe_report)
@@ -246,6 +252,9 @@ def create_plan_bundle(
         matched_recipes=matched_recipes,
         concept_grounding=_concept_grounding(plan),
         source_graph_evidence=graph_evidence,
+        semantic_missing_details=list(plan.semantic_missing_details or proposal.semantic_missing_details),
+        semantic_clarifying_questions=list(plan.semantic_clarifying_questions or proposal.semantic_clarifying_questions),
+        semantic_caveats=list(plan.semantic_caveats or proposal.semantic_caveats),
         validation=validation,
         risks_and_caveats=risks,
         handoff_prompts=handoffs,
@@ -360,6 +369,18 @@ def format_plan_bundle_markdown(bundle: PlanBundle) -> str:
     else:
         lines.append("No compact source graph evidence available.")
 
+    lines.extend(["", "## Semantic Missing Details"])
+    if bundle.semantic_missing_details:
+        lines.extend(f"- {detail}" for detail in bundle.semantic_missing_details)
+    else:
+        lines.append("- none")
+
+    lines.extend(["", "## Semantic Clarifying Questions"])
+    if bundle.semantic_clarifying_questions:
+        lines.extend(f"- {question}" for question in bundle.semantic_clarifying_questions)
+    else:
+        lines.append("- none")
+
     lines.extend(["", "## Validation Commands"])
     if bundle.validation.commands:
         lines.extend(f"- `{command}`" for command in bundle.validation.commands)
@@ -437,7 +458,16 @@ def _summary(
 ) -> PlanBundleSummary:
     planner_native_available = any(item.files for item in proposal.proposed_changes)
     recipe_assisted = bool(recipe_report and (recipe_report.matched_recipes or recipe_report.suggestions))
-    if planner_native_available and recipe_assisted:
+    semantic_assisted = bool(plan.recipe_confidence_summary.get("semantic_enrichment"))
+    if planner_native_available and recipe_assisted and semantic_assisted:
+        planning_mode = "planner+recipe+semantic"
+    elif planner_native_available and semantic_assisted:
+        planning_mode = "planner+semantic"
+    elif recipe_assisted and semantic_assisted:
+        planning_mode = "recipe+semantic"
+    elif semantic_assisted:
+        planning_mode = "semantic-assisted"
+    elif planner_native_available and recipe_assisted:
         planning_mode = "planner+recipe"
     elif recipe_assisted:
         planning_mode = "recipe-assisted"
@@ -492,11 +522,15 @@ def _recommended_change_set(
 def _matched_recipes(
     recipe_report: RecipeSuggestionReport | None,
     recipes_by_id: dict[str, ChangeRecipe],
+    *,
+    semantic_result: SemanticEnrichmentResult | None = None,
 ) -> list[PlanBundleRecipe]:
     if recipe_report is None:
         return []
     items: list[PlanBundleRecipe] = []
     for match in recipe_report.matched_recipes:
+        if _semantic_should_hide_recipe_match(match.recipe_type, match.score, semantic_result):
+            continue
         recipe = recipes_by_id.get(match.recipe_id)
         items.append(
             PlanBundleRecipe(
@@ -513,6 +547,21 @@ def _matched_recipes(
             )
         )
     return items
+
+
+def _semantic_should_hide_recipe_match(
+    recipe_type: str,
+    score: int,
+    semantic_result: SemanticEnrichmentResult | None,
+) -> bool:
+    if semantic_result is None:
+        return False
+    labels = set(semantic_intent_labels_for_result(semantic_result))
+    if not ({"file_upload", "media_upload"} & labels):
+        return False
+    if any(token in recipe_type for token in ("upload", "media", "picture", "photo", "image")):
+        return False
+    return score < 70 or recipe_type in {"backend_validation_change", "backend_api_change"}
 
 
 def _source_graph_evidence(
@@ -571,6 +620,22 @@ def _risks_and_caveats(
     for message in proposal.missing_evidence:
         if message not in {risk.message for risk in risks}:
             risks.append(PlanBundleRisk(severity="warning", message=message, source="planner"))
+    for detail in plan.semantic_missing_details or proposal.semantic_missing_details:
+        risks.append(
+            PlanBundleRisk(
+                severity="warning",
+                message=detail,
+                source="semantic_enrichment",
+            )
+        )
+    for caveat in plan.semantic_caveats or proposal.semantic_caveats:
+        risks.append(
+            PlanBundleRisk(
+                severity="info",
+                message=caveat,
+                source="semantic_enrichment",
+            )
+        )
     if _new_domain_candidates(plan):
         risks.append(
             PlanBundleRisk(
@@ -696,6 +761,9 @@ def _handoff_prompt_text(
         lines.extend(recipe_lines)
     else:
         lines.append("Use the planner-native recommendations and source graph evidence below.")
+    semantic_labels = set(plan.feature_intents)
+    if {"file_upload", "media_upload"} & semantic_labels:
+        lines.append("This feature likely requires UI + backend API + storage/persistence work.")
     lines.extend(["", "Inspect first:"])
     for index, item in enumerate(items, start=1):
         lines.append(f"{index}. {item.path} ({item.action}, {item.confidence}, source={item.source})")
@@ -715,6 +783,8 @@ def _handoff_prompt_text(
         for risk in risks
     ):
         lines.append("- Do not attempt backend implementation in this repo; register the monorepo root or backend repo for complete implementation.")
+    if {"file_upload", "media_upload"} & set(plan.feature_intents):
+        lines.append("- Decide storage strategy before implementation: DB metadata + filesystem/object storage vs DB blob vs external URL.")
     lines.extend(["", "Validation:"])
     if validation_commands:
         lines.extend(f"- {command}" for command in validation_commands)
@@ -739,6 +809,8 @@ def _expected_changes(
             lines.append(f"Frontend: add the new domain page/form surface such as {_join_paths(frontend_paths)}.")
         if backend_paths:
             lines.append(f"Backend/API: add the new domain API/object surfaces such as {_join_paths(backend_paths)}.")
+    if {"file_upload", "media_upload"} & set(plan.feature_intents):
+        lines.extend(_media_upload_expected_changes(items))
     recipe_types = {recipe.recipe_type for recipe in matched_recipes}
     if "ui_page_add" in recipe_types:
         lines.extend(_ui_page_add_expected_changes(items))
@@ -765,6 +837,23 @@ def _expected_changes(
     if not lines:
         lines.append("Inspect the recommended files first and make the smallest justified change.")
     return _dedupe(lines)
+
+
+def _media_upload_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
+    frontend_paths = [item.path for item in items if item.ui_section == "frontend"][:5]
+    backend_paths = [item.path for item in items if item.ui_section in {"api", "backend", "persistence"}][:6]
+    lines = [
+        "Add file input and preview behavior in the pet editor/create/edit surfaces.",
+        "Decide storage strategy before implementation: DB metadata + filesystem/object storage vs DB blob vs external URL.",
+        "Update backend pet API behavior to accept or reference picture uploads.",
+        "Persist image metadata or storage references only if the chosen storage design requires it.",
+        "Update display surfaces only where the product requires the pet picture to appear.",
+    ]
+    if frontend_paths:
+        lines.append(f"Frontend candidates include {_join_paths(frontend_paths)}.")
+    if backend_paths:
+        lines.append(f"Backend/API/persistence candidates include {_join_paths(backend_paths)}.")
+    return lines
 
 
 def _ui_page_add_expected_changes(items: Sequence[PlanBundleChangeItem]) -> list[str]:
