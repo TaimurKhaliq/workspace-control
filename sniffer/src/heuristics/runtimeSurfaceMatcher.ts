@@ -14,16 +14,26 @@ export function matchRuntimeSurfaces(sourceGraph: SourceGraph, crawlGraph: Crawl
     const sourceNeedles = [...surface.evidence, ...surface.relatedButtons, ...surface.relatedInputs]
       .filter((value) => value.length >= 3)
     const matches = sourceNeedles.filter((value) => domText.includes(value.toLowerCase()))
-    return toMatch(surface, matches.length > 0 ? 'yes' : 'no', matches.slice(0, 8))
+    const missingControls = [...surface.relatedButtons, ...surface.relatedInputs]
+      .filter((value) => value.length >= 3 && !domText.includes(value.toLowerCase()))
+    const ratio = sourceNeedles.length === 0 ? 0 : matches.length / sourceNeedles.length
+    const seenInRuntime = matches.length === 0 ? 'no' : missingControls.length > 0 || ratio < 0.5 ? 'partial' : 'yes'
+    return toMatch(surface, seenInRuntime, matches.slice(0, 8), missingControls.slice(0, 8))
   })
 }
 
-function toMatch(surface: UiSurface, seenInRuntime: RuntimeSurfaceMatch['seenInRuntime'], matchingDomEvidence: string[]): RuntimeSurfaceMatch {
+function toMatch(
+  surface: UiSurface,
+  seenInRuntime: RuntimeSurfaceMatch['seenInRuntime'],
+  matchingDomEvidence: string[],
+  missingControls: string[] = []
+): RuntimeSurfaceMatch {
   return {
     surface_type: surface.surface_type,
     display_name: surface.display_name,
     file: surface.file,
     seenInRuntime,
-    matchingDomEvidence
+    matchingDomEvidence,
+    missingControls
   }
 }

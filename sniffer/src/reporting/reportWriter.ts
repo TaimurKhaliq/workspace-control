@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppIntent, CrawlGraph, Issue, SnifferReport, SourceGraph } from '../types.js'
+import type { AppIntent, CrawlGraph, Issue, RuntimeWorkflowVerification, SnifferReport, SourceGraph } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 
@@ -8,6 +8,7 @@ export async function writeAuditReports(reportDir: string, input: {
   sourceGraph: SourceGraph
   crawlGraph: CrawlGraph
   appIntent: AppIntent
+  runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
   issues: Issue[]
 }): Promise<SnifferReport> {
   await mkdir(reportDir, { recursive: true })
@@ -65,6 +66,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderSurfaceSummary(report),
     '',
+    '## Source Workflows',
+    '',
+    renderWorkflowSummary(report),
+    '',
     '## Issues',
     '',
     issues,
@@ -78,6 +83,19 @@ function renderSurfaceSummary(report: SnifferReport): string {
     const evidence = match.matchingDomEvidence.length > 0 ? `; DOM evidence: ${match.matchingDomEvidence.join(', ')}` : ''
     return `- ${match.display_name} (${match.surface_type}) from ${match.file}: runtime ${match.seenInRuntime}${evidence}`
   }).join('\n')
+}
+
+function renderWorkflowSummary(report: SnifferReport): string {
+  if (report.sourceGraph.sourceWorkflows.length === 0) return 'No source workflows discovered.'
+  return report.runtimeWorkflowVerifications.map((workflow) => [
+    `### ${workflow.name}`,
+    '',
+    `- Runtime status: ${workflow.status}`,
+    `- Source files: ${workflow.sourceFiles.join(', ') || 'unknown'}`,
+    `- Attempted interactions: ${workflow.attemptedInteractions.join(', ') || 'none'}`,
+    `- Found controls: ${workflow.controls.filter((control) => control.status === 'found').map((control) => control.label).join(', ') || 'none'}`,
+    `- Missing controls: ${workflow.controls.filter((control) => control.status === 'missing').map((control) => control.label).join(', ') || 'none'}`
+  ].join('\n')).join('\n\n')
 }
 
 function renderFixPrompts(issues: Issue[]): string {

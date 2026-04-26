@@ -41,6 +41,7 @@ function report(): SnifferReport {
     },
     appIntent: { summary: 'Demo app', likelyWorkflows: [], sourceSignals: [], llmUsed: false },
     runtimeSurfaceMatches: [],
+    runtimeWorkflowVerifications: [],
     issues: [{
       severity: 'medium',
       type: 'console_error',

@@ -4,6 +4,8 @@ export type IssueType =
   | 'functional_bug'
   | 'broken_navigation'
   | 'missing_ui_surface'
+  | 'broken_interaction'
+  | 'missing_form_control'
   | 'broken_form'
   | 'api_error'
   | 'console_error'
@@ -180,6 +182,7 @@ export interface SnifferReport {
   crawlGraph: CrawlGraph
   appIntent: AppIntent
   runtimeSurfaceMatches: RuntimeSurfaceMatch[]
+  runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
   issues: Issue[]
   generatedAt: string
 }
@@ -188,8 +191,33 @@ export interface RuntimeSurfaceMatch {
   surface_type: UiSurfaceType
   display_name: string
   file: string
-  seenInRuntime: 'yes' | 'no' | 'unknown'
+  seenInRuntime: 'yes' | 'no' | 'partial' | 'unknown'
   matchingDomEvidence: string[]
+  missingControls?: string[]
+}
+
+export interface RuntimeWorkflowVerification {
+  name: string
+  sourceFiles: string[]
+  status: 'verified' | 'partial' | 'missing' | 'unknown'
+  evidence: string[]
+  controls: RuntimeControlCheck[]
+  attemptedInteractions: string[]
+  issues: RuntimeWorkflowIssue[]
+}
+
+export interface RuntimeControlCheck {
+  label: string
+  status: 'found' | 'missing' | 'not_applicable'
+  matchedEvidence: string[]
+  missingReason?: string
+}
+
+export interface RuntimeWorkflowIssue {
+  type: IssueType
+  title: string
+  description: string
+  evidence: string[]
 }
 
 export interface GeneratedSpec {

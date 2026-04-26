@@ -10,6 +10,7 @@ import { classifyRuntimeIssues, classifyTestFailures } from '../heuristics/issue
 import { writeAuditReports } from '../reporting/reportWriter.js'
 import { generatePlaywrightSpecs, writeGeneratedSpecs } from '../testgen/specWriter.js'
 import { runGeneratedTests } from '../runtime/testRunner.js'
+import { verifyRuntimeIntent } from '../runtime/workflowVerifier.js'
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2)
@@ -42,8 +43,9 @@ async function main(): Promise<void> {
       const provider = createLlmProvider()
       if (provider) appIntent = await provider.inferIntent({ sourceGraph, deterministicIntent: appIntent })
     }
-    const issues = classifyRuntimeIssues(sourceGraph, crawlGraph)
-    await writeAuditReports(reportDir, { sourceGraph, crawlGraph, appIntent, issues })
+    const runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph })
+    const issues = classifyRuntimeIssues(sourceGraph, crawlGraph, runtimeWorkflowVerifications)
+    await writeAuditReports(reportDir, { sourceGraph, crawlGraph, appIntent, runtimeWorkflowVerifications, issues })
     console.log(`Wrote ${path.join(reportDir, 'latest_report.md')}`)
     return
   }

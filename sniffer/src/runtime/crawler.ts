@@ -98,43 +98,43 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
 }
 
 export async function captureState(page: Page): Promise<CrawlState> {
-  const visible = await page.evaluate(() => {
-    function textOf(el: Element): string | undefined {
-      const text = (el.textContent ?? '').replace(/\s+/g, ' ').trim()
-      return text || undefined
-    }
-    function selectorHint(el: Element): string {
-      const id = el.getAttribute('id')
-      if (id) return `#${id}`
-      const testId = el.getAttribute('data-testid')
-      if (testId) return `[data-testid="${testId}"]`
-      return el.tagName.toLowerCase()
-    }
-    const elements: VisibleElement[] = []
+  const visible = await page.evaluate(`(() => {
+    const textOf = (el) => {
+      const text = (el.textContent || '').replace(/\\s+/g, ' ').trim();
+      return text || undefined;
+    };
+    const selectorHint = (el) => {
+      const id = el.getAttribute('id');
+      if (id) return '#' + id;
+      const testId = el.getAttribute('data-testid');
+      if (testId) return '[data-testid="' + testId + '"]';
+      return el.tagName.toLowerCase();
+    };
+    const elements = [];
     for (const el of Array.from(document.querySelectorAll('button,a,[role="tab"],input,textarea,select,form,[role="dialog"],dialog'))) {
-      const rect = el.getBoundingClientRect()
-      const style = window.getComputedStyle(el)
-      if (rect.width <= 0 || rect.height <= 0 || style.visibility === 'hidden' || style.display === 'none') continue
-      const tag = el.tagName.toLowerCase()
-      const role = el.getAttribute('role')
+      const rect = el.getBoundingClientRect();
+      const style = window.getComputedStyle(el);
+      if (rect.width <= 0 || rect.height <= 0 || style.visibility === 'hidden' || style.display === 'none') continue;
+      const tag = el.tagName.toLowerCase();
+      const role = el.getAttribute('role');
       const kind =
         tag === 'a' ? 'link' :
         role === 'tab' ? 'tab' :
         tag === 'input' || tag === 'textarea' || tag === 'select' ? 'input' :
         tag === 'form' ? 'form' :
         role === 'dialog' || tag === 'dialog' ? 'dialog' :
-        'button'
+        'button';
       elements.push({
         kind,
         text: textOf(el),
-        name: el.getAttribute('aria-label') ?? el.getAttribute('name') ?? undefined,
-        href: tag === 'a' ? (el as HTMLAnchorElement).href : undefined,
-        type: el.getAttribute('type') ?? undefined,
+        name: el.getAttribute('aria-label') || el.getAttribute('name') || undefined,
+        href: tag === 'a' ? el.href : undefined,
+        type: el.getAttribute('type') || undefined,
         selectorHint: selectorHint(el)
-      })
+      });
     }
-    return elements
-  })
+    return elements;
+  })()`) as VisibleElement[]
 
   const hashPayload = {
     url: page.url(),

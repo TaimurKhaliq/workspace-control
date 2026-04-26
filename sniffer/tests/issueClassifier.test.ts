@@ -16,7 +16,7 @@ describe('classifyRuntimeIssues', () => {
       generatedAt: new Date().toISOString()
     })
 
-    expect(issues.map((issue) => issue.type)).toEqual(expect.arrayContaining(['console_error', 'network_error']))
+    expect(issues.map((issue) => issue.type)).toEqual(expect.arrayContaining(['console_error', 'api_error']))
   })
 })
 
