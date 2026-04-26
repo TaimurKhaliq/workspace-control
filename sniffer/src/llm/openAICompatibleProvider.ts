@@ -1,4 +1,5 @@
 import type { AppIntent } from '../types.js'
+import type { SnifferCriticContext, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 
 type ApiStyle = 'responses' | 'chat_completions' | 'auto'
@@ -51,6 +52,21 @@ export class OpenAICompatibleProvider implements LlmProvider {
   async repairTest(input: { testFile: string; failure: string }): Promise<string | undefined> {
     if (!this.isConfigured()) return undefined
     return this.complete(`Repair this Playwright test if the failure is likely a selector or timing test bug. Return only the full test file.\n\nFailure:\n${input.failure}\n\nTest:\n${input.testFile}`)
+  }
+
+  async critiqueWorkflow(context: SnifferCriticContext): Promise<WorkflowCriticDecision> {
+    if (!this.isConfigured()) throw new Error('LLM provider is not configured')
+    const prompt = [
+      'You are a UI workflow analyst for Sniffer.',
+      'Use source intent, runtime observation, execution trace, known app state, and candidate findings.',
+      'Decide whether the candidate is a real bug, expected conditional UI, crawler precondition gap, test bug, inconclusive, or needs more crawling.',
+      'Do not suggest destructive actions. Safe action policy is authoritative.',
+      'Return JSON only matching this shape:',
+      '{"finding_id":"...","classification":"real_bug|conditional_ui_not_bug|crawler_needs_precondition|test_bug|inconclusive|needs_more_crawling","is_real_bug":true,"confidence":0.0,"required_precondition":"...","next_safe_action":"...","reasoning_summary":"...","evidence":["..."],"should_report":true,"should_generate_fix_packet":true}',
+      JSON.stringify(context)
+    ].join('\n\n')
+    const text = await this.complete(prompt)
+    return JSON.parse(text) as WorkflowCriticDecision
   }
 
   private async complete(prompt: string): Promise<string> {

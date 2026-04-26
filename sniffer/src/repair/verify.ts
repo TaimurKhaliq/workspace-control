@@ -9,6 +9,7 @@ import { classifyRuntimeIssues } from '../heuristics/issueClassifier.js'
 import { writeAuditReports } from '../reporting/reportWriter.js'
 import { writeJson } from '../reporting/json.js'
 import { loadReport } from './fixPackets.js'
+import { critiqueFindings } from '../critic/workflowCritic.js'
 
 export async function verifyIssue(input: {
   issueId: string
@@ -26,13 +27,21 @@ export async function verifyIssue(input: {
   const sourceGraph = await discoverSource(before.sourceGraph.repoPath)
   const crawlGraph = await crawlApp(input.url, { reportDir })
   const runtimeWorkflowVerifications = await verifyRuntimeIntent({ url: input.url, sourceGraph })
-  const issues = classifyRuntimeIssues(sourceGraph, crawlGraph, runtimeWorkflowVerifications)
+  const candidateIssues = classifyRuntimeIssues(sourceGraph, crawlGraph, runtimeWorkflowVerifications)
+  const critic = await critiqueFindings({
+    sourceGraph,
+    crawlGraph,
+    workflowVerifications: runtimeWorkflowVerifications,
+    candidateIssues,
+    appUrl: input.url,
+    mode: 'deterministic'
+  })
   const afterReport = await writeAuditReports(reportDir, {
     sourceGraph,
     crawlGraph,
     appIntent: buildDeterministicIntent(sourceGraph),
     runtimeWorkflowVerifications,
-    issues
+    ...critic
   })
 
   const matchingAfter = findMatchingIssue(beforeIssue, afterReport)

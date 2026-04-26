@@ -40,7 +40,7 @@ export async function generateFixPackets(reportPath: string, allowDestructive = 
   await clearPacketDir(packetDir)
   const packets: FixPacket[] = []
 
-  for (const issue of report.issues.filter(isActionableIssue)) {
+  for (const issue of report.issues.filter(isActionableIssue).filter((issue) => issue.critic_decision?.should_generate_fix_packet !== false)) {
     const packet = createFixPacket(issue, report, reportPath)
     assertSafeFixPacket(packet, allowDestructive)
     await writeJson(path.join(packetDir, `${issue.issue_id}.json`), packet)

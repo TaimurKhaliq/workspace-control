@@ -24,6 +24,8 @@ npm run build
 npm run sniffer -- discover --repo ../web
 npm run sniffer -- crawl --url http://localhost:3000
 npm run sniffer -- audit --repo ../web --url http://localhost:3000
+npm run sniffer -- audit --repo ../web --url http://localhost:3000 --critic-mode deterministic
+npm run sniffer -- audit --repo ../web --url http://localhost:3000 --use-llm --provider mock --critic-mode llm
 npm run sniffer -- generate-fixes --report reports/sniffer/latest/latest_report.json
 npm run sniffer -- apply-fix --issue <issue_id> --report reports/sniffer/latest/latest_report.json --agent manual
 npm run sniffer -- verify --issue <issue_id> --url http://localhost:3000 --report reports/sniffer/latest/latest_report.json
@@ -91,6 +93,41 @@ Runtime crawling opens the app with Playwright and collects:
 - visible buttons, links, tabs, inputs, forms, and dialogs
 - safe navigation and tab/dialog interactions
 - visited states, state hashes, actions, and screenshots
+
+## Workflow Critic
+
+Sniffer runs candidate findings through a workflow critic before turning them into report issues or fix packets.
+
+Default deterministic critic:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --critic-mode deterministic
+```
+
+Mock LLM critic for local testing:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --use-llm \
+  --provider mock \
+  --critic-mode llm
+```
+
+Provider flags:
+
+- `--critic-mode deterministic|llm|auto`
+- `--provider mock|openai|auto`
+- `--use-llm`
+- `--max-iterations`
+
+The critic receives a focused context packet per finding: app identity, relevant source intent, runtime controls, screenshots paths, console/network errors, crawl actions, inferred app state, and the candidate finding. It returns structured JSON decisions such as `real_bug`, `crawler_needs_precondition`, `needs_more_crawling`, or `inconclusive`.
+
+Conditional UI is deferred instead of reported when a precondition is missing. For example, missing Raw JSON before a plan bundle exists is treated as `crawler_needs_precondition` with `next_safe_action=generate_plan_bundle_with_sample_prompt`, not as a fix-packet-worthy bug. API/console 500s still report as real bugs.
 
 ## Repair Loop
 

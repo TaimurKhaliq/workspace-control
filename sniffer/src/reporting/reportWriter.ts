@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppIntent, CrawlGraph, Issue, RuntimeWorkflowVerification, SnifferReport, SourceGraph } from '../types.js'
+import type { AppIntent, CandidateFinding, CrawlGraph, Issue, RuntimeWorkflowVerification, SnifferReport, SourceGraph, WorkflowCriticDecision } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 import { enrichIssues } from '../repair/issueMetadata.js'
@@ -10,6 +10,10 @@ export async function writeAuditReports(reportDir: string, input: {
   crawlGraph: CrawlGraph
   appIntent: AppIntent
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
+  criticDecisions?: WorkflowCriticDecision[]
+  deferredFindings?: CandidateFinding[]
+  blockedChecks?: CandidateFinding[]
+  needsMoreCrawling?: CandidateFinding[]
   issues: Issue[]
 }): Promise<SnifferReport> {
   await mkdir(reportDir, { recursive: true })
@@ -17,6 +21,10 @@ export async function writeAuditReports(reportDir: string, input: {
   const report: SnifferReport = {
     ...input,
     issues: enrichedIssues,
+    criticDecisions: input.criticDecisions ?? [],
+    deferredFindings: input.deferredFindings ?? [],
+    blockedChecks: input.blockedChecks ?? [],
+    needsMoreCrawling: input.needsMoreCrawling ?? [],
     runtimeSurfaceMatches: matchRuntimeSurfaces(input.sourceGraph, input.crawlGraph),
     generatedAt: new Date().toISOString()
   }
@@ -80,10 +88,36 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderFixPacketSummary(report),
     '',
+    '## Workflow Critic',
+    '',
+    renderCriticSummary(report),
+    '',
     '## Issues',
     '',
     issues,
     ''
+  ].join('\n')
+}
+
+function renderCriticSummary(report: SnifferReport): string {
+  if (report.criticDecisions.length === 0) return 'No critic decisions recorded.'
+  return [
+    `- Real issues: ${report.criticDecisions.filter((decision) => decision.should_report).length}`,
+    `- Deferred findings: ${report.deferredFindings.length}`,
+    `- Blocked checks: ${report.blockedChecks.length}`,
+    `- Needs more crawling: ${report.needsMoreCrawling.length}`,
+    '',
+    ...report.criticDecisions.map((decision) => [
+      `### ${decision.finding_id}`,
+      '',
+      `- Classification: ${decision.classification}`,
+      `- Confidence: ${decision.confidence}`,
+      `- Report: ${decision.should_report ? 'yes' : 'no'}`,
+      `- Fix packet: ${decision.should_generate_fix_packet ? 'yes' : 'no'}`,
+      decision.required_precondition ? `- Required precondition: ${decision.required_precondition}` : undefined,
+      decision.next_safe_action ? `- Next safe action: ${decision.next_safe_action}` : undefined,
+      `- Reason: ${decision.reasoning_summary}`
+    ].filter(Boolean).join('\n'))
   ].join('\n')
 }
 

@@ -183,6 +183,7 @@ export interface Issue {
   screenshotPath?: string
   tracePath?: string
   suggestedFixPrompt: string
+  critic_decision?: WorkflowCriticDecision
 }
 
 export interface SnifferReport {
@@ -191,6 +192,10 @@ export interface SnifferReport {
   appIntent: AppIntent
   runtimeSurfaceMatches: RuntimeSurfaceMatch[]
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
+  criticDecisions: WorkflowCriticDecision[]
+  deferredFindings: CandidateFinding[]
+  blockedChecks: CandidateFinding[]
+  needsMoreCrawling: CandidateFinding[]
   issues: Issue[]
   generatedAt: string
 }
@@ -285,4 +290,106 @@ export interface RepairAttempt {
   gitDiffAfter: string
   verification?: VerificationResult
   createdAt: string
+}
+
+export type CriticClassification =
+  | 'real_bug'
+  | 'conditional_ui_not_bug'
+  | 'crawler_needs_precondition'
+  | 'test_bug'
+  | 'inconclusive'
+  | 'needs_more_crawling'
+
+export type NextSafeAction =
+  | 'navigate_to_repositories'
+  | 'navigate_to_plan_runs'
+  | 'open_add_repo_modal'
+  | 'open_workspace_modal'
+  | 'select_first_workspace'
+  | 'select_first_repo_target'
+  | 'generate_plan_bundle_with_sample_prompt'
+  | 'open_plan_tab'
+  | 'copy_handoff_prompt'
+
+export interface CandidateFinding {
+  finding_id: string
+  severity: Severity
+  type: IssueType
+  title: string
+  description: string
+  evidence: string[]
+  workflowName?: string
+  surfaceType?: UiSurfaceType
+  screenshotPath?: string
+  tracePath?: string
+  suggestedFixPrompt: string
+}
+
+export interface WorkflowCriticDecision {
+  finding_id: string
+  classification: CriticClassification
+  is_real_bug: boolean
+  confidence: number
+  required_precondition?: string
+  next_safe_action?: NextSafeAction
+  reasoning_summary: string
+  evidence: string[]
+  should_report: boolean
+  should_generate_fix_packet: boolean
+}
+
+export interface SnifferCriticContext {
+  app_identity: {
+    repo_path: string
+    package_name?: string
+    framework: string
+    build_tool: string
+    app_url: string
+  }
+  source_intent: {
+    relevant_ui_surfaces: UiSurface[]
+    relevant_source_workflows: SourceWorkflow[]
+    relevant_api_calls: ApiCall[]
+    relevant_state_actions: StateActionHints[]
+  }
+  runtime_observation: {
+    current_url: string
+    final_url: string
+    visible_controls: VisibleElement[]
+    forms: VisibleElement[]
+    dialogs: VisibleElement[]
+    screenshots: string[]
+    console_errors: RuntimeMessage[]
+    network_errors: NetworkFailure[]
+  }
+  execution_trace: {
+    actions_attempted: CrawlAction[]
+    state_transitions: string[]
+    repeated_actions: string[]
+    skipped_actions: CrawlAction[]
+    unvisited_safe_actions: string[]
+  }
+  known_state: KnownRuntimeState
+  candidate_findings: CandidateFinding[]
+  question_for_critic: string
+  omitted_counts: Record<string, number>
+}
+
+export interface LlmCriticProvider {
+  name: string
+  critiqueWorkflow(context: SnifferCriticContext): Promise<WorkflowCriticDecision>
+}
+
+export interface KnownRuntimeState {
+  workspace_exists: boolean
+  workspace_selected: boolean
+  repo_exists: boolean
+  repo_selected: boolean
+  plan_bundle_generated: boolean
+  handoff_prompt_exists: boolean
+  raw_json_visible: boolean
+  add_repo_modal_open: boolean
+  workspace_modal_open: boolean
+  semantic_enabled: boolean
+  last_action_changed_state: boolean
 }

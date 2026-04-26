@@ -10,6 +10,7 @@ import { applyFix } from './applyFix.js'
 import { generateFixPackets } from './fixPackets.js'
 import { isActionableIssue } from './safety.js'
 import { verifyIssue } from './verify.js'
+import { critiqueFindings } from '../critic/workflowCritic.js'
 
 export async function runRepairLoop(input: {
   repo: string
@@ -27,13 +28,21 @@ export async function runRepairLoop(input: {
     const sourceGraph = await discoverSource(input.repo)
     const crawlGraph = await crawlApp(input.url, { reportDir })
     const runtimeWorkflowVerifications = await verifyRuntimeIntent({ url: input.url, sourceGraph })
-    const issues = classifyRuntimeIssues(sourceGraph, crawlGraph, runtimeWorkflowVerifications)
+    const candidateIssues = classifyRuntimeIssues(sourceGraph, crawlGraph, runtimeWorkflowVerifications)
+    const critic = await critiqueFindings({
+      sourceGraph,
+      crawlGraph,
+      workflowVerifications: runtimeWorkflowVerifications,
+      candidateIssues,
+      appUrl: input.url,
+      mode: 'deterministic'
+    })
     const report = await writeAuditReports(reportDir, {
       sourceGraph,
       crawlGraph,
       appIntent: buildDeterministicIntent(sourceGraph),
       runtimeWorkflowVerifications,
-      issues
+      ...critic
     })
 
     const actionable = report.issues.filter(isActionableIssue)

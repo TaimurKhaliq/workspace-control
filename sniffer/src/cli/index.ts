@@ -15,6 +15,9 @@ import { generateFixPackets } from '../repair/fixPackets.js'
 import { applyFix } from '../repair/applyFix.js'
 import { verifyIssue } from '../repair/verify.js'
 import { runRepairLoop } from '../repair/repairLoop.js'
+import { critiqueFindings, type CriticMode } from '../critic/workflowCritic.js'
+import type { LlmCriticProvider } from '../types.js'
+import { executeNextSafeActions } from '../critic/nextActionExecutor.js'
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2)
@@ -43,13 +46,46 @@ async function main(): Promise<void> {
     const sourceGraph = await discoverSource(repo)
     const crawlGraph = await crawlApp(url, { reportDir })
     let appIntent = buildDeterministicIntent(sourceGraph)
+    const providerName = typeof args.provider === 'string' ? args.provider : args['use-llm'] ? 'auto' : 'auto'
+    const provider = args['use-llm'] || args['critic-mode'] === 'llm' || providerName === 'mock'
+      ? createLlmProvider(providerName)
+      : undefined
     if (args['use-llm']) {
-      const provider = createLlmProvider()
       if (provider) appIntent = await provider.inferIntent({ sourceGraph, deterministicIntent: appIntent })
     }
-    const runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph })
-    const issues = classifyRuntimeIssues(sourceGraph, crawlGraph, runtimeWorkflowVerifications)
-    await writeAuditReports(reportDir, { sourceGraph, crawlGraph, appIntent, runtimeWorkflowVerifications, issues })
+    let activeCrawlGraph = crawlGraph
+    let runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph })
+    let candidateIssues = classifyRuntimeIssues(sourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
+    const criticMode = (typeof args['critic-mode'] === 'string' ? args['critic-mode'] : args['use-llm'] ? 'llm' : 'deterministic') as CriticMode
+    const criticProvider: LlmCriticProvider | undefined = provider?.critiqueWorkflow ? provider as LlmCriticProvider : undefined
+    let critic = await critiqueFindings({
+      sourceGraph,
+      crawlGraph: activeCrawlGraph,
+      workflowVerifications: runtimeWorkflowVerifications,
+      candidateIssues,
+      appUrl: url,
+      mode: criticMode,
+      provider: criticProvider
+    })
+    const maxIterations = Number(typeof args['max-iterations'] === 'string' ? args['max-iterations'] : 0)
+    if (maxIterations > 0) {
+      const executed = await executeNextSafeActions({ url, decisions: critic.criticDecisions, maxIterations })
+      if (executed.length > 0) {
+        activeCrawlGraph = await crawlApp(url, { reportDir })
+        runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph })
+        candidateIssues = classifyRuntimeIssues(sourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
+        critic = await critiqueFindings({
+          sourceGraph,
+          crawlGraph: activeCrawlGraph,
+          workflowVerifications: runtimeWorkflowVerifications,
+          candidateIssues,
+          appUrl: url,
+          mode: criticMode,
+          provider: criticProvider
+        })
+      }
+    }
+    await writeAuditReports(reportDir, { sourceGraph, crawlGraph: activeCrawlGraph, appIntent, runtimeWorkflowVerifications, ...critic })
     console.log(`Wrote ${path.join(reportDir, 'latest_report.md')}`)
     return
   }
@@ -60,7 +96,7 @@ async function main(): Promise<void> {
     const sourceGraph = await discoverSource(repo)
     let appIntent = buildDeterministicIntent(sourceGraph)
     if (args['use-llm']) {
-      const provider = createLlmProvider()
+      const provider = createLlmProvider(typeof args.provider === 'string' ? args.provider : 'auto')
       if (provider) appIntent = await provider.inferIntent({ sourceGraph, deterministicIntent: appIntent })
     }
     const specs = generatePlaywrightSpecs(appIntent, url)
@@ -160,7 +196,7 @@ function printHelp(): void {
 Commands:
   sniffer discover --repo <path>
   sniffer crawl --url <url>
-  sniffer audit --repo <path> --url <url> [--use-llm]
+  sniffer audit --repo <path> --url <url> [--use-llm] [--provider mock|openai|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0]
   sniffer generate-fixes --report <path>
   sniffer apply-fix --issue <issue_id> --report <path> [--agent manual|mock|codex]
   sniffer verify --issue <issue_id> --url <url> --report <path>

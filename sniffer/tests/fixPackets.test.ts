@@ -56,6 +56,10 @@ function report(): SnifferReport {
     appIntent: { summary: '', likelyWorkflows: [], sourceSignals: [], llmUsed: false },
     runtimeSurfaceMatches: [],
     runtimeWorkflowVerifications: [],
+    criticDecisions: [],
+    deferredFindings: [],
+    blockedChecks: [],
+    needsMoreCrawling: [],
     issues: [{
       issue_id: 'issue-1',
       severity: 'medium',
