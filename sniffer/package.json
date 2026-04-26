@@ -10,7 +10,11 @@
     "build": "tsc -p tsconfig.json",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "sniffer": "tsx src/cli/index.ts"
+    "sniffer": "tsx src/cli/index.ts",
+    "audit": "tsx src/cli/index.ts audit",
+    "apply-fix": "tsx src/cli/index.ts apply-fix",
+    "verify": "tsx src/cli/index.ts verify",
+    "repair-loop": "tsx src/cli/index.ts repair-loop"
   },
   "engines": {
     "node": ">=20.0.0"

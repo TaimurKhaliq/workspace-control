@@ -8,7 +8,11 @@ export function isActionableIssue(issue: Issue): boolean {
 }
 
 export function assertSafeFixPacket(packet: FixPacket, allowDestructive = false): void {
-  const text = `${packet.title}\n${packet.prompt}`.toLowerCase()
+  const text = `${packet.title}\n${packet.prompt}`
+    .split('\n')
+    .filter((line) => !/^\s*(-\s*)?(do not|never)\b/i.test(line))
+    .join('\n')
+    .toLowerCase()
   const destructive = destructiveTerms.some((term) => text.includes(term))
   const protectedTarget = protectedTerms.some((term) => text.includes(term))
   if (!allowDestructive && destructive && protectedTarget) {

@@ -3,6 +3,7 @@ import path from 'node:path'
 import type { FixPacket, Issue, SnifferReport } from '../types.js'
 import { writeJson } from '../reporting/json.js'
 import { assertSafeFixPacket, isActionableIssue } from './safety.js'
+import { resolveRepairPathPolicy } from './pathPolicy.js'
 
 export async function loadReport(reportPath: string): Promise<SnifferReport> {
   return JSON.parse(await readFile(reportPath, 'utf8')) as SnifferReport
@@ -12,22 +13,31 @@ export function createFixPacket(issue: Issue, report: SnifferReport, reportPath:
   if (!issue.issue_id) throw new Error(`Issue is missing issue_id: ${issue.title}`)
   const reportDir = path.dirname(path.resolve(reportPath))
   const evidencePaths = [issue.screenshotPath, issue.tracePath].filter(Boolean) as string[]
+  const policy = resolveRepairPathPolicy({
+    repoPath: report.sourceGraph.repoPath,
+    suspectedFiles: issue.suspected_files ?? [],
+    reportDir
+  })
+  const verificationCommand = `npm run sniffer -- verify --issue ${issue.issue_id} --url ${report.crawlGraph.startUrl} --report ${path.resolve(reportPath)}`
   return {
     issue_id: issue.issue_id,
     title: issue.title,
     repo_path: report.sourceGraph.repoPath,
-    working_directory: report.sourceGraph.repoPath,
+    repair_root: policy.repairRoot,
+    allowed_paths: policy.allowedPaths,
+    working_directory: policy.repairRoot,
     evidence_paths: evidencePaths,
-    suspected_files: issue.suspected_files ?? [],
-    prompt: renderCodexPrompt(issue, report),
+    suspected_files: policy.normalizedSuspectedFiles,
+    prompt: renderCodexPrompt(issue, report, policy.repairRoot, policy.allowedPaths, policy.normalizedSuspectedFiles, verificationCommand),
     constraints: [
       'Do not run destructive app or repo actions.',
       'Never delete workspaces, repos, baselines, reports, or user data.',
-      'Do not modify files outside repo_path unless explicitly instructed.',
+      'Do not modify files outside repair_root unless explicitly instructed.',
+      `Only modify allowed paths: ${policy.allowedPaths.join(', ') || 'none'}.`,
       'Keep changes minimal and evidence-driven.',
       `Use report context from ${reportDir}.`
     ],
-    verification_command: `npm run sniffer -- verify --issue ${issue.issue_id} --url ${report.crawlGraph.startUrl} --report ${path.resolve(reportPath)}`,
+    verification_command: verificationCommand,
     pass_conditions: issue.pass_conditions ?? []
   }
 }
@@ -69,7 +79,12 @@ export function renderFixPacketMarkdown(packet: FixPacket): string {
     '',
     `Issue ID: ${packet.issue_id}`,
     `Repo path: ${packet.repo_path}`,
+    `Repair root: ${packet.repair_root}`,
     `Working directory: ${packet.working_directory}`,
+    '',
+    '## Allowed Paths',
+    '',
+    packet.allowed_paths.map((file) => `- ${file}`).join('\n') || '- none',
     '',
     '## Suspected Files',
     '',
@@ -98,9 +113,26 @@ export function renderFixPacketMarkdown(packet: FixPacket): string {
   ].join('\n')
 }
 
-function renderCodexPrompt(issue: Issue, report: SnifferReport): string {
+function renderCodexPrompt(
+  issue: Issue,
+  report: SnifferReport,
+  repairRoot: string,
+  allowedPaths: string[],
+  suspectedFiles: string[],
+  verificationCommand: string
+): string {
   return [
+    `You are fixing a Sniffer-reported issue in:`,
+    `PROJECT_ROOT=${repairRoot}`,
+    '',
+    'You may modify:',
+    allowedPaths.map((item) => `- ${item}`).join('\n') || '- none',
+    '',
+    'Issue:',
     issue.fix_prompt,
+    '',
+    'Suspected files:',
+    suspectedFiles.map((file) => `- ${file}`).join('\n') || '- unknown',
     '',
     'Sniffer runtime context:',
     `- App URL: ${report.crawlGraph.startUrl}`,
@@ -110,6 +142,20 @@ function renderCodexPrompt(issue: Issue, report: SnifferReport): string {
     `- Network failures: ${report.crawlGraph.networkFailures.length}`,
     '',
     'Verification steps:',
-    (issue.verification_steps ?? []).map((step) => `- ${step}`).join('\n')
+    (issue.verification_steps ?? []).map((step) => `- ${step}`).join('\n'),
+    '',
+    'Verification command:',
+    verificationCommand,
+    '',
+    'After fix:',
+    '- run backend/frontend tests if practical',
+    '- run the Sniffer verify command',
+    '- report files changed and root cause',
+    '',
+    'Safety constraints:',
+    '- Do not run destructive app or repo actions.',
+    '- Never delete workspaces, repos, baselines, reports, or user data.',
+    '- Do not modify files outside PROJECT_ROOT.',
+    '- Do not modify files outside the allowed paths unless the fix is impossible otherwise and you clearly explain why.'
   ].join('\n')
 }

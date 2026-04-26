@@ -255,6 +255,8 @@ export interface FixPacket {
   issue_id: string
   title: string
   repo_path: string
+  repair_root: string
+  allowed_paths: string[]
   working_directory: string
   evidence_paths: string[]
   suspected_files: string[]
@@ -267,10 +269,17 @@ export interface FixPacket {
 export interface AgentResult {
   agent: string
   status: 'not_run' | 'applied' | 'failed' | 'unsafe_blocked'
+  success: boolean
+  exitCode: number | null
   stdout: string
   stderr: string
+  startedAt: string
+  completedAt: string
   commandsRun: string[]
   modifiedFiles: string[]
+  changedFiles: string[]
+  diffSummary: string
+  notes: string[]
 }
 
 export interface VerificationResult {
@@ -287,9 +296,13 @@ export interface RepairAttempt {
   iteration: number
   agentResult: AgentResult
   gitStatusBefore: string
+  gitStatusAfter: string
   gitDiffAfter: string
+  gitDiffSummary: string
+  commandsRun: string[]
   verification?: VerificationResult
   createdAt: string
+  attemptDir: string
 }
 
 export type CriticClassification =

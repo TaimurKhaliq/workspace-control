@@ -163,18 +163,33 @@ npm run sniffer -- apply-fix \
 
 Manual mode prints the Codex-ready packet and does not modify files.
 
-Use Codex mode only when configured:
+Use Codex mode only when configured. Sniffer writes the prompt to the repair attempt directory, runs Codex from `repair_root`, captures stdout/stderr, records git status/diff, and then you can run verification.
 
 ```bash
 export SNIFFER_AGENT=codex
 export SNIFFER_CODEX_COMMAND="codex"
+export SNIFFER_CODEX_TIMEOUT_SECONDS=900
 npm run sniffer -- apply-fix \
   --issue <issue_id> \
   --report reports/sniffer/latest/latest_report.json \
   --agent codex
 ```
 
-If `SNIFFER_CODEX_COMMAND` is missing, Sniffer prints clear instructions and does not run Codex.
+You can also provide a command template:
+
+```bash
+export SNIFFER_CODEX_COMMAND="codex exec --prompt-file {prompt_file}"
+```
+
+If the command contains `{prompt_file}`, Sniffer replaces it with the generated prompt file path. Otherwise it pipes the prompt to stdin. If Codex is not installed or the command cannot be found, Sniffer prints clear instructions and does not run Codex.
+
+Convenience scripts are also available:
+
+```bash
+npm run audit -- --repo /path/to/web --url http://localhost:3000 --critic-mode deterministic
+npm run apply-fix -- --issue <issue_id> --report reports/sniffer/latest/latest_report.json --agent manual
+npm run verify -- --issue <issue_id> --url http://localhost:3000 --report reports/sniffer/latest/latest_report.json
+```
 
 Verify an issue after a fix:
 
@@ -197,6 +212,13 @@ npm run sniffer -- repair-loop \
 ```
 
 Repair attempts record git status before, git diff after, commands run, agent output, and verification results under `reports/sniffer/latest/repair_attempts/`.
+
+Repair root and path safety:
+
+- `repo_path` remains the scanned repo, such as `workspace-control/web`.
+- `repair_root` is inferred from suspected files. If a fix needs `../server`, repair root becomes the parent project root.
+- `allowed_paths` constrains modifications. For workspace-control learning-status issues, Sniffer allows `server/` and `web/src/`.
+- Any new changed file outside `repair_root` or outside `allowed_paths` is blocked.
 
 ## Generated Tests
 

@@ -21,7 +21,8 @@ export async function verifyIssue(input: {
   if (!beforeIssue) throw new Error(`Issue not found: ${input.issueId}`)
 
   const reportDir = path.dirname(path.resolve(input.reportPath))
-  const verificationDir = path.join(reportDir, 'verification', input.issueId)
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+  const verificationDir = path.join(reportDir, 'repair_attempts', input.issueId, timestamp, 'verification')
   await mkdir(verificationDir, { recursive: true })
 
   const sourceGraph = await discoverSource(before.sourceGraph.repoPath)

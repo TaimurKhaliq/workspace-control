@@ -131,6 +131,8 @@ async function main(): Promise<void> {
       allowDestructive: boolArg(args, 'allow-destructive')
     })
     console.log(result.agentResult.stdout || `Agent ${result.agentResult.agent} returned ${result.agentResult.status}`)
+    console.log(`Repair attempt: ${result.attemptDir}`)
+    console.log(`Next: npm run sniffer -- verify --issue ${issueId} --url <url> --report ${report}`)
     return
   }
 

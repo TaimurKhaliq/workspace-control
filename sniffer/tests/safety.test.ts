@@ -20,6 +20,8 @@ function packet(): FixPacket {
     issue_id: 'safe',
     title: 'Fix UI label',
     repo_path: '/tmp/repo',
+    repair_root: '/tmp/repo',
+    allowed_paths: ['src/'],
     working_directory: '/tmp/repo',
     evidence_paths: [],
     suspected_files: ['src/App.tsx'],
