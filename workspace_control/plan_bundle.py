@@ -571,6 +571,17 @@ def _risks_and_caveats(
     for message in proposal.missing_evidence:
         if message not in {risk.message for risk in risks}:
             risks.append(PlanBundleRisk(severity="warning", message=message, source="planner"))
+    if _new_domain_candidates(plan):
+        risks.append(
+            PlanBundleRisk(
+                severity="warning",
+                message=(
+                    "Feature intake should confirm fields, route/path, API/retrieval behavior, "
+                    "and persistence defaults before precise implementation."
+                ),
+                source="planner",
+            )
+        )
     if not any(item.files for item in proposal.proposed_changes) and (
         proposal.recipe_suggestions
         or (recipe_report is not None and bool(recipe_report.matched_recipes))

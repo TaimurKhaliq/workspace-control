@@ -44,6 +44,7 @@ from .graph import (
     format_source_graph_text,
 )
 from .inventory import format_inventory_table
+from .intake import create_feature_intake, format_feature_intake_json
 from .manifests import build_inventory
 from .plan import create_feature_plan, format_feature_plan
 from .plan_bundle import (
@@ -325,6 +326,25 @@ def run(argv: list[str] | None = None) -> int:
         default=DEFAULT_REGISTRY_PATH,
         help="Path to the discovery target registry JSON file",
     )
+    intake_parser = subparsers.add_parser(
+        "intake-feature",
+        help="Create a structured intake draft and clarification questions before planning",
+    )
+    intake_parser.add_argument(
+        "feature_description",
+        help='Feature description, for example: "create a contact-us page"',
+    )
+    intake_parser.add_argument(
+        "--target-id",
+        required=True,
+        help="Registered discovery target id to intake against",
+    )
+    intake_parser.add_argument(
+        "--registry-path",
+        type=Path,
+        default=DEFAULT_REGISTRY_PATH,
+        help="Path to the discovery target registry JSON file",
+    )
     bundle_parser = subparsers.add_parser(
         "generate-plan-bundle",
         help="Generate a structured plan bundle and repo handoff prompts",
@@ -493,6 +513,7 @@ def run(argv: list[str] | None = None) -> int:
         "plan-feature",
         "propose-changes",
         "explain-feature",
+        "intake-feature",
         "generate-plan-bundle",
         "refresh-learning",
         "learning-status",
@@ -691,6 +712,7 @@ def run(argv: list[str] | None = None) -> int:
         "plan-feature",
         "propose-changes",
         "explain-feature",
+        "intake-feature",
         "generate-plan-bundle",
     }:
         try:
@@ -714,6 +736,16 @@ def run(argv: list[str] | None = None) -> int:
 
     if args.command == "inventory":
         print(format_inventory_table(rows))
+        return 0
+
+    if args.command == "intake-feature":
+        intake = create_feature_intake(
+            args.feature_description,
+            rows,
+            scan_root=effective_scan_root,
+            discovery_snapshot=discovery_snapshot,
+        )
+        print(format_feature_intake_json(intake))
         return 0
 
     if args.command == "explain-feature":
