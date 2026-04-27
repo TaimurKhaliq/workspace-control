@@ -165,6 +165,46 @@ def test_plan_bundle_api_threads_semantic_flag(tmp_path: Path, monkeypatch) -> N
     assert response.json()["plan_bundle"]["semantic_missing_details"] == ["Storage strategy is unknown."]
 
 
+def test_learning_status_missing_state_is_controlled_json(tmp_path: Path, monkeypatch) -> None:
+    class FakeLearningService:
+        def status(self, target_id: str) -> list[Any]:
+            return []
+
+        def recipes_for_target(self, target_id: str) -> list[Any]:
+            return []
+
+        def recipe_catalog_path(self, target_id: str) -> Path:
+            return tmp_path / "learning" / target_id / "change_recipes.json"
+
+        def validation_history_path(self, target_id: str) -> Path:
+            return tmp_path / "learning" / target_id / "validation_history.json"
+
+    monkeypatch.setattr("server.routes.learning._learning_service", lambda request: FakeLearningService())
+    app = create_app(
+        db_path=tmp_path / "workspace_control.db",
+        registry_path=tmp_path / "discovery_targets.json",
+    )
+
+    with TestClient(app) as client:
+        workspace_id = client.post("/api/workspaces", json={"name": "Fixture"}).json()["id"]
+        client.post(
+            f"/api/workspaces/{workspace_id}/repos",
+            json={
+                "target_id": "fixture-stack",
+                "source_type": "local_path",
+                "locator": str(FIXTURE_STACK),
+            },
+        )
+        response = client.get("/api/repos/fixture-stack/learning-status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["target_id"] == "fixture-stack"
+    assert body["status"] == "missing"
+    assert body["recipe_count"] == 0
+    assert body["message"] == "Learning has not been run for this target yet"
+
+
 def test_semantic_status_does_not_expose_api_key(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("STACKPILOT_SEMANTIC_BASE_URL", "https://api.openai.com/v1")
     monkeypatch.setenv("STACKPILOT_SEMANTIC_API_KEY", "secret-key")

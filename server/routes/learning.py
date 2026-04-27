@@ -48,6 +48,18 @@ def _fallback_learning_state(
     return state
 
 
+def _learning_status_message(status: str, recipe_count: int) -> str:
+    if status == "missing":
+        return "Learning has not been run for this target yet"
+    if status == "stale":
+        return "Learning exists but may be stale for the current repo state"
+    if status == "fresh":
+        return "Learning is fresh for this target"
+    if status == "error":
+        return "Learning status is available but contains an error state"
+    return f"Learning status: {status}; recipes: {recipe_count}"
+
+
 @router.post("/{target_id}/refresh-learning")
 def refresh_learning(
     target_id: str,
@@ -80,45 +92,50 @@ def learning_status(
     repo = require_repo(db, target_id)
     service = _learning_service(request)
     status = "missing"
+    recipe_count = 0
     state_payload = _fallback_learning_state(target_id, repo, service, status)
 
     try:
-        states = service.status(target_id)
-        state = states[0] if states else None
-        if state is not None:
-            status = state.status
-            state_payload = state.model_dump(mode="json")
-    except Exception as exc:
         try:
-            existing_state = service.load_state(target_id)
-        except Exception:
-            existing_state = None
-        if existing_state is None and not service.state_path(target_id).is_file():
-            status = "missing"
-            state_payload = _fallback_learning_state(
-                target_id,
-                repo,
-                service,
-                status,
-                str(exc),
-            )
-        else:
+            states = service.status(target_id)
+            state = states[0] if states else None
+            if state is not None:
+                status = state.status
+                state_payload = state.model_dump(mode="json")
+        except Exception as exc:
+            try:
+                existing_state = service.load_state(target_id)
+            except Exception:
+                existing_state = None
+            if existing_state is None and not service.state_path(target_id).is_file():
+                status = "missing"
+                state_payload = _fallback_learning_state(
+                    target_id,
+                    repo,
+                    service,
+                    status,
+                    str(exc),
+                )
+            else:
+                status = "error"
+                state_payload = (
+                    existing_state.model_dump(mode="json")
+                    if existing_state is not None
+                    else _fallback_learning_state(target_id, repo, service, status)
+                )
+                state_payload["status"] = status
+                state_payload["error"] = str(exc)
+
+        try:
+            recipes = service.recipes_for_target(target_id)
+            recipe_count = len(recipes)
+        except Exception as exc:
             status = "error"
-            state_payload = (
-                existing_state.model_dump(mode="json")
-                if existing_state is not None
-                else _fallback_learning_state(target_id, repo, service, status)
-            )
             state_payload["status"] = status
             state_payload["error"] = str(exc)
-
-    try:
-        recipes = service.recipes_for_target(target_id)
-        recipe_count = len(recipes)
     except Exception as exc:
         status = "error"
-        state_payload["status"] = status
-        state_payload["error"] = str(exc)
+        state_payload = _fallback_learning_state(target_id, repo, service, status, str(exc))
         recipe_count = 0
 
     return LearningStatusResponse(
@@ -126,6 +143,7 @@ def learning_status(
         status=status,
         state=state_payload,
         recipe_count=recipe_count,
+        message=_learning_status_message(status, recipe_count),
     )
 
 

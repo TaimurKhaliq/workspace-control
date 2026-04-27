@@ -36,6 +36,7 @@ body,
 
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
 }
@@ -391,6 +392,7 @@ pre {
 .bundle-panel,
 .empty-plan,
 .error-card,
+.status-card,
 .inspector,
 .validation-preview,
 .modal {
@@ -404,15 +406,26 @@ pre {
 .composer-card,
 .bundle-panel,
 .empty-plan,
-.error-card {
+.error-card,
+.status-card {
   padding: 1rem;
 }
 
-.error-card {
+.error-card,
+.status-card {
   margin: 1rem 1rem 0;
+}
+
+.error-card {
   border-color: #f4aea9;
   background: var(--danger-soft);
   color: #a50e0e;
+}
+
+.status-card {
+  border-color: #aecbfa;
+  background: var(--primary-soft);
+  color: #174ea6;
 }
 
 .eyebrow {
@@ -509,17 +522,16 @@ pre {
 
 .repo-table {
   display: grid;
-  overflow: auto;
+  overflow: visible;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 
 .repo-table-row {
   display: grid;
-  grid-template-columns: minmax(170px, 1fr) 150px minmax(150px, 0.9fr) minmax(175px, 1fr) minmax(220px, 1.3fr) minmax(220px, auto);
-  align-items: center;
+  grid-template-columns: minmax(180px, 1fr) minmax(130px, 0.65fr) minmax(160px, 0.9fr) minmax(180px, 0.95fr) minmax(220px, 1.2fr) minmax(180px, 0.9fr);
+  align-items: start;
   gap: 0.75rem;
-  min-width: 1100px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
   padding: 0.8rem;
@@ -570,6 +582,13 @@ pre {
   white-space: normal;
 }
 
+.locator-cell {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.secondary-button.compact,
 .repo-actions .secondary-button {
   padding: 0.42rem 0.7rem;
 }
@@ -583,6 +602,11 @@ pre {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 240px;
   gap: 0.85rem;
+}
+
+.feature-request-field small {
+  color: var(--muted);
+  font-weight: 500;
 }
 
 .composer-actions {
@@ -644,9 +668,11 @@ pre {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.15rem;
-  overflow-x: auto;
+  overflow-x: visible;
   border-bottom: 1px solid var(--border);
+  width: min(100%, 640px);
 }
 
 .tabs button {
@@ -656,7 +682,7 @@ pre {
   background: transparent;
   color: var(--muted);
   box-shadow: none;
-  padding: 0.72rem 0.78rem;
+  padding: 0.62rem 0.68rem;
   white-space: nowrap;
 }
 
@@ -755,7 +781,20 @@ pre {
 
 .change-card-list {
   display: grid;
+  gap: 0.9rem;
+}
+
+.change-group {
+  display: grid;
   gap: 0.55rem;
+}
+
+.change-group h3 {
+  margin: 0.35rem 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .change-card {
@@ -768,6 +807,23 @@ pre {
   color: var(--text);
   padding: 0.85rem;
   text-align: left;
+}
+
+.change-card-main {
+  display: grid;
+  gap: 0.45rem;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  padding: 0;
+  text-align: left;
+}
+
+.change-card-main:hover {
+  background: transparent;
+  box-shadow: none;
 }
 
 .change-card:hover,
@@ -800,6 +856,23 @@ pre {
   background: var(--primary-soft);
   color: var(--primary);
   font-weight: 750;
+}
+
+.evidence-details {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  padding-top: 0.45rem;
+}
+
+.evidence-details summary {
+  color: var(--primary);
+  cursor: pointer;
+  font-weight: 650;
+}
+
+.evidence-details ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.1rem;
 }
 
 .recipe-grid,
@@ -1071,6 +1144,14 @@ pre {
 
   .top-status {
     justify-content: flex-start;
+  }
+
+  .repo-table-head {
+    display: none;
+  }
+
+  .repo-table-row {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

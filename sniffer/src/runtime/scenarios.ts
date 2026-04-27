@@ -177,6 +177,7 @@ function assertionLocator(page: Page, label: string): Locator {
   if (/generate plan/i.test(label)) return button(page, /generate.*plan|generate plan bundle/i)
   if (/plan output/i.test(label)) return page.getByText(/overview|change set|handoff|raw json|error|failed/i)
   if (/copy prompt/i.test(label)) return button(page, /copy prompt|copy/i)
+  if (/raw json tab|json tab/i.test(label)) return page.getByRole('tab', { name: /raw json|json/i }).or(button(page, /raw json|json/i)).or(page.getByTestId('plan-tab-json'))
   if (/raw json payload/i.test(label)) return page.locator('pre, code').or(page.getByText(/schema_version|recommended_change_set|plan_bundle/i))
   if (/semantic/i.test(label)) return page.getByText(/semantic/i)
   return page.getByText(new RegExp(escapeRegex(label), 'i'))

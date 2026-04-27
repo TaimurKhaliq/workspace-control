@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Workspace,
   RepoTarget,
@@ -25,6 +25,11 @@ type PlanTab = 'overview' | 'changes' | 'recipes' | 'graph' | 'validation' | 'ha
 type SourceFilter = 'all' | 'planner' | 'recipe' | 'semantic_enrichment' | 'both';
 type ActionFilter = 'all' | 'modify' | 'create' | 'inspect' | 'inspect-only';
 type SectionFilter = 'all' | 'frontend' | 'backend' | 'api' | 'persistence' | 'config' | 'unknown';
+type PlanRunSemanticContext = {
+  requested: boolean;
+  sent: boolean;
+  status: SemanticStatus | null;
+};
 
 type DirectoryPickerWindow = Window & {
   showDirectoryPicker?: () => Promise<{ name: string }>;
@@ -45,6 +50,8 @@ export default function App() {
   const [recipeCounts, setRecipeCounts] = useState<Record<string, number>>({});
   const [learningStates, setLearningStates] = useState<Record<string, string>>({});
   const [repoValidation, setRepoValidation] = useState<RepoTargetValidation | null>(null);
+  const [repoValidationBusy, setRepoValidationBusy] = useState(false);
+  const [repoValidationError, setRepoValidationError] = useState('');
   const [repoValidations, setRepoValidations] = useState<Record<string, RepoTargetValidation>>({});
   const [busy, setBusy] = useState('');
   const [error, setError] = useState('');
@@ -59,7 +66,14 @@ export default function App() {
   const [folderPickerNote, setFolderPickerNote] = useState('');
   const [semanticStatus, setSemanticStatus] = useState<SemanticStatus | null>(null);
   const [useSemantic, setUseSemantic] = useState(false);
-  const [lastRunUsedSemantic, setLastRunUsedSemantic] = useState(false);
+  const [lastRunSemantic, setLastRunSemantic] = useState<PlanRunSemanticContext>({
+    requested: false,
+    sent: false,
+    status: null
+  });
+  const [planStatusMessage, setPlanStatusMessage] = useState('Ready for generating Plan Bundles.');
+  const planRequestId = useRef(0);
+  const planAbort = useRef<AbortController | null>(null);
 
   useEffect(() => {
     void refreshWorkspaces();
@@ -110,12 +124,20 @@ export default function App() {
   useEffect(() => {
     if (!locator.trim()) {
       setRepoValidation(null);
+      setRepoValidationBusy(false);
+      setRepoValidationError('');
       return;
     }
     const timeout = window.setTimeout(() => {
+      setRepoValidationBusy(true);
+      setRepoValidationError('');
       void validateRepoTarget({ source_type: sourceType, locator })
         .then(setRepoValidation)
-        .catch(() => setRepoValidation(null));
+        .catch((err) => {
+          setRepoValidation(null);
+          setRepoValidationError(err instanceof Error ? err.message : String(err));
+        })
+        .finally(() => setRepoValidationBusy(false));
     }, 350);
     return () => window.clearTimeout(timeout);
   }, [sourceType, locator]);
@@ -227,15 +249,56 @@ export default function App() {
   async function onGeneratePlan(event: FormEvent) {
     event.preventDefault();
     if (!selectedWorkspaceId || !selectedTargetId) return;
+    const requestedSemantic = Boolean(useSemantic);
     const semanticEnabled = Boolean(useSemantic && semanticStatus?.available);
-    const result = await runTask('Generating Plan Bundle', () =>
-      generatePlanBundle(selectedWorkspaceId, featureRequest, [selectedTargetId], semanticEnabled)
-    );
-    if (!result) return;
-    setRunId(result.run_id);
-    setPlanBundle(result.plan_bundle);
-    setLastRunUsedSemantic(semanticEnabled);
+    const requestId = planRequestId.current + 1;
+    planRequestId.current = requestId;
+    planAbort.current?.abort();
+    const controller = new AbortController();
+    planAbort.current = controller;
+    setBusy('Generating Plan Bundle');
+    setError('');
+    setPlanBundle(null);
+    setSelectedChange(null);
+    setRunId('');
     setActivePlanTab('overview');
+    setLastRunSemantic({ requested: requestedSemantic, sent: semanticEnabled, status: semanticStatus });
+    setPlanStatusMessage('Generating a fresh Plan Bundle...');
+    console.info('[StackPilot] generate plan bundle request', {
+      feature_request: featureRequest,
+      target_id: selectedTargetId,
+      use_semantic: semanticEnabled,
+      semantic_requested: requestedSemantic,
+      semantic_available: semanticStatus?.available ?? false
+    });
+    try {
+      const result = await generatePlanBundle(
+        selectedWorkspaceId,
+        featureRequest,
+        [selectedTargetId],
+        semanticEnabled,
+        { signal: controller.signal }
+      );
+      if (requestId !== planRequestId.current) return;
+      console.info('[StackPilot] generate plan bundle response', {
+        feature_request: result.plan_bundle.feature_request,
+        intent_labels: semanticIntentLabels(result.plan_bundle),
+        summary_intents: result.plan_bundle.summary.detected_intents,
+        semantic_available: Boolean(result.plan_bundle.semantic_enrichment?.available)
+      });
+      setRunId(result.run_id);
+      setPlanBundle(result.plan_bundle);
+      setPlanStatusMessage('');
+    } catch (err) {
+      if (controller.signal.aborted || requestId !== planRequestId.current) return;
+      setError(err instanceof Error ? err.message : String(err));
+      setPlanStatusMessage('');
+    } finally {
+      if (requestId === planRequestId.current) {
+        setBusy('');
+        planAbort.current = null;
+      }
+    }
   }
 
   async function onPickFolder() {
@@ -276,7 +339,8 @@ export default function App() {
           learningState={selectedTargetId ? learningStates[selectedTargetId] : undefined}
           busy={busy}
         />
-        {error && <div className="error-card">{error}</div>}
+        {error && <div className="error-card" role="alert">{error}</div>}
+        {planStatusMessage && <div className="status-card" role="status">{planStatusMessage}</div>}
 
         <section className="workflow-grid">
           <div className="work-surface">
@@ -319,7 +383,7 @@ export default function App() {
                 onActionFilterChange={setActionFilter}
                 onSectionFilterChange={setSectionFilter}
                 selectedChange={selectedChange}
-                semanticEnabled={lastRunUsedSemantic}
+                semanticContext={lastRunSemantic}
                 onSelectChange={setSelectedChange}
               />
             ) : (
@@ -346,6 +410,8 @@ export default function App() {
           sourceType={sourceType}
           locator={locator}
           validation={repoValidation}
+          validationBusy={repoValidationBusy}
+          validationError={repoValidationError}
           recentPaths={recentPaths}
           folderPickerNote={folderPickerNote}
           onTargetIdChange={setRepoTargetId}
@@ -401,7 +467,7 @@ function Sidebar({
       <section className="sidebar-section">
         <div className="sidebar-title-row">
           <span>Workspaces</span>
-          <button className="icon-button" onClick={onOpenWorkspace} title="Add workspace">+</button>
+          <button className="icon-button" onClick={onOpenWorkspace} title="Add workspace" aria-label="Add">+</button>
         </div>
         <div className="workspace-list">
           {workspaces.length === 0 && <p className="sidebar-empty">Create a workspace to begin.</p>}
@@ -409,10 +475,11 @@ function Sidebar({
             <button
               key={workspace.id}
               className={`sidebar-item ${workspace.id === selectedWorkspaceId ? 'active' : ''}`}
+              aria-label={`Select workspace ${workspace.name}`}
               onClick={() => onSelectWorkspace(workspace.id)}
             >
               <span>{workspace.name}</span>
-              <small>{new Date(workspace.updated_at).toLocaleDateString()}</small>
+              <small> • Updated {new Date(workspace.updated_at).toLocaleDateString()}</small>
             </button>
           ))}
         </div>
@@ -594,10 +661,20 @@ function RepoTableRow({
         <StatusChip label={`learning ${learningState}`} tone={learningState === 'fresh' ? 'good' : 'muted'} />
         <StatusChip label={`${recipeCount} recipes`} tone={recipeCount > 0 ? 'good' : 'muted'} />
       </div>
-      <code className="locator-text">{repo.locator}</code>
+      <div className="locator-cell">
+        <code className="locator-text" title={repo.locator}>{compactPathLabel(repo.locator)}</code>
+        <button
+          type="button"
+          className="secondary-button compact"
+          aria-label={`Copy path for ${repo.target_id}`}
+          onClick={() => copyText(repo.locator)}
+        >
+          Copy path
+        </button>
+      </div>
       <div className="repo-actions">
-        <button className="secondary-button" onClick={onDiscover} disabled={Boolean(busy)}>Discover</button>
-        <button className="secondary-button" onClick={onRefreshLearning} disabled={Boolean(busy)}>Refresh learning</button>
+        <button className="secondary-button" onClick={onDiscover} disabled={Boolean(busy)} title={busy ? `Waiting for ${busy}` : 'Refresh architecture discovery'}>Discover</button>
+        <button className="secondary-button" onClick={onRefreshLearning} disabled={Boolean(busy)} title={busy ? `Waiting for ${busy}` : 'Refresh learning recipes'}>Refresh learning</button>
         <button className="secondary-button" onClick={onSelect}>View details</button>
       </div>
     </div>
@@ -636,6 +713,8 @@ function AddRepoModal({
   sourceType,
   locator,
   validation,
+  validationBusy,
+  validationError,
   recentPaths,
   folderPickerNote,
   onTargetIdChange,
@@ -651,6 +730,8 @@ function AddRepoModal({
   sourceType: 'local_path' | 'git_url';
   locator: string;
   validation: RepoTargetValidation | null;
+  validationBusy: boolean;
+  validationError: string;
   recentPaths: string[];
   folderPickerNote: string;
   onTargetIdChange: (value: string) => void;
@@ -663,23 +744,23 @@ function AddRepoModal({
   disabled: boolean;
 }) {
   return (
-    <Modal title="Add repo target" onClose={onClose} wide>
+    <Modal title="Add repository" onClose={onClose} wide>
       <form onSubmit={onSubmit} className="add-repo-layout">
         <div className="modal-form">
-          <label>
+          <label htmlFor="repo-target-id-input">
             Target id
-            <input value={repoTargetId} onChange={(event) => onTargetIdChange(event.target.value)} autoFocus />
+            <input id="repo-target-id-input" value={repoTargetId} onChange={(event) => onTargetIdChange(event.target.value)} autoFocus />
           </label>
-          <label>
+          <label htmlFor="repo-source-type-input">
             Source type
-            <select value={sourceType} onChange={(event) => onSourceTypeChange(event.target.value as 'local_path' | 'git_url')}>
+            <select id="repo-source-type-input" value={sourceType} onChange={(event) => onSourceTypeChange(event.target.value as 'local_path' | 'git_url')}>
               <option value="local_path">local path</option>
               <option value="git_url">git URL (stored only)</option>
             </select>
           </label>
-          <label>
+          <label htmlFor="repo-locator-input">
             Path or URL
-            <input value={locator} onChange={(event) => onLocatorChange(event.target.value)} />
+            <input id="repo-locator-input" value={locator} onChange={(event) => onLocatorChange(event.target.value)} />
           </label>
           <div className="inline-actions">
             <button type="button" className="secondary-button" onClick={onPickFolder}>Try browser folder picker</button>
@@ -690,7 +771,7 @@ function AddRepoModal({
             )}
           </div>
           <p className="helper-text">
-            Browser mode keeps manual path input. TODO for desktop mode: a Tauri wrapper can use the native dialog plugin to provide absolute folder paths.
+            Paste an absolute path. Native folder picker can be added in desktop/Tauri mode.
           </p>
           {folderPickerNote && <p className="helper-text">{folderPickerNote}</p>}
           {recentPaths.length > 0 && (
@@ -703,26 +784,42 @@ function AddRepoModal({
           )}
           <div className="modal-actions">
             <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
-            <button type="submit" disabled={disabled}>Save target</button>
+            <button type="submit" disabled={disabled}>Add repo</button>
           </div>
         </div>
-        <RepoValidationPreview validation={validation} />
+        <RepoValidationPreview validation={validation} busy={validationBusy} error={validationError} />
       </form>
     </Modal>
   );
 }
 
-function RepoValidationPreview({ validation }: { validation: RepoTargetValidation | null }) {
+function RepoValidationPreview({ validation, busy, error }: { validation: RepoTargetValidation | null; busy: boolean; error: string }) {
+  if (busy) {
+    return (
+      <aside className="validation-preview empty" role="status" aria-live="polite" aria-busy="true">
+        <span>Validation preview</span>
+        <p>Validating repo path...</p>
+      </aside>
+    );
+  }
+  if (error) {
+    return (
+      <aside className="validation-preview empty" role="alert">
+        <span>Validation preview</span>
+        <p>{error}</p>
+      </aside>
+    );
+  }
   if (!validation) {
     return (
-      <aside className="validation-preview empty">
+      <aside className="validation-preview empty" role="status" aria-live="polite">
         <span>Validation preview</span>
         <p>Enter a local path to detect repo type, frameworks, and common client-subfolder mistakes.</p>
       </aside>
     );
   }
   return (
-    <aside className="validation-preview">
+    <aside className="validation-preview" role="status" aria-live="polite">
       <div className="preview-head">
         <span>Validation preview</span>
         <StatusChip label={validation.detected_repo_type} tone={validation.detected_repo_type.includes('frontend') ? 'warn' : 'good'} />
@@ -790,7 +887,17 @@ function PromptComposer({
       </div>
       <form onSubmit={onSubmit}>
         <div className="composer-grid">
-          <textarea value={featureRequest} onChange={(event) => onPromptChange(event.target.value)} rows={3} />
+          <label htmlFor="feature-request-input" className="feature-request-field">
+            Feature request
+            <textarea
+              id="feature-request-input"
+              value={featureRequest}
+              onChange={(event) => onPromptChange(event.target.value)}
+              rows={3}
+              aria-describedby="feature-request-helper"
+            />
+            <small id="feature-request-helper">Describe the change you want StackPilot to plan for the selected repo target.</small>
+          </label>
           <div className="composer-actions">
             <label>
               Target
@@ -805,13 +912,14 @@ function PromptComposer({
               <span>
                 <input
                   type="checkbox"
+                  aria-describedby="semantic-toggle-helper"
                   checked={useSemantic && semanticAvailable}
                   disabled={!semanticAvailable}
                   onChange={(event) => onUseSemanticChange(event.target.checked)}
                 />
                 Use semantic enrichment
               </span>
-              <small>{semanticHelpText}</small>
+              <small id="semantic-toggle-helper">{semanticHelpText}</small>
             </label>
             <button type="submit" disabled={!selectedTargetId || Boolean(busy)}>
               {busy === 'Generating Plan Bundle' ? 'Generating...' : 'Generate Plan Bundle'}
@@ -845,7 +953,7 @@ function PlanBundleView({
   onActionFilterChange,
   onSectionFilterChange,
   selectedChange,
-  semanticEnabled,
+  semanticContext,
   onSelectChange
 }: {
   bundle: PlanBundle;
@@ -858,7 +966,7 @@ function PlanBundleView({
   onActionFilterChange: (value: ActionFilter) => void;
   onSectionFilterChange: (value: SectionFilter) => void;
   selectedChange: PlanBundleChangeItem | null;
-  semanticEnabled: boolean;
+  semanticContext: PlanRunSemanticContext;
   onSelectChange: (item: PlanBundleChangeItem) => void;
 }) {
   const filteredChanges = bundle.recommended_change_set.filter((item) => {
@@ -880,12 +988,25 @@ function PlanBundleView({
           <StatusChip label={bundle.summary.confidence} tone={bundle.summary.confidence === 'high' ? 'good' : bundle.summary.confidence === 'medium' ? 'warn' : 'danger'} />
           <StatusChip label={bundle.summary.planning_mode} tone="muted" />
           <StatusChip
-            label={`Semantic enrichment: ${bundle.semantic_enrichment?.available ? 'On' : semanticEnabled ? 'Requested' : 'Off'}`}
-            tone={bundle.semantic_enrichment?.available ? 'good' : semanticEnabled ? 'warn' : 'muted'}
+            label={`Semantic enrichment: ${bundle.semantic_enrichment?.available ? 'On' : semanticContext.requested ? 'Requested' : 'Off'}`}
+            tone={bundle.semantic_enrichment?.available ? 'good' : semanticContext.requested ? 'warn' : 'muted'}
           />
-          {bundle.summary.detected_intents.map((intent) => <StatusChip key={intent} label={intent} tone="good" />)}
+          {semanticContext.status && (
+            <StatusChip
+              label={`Semantic cache: ${semanticContext.status.cached_artifact_available ? 'hit' : 'miss'}`}
+              tone={semanticContext.status.cached_artifact_available ? 'good' : 'muted'}
+            />
+          )}
+          {semanticProviderLabel(bundle, semanticContext) && <StatusChip label={semanticProviderLabel(bundle, semanticContext)} tone="muted" />}
+          {[...new Set([...bundle.summary.detected_intents, ...semanticIntentLabels(bundle)])].slice(0, 14).map((intent) => <StatusChip key={intent} label={intent} tone="good" />)}
         </div>
       </div>
+      {semanticContext.requested && !bundle.semantic_enrichment?.available && (
+        <Notice
+          tone="warning"
+          text="Semantic enrichment was requested but no provider or cached semantic artifact was available."
+        />
+      )}
       <Tabs active={activeTab} onChange={onTabChange} />
       <div className="tab-body">
         {activeTab === 'overview' && <OverviewTab bundle={bundle} />}
@@ -913,26 +1034,36 @@ function PlanBundleView({
 }
 
 function Tabs({ active, onChange }: { active: PlanTab; onChange: (tab: PlanTab) => void }) {
-  const tabs: Array<[PlanTab, string]> = [
-    ['overview', 'Overview'],
-    ['changes', 'Change Set'],
-    ['recipes', 'Recipes'],
-    ['graph', 'Graph Evidence'],
-    ['validation', 'Validation'],
-    ['handoff', 'Handoff Prompt'],
-    ['json', 'Raw JSON']
+  const tabs: Array<[PlanTab, string, string]> = [
+    ['overview', 'Overview', 'plan-tab-overview'],
+    ['changes', 'Change Set', 'plan-tab-change-set'],
+    ['recipes', 'Recipes', 'plan-tab-recipes'],
+    ['graph', 'Graph Evidence', 'plan-tab-graph'],
+    ['validation', 'Validation', 'plan-tab-validation'],
+    ['handoff', 'Handoff', 'plan-tab-handoff'],
+    ['json', 'Raw JSON', 'plan-tab-json']
   ];
   return (
-    <nav className="tabs" aria-label="Plan Bundle sections">
-      {tabs.map(([value, label]) => (
-        <button key={value} className={active === value ? 'active' : ''} onClick={() => onChange(value)}>{label}</button>
+    <div className="tabs" role="tablist" aria-label="Plan Bundle sections">
+      {tabs.map(([value, label, testId]) => (
+        <button
+          key={value}
+          type="button"
+          role="tab"
+          aria-selected={active === value}
+          data-testid={testId}
+          className={active === value ? 'active' : ''}
+          onClick={() => onChange(value)}
+        >
+          {label}
+        </button>
       ))}
-    </nav>
+    </div>
   );
 }
 
 function OverviewTab({ bundle }: { bundle: PlanBundle }) {
-  const semanticLabels = bundle.semantic_enrichment?.technical_intent_labels ?? bundle.semantic_enrichment?.feature_spec?.technical_intent_labels ?? [];
+  const semanticLabels = semanticIntentLabels(bundle);
   const semanticMissing = bundle.semantic_missing_details ?? bundle.semantic_enrichment?.feature_spec?.missing_details ?? [];
   const semanticQuestions = bundle.semantic_clarifying_questions ?? bundle.semantic_enrichment?.feature_spec?.clarifying_questions ?? [];
   const semanticCaveats = bundle.semantic_caveats ?? bundle.semantic_enrichment?.caveats ?? [];
@@ -1003,6 +1134,7 @@ function ChangeSetTab({
   selectedChange: PlanBundleChangeItem | null;
   onSelectChange: (item: PlanBundleChangeItem) => void;
 }) {
+  const groupedChanges = groupChangesByArea(changes);
   return (
     <div className="change-set-layout">
       <div className="filter-row">
@@ -1012,13 +1144,18 @@ function ChangeSetTab({
       </div>
       <div className="change-card-list">
         {changes.length === 0 && <p className="muted">No recommendations match these filters.</p>}
-        {changes.map((item) => (
-          <ChangeSetCard
-            key={`${item.priority}-${item.repo_name}-${item.path}`}
-            item={item}
-            active={selectedChange?.priority === item.priority && selectedChange?.path === item.path}
-            onSelect={() => onSelectChange(item)}
-          />
+        {groupedChanges.map(([area, items]) => (
+          <section key={area} className="change-group" aria-label={`${area} recommendations`}>
+            <h3>{area}</h3>
+            {items.map((item) => (
+              <ChangeSetCard
+                key={`${item.priority}-${item.repo_name}-${item.path}`}
+                item={item}
+                active={selectedChange?.priority === item.priority && selectedChange?.path === item.path}
+                onSelect={() => onSelectChange(item)}
+              />
+            ))}
+          </section>
         ))}
       </div>
     </div>
@@ -1027,20 +1164,72 @@ function ChangeSetTab({
 
 function ChangeSetCard({ item, active, onSelect }: { item: PlanBundleChangeItem; active: boolean; onSelect: () => void }) {
   return (
-    <button className={`change-card ${active ? 'active' : ''}`} onClick={onSelect}>
-      <div className="change-card-top">
-        <span className="priority-badge">{item.priority}</span>
-        <code>{item.path}</code>
-      </div>
-      <p>{item.reason}</p>
-      <div className="chip-row">
-        <StatusChip label={item.action} tone={item.action === 'create' || item.action === 'modify' ? 'good' : 'muted'} />
-        <StatusChip label={item.confidence} tone={item.confidence === 'high' ? 'good' : item.confidence === 'medium' ? 'warn' : 'muted'} />
-        <StatusChip label={item.source} tone={item.source === 'both' ? 'good' : 'muted'} />
-        <StatusChip label={item.ui_section ?? 'unknown'} tone="muted" />
-      </div>
-    </button>
+    <article className={`change-card ${active ? 'active' : ''}`}>
+      <button type="button" className="change-card-main" onClick={onSelect}>
+        <div className="change-card-top">
+          <span className="priority-badge">{item.priority}</span>
+          <code>{item.path}</code>
+        </div>
+        <p>{item.reason}</p>
+        <div className="chip-row">
+          <StatusChip label={item.action} tone={item.action === 'create' || item.action === 'modify' ? 'good' : 'muted'} />
+          <StatusChip label={item.confidence} tone={item.confidence === 'high' ? 'good' : item.confidence === 'medium' ? 'warn' : 'muted'} />
+          <StatusChip label={item.source} tone={item.source === 'both' ? 'good' : 'muted'} />
+          <StatusChip label={item.ui_section ?? 'unknown'} tone="muted" />
+        </div>
+      </button>
+      {item.evidence?.length > 0 && (
+        <details className="evidence-details">
+          <summary>Evidence</summary>
+          <ul>
+            {item.evidence.slice(0, 6).map((evidence) => <li key={evidence}>{evidence}</li>)}
+          </ul>
+        </details>
+      )}
+    </article>
   );
+}
+
+function groupChangesByArea(changes: PlanBundleChangeItem[]): Array<[string, PlanBundleChangeItem[]]> {
+  const grouped = new Map<string, PlanBundleChangeItem[]>();
+  for (const item of changes) {
+    const area = repairAreaForChange(item);
+    grouped.set(area, [...(grouped.get(area) ?? []), item]);
+  }
+  const order = ['Frontend', 'Backend/API', 'Persistence/Storage', 'Display/Reference', 'Unknown'];
+  return [...grouped.entries()].sort((left, right) => order.indexOf(left[0]) - order.indexOf(right[0]));
+}
+
+function repairAreaForChange(item: PlanBundleChangeItem): string {
+  const text = `${item.ui_section} ${item.node_type} ${item.path} ${item.reason}`.toLowerCase();
+  if (/client\/src|tsx|jsx|frontend|component|page|form|types/.test(text)) return 'Frontend';
+  if (/controller|api|rest|endpoint|mapper|service/.test(text)) return 'Backend/API';
+  if (/repository|jdbc|entity|model|database|persistence|storage|upload|file|media/.test(text)) return 'Persistence/Storage';
+  if (/display|view|reference|retrieval|read/.test(text)) return 'Display/Reference';
+  return 'Unknown';
+}
+
+function semanticIntentLabels(bundle: PlanBundle): string[] {
+  return dedupeStrings([
+    ...(bundle.semantic_enrichment?.technical_intent_labels ?? []),
+    ...(bundle.semantic_enrichment?.technical_intents ?? []),
+    ...(bundle.semantic_enrichment?.feature_spec?.technical_intent_labels ?? []),
+    ...(bundle.semantic_enrichment?.feature_spec?.technical_intents ?? [])
+  ]);
+}
+
+function semanticProviderLabel(bundle: PlanBundle, context: PlanRunSemanticContext): string {
+  const modelInfo = bundle.semantic_enrichment?.model_info ?? {};
+  const provider = modelInfo.provider ?? context.status?.provider;
+  const model = modelInfo.model ?? context.status?.model;
+  if (provider && model) return `${String(provider)} · ${String(model)}`;
+  if (provider) return String(provider);
+  if (model) return String(model);
+  return '';
+}
+
+function dedupeStrings(values: Array<string | undefined>): string[] {
+  return [...new Set(values.filter(Boolean).map((value) => String(value)))];
 }
 
 function RecipesTab({ bundle }: { bundle: PlanBundle }) {
@@ -1124,12 +1313,14 @@ function HandoffTab({ bundle }: { bundle: PlanBundle }) {
   }
   return (
     <div className="handoff-list">
-      {bundle.handoff_prompts.map((handoff) => <HandoffPromptCard key={handoff.repo_name} handoff={handoff} />)}
+      {bundle.handoff_prompts.map((handoff) => <HandoffPromptCard key={handoff.repo_name} handoff={handoff} bundle={bundle} />)}
     </div>
   );
 }
 
-function HandoffPromptCard({ handoff }: { handoff: PlanBundle['handoff_prompts'][number] }) {
+function HandoffPromptCard({ handoff, bundle }: { handoff: PlanBundle['handoff_prompts'][number]; bundle: PlanBundle }) {
+  const semanticLabels = semanticIntentLabels(bundle);
+  const caveats = [...(bundle.semantic_caveats ?? []), ...(bundle.semantic_missing_details ?? [])];
   return (
     <article className="handoff-card card-panel">
       <div className="section-heading compact">
@@ -1137,8 +1328,25 @@ function HandoffPromptCard({ handoff }: { handoff: PlanBundle['handoff_prompts']
           <p className="eyebrow">{handoff.repo_name}</p>
           <h3>{handoff.title}</h3>
         </div>
-        <button onClick={() => copyText(handoff.prompt)}>Copy prompt</button>
+        <button
+          type="button"
+          data-testid="copy-handoff-prompt"
+          aria-label={`Copy handoff prompt for ${handoff.repo_name}`}
+          onClick={() => copyText(handoff.prompt)}
+        >
+          Copy prompt
+        </button>
       </div>
+      {semanticLabels.length > 0 && (
+        <div className="chip-row" aria-label="Semantic handoff labels">
+          {semanticLabels.slice(0, 10).map((label) => <StatusChip key={label} label={label} tone="muted" />)}
+        </div>
+      )}
+      {caveats.length > 0 && (
+        <div className="notice warning">
+          Semantic caveats: {caveats.slice(0, 3).join(' · ')}
+        </div>
+      )}
       <pre>{handoff.prompt}</pre>
     </article>
   );
@@ -1153,7 +1361,14 @@ function JsonViewer({ bundle }: { bundle: PlanBundle }) {
           <p className="eyebrow">UI contract</p>
           <h3>Raw Plan Bundle JSON</h3>
         </div>
-        <button onClick={() => copyText(text)}>Copy JSON</button>
+        <button
+          type="button"
+          data-testid="copy-raw-json"
+          aria-label="Copy raw JSON"
+          onClick={() => copyText(text)}
+        >
+          Copy JSON
+        </button>
       </div>
       <details open>
         <summary>Structured response</summary>
@@ -1291,11 +1506,20 @@ function EmptyPlanState() {
 }
 
 function Modal({ title, children, onClose, wide = false }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+  const titleId = `modal-title-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [onClose]);
+
   return (
-    <div className="modal-backdrop" role="dialog" aria-modal="true">
-      <div className={`modal ${wide ? 'wide' : ''}`}>
+    <div className="modal-backdrop">
+      <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
         <div className="modal-head">
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           <button className="icon-button" onClick={onClose} aria-label="Close">×</button>
         </div>
         {children}
@@ -1319,6 +1543,19 @@ function rememberRecentPath(path: string, setRecentPaths: (value: string[]) => v
   const next = [clean, ...loadRecentPaths().filter((item) => item !== clean)].slice(0, 5);
   window.localStorage.setItem(RECENT_PATHS_KEY, JSON.stringify(next));
   setRecentPaths(next);
+}
+
+function middleEllipsis(value: string, maxLength: number): string {
+  if (value.length <= maxLength) return value;
+  const half = Math.floor((maxLength - 1) / 2);
+  return `${value.slice(0, half)}…${value.slice(-half)}`;
+}
+
+function compactPathLabel(value: string): string {
+  if (!value.includes('/') && !value.includes('\\')) return middleEllipsis(value, 64);
+  const parts = value.split(/[\\/]+/).filter(Boolean);
+  if (parts.length <= 3) return middleEllipsis(value, 64);
+  return `…/${parts.slice(-3).join('/')}`;
 }
 
 function copyText(text: string) {

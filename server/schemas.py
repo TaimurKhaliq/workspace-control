@@ -99,6 +99,7 @@ class LearningStatusResponse(BaseModel):
     status: str
     state: dict[str, Any]
     recipe_count: int
+    message: str | None = None
 
 
 class RecipesResponse(BaseModel):

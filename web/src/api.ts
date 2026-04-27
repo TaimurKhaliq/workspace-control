@@ -129,6 +129,7 @@ export type PlanBundle = {
       clarifying_questions?: string[];
       [key: string]: unknown;
     };
+    technical_intents?: string[];
     technical_intent_labels?: string[];
     caveats?: string[];
     [key: string]: unknown;
@@ -208,7 +209,7 @@ export function discoverRepo(targetId: string) {
 }
 
 export function learningStatus(targetId: string) {
-  return request<{ target_id: string; status: string; recipe_count: number }>(`/api/repos/${targetId}/learning-status`);
+  return request<{ target_id: string; status: string; recipe_count: number; message?: string }>(`/api/repos/${targetId}/learning-status`);
 }
 
 export function refreshLearning(targetId: string) {
@@ -224,10 +225,12 @@ export function generatePlanBundle(
   workspaceId: string,
   featureRequest: string,
   targetIds: string[],
-  useSemantic = false
+  useSemantic = false,
+  options?: { signal?: AbortSignal }
 ) {
   return request<PlanBundleResponse>(`/api/workspaces/${workspaceId}/plan-bundles`, {
     method: 'POST',
+    signal: options?.signal,
     body: JSON.stringify({ feature_request: featureRequest, target_ids: targetIds, use_semantic: useSemantic })
   });
 }
