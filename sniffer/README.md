@@ -24,8 +24,10 @@ npm run build
 npm run sniffer -- discover --repo ../web
 npm run sniffer -- crawl --url http://localhost:3000
 npm run sniffer -- audit --repo ../web --url http://localhost:3000
+npm run sniffer -- audit --repo ../web --url http://localhost:3000 --scenario all --ux-critic deterministic
+npm run sniffer -- audit --repo ../web --url http://localhost:3000 --scenario generate-plan-bundle
 npm run sniffer -- audit --repo ../web --url http://localhost:3000 --critic-mode deterministic
-npm run sniffer -- audit --repo ../web --url http://localhost:3000 --use-llm --provider mock --critic-mode llm
+npm run sniffer -- audit --repo ../web --url http://localhost:3000 --use-llm --provider mock --critic-mode llm --ux-critic llm
 npm run sniffer -- generate-fixes --report reports/sniffer/latest/latest_report.json
 npm run sniffer -- apply-fix --issue <issue_id> --report reports/sniffer/latest/latest_report.json --agent manual
 npm run sniffer -- verify --issue <issue_id> --url http://localhost:3000 --report reports/sniffer/latest/latest_report.json
@@ -128,6 +130,107 @@ Provider flags:
 The critic receives a focused context packet per finding: app identity, relevant source intent, runtime controls, screenshots paths, console/network errors, crawl actions, inferred app state, and the candidate finding. It returns structured JSON decisions such as `real_bug`, `crawler_needs_precondition`, `needs_more_crawling`, or `inconclusive`.
 
 Conditional UI is deferred instead of reported when a precondition is missing. For example, missing Raw JSON before a plan bundle exists is treated as `crawler_needs_precondition` with `next_safe_action=generate_plan_bundle_with_sample_prompt`, not as a fix-packet-worthy bug. API/console 500s still report as real bugs.
+
+## Scenario Packs And UX Audit
+
+Sniffer can run safe workflow scenarios instead of only inspecting the first visible DOM state:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --scenario all \
+  --ux-critic deterministic
+```
+
+Built-in scenarios cover workspace-control style apps:
+
+- create/select workspace
+- add repo target
+- validate local repo path
+- refresh discovery
+- refresh learning
+- generate plan bundle
+- review plan output tabs
+- copy handoff prompt
+- inspect raw JSON
+- semantic enrichment toggle
+
+Scenario execution only performs safe actions: selecting visible workspace/repo controls, opening modals, typing the sample prompt `Add OwnersPage (no actions yet)`, clicking generate/refresh-style actions, opening tabs, and clicking copy controls. It does not delete, reset, overwrite, or submit destructive actions.
+
+Run a single scenario:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --scenario generate-plan-bundle
+
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --scenario review-plan-output
+```
+
+Deterministic UX/accessibility checks look for:
+
+- duplicate workspace names without disambiguation
+- plus-only or unnamed buttons
+- inputs/selects/textareas without accessible labels
+- dialogs without labels
+- duplicate DOM IDs
+- jammed text such as `PetClinic local4/25/2026`
+- horizontal overflow and long paths that do not wrap/truncate
+- missing empty/loading states
+- unclear primary actions
+- disabled controls without guidance
+- handoff/raw JSON output without copy affordances
+- oversized plan output without tabs/collapsible sections
+
+Optional LLM UX critique is separate from the workflow critic:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --scenario all \
+  --ux-critic llm \
+  --provider openai \
+  --use-llm
+```
+
+The UX critic receives compact context: app purpose, source workflow, visible controls, screenshot paths, DOM text summary, known state, and deterministic candidate UX issues. It returns structured JSON findings only. Screenshots are referenced by path; Sniffer does not send browser-side secrets.
+
+Reports include separate sections for Functional/API issues, Workflow scenario failures, UX/layout issues, Accessibility issues, Deferred/conditional findings, LLM UX critic findings, and Fix packets.
+
+## Issue Triage
+
+Sniffer keeps detailed raw findings, but the user-facing report and fix packets are built from triaged repair groups.
+
+The report summary includes:
+
+- raw findings count
+- triaged issues / repair groups count
+- functional/API issues
+- workflow scenario issues
+- UX/layout issues
+- accessibility issues
+- raw findings appendix
+
+Examples of deterministic repair groups:
+
+- API endpoint failures
+- Add repo workflow discoverability
+- Plan output review/copy workflow
+- Repository/workspace list readability
+- Accessibility/copy affordance cleanup
+- Loading/error state cleanup
+
+If workflow verification found a control but a scenario later failed to locate it, Sniffer marks that raw scenario finding as inconclusive and notes that the scenario locator may be too strict. Those raw findings remain in the appendix but do not create standalone fix packets.
+
+API evidence includes normalized endpoint patterns, method, status code, affected URLs, target ids when available, and response body text when Playwright can safely read it.
+
+When `--critic-mode llm` or `--ux-critic llm` is enabled and the provider supports it, Sniffer can ask the LLM to group raw findings into repair themes. Deterministic grouping remains the fallback.
 
 ## Repair Loop
 

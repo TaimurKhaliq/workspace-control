@@ -13,6 +13,9 @@ export type IssueType =
   | 'network_error'
   | 'accessibility_issue'
   | 'usability_issue'
+  | 'layout_issue'
+  | 'workflow_confusion'
+  | 'visual_clutter'
   | 'test_bug'
   | 'inconclusive'
 
@@ -151,6 +154,8 @@ export interface NetworkFailure {
   url: string
   method: string
   failureText: string
+  statusCode?: number
+  responseBody?: string
 }
 
 export interface AppIntent {
@@ -192,12 +197,23 @@ export interface SnifferReport {
   appIntent: AppIntent
   runtimeSurfaceMatches: RuntimeSurfaceMatch[]
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
+  scenarioRuns?: ScenarioRun[]
   criticDecisions: WorkflowCriticDecision[]
+  uxCriticFindings?: UxCriticFinding[]
   deferredFindings: CandidateFinding[]
   blockedChecks: CandidateFinding[]
   needsMoreCrawling: CandidateFinding[]
+  rawFindings?: Issue[]
   issues: Issue[]
   generatedAt: string
+}
+
+export interface IssueTriageContext {
+  sourceGraph: SourceGraph
+  crawlGraph: CrawlGraph
+  runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
+  rawFindings: Issue[]
+  question_for_triage: string
 }
 
 export interface RuntimeSurfaceMatch {
@@ -405,4 +421,73 @@ export interface KnownRuntimeState {
   workspace_modal_open: boolean
   semantic_enabled: boolean
   last_action_changed_state: boolean
+}
+
+export type ScenarioSlug =
+  | 'all'
+  | 'create-select-workspace'
+  | 'add-repo-target'
+  | 'validate-local-repo-path'
+  | 'refresh-discovery'
+  | 'refresh-learning'
+  | 'generate-plan-bundle'
+  | 'review-plan-output'
+  | 'copy-handoff-prompt'
+  | 'inspect-raw-json'
+  | 'semantic-enrichment-toggle'
+
+export interface ScenarioStep {
+  name: string
+  action: string
+  expectedControls: string[]
+  safe: boolean
+  unsafeReason?: string
+}
+
+export interface ScenarioDefinition {
+  slug: Exclude<ScenarioSlug, 'all'>
+  name: string
+  prerequisites: string[]
+  steps: ScenarioStep[]
+  expectedResult: string
+  assertions: string[]
+}
+
+export interface ScenarioAssertionResult {
+  label: string
+  status: 'passed' | 'failed' | 'blocked'
+  evidence: string[]
+  screenshotPath?: string
+}
+
+export interface ScenarioRun {
+  slug: string
+  name: string
+  status: 'passed' | 'failed' | 'blocked'
+  prerequisites: string[]
+  stepsAttempted: string[]
+  screenshots: string[]
+  assertions: ScenarioAssertionResult[]
+  issues: Issue[]
+}
+
+export interface UxCriticFinding {
+  title: string
+  severity: Severity
+  type: 'usability_issue' | 'layout_issue' | 'accessibility_issue' | 'workflow_confusion' | 'visual_clutter'
+  evidence: string[]
+  suggested_fix: string
+  should_report: boolean
+  screenshotPath?: string
+}
+
+export interface UxCriticContext {
+  app_purpose: string
+  workflow?: SourceWorkflow
+  runtime_visible_controls: VisibleElement[]
+  screenshot_paths: string[]
+  dom_text_summary: string[]
+  known_state: KnownRuntimeState
+  candidate_heuristic_issues: Issue[]
+  question_for_critic: string
 }

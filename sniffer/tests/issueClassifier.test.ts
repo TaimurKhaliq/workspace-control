@@ -38,6 +38,33 @@ describe('classifyRuntimeIssues', () => {
     expect(issues.filter((issue) => issue.title.includes('Learning status endpoint'))).toHaveLength(1)
     expect(issues[0].evidence).toEqual(expect.arrayContaining(['count: 2']))
   })
+
+  it('captures API status code and response body evidence', () => {
+    const issues = classifyRuntimeIssues(sourceGraph(), {
+      startUrl: 'http://localhost:3000',
+      title: 'Demo',
+      finalUrl: 'http://localhost:3000',
+      states: [{ url: 'http://localhost:3000', title: 'Demo', hash: 'x', visible: [] }],
+      actions: [],
+      consoleErrors: [],
+      networkFailures: [{
+        url: 'http://localhost/api/workspaces',
+        method: 'GET',
+        failureText: 'HTTP 500 Internal Server Error',
+        statusCode: 500,
+        responseBody: '{"detail":"database locked"}'
+      }],
+      screenshots: ['/tmp/screen.png'],
+      generatedAt: new Date().toISOString()
+    })
+
+    expect(issues[0].evidence).toEqual(expect.arrayContaining([
+      'endpoint_pattern: GET /api/workspaces',
+      'method: GET',
+      'status_code: 500',
+      'response_body: {"detail":"database locked"}'
+    ]))
+  })
 })
 
 function sourceGraph(): SourceGraph {

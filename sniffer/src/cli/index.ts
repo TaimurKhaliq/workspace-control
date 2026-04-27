@@ -18,6 +18,11 @@ import { runRepairLoop } from '../repair/repairLoop.js'
 import { critiqueFindings, type CriticMode } from '../critic/workflowCritic.js'
 import type { LlmCriticProvider } from '../types.js'
 import { executeNextSafeActions } from '../critic/nextActionExecutor.js'
+import { runScenarios, scenarioIssues } from '../runtime/scenarios.js'
+import { runUxHeuristicAudit } from '../heuristics/uxHeuristics.js'
+import { critiqueUx, type UxCriticMode } from '../critic/uxCritic.js'
+import type { ScenarioSlug } from '../types.js'
+import { triageIssues } from '../heuristics/issueTriage.js'
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2)
@@ -45,6 +50,8 @@ async function main(): Promise<void> {
     const url = requireArg(args, 'url')
     const sourceGraph = await discoverSource(repo)
     const crawlGraph = await crawlApp(url, { reportDir })
+    const scenarioSlug = (typeof args.scenario === 'string' ? args.scenario : undefined) as ScenarioSlug | undefined
+    const scenarioRuns = scenarioSlug ? await runScenarios({ url, reportDir, scenario: scenarioSlug }) : []
     let appIntent = buildDeterministicIntent(sourceGraph)
     const providerName = typeof args.provider === 'string' ? args.provider : args['use-llm'] ? 'auto' : 'auto'
     const provider = args['use-llm'] || args['critic-mode'] === 'llm' || providerName === 'mock'
@@ -85,7 +92,43 @@ async function main(): Promise<void> {
         })
       }
     }
-    await writeAuditReports(reportDir, { sourceGraph, crawlGraph: activeCrawlGraph, appIntent, runtimeWorkflowVerifications, ...critic })
+    const scenarioRuntimeIssues = scenarioIssues(scenarioRuns)
+    const uxMode = (typeof args['ux-critic'] === 'string'
+      ? args['ux-critic']
+      : scenarioSlug ? 'deterministic' : 'off') as UxCriticMode
+    const uxHeuristicResult = uxMode === 'off'
+      ? { uxIssues: [], accessibilityIssues: [] }
+      : await runUxHeuristicAudit({ url, reportDir, sourceGraph, crawlGraph: activeCrawlGraph })
+    const uxCandidateIssues = [...uxHeuristicResult.uxIssues, ...uxHeuristicResult.accessibilityIssues]
+    const uxCritic = await critiqueUx({
+      mode: uxMode,
+      provider,
+      sourceGraph,
+      crawlGraph: activeCrawlGraph,
+      candidateIssues: uxCandidateIssues
+    })
+    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...uxCandidateIssues, ...uxCritic.issues]
+    const shouldUseLlmTriage = (criticMode === 'llm' || uxMode === 'llm') && provider?.triageIssues
+    const triagedIssues = shouldUseLlmTriage
+      ? await provider.triageIssues!({
+        sourceGraph,
+        crawlGraph: activeCrawlGraph,
+        runtimeWorkflowVerifications,
+        rawFindings,
+        question_for_triage: 'Group raw findings into repair-sized themes and preserve severe API issues.'
+      })
+      : triageIssues({ rawFindings, sourceGraph, workflowVerifications: runtimeWorkflowVerifications })
+    await writeAuditReports(reportDir, {
+      sourceGraph,
+      crawlGraph: activeCrawlGraph,
+      appIntent,
+      runtimeWorkflowVerifications,
+      scenarioRuns,
+      ...critic,
+      rawFindings,
+      issues: triagedIssues,
+      uxCriticFindings: uxCritic.uxCriticFindings
+    })
     console.log(`Wrote ${path.join(reportDir, 'latest_report.md')}`)
     return
   }
@@ -198,7 +241,7 @@ function printHelp(): void {
 Commands:
   sniffer discover --repo <path>
   sniffer crawl --url <url>
-  sniffer audit --repo <path> --url <url> [--use-llm] [--provider mock|openai|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0]
+  sniffer audit --repo <path> --url <url> [--scenario all|generate-plan-bundle|review-plan-output] [--ux-critic off|deterministic|llm] [--use-llm] [--provider mock|openai|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0]
   sniffer generate-fixes --report <path>
   sniffer apply-fix --issue <issue_id> --report <path> [--agent manual|mock|codex]
   sniffer verify --issue <issue_id> --url <url> --report <path>

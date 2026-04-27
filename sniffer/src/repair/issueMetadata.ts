@@ -45,9 +45,16 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
       files.add(apiCall.sourceFile)
       if (apiCall.endpoint.includes('/api/repos/') && apiCall.endpoint.includes('learning-status')) {
         addLearningStatusSuspects(files, sourceGraph, issue)
-      } else if (apiCall.endpoint.includes('/api/repos/validate-target') || apiCall.endpoint.includes('/api/workspaces')) {
+      } else if (apiCall.endpoint.includes('/api/workspaces')) {
+        files.add(apiCall.sourceFile)
         files.add('src/api.ts')
         files.add('src/App.tsx')
+        files.add('../server/routes/workspaces.py')
+      } else if (apiCall.endpoint.includes('/api/repos/validate-target')) {
+        files.add(apiCall.sourceFile)
+        files.add('src/api.ts')
+        files.add('src/App.tsx')
+        files.add('../server/routes/repos.py')
       }
     }
   }
@@ -55,8 +62,18 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
   if (issue.type === 'console_error' || issue.type === 'api_error' || evidence.includes('/api/')) {
     files.add('src/api.ts')
   }
-  if (issue.type === 'missing_ui_surface' || issue.type === 'missing_form_control' || issue.type === 'broken_interaction') {
+  if ([
+    'missing_ui_surface',
+    'missing_form_control',
+    'broken_interaction',
+    'workflow_confusion',
+    'usability_issue',
+    'layout_issue',
+    'accessibility_issue',
+    'visual_clutter'
+  ].includes(issue.type)) {
     files.add('src/App.tsx')
+    sourceGraph.uiSurfaces.forEach((surface) => files.add(surface.file))
   }
 
   return [...files].sort()

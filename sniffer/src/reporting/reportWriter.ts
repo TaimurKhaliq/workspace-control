@@ -1,27 +1,41 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppIntent, CandidateFinding, CrawlGraph, Issue, RuntimeWorkflowVerification, SnifferReport, SourceGraph, WorkflowCriticDecision } from '../types.js'
+import type { AppIntent, CandidateFinding, CrawlGraph, Issue, RuntimeWorkflowVerification, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 import { enrichIssues } from '../repair/issueMetadata.js'
+import { triageIssues } from '../heuristics/issueTriage.js'
 
 export async function writeAuditReports(reportDir: string, input: {
   sourceGraph: SourceGraph
   crawlGraph: CrawlGraph
   appIntent: AppIntent
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
+  scenarioRuns?: ScenarioRun[]
   criticDecisions?: WorkflowCriticDecision[]
+  uxCriticFindings?: UxCriticFinding[]
   deferredFindings?: CandidateFinding[]
   blockedChecks?: CandidateFinding[]
   needsMoreCrawling?: CandidateFinding[]
+  rawFindings?: Issue[]
   issues: Issue[]
 }): Promise<SnifferReport> {
   await mkdir(reportDir, { recursive: true })
-  const enrichedIssues = enrichIssues(input.issues, input.sourceGraph, input.crawlGraph)
+  const rawFindings = enrichIssues(input.rawFindings ?? input.issues, input.sourceGraph, input.crawlGraph)
+  const triagedIssues = input.rawFindings
+    ? enrichIssues(input.issues, input.sourceGraph, input.crawlGraph)
+    : enrichIssues(triageIssues({
+      rawFindings,
+      sourceGraph: input.sourceGraph,
+      workflowVerifications: input.runtimeWorkflowVerifications
+    }), input.sourceGraph, input.crawlGraph)
   const report: SnifferReport = {
     ...input,
-    issues: enrichedIssues,
+    rawFindings,
+    issues: triagedIssues,
+    scenarioRuns: input.scenarioRuns ?? [],
     criticDecisions: input.criticDecisions ?? [],
+    uxCriticFindings: input.uxCriticFindings ?? [],
     deferredFindings: input.deferredFindings ?? [],
     blockedChecks: input.blockedChecks ?? [],
     needsMoreCrawling: input.needsMoreCrawling ?? [],
@@ -33,14 +47,15 @@ export async function writeAuditReports(reportDir: string, input: {
   await writeJson(path.join(reportDir, 'crawl_graph.json'), input.crawlGraph)
   await writeJson(path.join(reportDir, 'latest_report.json'), report)
   await writeFile(path.join(reportDir, 'latest_report.md'), renderMarkdown(report), 'utf8')
-  await writeFile(path.join(reportDir, 'fix_prompts.md'), renderFixPrompts(enrichedIssues), 'utf8')
+  await writeFile(path.join(reportDir, 'fix_prompts.md'), renderFixPrompts(triagedIssues), 'utf8')
   return report
 }
 
 export function renderMarkdown(report: SnifferReport): string {
-  const issues = report.issues.length === 0
-    ? 'No likely real UI bugs found by deterministic checks.'
-    : report.issues.map((issue, index) => [
+  const rawFindings = report.rawFindings ?? report.issues
+  const rawAppendix = rawFindings.length === 0
+    ? 'No raw findings recorded.'
+    : rawFindings.map((issue, index) => [
       `## ${index + 1}. ${issue.title}`,
       '',
       `- Severity: ${issue.severity}`,
@@ -75,6 +90,8 @@ export function renderMarkdown(report: SnifferReport): string {
     `- Actions attempted: ${report.crawlGraph.actions.length}`,
     `- Console errors: ${report.crawlGraph.consoleErrors.length}`,
     `- Network failures: ${report.crawlGraph.networkFailures.length}`,
+    `- Raw findings: ${rawFindings.length}`,
+    `- Triaged issues / repair groups: ${report.issues.length}`,
     '',
     '## Source UI Surfaces',
     '',
@@ -84,6 +101,30 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderWorkflowSummary(report),
     '',
+    '## Scenario Runs',
+    '',
+    renderScenarioSummary(report),
+    '',
+    '## Functional/API Issues',
+    '',
+    renderIssueGroup(report, ['functional_bug', 'api_error', 'console_error', 'network_error', 'broken_navigation', 'broken_interaction', 'broken_form', 'missing_form_control']),
+    '',
+    '## Workflow Scenario Issues',
+    '',
+    renderIssueGroup(report, ['workflow_confusion']),
+    '',
+    '## UX/Layout Issues',
+    '',
+    renderIssueGroup(report, ['usability_issue', 'layout_issue', 'visual_clutter']),
+    '',
+    '## Accessibility Issues',
+    '',
+    renderIssueGroup(report, ['accessibility_issue']),
+    '',
+    '## UX Critic Findings',
+    '',
+    renderUxCriticSummary(report),
+    '',
     '## Actionable Fix Packets',
     '',
     renderFixPacketSummary(report),
@@ -92,11 +133,60 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderCriticSummary(report),
     '',
-    '## Issues',
+    '## Triaged Repair Groups',
     '',
-    issues,
+    renderTriagedIssues(report),
+    '',
+    '## Raw Findings Appendix',
+    '',
+    rawAppendix,
     ''
   ].join('\n')
+}
+
+function renderTriagedIssues(report: SnifferReport): string {
+  if (report.issues.length === 0) return 'No triaged repair groups found.'
+  return report.issues.map((issue, index) => [
+    `### ${index + 1}. ${issue.title}`,
+    '',
+    `- Severity: ${issue.severity}`,
+    `- Type: ${issue.type}`,
+    `- Issue ID: ${issue.issue_id ?? 'unknown'}`,
+    `- Description: ${issue.description}`,
+    `- Evidence: ${issue.evidence.join('; ')}`,
+    `- Suspected files: ${issue.suspected_files?.join(', ') || 'unknown'}`,
+    issue.screenshotPath ? `- Screenshot: ${issue.screenshotPath}` : undefined
+  ].filter(Boolean).join('\n')).join('\n\n')
+}
+
+function renderScenarioSummary(report: SnifferReport): string {
+  const runs = report.scenarioRuns ?? []
+  if (runs.length === 0) return 'No scenario packs were run.'
+  return runs.map((run) => [
+    `### ${run.name}`,
+    '',
+    `- Status: ${run.status}`,
+    `- Prerequisites: ${run.prerequisites.join(', ') || 'none'}`,
+    `- Steps attempted: ${run.stepsAttempted.join(', ') || 'none'}`,
+    `- Screenshots: ${run.screenshots.join(', ') || 'none'}`,
+    `- Failed assertions: ${run.assertions.filter((assertion) => assertion.status === 'failed').map((assertion) => assertion.label).join(', ') || 'none'}`
+  ].join('\n')).join('\n\n')
+}
+
+function renderIssueGroup(report: SnifferReport, types: Issue['type'][]): string {
+  const issues = report.issues.filter((issue) => types.includes(issue.type))
+  if (issues.length === 0) return 'None found.'
+  return issues.map((issue) => `- ${issue.severity} ${issue.type}: ${issue.title} (${issue.issue_id ?? 'unknown'})`).join('\n')
+}
+
+function renderUxCriticSummary(report: SnifferReport): string {
+  const findings = report.uxCriticFindings ?? []
+  if (findings.length === 0) return 'No LLM UX critic findings recorded.'
+  return findings.map((finding) => [
+    `- ${finding.severity} ${finding.type}: ${finding.title}`,
+    `  - Reported: ${finding.should_report ? 'yes' : 'no'}`,
+    `  - Evidence: ${finding.evidence.join('; ')}`
+  ].join('\n')).join('\n')
 }
 
 function renderCriticSummary(report: SnifferReport): string {

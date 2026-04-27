@@ -4,6 +4,8 @@ import type { FixPacket, Issue, SnifferReport } from '../types.js'
 import { writeJson } from '../reporting/json.js'
 import { assertSafeFixPacket, isActionableIssue } from './safety.js'
 import { resolveRepairPathPolicy } from './pathPolicy.js'
+import { enrichIssues } from './issueMetadata.js'
+import { triageIssues } from '../heuristics/issueTriage.js'
 
 export async function loadReport(reportPath: string): Promise<SnifferReport> {
   return JSON.parse(await readFile(reportPath, 'utf8')) as SnifferReport
@@ -50,7 +52,14 @@ export async function generateFixPackets(reportPath: string, allowDestructive = 
   await clearPacketDir(packetDir)
   const packets: FixPacket[] = []
 
-  for (const issue of report.issues.filter(isActionableIssue).filter((issue) => issue.critic_decision?.should_generate_fix_packet !== false)) {
+  const packetIssues = report.rawFindings
+    ? enrichIssues(report.issues, report.sourceGraph, report.crawlGraph)
+    : enrichIssues(triageIssues({
+      rawFindings: enrichIssues(report.issues, report.sourceGraph, report.crawlGraph),
+      sourceGraph: report.sourceGraph,
+      workflowVerifications: report.runtimeWorkflowVerifications
+    }), report.sourceGraph, report.crawlGraph)
+  for (const issue of packetIssues.filter(isActionableIssue).filter((issue) => issue.critic_decision?.should_generate_fix_packet !== false)) {
     const packet = createFixPacket(issue, report, reportPath)
     assertSafeFixPacket(packet, allowDestructive)
     await writeJson(path.join(packetDir, `${issue.issue_id}.json`), packet)

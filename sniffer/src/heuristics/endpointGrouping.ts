@@ -14,6 +14,8 @@ interface EndpointFailureGroup {
   urls: string[]
   targetIds: string[]
   messages: string[]
+  statusCodes: number[]
+  responseBodies: string[]
 }
 
 export function normalizeEndpoint(input: { url: string; method?: string }): NormalizedEndpoint | undefined {
@@ -65,7 +67,7 @@ export function groupedEndpointIssues(input: {
   for (const failure of input.networkFailures) {
     const normalized = normalizeEndpoint({ url: failure.url, method: failure.method })
     if (!normalized) continue
-    addToGroup(groups, normalized, failure.failureText)
+    addToGroup(groups, normalized, failure.failureText, failure.statusCode, failure.responseBody)
   }
 
   return [...groups.values()].map((group) => {
@@ -83,7 +85,7 @@ export function groupedEndpointIssues(input: {
       : 'Expected behavior: API endpoints should return controlled responses that the UI can handle.'
 
     return {
-      severity: group.messages.some((message) => /500|internal server error/i.test(message)) ? 'high' : 'medium',
+      severity: group.messages.some((message) => /500|internal server error/i.test(message)) || group.statusCodes.some((code) => code >= 500) ? 'high' : 'medium',
       type: 'api_error',
       title,
       description: [
@@ -93,9 +95,12 @@ export function groupedEndpointIssues(input: {
       evidence: [
         `endpoint_pattern: ${group.method} ${group.pattern}`,
         `count: ${group.urls.length}`,
+        `method: ${group.method}`,
+        ...group.statusCodes.map((code) => `status_code: ${code}`),
         ...group.targetIds.map((id) => `target_id: ${id}`),
         ...group.urls.map((url) => `url: ${url}`),
-        ...[...new Set(group.messages)].map((message) => `console_error: ${message}`)
+        ...[...new Set(group.messages)].map((message) => `runtime_error: ${message}`),
+        ...[...new Set(group.responseBodies)].filter(Boolean).map((body) => `response_body: ${body}`)
       ],
       screenshotPath: input.screenshotPath,
       suggestedFixPrompt: [
@@ -113,7 +118,7 @@ export function evidenceHasGroupedEndpoint(issue: Issue, pattern: string): boole
   return issue.evidence.some((item) => item.includes(pattern))
 }
 
-function addToGroup(groups: Map<string, EndpointFailureGroup>, endpoint: NormalizedEndpoint, message: string): void {
+function addToGroup(groups: Map<string, EndpointFailureGroup>, endpoint: NormalizedEndpoint, message: string, statusCode?: number, responseBody?: string): void {
   const key = `${endpoint.method} ${endpoint.pattern}`
   const group = groups.get(key) ?? {
     key,
@@ -121,10 +126,14 @@ function addToGroup(groups: Map<string, EndpointFailureGroup>, endpoint: Normali
     pattern: endpoint.pattern,
     urls: [],
     targetIds: [],
-    messages: []
+    messages: [],
+    statusCodes: [],
+    responseBodies: []
   }
   if (!group.urls.includes(endpoint.url)) group.urls.push(endpoint.url)
   if (endpoint.targetId && !group.targetIds.includes(endpoint.targetId)) group.targetIds.push(endpoint.targetId)
   group.messages.push(message)
+  if (statusCode && !group.statusCodes.includes(statusCode)) group.statusCodes.push(statusCode)
+  if (responseBody && !group.responseBodies.includes(responseBody)) group.responseBodies.push(responseBody)
   groups.set(key, group)
 }

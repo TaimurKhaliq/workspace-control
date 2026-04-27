@@ -39,6 +39,23 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
       failureText: request.failure()?.errorText ?? 'request failed'
     })
   })
+  page.on('response', async (response) => {
+    const request = response.request()
+    if (response.ok() || !response.url().includes('/api/')) return
+    let body = ''
+    try {
+      body = (await response.text()).replace(/\s+/g, ' ').trim().slice(0, 1000)
+    } catch {
+      body = ''
+    }
+    networkFailures.push({
+      url: response.url(),
+      method: request.method(),
+      failureText: `HTTP ${response.status()} ${response.statusText()}`.trim(),
+      statusCode: response.status(),
+      responseBody: body
+    })
+  })
 
   await page.goto(url, { waitUntil: 'domcontentloaded' })
   let stale = 0

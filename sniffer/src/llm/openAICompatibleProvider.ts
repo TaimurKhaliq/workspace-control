@@ -1,5 +1,5 @@
 import type { AppIntent } from '../types.js'
-import type { SnifferCriticContext, WorkflowCriticDecision } from '../types.js'
+import type { Issue, IssueTriageContext, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 
 type ApiStyle = 'responses' | 'chat_completions' | 'auto'
@@ -67,6 +67,55 @@ export class OpenAICompatibleProvider implements LlmProvider {
     ].join('\n\n')
     const text = await this.complete(prompt)
     return JSON.parse(text) as WorkflowCriticDecision
+  }
+
+  async critiqueUx(context: UxCriticContext): Promise<UxCriticFinding[]> {
+    if (!this.isConfigured()) throw new Error('LLM provider is not configured')
+    const prompt = [
+      'You are a UI/UX critic for a context-aware QA agent.',
+      'Use app purpose, source workflow, visible DOM controls, screenshots paths, known state, and candidate heuristic issues.',
+      'Decide whether the screen is usable for the workflow and identify confusing, broken, cluttered, unreadable, or inaccessible UI.',
+      'Do not suggest destructive actions. Return structured JSON only.',
+      'Return exactly this shape:',
+      '{"ux_findings":[{"title":"...","severity":"critical|high|medium|low","type":"usability_issue|layout_issue|accessibility_issue|workflow_confusion|visual_clutter","evidence":["..."],"suggested_fix":"...","should_report":true}]}',
+      JSON.stringify(context)
+    ].join('\n\n')
+    const text = await this.complete(prompt)
+    const parsed = JSON.parse(text) as { ux_findings?: UxCriticFinding[] }
+    return parsed.ux_findings ?? []
+  }
+
+  async triageIssues(context: IssueTriageContext): Promise<Issue[]> {
+    if (!this.isConfigured()) throw new Error('LLM provider is not configured')
+    const compact = {
+      sourceGraph: {
+        repoPath: context.sourceGraph.repoPath,
+        framework: context.sourceGraph.framework,
+        buildTool: context.sourceGraph.buildTool,
+        workflows: context.sourceGraph.sourceWorkflows,
+        apiCalls: context.sourceGraph.apiCalls,
+        uiSurfaces: context.sourceGraph.uiSurfaces
+      },
+      runtimeWorkflowVerifications: context.runtimeWorkflowVerifications,
+      crawl: {
+        startUrl: context.crawlGraph.startUrl,
+        finalUrl: context.crawlGraph.finalUrl,
+        screenshots: context.crawlGraph.screenshots,
+        consoleErrors: context.crawlGraph.consoleErrors,
+        networkFailures: context.crawlGraph.networkFailures
+      },
+      rawFindings: context.rawFindings
+    }
+    const prompt = [
+      'You are triaging raw Sniffer UI QA findings into repair-sized groups.',
+      'Group tiny missing-control findings into actionable themes. Preserve severe API issues. Mark likely locator/test issues as inconclusive in the evidence or status.',
+      'Return JSON only with this shape:',
+      '{"issues":[{"severity":"critical|high|medium|low","type":"functional_bug|api_error|workflow_confusion|layout_issue|usability_issue|accessibility_issue|inconclusive","title":"...","description":"...","evidence":["..."],"suggestedFixPrompt":"...","screenshotPath":"..."}]}',
+      JSON.stringify(compact)
+    ].join('\n\n')
+    const text = await this.complete(prompt)
+    const parsed = JSON.parse(text) as { issues?: Issue[] }
+    return parsed.issues ?? []
   }
 
   private async complete(prompt: string): Promise<string> {
