@@ -591,6 +591,37 @@ pre {
   gap: 0.75rem;
 }
 
+.semantic-toggle {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-hover);
+  color: var(--text);
+  padding: 0.7rem 0.75rem;
+}
+
+.semantic-toggle span {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-weight: 700;
+}
+
+.semantic-toggle input {
+  width: auto;
+  accent-color: var(--primary);
+}
+
+.semantic-toggle small {
+  color: var(--muted);
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.semantic-toggle.disabled {
+  background: var(--surface-subtle);
+  color: var(--muted);
+}
+
 .example-row {
   display: flex;
   flex-wrap: wrap;
@@ -645,6 +676,18 @@ pre {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(260px, 0.8fr);
   gap: 0.85rem;
+}
+
+.overview-main {
+  display: grid;
+  gap: 1rem;
+}
+
+.semantic-summary {
+  display: grid;
+  gap: 0.55rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.9rem;
 }
 
 .metric-grid,

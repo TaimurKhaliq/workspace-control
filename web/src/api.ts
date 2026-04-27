@@ -28,6 +28,15 @@ export type RepoTargetValidation = {
   warnings: string[];
 };
 
+export type SemanticStatus = {
+  configured: boolean;
+  provider: string | null;
+  model: string | null;
+  api_style: string;
+  cached_artifact_available: boolean;
+  available: boolean;
+};
+
 export type PlanBundleChangeItem = {
   repo_name: string;
   path: string;
@@ -110,6 +119,23 @@ export type PlanBundle = {
     confidence: 'high' | 'medium' | 'low';
     reason: string;
   }>;
+  semantic_enrichment?: {
+    available?: boolean;
+    model_info?: Record<string, unknown>;
+    feature_spec?: {
+      technical_intents?: string[];
+      technical_intent_labels?: string[];
+      missing_details?: string[];
+      clarifying_questions?: string[];
+      [key: string]: unknown;
+    };
+    technical_intent_labels?: string[];
+    caveats?: string[];
+    [key: string]: unknown;
+  };
+  semantic_missing_details?: string[];
+  semantic_clarifying_questions?: string[];
+  semantic_caveats?: string[];
   validation: {
     commands: string[];
     notes: string[];
@@ -189,9 +215,19 @@ export function refreshLearning(targetId: string) {
   return request(`/api/repos/${targetId}/refresh-learning`, { method: 'POST' });
 }
 
-export function generatePlanBundle(workspaceId: string, featureRequest: string, targetIds: string[]) {
+export function getSemanticStatus(targetId?: string) {
+  const suffix = targetId ? `?target_id=${encodeURIComponent(targetId)}` : '';
+  return request<SemanticStatus>(`/api/semantic/status${suffix}`);
+}
+
+export function generatePlanBundle(
+  workspaceId: string,
+  featureRequest: string,
+  targetIds: string[],
+  useSemantic = false
+) {
   return request<PlanBundleResponse>(`/api/workspaces/${workspaceId}/plan-bundles`, {
     method: 'POST',
-    body: JSON.stringify({ feature_request: featureRequest, target_ids: targetIds })
+    body: JSON.stringify({ feature_request: featureRequest, target_ids: targetIds, use_semantic: useSemantic })
   });
 }

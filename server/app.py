@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from server.db import configured_db_path, init_db
-from server.routes import learning, plan_bundles, repos, workspaces
+from server.routes import learning, plan_bundles, repos, semantic, workspaces
 
 
 def create_app(
@@ -46,6 +46,7 @@ def create_app(
     app.include_router(workspaces.router)
     app.include_router(repos.router)
     app.include_router(learning.router)
+    app.include_router(semantic.router)
     app.include_router(plan_bundles.router)
     return app
 

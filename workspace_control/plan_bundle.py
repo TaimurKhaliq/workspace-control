@@ -19,6 +19,7 @@ from app.services.repo_learning import DEFAULT_LEARNING_REPORT_ROOT, DEFAULT_LEA
 from app.services.repo_paths import repo_path_for
 from app.services.repo_target_validator import RepoTargetValidator
 from app.services.semantic_enrichment import semantic_intent_labels_for_result
+from workspace_control.semantic import semantic_explanation_payload
 
 from .models import ChangeProposal, CombinedRecommendation, FeatureImpact, FeaturePlan, InventoryRow
 
@@ -178,6 +179,7 @@ class PlanBundle(BaseModel):
     matched_recipes: list[PlanBundleRecipe] = Field(default_factory=list)
     concept_grounding: list[PlanBundleConceptGrounding] = Field(default_factory=list)
     source_graph_evidence: list[PlanBundleGraphEvidence] = Field(default_factory=list)
+    semantic_enrichment: dict[str, Any] = Field(default_factory=dict)
     semantic_missing_details: list[str] = Field(default_factory=list)
     semantic_clarifying_questions: list[str] = Field(default_factory=list)
     semantic_caveats: list[str] = Field(default_factory=list)
@@ -252,6 +254,7 @@ def create_plan_bundle(
         matched_recipes=matched_recipes,
         concept_grounding=_concept_grounding(plan),
         source_graph_evidence=graph_evidence,
+        semantic_enrichment=semantic_explanation_payload(semantic_result),
         semantic_missing_details=list(plan.semantic_missing_details or proposal.semantic_missing_details),
         semantic_clarifying_questions=list(plan.semantic_clarifying_questions or proposal.semantic_clarifying_questions),
         semantic_caveats=list(plan.semantic_caveats or proposal.semantic_caveats),

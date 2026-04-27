@@ -60,6 +60,16 @@ class PlanBundleCreate(BaseModel):
     feature_request: str = Field(min_length=1)
     target_ids: list[str] | None = None
     include_debug: bool = False
+    use_semantic: bool = False
+
+
+class SemanticStatusResponse(BaseModel):
+    configured: bool
+    provider: str | None = None
+    model: str | None = None
+    api_style: str
+    cached_artifact_available: bool = False
+    available: bool = False
 
 
 class PlanRunOut(BaseModel):

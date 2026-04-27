@@ -75,6 +75,7 @@ def create_plan_bundle_run(
             feature_request=payload.feature_request,
             registry_path=Path(request.app.state.registry_path),
             include_debug=payload.include_debug,
+            use_semantic=payload.use_semantic,
         )
     except Exception as exc:
         db.execute(

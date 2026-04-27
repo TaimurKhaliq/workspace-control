@@ -8,19 +8,21 @@ import {
   createWorkspace,
   discoverRepo,
   generatePlanBundle,
+  getSemanticStatus,
   learningStatus,
   listRepos,
   refreshLearning,
   listWorkspaces,
   validateRepoTarget,
-  RepoTargetValidation
+  RepoTargetValidation,
+  SemanticStatus
 } from './api';
 
 const DEFAULT_PROMPT = 'Add OwnersPage (no actions yet)';
 const RECENT_PATHS_KEY = 'stackpilot.recentRepoPaths';
 
 type PlanTab = 'overview' | 'changes' | 'recipes' | 'graph' | 'validation' | 'handoff' | 'json';
-type SourceFilter = 'all' | 'planner' | 'recipe' | 'both';
+type SourceFilter = 'all' | 'planner' | 'recipe' | 'semantic_enrichment' | 'both';
 type ActionFilter = 'all' | 'modify' | 'create' | 'inspect' | 'inspect-only';
 type SectionFilter = 'all' | 'frontend' | 'backend' | 'api' | 'persistence' | 'config' | 'unknown';
 
@@ -55,10 +57,32 @@ export default function App() {
   const [selectedChange, setSelectedChange] = useState<PlanBundleChangeItem | null>(null);
   const [recentPaths, setRecentPaths] = useState<string[]>(() => loadRecentPaths());
   const [folderPickerNote, setFolderPickerNote] = useState('');
+  const [semanticStatus, setSemanticStatus] = useState<SemanticStatus | null>(null);
+  const [useSemantic, setUseSemantic] = useState(false);
+  const [lastRunUsedSemantic, setLastRunUsedSemantic] = useState(false);
 
   useEffect(() => {
     void refreshWorkspaces();
   }, []);
+
+  useEffect(() => {
+    void getSemanticStatus(selectedTargetId || undefined)
+      .then((status) => {
+        setSemanticStatus(status);
+        if (!status.available) setUseSemantic(false);
+      })
+      .catch(() => {
+        setSemanticStatus({
+          configured: false,
+          provider: null,
+          model: null,
+          api_style: 'auto',
+          cached_artifact_available: false,
+          available: false
+        });
+        setUseSemantic(false);
+      });
+  }, [selectedTargetId]);
 
   useEffect(() => {
     if (selectedWorkspaceId) {
@@ -203,12 +227,14 @@ export default function App() {
   async function onGeneratePlan(event: FormEvent) {
     event.preventDefault();
     if (!selectedWorkspaceId || !selectedTargetId) return;
+    const semanticEnabled = Boolean(useSemantic && semanticStatus?.available);
     const result = await runTask('Generating Plan Bundle', () =>
-      generatePlanBundle(selectedWorkspaceId, featureRequest, [selectedTargetId])
+      generatePlanBundle(selectedWorkspaceId, featureRequest, [selectedTargetId], semanticEnabled)
     );
     if (!result) return;
     setRunId(result.run_id);
     setPlanBundle(result.plan_bundle);
+    setLastRunUsedSemantic(semanticEnabled);
     setActivePlanTab('overview');
   }
 
@@ -273,8 +299,11 @@ export default function App() {
               repos={repos}
               runId={runId}
               busy={busy}
+              semanticStatus={semanticStatus}
+              useSemantic={useSemantic}
               onPromptChange={setFeatureRequest}
               onTargetChange={setSelectedTargetId}
+              onUseSemanticChange={setUseSemantic}
               onSubmit={onGeneratePlan}
             />
 
@@ -290,6 +319,7 @@ export default function App() {
                 onActionFilterChange={setActionFilter}
                 onSectionFilterChange={setSectionFilter}
                 selectedChange={selectedChange}
+                semanticEnabled={lastRunUsedSemantic}
                 onSelectChange={setSelectedChange}
               />
             ) : (
@@ -724,8 +754,11 @@ function PromptComposer({
   repos,
   runId,
   busy,
+  semanticStatus,
+  useSemantic,
   onPromptChange,
   onTargetChange,
+  onUseSemanticChange,
   onSubmit
 }: {
   featureRequest: string;
@@ -733,10 +766,19 @@ function PromptComposer({
   repos: RepoTarget[];
   runId: string;
   busy: string;
+  semanticStatus: SemanticStatus | null;
+  useSemantic: boolean;
   onPromptChange: (value: string) => void;
   onTargetChange: (value: string) => void;
+  onUseSemanticChange: (value: boolean) => void;
   onSubmit: (event: FormEvent) => void;
 }) {
+  const semanticAvailable = Boolean(semanticStatus?.available);
+  const semanticHelpText = semanticStatus?.configured
+    ? `${semanticStatus.provider ?? 'semantic provider'} · ${semanticStatus.model ?? 'model'} · ${semanticStatus.api_style ?? 'auto'}`
+    : semanticStatus?.cached_artifact_available
+      ? 'Latest cached semantic enrichment is available for this target.'
+      : 'Semantic enrichment requires provider configuration or a cached target artifact.';
   return (
     <section className="composer-card">
       <div className="section-heading compact">
@@ -758,6 +800,18 @@ function PromptComposer({
                   <option key={repo.id} value={repo.target_id}>{repo.target_id}</option>
                 ))}
               </select>
+            </label>
+            <label className={`semantic-toggle ${semanticAvailable ? '' : 'disabled'}`}>
+              <span>
+                <input
+                  type="checkbox"
+                  checked={useSemantic && semanticAvailable}
+                  disabled={!semanticAvailable}
+                  onChange={(event) => onUseSemanticChange(event.target.checked)}
+                />
+                Use semantic enrichment
+              </span>
+              <small>{semanticHelpText}</small>
             </label>
             <button type="submit" disabled={!selectedTargetId || Boolean(busy)}>
               {busy === 'Generating Plan Bundle' ? 'Generating...' : 'Generate Plan Bundle'}
@@ -791,6 +845,7 @@ function PlanBundleView({
   onActionFilterChange,
   onSectionFilterChange,
   selectedChange,
+  semanticEnabled,
   onSelectChange
 }: {
   bundle: PlanBundle;
@@ -803,6 +858,7 @@ function PlanBundleView({
   onActionFilterChange: (value: ActionFilter) => void;
   onSectionFilterChange: (value: SectionFilter) => void;
   selectedChange: PlanBundleChangeItem | null;
+  semanticEnabled: boolean;
   onSelectChange: (item: PlanBundleChangeItem) => void;
 }) {
   const filteredChanges = bundle.recommended_change_set.filter((item) => {
@@ -823,6 +879,10 @@ function PlanBundleView({
         <div className="bundle-chips">
           <StatusChip label={bundle.summary.confidence} tone={bundle.summary.confidence === 'high' ? 'good' : bundle.summary.confidence === 'medium' ? 'warn' : 'danger'} />
           <StatusChip label={bundle.summary.planning_mode} tone="muted" />
+          <StatusChip
+            label={`Semantic enrichment: ${bundle.semantic_enrichment?.available ? 'On' : semanticEnabled ? 'Requested' : 'Off'}`}
+            tone={bundle.semantic_enrichment?.available ? 'good' : semanticEnabled ? 'warn' : 'muted'}
+          />
           {bundle.summary.detected_intents.map((intent) => <StatusChip key={intent} label={intent} tone="good" />)}
         </div>
       </div>
@@ -872,6 +932,10 @@ function Tabs({ active, onChange }: { active: PlanTab; onChange: (tab: PlanTab) 
 }
 
 function OverviewTab({ bundle }: { bundle: PlanBundle }) {
+  const semanticLabels = bundle.semantic_enrichment?.technical_intent_labels ?? bundle.semantic_enrichment?.feature_spec?.technical_intent_labels ?? [];
+  const semanticMissing = bundle.semantic_missing_details ?? bundle.semantic_enrichment?.feature_spec?.missing_details ?? [];
+  const semanticQuestions = bundle.semantic_clarifying_questions ?? bundle.semantic_enrichment?.feature_spec?.clarifying_questions ?? [];
+  const semanticCaveats = bundle.semantic_caveats ?? bundle.semantic_enrichment?.caveats ?? [];
   return (
     <div className="overview-grid">
       <section className="overview-main card-panel">
@@ -888,6 +952,20 @@ function OverviewTab({ bundle }: { bundle: PlanBundle }) {
             New domain candidate: {bundle.summary.new_domain_candidates.join(', ')}. Plan conservatively until source structure confirms it.
           </div>
         )}
+        {bundle.semantic_enrichment?.available && (
+          <div className="semantic-summary">
+            <h3>Semantic enrichment</h3>
+            <div className="chip-row">
+              <StatusChip label="semantic_enrichment" tone="good" />
+              {semanticLabels.slice(0, 10).map((label) => <StatusChip key={label} label={label} tone="muted" />)}
+            </div>
+            {bundle.semantic_enrichment.model_info && (
+              <p className="muted">
+                Model: {String(bundle.semantic_enrichment.model_info.model ?? bundle.semantic_enrichment.model_info.provider ?? 'configured provider')}
+              </p>
+            )}
+          </div>
+        )}
       </section>
       <section className="card-panel caveat-panel">
         <h3>Key caveats</h3>
@@ -895,7 +973,10 @@ function OverviewTab({ bundle }: { bundle: PlanBundle }) {
         {bundle.risks_and_caveats.slice(0, 5).map((risk, index) => (
           <Notice key={`${risk.source}-${index}`} tone={risk.severity === 'high' ? 'danger' : 'warning'} text={risk.message} />
         ))}
-        {bundle.target.warnings.length === 0 && bundle.risks_and_caveats.length === 0 && <p className="muted">No major caveats reported.</p>}
+        {semanticMissing.slice(0, 4).map((detail) => <Notice key={`semantic-missing-${detail}`} tone="warning" text={`Semantic missing detail: ${detail}`} />)}
+        {semanticQuestions.slice(0, 4).map((question) => <Notice key={`semantic-question-${question}`} tone="info" text={`Question: ${question}`} />)}
+        {semanticCaveats.slice(0, 4).map((caveat) => <Notice key={`semantic-caveat-${caveat}`} tone="warning" text={`Semantic caveat: ${caveat}`} />)}
+        {bundle.target.warnings.length === 0 && bundle.risks_and_caveats.length === 0 && semanticMissing.length === 0 && semanticQuestions.length === 0 && semanticCaveats.length === 0 && <p className="muted">No major caveats reported.</p>}
       </section>
     </div>
   );
@@ -925,7 +1006,7 @@ function ChangeSetTab({
   return (
     <div className="change-set-layout">
       <div className="filter-row">
-        <FilterSelect label="Source" value={sourceFilter} values={['all', 'planner', 'recipe', 'both']} onChange={(value) => onSourceFilterChange(value as SourceFilter)} />
+        <FilterSelect label="Source" value={sourceFilter} values={['all', 'planner', 'recipe', 'semantic_enrichment', 'both']} onChange={(value) => onSourceFilterChange(value as SourceFilter)} />
         <FilterSelect label="Action" value={actionFilter} values={['all', 'modify', 'create', 'inspect', 'inspect-only']} onChange={(value) => onActionFilterChange(value as ActionFilter)} />
         <FilterSelect label="Section" value={sectionFilter} values={['all', 'frontend', 'backend', 'api', 'persistence', 'config', 'unknown']} onChange={(value) => onSectionFilterChange(value as SectionFilter)} />
       </div>
@@ -1132,6 +1213,20 @@ function RightInspector({ bundle, selectedChange }: { bundle: PlanBundle | null;
             <h3>Recipe evidence</h3>
             {bundle.matched_recipes.slice(0, 4).map((recipe) => <p key={recipe.recipe_id}>{recipe.recipe_type}: {recipe.structural_confidence.toFixed(2)}</p>)}
             {bundle.matched_recipes.length === 0 && <p className="muted">No matched recipes.</p>}
+          </div>
+          <div className="inspector-card compact-list">
+            <h3>Semantic enrichment</h3>
+            {bundle.semantic_enrichment?.available ? (
+              <>
+                <p>Status: enabled</p>
+                <p>Intents: {(bundle.semantic_enrichment.technical_intent_labels ?? []).slice(0, 8).join(', ') || '-'}</p>
+                {(bundle.semantic_missing_details ?? []).slice(0, 3).map((detail) => (
+                  <p key={detail} className="inline-risk warning">{detail}</p>
+                ))}
+              </>
+            ) : (
+              <p className="muted">Not used for this plan run.</p>
+            )}
           </div>
         </>
       )}
