@@ -129,12 +129,16 @@ async function executeStep(page: Page, step: ScenarioStep): Promise<void> {
       await clickFirst(page, [button(page, /add repo|add repository/i)])
       break
     case 'select_first_workspace':
-      await clickFirst(page, [button(page, /workspace/i), page.getByRole('link', { name: /workspace/i })])
+      if (await selectFirstOption(page.getByTestId('workspace-selector'))) break
+      await clickFirst(page, [page.getByTestId('workspace-item'), button(page, /select workspace/i), page.getByRole('link', { name: /workspace/i })])
       break
     case 'select_first_repo_target':
+      await clickFirst(page, [button(page, /^plan runs$/i)])
+      if (await selectFirstOption(page.getByTestId('target-repo-select'))) break
       await clickFirst(page, [button(page, /view details|select|repo|petclinic|target/i), page.getByText(/petclinic|repository target/i)])
       break
     case 'enter_sample_prompt':
+      await clickFirst(page, [button(page, /^plan runs$/i)])
       await fillFirst(page, [page.getByLabel(/feature request|prompt/i), page.getByPlaceholder(/feature|prompt|describe/i), page.getByRole('textbox', { name: /feature|prompt/i }), page.locator('textarea').first()], SAMPLE_PROMPT)
       break
     case 'click_generate_plan':
@@ -142,6 +146,7 @@ async function executeStep(page: Page, step: ScenarioStep): Promise<void> {
       await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
       break
     case 'open_plan_tabs':
+      await clickFirst(page, [button(page, /^plan runs$/i)])
       for (const label of [/overview/i, /change set|changes/i, /recipes/i, /graph evidence|graph/i, /validation/i, /handoff/i, /raw json|json/i]) {
         await clickFirst(page, [page.getByRole('tab', { name: label }), button(page, label)])
       }
@@ -224,6 +229,20 @@ async function fillFirst(page: Page, locators: Locator[], value: string): Promis
       return
     }
   }
+}
+
+async function selectFirstOption(locator: Locator): Promise<boolean> {
+  const first = locator.first()
+  if (!await isVisible(first)) return false
+  const values = await first.locator('option').evaluateAll((options) =>
+    options
+      .map((option) => (option as HTMLOptionElement).value)
+      .filter((value) => value.length > 0)
+  ).catch(() => [])
+  const value = values[0]
+  if (!value) return false
+  await first.selectOption(value, { timeout: 1_500 }).catch(() => undefined)
+  return true
 }
 
 async function isVisible(locator: Locator): Promise<boolean> {

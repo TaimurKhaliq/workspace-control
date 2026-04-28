@@ -10,6 +10,7 @@ export function triageIssues(input: TriageInput): Issue[] {
   const raw = markInconclusiveScenarioFindings(input.rawFindings, input.workflowVerifications)
   const groups: Issue[] = []
   groups.push(...raw.filter((issue) => ['api_error', 'console_error', 'network_error', 'functional_bug'].includes(issue.type)))
+  groups.push(...raw.filter((issue) => ['semantic_mismatch', 'stale_output'].includes(issue.type)))
   const addRepo = scenarioGroup(raw, /add repo target/i, 'Add repo target workflow is not reliably discoverable', 'The Add repo scenario failed to expose expected controls consistently.', 'Improve Add repo modal/form labels, role names, and visibility.')
   if (addRepo) groups.push(addRepo)
   const planOutput = scenarioGroup(raw, /review plan bundle tabs|copy handoff prompt|inspect raw json/i, 'Plan output review/copy workflow is incomplete or not discoverable', 'Plan output review, handoff copy, or raw JSON access failed during scenario execution.', 'Make generated plan output clearly navigable with Overview, Change Set, Recipes, Graph Evidence, Validation, Handoff, and Raw JSON tabs plus accessible copy actions.')
@@ -20,10 +21,12 @@ export function triageIssues(input: TriageInput): Issue[] {
   if (accessibility) groups.push(accessibility)
   const loading = groupedByTitle(raw, /loading|error states/i, 'Loading and error states need clearer user feedback', 'Async workflows do not consistently expose visible loading/error guidance.', 'Add localized loading and error states for validation, discovery, learning, and plan generation actions.')
   if (loading) groups.push(loading)
+  const productIntent = groupedByTypes(raw, ['product_intent_gap'], 'Plan run history is not usable for repeated prompt workflows', 'Product-intent evidence indicates repeated prompt workflows need browseable/reopenable plan runs.', 'Improve plan run browsing so users can see prior prompts by time/target/status, reopen previous plan bundles, and copy handoff prompts from prior runs.')
+  if (productIntent) groups.push(productIntent)
 
   const groupedIds = new Set(groups.flatMap((group) => childIds(group)))
   const ungrouped = raw.filter((issue) => !issue.issue_id || !groupedIds.has(issue.issue_id))
-    .filter((issue) => !['workflow_confusion', 'layout_issue', 'visual_clutter', 'accessibility_issue', 'usability_issue', 'api_error', 'console_error', 'network_error', 'functional_bug', 'inconclusive', 'test_bug'].includes(issue.type))
+    .filter((issue) => !['workflow_confusion', 'layout_issue', 'visual_clutter', 'accessibility_issue', 'usability_issue', 'product_intent_gap', 'semantic_mismatch', 'stale_output', 'api_error', 'console_error', 'network_error', 'functional_bug', 'inconclusive', 'test_bug'].includes(issue.type))
   return [...groups, ...ungrouped]
 }
 

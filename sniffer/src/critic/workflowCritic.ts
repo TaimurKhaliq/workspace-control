@@ -147,14 +147,21 @@ function precondition(candidate: CandidateFinding, required: string, action: Nex
 }
 
 function validateDecision(decision: WorkflowCriticDecision): WorkflowCriticDecision {
+  const shouldReport = decision.classification === 'real_bug' && decision.is_real_bug && decision.should_report
+  const shouldGenerateFixPacket = shouldReport && decision.should_generate_fix_packet
+  let normalized = {
+    ...decision,
+    should_report: shouldReport,
+    should_generate_fix_packet: shouldGenerateFixPacket
+  }
   if (decision.next_safe_action && !isSupportedSafeAction(decision.next_safe_action)) {
-    return {
-      ...decision,
+    normalized = {
+      ...normalized,
       next_safe_action: undefined,
       reasoning_summary: `${decision.reasoning_summary} Unsafe or unsupported next action was removed.`
     }
   }
-  return decision
+  return normalized
 }
 
 function isSupportedSafeAction(action: NextSafeAction): boolean {

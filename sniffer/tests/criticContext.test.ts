@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCriticContext } from '../src/critic/contextBuilder.js'
+import { buildCriticContext, inferKnownState } from '../src/critic/contextBuilder.js'
 import type { CandidateFinding, CrawlGraph, SourceGraph } from '../src/types.js'
 
 describe('buildCriticContext', () => {
@@ -18,6 +18,24 @@ describe('buildCriticContext', () => {
     expect(context.execution_trace.actions_attempted[0].label).toBe('Workspaces')
     expect(context.known_state.plan_bundle_generated).toBe(false)
     expect(context.omitted_counts).toHaveProperty('visible_controls')
+  })
+
+  it('treats active workspace DOM evidence as a selected workspace', () => {
+    const state = inferKnownState({
+      ...crawlGraph(),
+      states: [{
+        url: 'http://localhost:5173',
+        title: 'Demo',
+        hash: 'workspace',
+        visible: [
+          { kind: 'input', text: 'Taimur test - pet clinic', name: 'Workspace selector' },
+          { kind: 'button', text: 'Taimur test - pet clinic Updated · 4/28/2026 · Active workspace', name: 'Select workspace Taimur test - pet clinic' }
+        ]
+      }]
+    })
+
+    expect(state.workspace_exists).toBe(true)
+    expect(state.workspace_selected).toBe(true)
   })
 })
 

@@ -37,7 +37,18 @@ export async function runUxHeuristicAudit(input: {
     const screenshotPath = path.join(screenshotsDir, 'overview.png')
     await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined)
     const snapshot = await page.evaluate(`(() => {
-      const text = (el) => (el.textContent || '').replace(/\\s+/g, ' ').trim();
+      const text = (el) => {
+        if (el instanceof HTMLSelectElement) {
+          const selected = el.selectedOptions[0]?.textContent?.trim();
+          if (selected) return selected;
+          return Array.from(el.options)
+            .map((option) => option.textContent?.trim())
+            .filter(Boolean)
+            .join(' / ');
+        }
+        const raw = el instanceof HTMLElement ? (el.innerText || el.textContent || '') : (el.textContent || '');
+        return raw.replace(/\\s+/g, ' ').trim();
+      };
       const labelFor = (el) => {
         const id = el.getAttribute('id');
         if (id && document.querySelector('label[for="' + CSS.escape(id) + '"]')) return true;
@@ -152,6 +163,11 @@ function dialogLabelIssues(elements: DomUxElement[], screenshotPath: string): Is
 
 function copyAccessibilityIssues(elements: DomUxElement[], bodyText: string, screenshotPath: string): Issue[] {
   if (!/handoff|raw json|prompt/i.test(bodyText)) return []
+  const hasGeneratedOutput = elements.some((el) =>
+    el.tag === 'pre' ||
+    /handoff-card|json-viewer|bundle-panel/.test(el.className) && /handoff|raw json|schema_version|recommended_change_set/i.test(el.text)
+  )
+  if (!hasGeneratedOutput) return []
   const copyButtons = elements.filter((el) => (el.tag === 'button' || el.role === 'button') && /copy/i.test(accessibleName(el)))
   if (copyButtons.length > 0) return []
   return [issue('low', 'accessibility_issue', 'Generated text lacks an accessible copy action', 'Handoff/raw JSON style output appears present but no accessible Copy button was found.', ['DOM mentions handoff/raw JSON/prompt but no copy button by accessible name'], screenshotPath, 'Add accessible Copy buttons for generated handoff prompts and raw JSON panels.')]

@@ -6,7 +6,9 @@ export function enrichIssues(issues: Issue[], sourceGraph: SourceGraph, crawlGra
   return issues.map((issue, index) => {
     const issueId = issue.issue_id || makeIssueId(issue, index)
     const suspectedFiles = issue.suspected_files?.length ? issue.suspected_files : inferSuspectedFiles(issue, sourceGraph)
-    const fixPrompt = issue.fix_prompt || issue.suggestedFixPrompt || buildFixPrompt(issue, suspectedFiles)
+    const fixPrompt = issue.fix_prompt || (['semantic_mismatch', 'stale_output'].includes(issue.type)
+      ? buildFixPrompt(issue, suspectedFiles)
+      : issue.suggestedFixPrompt || buildFixPrompt(issue, suspectedFiles))
     return {
       ...issue,
       issue_id: issueId,
@@ -67,6 +69,7 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
     'missing_form_control',
     'broken_interaction',
     'workflow_confusion',
+    'product_intent_gap',
     'usability_issue',
     'layout_issue',
     'accessibility_issue',
@@ -74,6 +77,13 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
   ].includes(issue.type)) {
     files.add('src/App.tsx')
     sourceGraph.uiSurfaces.forEach((surface) => files.add(surface.file))
+  }
+  if (['semantic_mismatch', 'stale_output'].includes(issue.type)) {
+    files.add('src/App.tsx')
+    files.add('src/api.ts')
+    files.add('../server/routes/plan_bundles.py')
+    files.add('../server/planner.py')
+    files.add('../app/services/semantic_enrichment.py')
   }
 
   return [...files].sort()
@@ -123,6 +133,37 @@ function buildFixPrompt(issue: Issue, suspectedFiles: string[]): string {
       '- Add or update focused tests for the endpoint behavior.'
     ].join('\n')
   }
+  if (['semantic_mismatch', 'stale_output'].includes(issue.type)) {
+    return [
+      `Fix Sniffer prompt/output consistency issue: ${issue.title}.`,
+      '',
+      `Type: ${issue.type}`,
+      `Severity: ${issue.severity}`,
+      '',
+      issue.description,
+      '',
+      `Evidence:\n${issue.evidence.map((item) => `- ${item}`).join('\n')}`,
+      '',
+      'Expected behavior:',
+      '- Generated plan bundle content, handoff prompt, semantic labels, recommended changes, and raw JSON must match the current input prompt.',
+      '- Prior prompt output must not leak into the active plan bundle view.',
+      '- plan_bundle.feature_request must match the submitted prompt.',
+      '',
+      'Likely fix areas:',
+      '- Ensure UI sends current feature_request, selected target id, and semantic flag for every request.',
+      '- Prevent stale async responses from overwriting newer plan responses.',
+      '- Key prompt-specific semantic/cache content by feature_request + target_id where applicable.',
+      '- Ensure Handoff and Raw JSON tabs render the current active plan bundle only.',
+      '- Ensure plan run switching updates all plan output tabs together.',
+      '',
+      `Suspected files:\n${suspectedFiles.map((file) => `- ${file}`).join('\n') || '- unknown'}`,
+      '',
+      'Constraints:',
+      '- Do not change planner/proposal behavior unless the UI/API wiring bug requires it.',
+      '- Do not delete workspaces, repos, baselines, reports, or user data.',
+      '- Add or update focused tests for prompt/output consistency.'
+    ].join('\n')
+  }
   return [
     `Fix Sniffer issue ${issue.issue_id || issue.title}.`,
     '',
@@ -160,6 +201,14 @@ function normalizeSourceEndpointPattern(endpoint: string): string {
 }
 
 function buildVerificationSteps(issue: Issue, crawlGraph: CrawlGraph): string[] {
+  if (['semantic_mismatch', 'stale_output'].includes(issue.type)) {
+    return [
+      `Run sniffer audit against ${crawlGraph.startUrl} with --consistency-check.`,
+      `Confirm issue ${issue.title} no longer appears with matching prompt/output evidence.`,
+      'Confirm Prompt/Output Consistency shows both built-in prompts as consistent.',
+      'Review latest_report.md and screenshots for regressions.'
+    ]
+  }
   return [
     `Run sniffer audit against ${crawlGraph.startUrl}.`,
     `Confirm issue ${issue.title} no longer appears with matching evidence.`,

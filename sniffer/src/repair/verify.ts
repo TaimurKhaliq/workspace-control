@@ -10,6 +10,9 @@ import { writeAuditReports } from '../reporting/reportWriter.js'
 import { writeJson } from '../reporting/json.js'
 import { loadReport } from './fixPackets.js'
 import { critiqueFindings } from '../critic/workflowCritic.js'
+import { synthesizeProductIntent } from '../heuristics/productIntent.js'
+import { triageIssues } from '../heuristics/issueTriage.js'
+import { runPromptConsistencyCheck } from '../runtime/promptConsistency.js'
 
 export async function verifyIssue(input: {
   issueId: string
@@ -27,6 +30,7 @@ export async function verifyIssue(input: {
 
   const sourceGraph = await discoverSource(before.sourceGraph.repoPath)
   const crawlGraph = await crawlApp(input.url, { reportDir })
+  const appIntent = buildDeterministicIntent(sourceGraph)
   const runtimeWorkflowVerifications = await verifyRuntimeIntent({ url: input.url, sourceGraph })
   const candidateIssues = classifyRuntimeIssues(sourceGraph, crawlGraph, runtimeWorkflowVerifications)
   const critic = await critiqueFindings({
@@ -37,12 +41,36 @@ export async function verifyIssue(input: {
     appUrl: input.url,
     mode: 'deterministic'
   })
+  const productIntent = await synthesizeProductIntent({
+    sourceGraph,
+    crawlGraph,
+    appIntent,
+    runtimeWorkflowVerifications,
+    appUrl: input.url,
+    productGoal: before.productIntent?.product_goal,
+    mode: 'deterministic'
+  })
+  const promptConsistency = ['semantic_mismatch', 'stale_output'].includes(beforeIssue.type) || before.promptConsistency?.enabled
+    ? await runPromptConsistencyCheck({
+      url: input.url,
+      reportDir,
+      sourceGraph,
+      promptsSource: 'built-in'
+    })
+    : undefined
+  const rawFindings = [...critic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues]
+  const issues = triageIssues({ rawFindings, sourceGraph, workflowVerifications: runtimeWorkflowVerifications })
   const afterReport = await writeAuditReports(reportDir, {
     sourceGraph,
     crawlGraph,
-    appIntent: buildDeterministicIntent(sourceGraph),
+    appIntent,
+    productIntent: productIntent.productIntent,
+    productIntentFindings: productIntent.productIntentFindings,
+    promptConsistency,
     runtimeWorkflowVerifications,
-    ...critic
+    ...critic,
+    rawFindings,
+    issues
   })
 
   const matchingAfter = findMatchingIssue(beforeIssue, afterReport)

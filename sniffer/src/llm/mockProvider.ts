@@ -1,4 +1,4 @@
-import type { AppIntent, Issue, IssueTriageContext, UxCriticContext, UxCriticFinding } from '../types.js'
+import type { AppIntent, Issue, IssueTriageContext, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, UxCriticContext, UxCriticFinding } from '../types.js'
 import type { SnifferCriticContext, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 import { deterministicDecision } from '../critic/workflowCritic.js'
@@ -37,6 +37,34 @@ export class MockLlmProvider implements LlmProvider {
       should_report: true,
       screenshotPath: issue.screenshotPath
     }))
+  }
+
+  async synthesizeProductIntent(context: ProductIntentContext): Promise<ProductIntentModel> {
+    return {
+      ...context.deterministic_model,
+      product_summary: `Mock LLM product synthesis: ${context.deterministic_model.product_summary}`,
+      assumptions: [
+        ...context.deterministic_model.assumptions,
+        'mock_llm_product_intent: structured product intent returned without external calls.'
+      ],
+      llmUsed: true
+    }
+  }
+
+  async critiquePromptConsistency(context: PromptConsistencyContext): Promise<PromptConsistencyDecision> {
+    const stale = context.forbidden_concepts_detected
+    const classification = stale.length >= 2
+      ? 'semantic_mismatch'
+      : stale.length === 1 ? 'stale_output' : 'consistent'
+    return {
+      classification,
+      confidence: stale.length > 0 ? 'high' : 'medium',
+      reasoning_summary: stale.length > 0
+        ? `Mock consistency critic: stale concepts found for current prompt: ${stale.join(', ')}.`
+        : 'Mock consistency critic: output appears aligned with the current prompt.',
+      stale_concepts: stale,
+      should_report: stale.length > 0
+    }
   }
 
   async triageIssues(context: IssueTriageContext): Promise<Issue[]> {

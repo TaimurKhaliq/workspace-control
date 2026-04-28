@@ -8,13 +8,16 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --dir tests",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "sniffer": "tsx src/cli/index.ts",
     "audit": "tsx src/cli/index.ts audit",
     "apply-fix": "tsx src/cli/index.ts apply-fix",
     "verify": "tsx src/cli/index.ts verify",
-    "repair-loop": "tsx src/cli/index.ts repair-loop"
+    "repair-loop": "tsx src/cli/index.ts repair-loop",
+    "ui:server": "tsx server/uiServer.ts",
+    "ui:build": "npm --prefix ui run build",
+    "ui:test": "npm --prefix ui test"
   },
   "engines": {
     "node": ">=20.0.0"

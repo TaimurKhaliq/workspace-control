@@ -128,9 +128,12 @@ export function inferKnownState(crawlGraph: CrawlGraph, workflows: RuntimeWorkfl
   const text = crawlText(crawlGraph).toLowerCase()
   const actionText = crawlGraph.actions.map((action) => `${action.label} ${action.reason ?? ''}`).join('\n').toLowerCase()
   const workflow = (name: string) => workflows.find((item) => item.name === name)
+  const hasNoWorkspace = /no workspace selected|no workspaces/.test(text)
+  const hasActiveWorkspace = /active workspace|workspace selector|selected workspace|current workspace/.test(text)
+  const hasWorkspace = /workspace|workspaces/.test(text)
   return {
-    workspace_exists: /no workspace selected|workspace|workspaces/.test(text),
-    workspace_selected: !/no workspace selected|select workspace/.test(text) && /workspace/.test(text),
+    workspace_exists: hasNoWorkspace || hasWorkspace,
+    workspace_selected: !hasNoWorkspace && (hasActiveWorkspace || (hasWorkspace && !/select workspace/.test(text))),
     repo_exists: /repo targets|discovery targets|repository|target selected/.test(text) && !/no repo targets/.test(text),
     repo_selected: /target selected|petclinic|spring-petclinic|no target selected/.test(text) && !/no target selected/.test(text),
     plan_bundle_generated: /overview|change set|recommended_change_set|raw json|handoff prompt|copy prompt/.test(text),

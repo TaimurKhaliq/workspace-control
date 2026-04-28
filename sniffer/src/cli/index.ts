@@ -16,13 +16,15 @@ import { applyFix } from '../repair/applyFix.js'
 import { verifyIssue } from '../repair/verify.js'
 import { runRepairLoop } from '../repair/repairLoop.js'
 import { critiqueFindings, type CriticMode } from '../critic/workflowCritic.js'
-import type { LlmCriticProvider } from '../types.js'
+import type { Issue, LlmCriticProvider } from '../types.js'
 import { executeNextSafeActions } from '../critic/nextActionExecutor.js'
 import { runScenarios, scenarioIssues } from '../runtime/scenarios.js'
 import { runUxHeuristicAudit } from '../heuristics/uxHeuristics.js'
 import { critiqueUx, type UxCriticMode } from '../critic/uxCritic.js'
-import type { ScenarioSlug } from '../types.js'
+import type { ProductIntentMode, ScenarioSlug } from '../types.js'
 import { triageIssues } from '../heuristics/issueTriage.js'
+import { synthesizeProductIntent } from '../heuristics/productIntent.js'
+import { runPromptConsistencyCheck } from '../runtime/promptConsistency.js'
 
 async function main(): Promise<void> {
   const [command, ...rest] = process.argv.slice(2)
@@ -39,7 +41,7 @@ async function main(): Promise<void> {
 
   if (command === 'crawl') {
     const url = requireArg(args, 'url')
-    const graph = await crawlApp(url, { reportDir })
+    const graph = await crawlApp(url, crawlOptions(args, reportDir))
     await writeJson(path.join(reportDir, 'crawl_graph.json'), graph)
     console.log(`Wrote ${path.join(reportDir, 'crawl_graph.json')}`)
     return
@@ -49,12 +51,14 @@ async function main(): Promise<void> {
     const repo = requireArg(args, 'repo')
     const url = requireArg(args, 'url')
     const sourceGraph = await discoverSource(repo)
-    const crawlGraph = await crawlApp(url, { reportDir })
+    const crawlGraph = await crawlApp(url, crawlOptions(args, reportDir))
     const scenarioSlug = (typeof args.scenario === 'string' ? args.scenario : undefined) as ScenarioSlug | undefined
-    const scenarioRuns = scenarioSlug ? await runScenarios({ url, reportDir, scenario: scenarioSlug }) : []
+    const scenarioRuns = scenarioSlug && scenarioSlug !== 'prompt-output-consistency' ? await runScenarios({ url, reportDir, scenario: scenarioSlug }) : []
     let appIntent = buildDeterministicIntent(sourceGraph)
+    const intentMode = (typeof args['intent-mode'] === 'string' ? args['intent-mode'] : 'deterministic') as ProductIntentMode
+    const productGoal = typeof args['product-goal'] === 'string' ? args['product-goal'] : undefined
     const providerName = typeof args.provider === 'string' ? args.provider : args['use-llm'] ? 'auto' : 'auto'
-    const provider = args['use-llm'] || args['critic-mode'] === 'llm' || providerName === 'mock'
+    const provider = args['use-llm'] || args['critic-mode'] === 'llm' || args['ux-critic'] === 'llm' || intentMode === 'llm' || intentMode === 'auto' || providerName === 'mock'
       ? createLlmProvider(providerName)
       : undefined
     if (args['use-llm']) {
@@ -78,7 +82,7 @@ async function main(): Promise<void> {
     if (maxIterations > 0) {
       const executed = await executeNextSafeActions({ url, decisions: critic.criticDecisions, maxIterations })
       if (executed.length > 0) {
-        activeCrawlGraph = await crawlApp(url, { reportDir })
+        activeCrawlGraph = await crawlApp(url, crawlOptions(args, reportDir))
         runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph })
         candidateIssues = classifyRuntimeIssues(sourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
         critic = await critiqueFindings({
@@ -107,9 +111,30 @@ async function main(): Promise<void> {
       crawlGraph: activeCrawlGraph,
       candidateIssues: uxCandidateIssues
     })
-    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...uxCandidateIssues, ...uxCritic.issues]
+    const consistencyCheckEnabled = boolArg(args, 'consistency-check') || scenarioSlug === 'prompt-output-consistency'
+    const promptConsistency = consistencyCheckEnabled
+      ? await runPromptConsistencyCheck({
+        url,
+        reportDir,
+        sourceGraph,
+        promptsSource: typeof args['consistency-prompts'] === 'string' ? args['consistency-prompts'] : 'built-in',
+        provider,
+        useLlm: Boolean(provider?.critiquePromptConsistency && (criticMode === 'llm' || uxMode === 'llm' || args['use-llm']))
+      })
+      : undefined
+    const productIntent = await synthesizeProductIntent({
+      sourceGraph,
+      crawlGraph: activeCrawlGraph,
+      appIntent,
+      runtimeWorkflowVerifications,
+      appUrl: url,
+      productGoal,
+      mode: intentMode,
+      provider
+    })
+    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues]
     const shouldUseLlmTriage = (criticMode === 'llm' || uxMode === 'llm') && provider?.triageIssues
-    const triagedIssues = shouldUseLlmTriage
+    let triagedIssues = shouldUseLlmTriage
       ? await provider.triageIssues!({
         sourceGraph,
         crawlGraph: activeCrawlGraph,
@@ -118,12 +143,28 @@ async function main(): Promise<void> {
         question_for_triage: 'Group raw findings into repair-sized themes and preserve severe API issues.'
       })
       : triageIssues({ rawFindings, sourceGraph, workflowVerifications: runtimeWorkflowVerifications })
+    if (shouldUseLlmTriage) {
+      const supported = filterLlmTriagedIssues(triagedIssues, rawFindings)
+      triagedIssues = supported.length > 0 || rawFindings.length === 0
+        ? supported
+        : triageIssues({ rawFindings, sourceGraph, workflowVerifications: runtimeWorkflowVerifications })
+    }
+    if (shouldUseLlmTriage && productIntent.issues.length > 0) {
+      const existingProductTitles = new Set(triagedIssues.filter((issue) => issue.type === 'product_intent_gap').map((issue) => issue.title))
+      triagedIssues = [
+        ...triagedIssues,
+        ...productIntent.issues.filter((issue) => !existingProductTitles.has(issue.title))
+      ]
+    }
     await writeAuditReports(reportDir, {
       sourceGraph,
       crawlGraph: activeCrawlGraph,
       appIntent,
       runtimeWorkflowVerifications,
       scenarioRuns,
+      promptConsistency,
+      productIntent: productIntent.productIntent,
+      productIntentFindings: productIntent.productIntentFindings,
       ...critic,
       rawFindings,
       issues: triagedIssues,
@@ -192,11 +233,15 @@ async function main(): Promise<void> {
     const repo = requireArg(args, 'repo')
     const url = requireArg(args, 'url')
     const maxIterations = Number(typeof args['max-iterations'] === 'string' ? args['max-iterations'] : 3)
+    const intentMode = (typeof args['intent-mode'] === 'string' ? args['intent-mode'] : 'deterministic') as ProductIntentMode
     const result = await runRepairLoop({
       repo,
       url,
       maxIterations,
       agentName: typeof args.agent === 'string' ? args.agent : undefined,
+      providerName: typeof args.provider === 'string' ? args.provider : undefined,
+      productGoal: typeof args['product-goal'] === 'string' ? args['product-goal'] : undefined,
+      intentMode,
       allowDestructive: boolArg(args, 'allow-destructive')
     })
     console.log(`Repair loop ran ${result.iterations} iteration(s). Fixed: ${result.fixed.length}. Remaining: ${result.remaining.length}. Report: ${result.reportPath}`)
@@ -235,17 +280,75 @@ function boolArg(args: Record<string, string | boolean>, key: string): boolean {
   return value === true || value === 'true'
 }
 
+function crawlOptions(args: Record<string, string | boolean>, reportDir: string) {
+  return {
+    reportDir,
+    maxActions: numberArg(args, 'max-actions'),
+    maxStates: numberArg(args, 'max-states'),
+    maxDepth: numberArg(args, 'max-depth'),
+    maxPerRoute: numberArg(args, 'max-per-route'),
+    maxDuplicateActions: numberArg(args, 'max-duplicate-actions')
+  }
+}
+
+function numberArg(args: Record<string, string | boolean>, key: string): number | undefined {
+  const value = args[key]
+  if (typeof value !== 'string') return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function filterLlmTriagedIssues(issues: Issue[], rawFindings: Issue[]): Issue[] {
+  if (rawFindings.length === 0) return []
+  return issues.filter((issue) => rawFindings.some((raw) => hasRawSupport(issue, raw)))
+}
+
+function hasRawSupport(issue: Issue, raw: Issue): boolean {
+  const issueText = normalizedIssueText(issue)
+  const rawTitle = normalizeText(raw.title)
+  const rawEvidence = raw.evidence.map(normalizeText).filter((item) => item.length >= 12)
+  if (rawTitle.length >= 12 && issueText.includes(rawTitle)) return true
+  if (rawEvidence.some((item) => issueText.includes(item))) return true
+  if (issue.evidence.some((item) => raw.evidence.some((rawItem) => textOverlaps(item, rawItem)))) return true
+  return issue.type === raw.type && tokenOverlap(issue.title, raw.title) >= 0.6
+}
+
+function normalizedIssueText(issue: Issue): string {
+  return normalizeText([
+    issue.title,
+    issue.description,
+    ...issue.evidence
+  ].join('\n'))
+}
+
+function normalizeText(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+function textOverlaps(left: string, right: string): boolean {
+  const a = normalizeText(left)
+  const b = normalizeText(right)
+  return a.length >= 12 && b.includes(a) || b.length >= 12 && a.includes(b)
+}
+
+function tokenOverlap(left: string, right: string): number {
+  const a = new Set(normalizeText(left).split(/\s+/).filter((item) => item.length > 3))
+  const b = new Set(normalizeText(right).split(/\s+/).filter((item) => item.length > 3))
+  if (a.size === 0 || b.size === 0) return 0
+  return [...a].filter((item) => b.has(item)).length / Math.min(a.size, b.size)
+}
+
 function printHelp(): void {
   console.log(`sniffer
 
 Commands:
   sniffer discover --repo <path>
-  sniffer crawl --url <url>
-  sniffer audit --repo <path> --url <url> [--scenario all|generate-plan-bundle|review-plan-output] [--ux-critic off|deterministic|llm] [--use-llm] [--provider mock|openai|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0]
+  sniffer crawl --url <url> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
+  sniffer audit --repo <path> --url <url> [--scenario all|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
   sniffer apply-fix --issue <issue_id> --report <path> [--agent manual|mock|codex]
   sniffer verify --issue <issue_id> --url <url> --report <path>
-  sniffer repair-loop --repo <path> --url <url> [--agent manual|mock|codex] [--max-iterations 3]
+  sniffer repair-loop --repo <path> --url <url> [--agent manual|mock|codex] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--provider mock|openai-compatible|auto] [--max-iterations 3]
   sniffer generate-tests --repo <path> --url <url> [--use-llm]
   sniffer run-tests [--use-llm]
 `)

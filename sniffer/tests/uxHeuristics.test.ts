@@ -76,6 +76,42 @@ describe('UX heuristics', () => {
     expect(result.uxIssues.map((issue) => issue.title)).toContain('Workspace names appear duplicated without disambiguation')
   })
 
+  it('does not require copy buttons for empty-state text that only mentions generated outputs', () => {
+    const result = analyzeUxSnapshot({
+      elements: [
+        element({
+          tag: 'section',
+          className: 'empty-plan',
+          text: 'Generate a Plan Bundle to render handoff prompts and Raw JSON.'
+        })
+      ],
+      ids: [],
+      bodyText: 'Generate a Plan Bundle to render handoff prompts and Raw JSON.',
+      sourceGraph,
+      screenshotPath: '/tmp/shot.png'
+    })
+
+    expect(result.accessibilityIssues.map((issue) => issue.title)).not.toContain('Generated text lacks an accessible copy action')
+  })
+
+  it('requires copy buttons when generated output panels are visible', () => {
+    const result = analyzeUxSnapshot({
+      elements: [
+        element({
+          tag: 'article',
+          className: 'json-viewer',
+          text: 'Raw JSON { "schema_version": "1.0", "recommended_change_set": [] }'
+        })
+      ],
+      ids: [],
+      bodyText: 'Raw JSON schema_version recommended_change_set',
+      sourceGraph,
+      screenshotPath: '/tmp/shot.png'
+    })
+
+    expect(result.accessibilityIssues.map((issue) => issue.title)).toContain('Generated text lacks an accessible copy action')
+  })
+
   it('groups repeated UX findings by type and title', () => {
     const issues: Issue[] = [
       { severity: 'low', type: 'layout_issue', title: 'Content overflows horizontally', description: 'a', evidence: ['one'], suggestedFixPrompt: 'fix' },

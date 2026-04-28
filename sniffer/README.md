@@ -18,6 +18,52 @@ npm install
 npm run build
 ```
 
+## Sniffer Dashboard UI
+
+Sniffer includes a local-only dashboard for launching audits, polling run status, and reading reports without opening JSON files by hand.
+
+Build the UI and start the local API/static server:
+
+```bash
+npm install
+npm --prefix ui install
+npm run ui:build
+npm run ui:server
+```
+
+Then open:
+
+```text
+http://127.0.0.1:4877
+```
+
+For UI development, run the API server and Vite dev server in separate terminals:
+
+```bash
+npm run ui:server
+npm --prefix ui run dev
+```
+
+The Vite dashboard runs at `http://127.0.0.1:4878` and proxies `/api` to the local Sniffer server.
+
+The dashboard provides:
+
+- Run launcher for repo path, app URL, scenario mode, critic mode, UX critic, intent mode, provider, product goal, max iterations, and consistency checks.
+- Story-first report navigation: Summary, Run Timeline, Scenarios, Crawl Path, Workflow Evidence, Issues, Fix Packets, Screenshots, Graph Explorer, and Raw JSON.
+- Live run status through polling, with the current phase and recent logs shown in the Run Timeline view.
+- Run Timeline phase cards for source discovery, runtime crawl, scenario execution, critics, product intent analysis, issue grouping, and fix packet generation.
+- Scenario detail replay with prerequisites, step/assertion evidence, status chips, and inline screenshot previews.
+- Crawl Path replay showing visited URLs/hashes, visible controls grouped by kind, safe actions attempted, repeated unchanged actions, screenshots, console errors, and network failures.
+- Workflow Evidence view connecting source intent, source files, expected actions, runtime verification, related API calls, scenarios, critic decisions, and issues.
+- Scoped Discovery Graph explorer with pan/zoom, minimap, controls, search, filters, legend, and node detail panels. It defaults to a crawl graph and supports Workflow graph, Issue graph, Crawl graph, Source intent graph, and Full graph (advanced) modes.
+- Report summary cards, issue groups, issue detail, fix prompt copy actions, and issue verification launch.
+- Fix packet list/detail view.
+- Screenshot/evidence gallery.
+- Settings view for LLM/agent configured status.
+- A lightweight inline SVG golden retriever mascot that animates while Sniffer is running.
+
+The UI never receives API keys. It only displays configured/unconfigured status, model name, and API style as reported by the local Node server. The server shells out to existing Sniffer CLI commands and captures stdout/stderr. It prevents concurrent audit runs by default and does not auto-apply fixes.
+
 ## Commands
 
 ```bash

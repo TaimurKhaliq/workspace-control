@@ -111,6 +111,69 @@ describe('workflow critic', () => {
     expect(result.criticDecisions[0].next_safe_action).toBeUndefined()
   })
 
+  it('normalizes inconsistent LLM decisions so preconditions are not reported as bugs', async () => {
+    const result = await critiqueFindings({
+      sourceGraph: {
+        repoPath: '/tmp/web',
+        framework: 'react',
+        buildTool: 'vite',
+        routes: [],
+        pages: [],
+        components: [],
+        forms: [],
+        uiSurfaces: [],
+        sourceWorkflows: [],
+        apiCalls: [],
+        stateActions: [],
+        packageScripts: {},
+        generatedAt: ''
+      },
+      crawlGraph: {
+        startUrl: 'http://localhost',
+        title: '',
+        finalUrl: 'http://localhost',
+        states: [],
+        actions: [],
+        consoleErrors: [],
+        networkFailures: [],
+        screenshots: [],
+        generatedAt: ''
+      },
+      workflowVerifications: [],
+      candidateIssues: [{
+        severity: 'low',
+        type: 'missing_ui_surface',
+        title: 'Missing Raw JSON',
+        description: 'Raw JSON tab missing before plan generation',
+        evidence: ['Raw JSON tab/button'],
+        suggestedFixPrompt: 'Fix it'
+      }],
+      appUrl: 'http://localhost',
+      mode: 'llm',
+      provider: {
+        name: 'inconsistent',
+        async critiqueWorkflow(ctx) {
+          return {
+            finding_id: ctx.candidate_findings[0].finding_id,
+            classification: 'crawler_needs_precondition',
+            is_real_bug: false,
+            confidence: 0.9,
+            required_precondition: 'plan_bundle_generated',
+            reasoning_summary: 'Needs a generated plan first.',
+            evidence: ['precondition missing'],
+            should_report: true,
+            should_generate_fix_packet: true
+          }
+        }
+      }
+    })
+
+    expect(result.criticDecisions[0].should_report).toBe(false)
+    expect(result.criticDecisions[0].should_generate_fix_packet).toBe(false)
+    expect(result.issues).toHaveLength(0)
+    expect(result.blockedChecks).toHaveLength(1)
+  })
+
   it('allows supported safe next action for plan generation', () => {
     expect(isSafeNextAction('generate_plan_bundle_with_sample_prompt')).toBe(true)
   })
