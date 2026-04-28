@@ -5,6 +5,8 @@ from typing import Any
 
 from fastapi.testclient import TestClient
 
+from app.models.semantic_enrichment import SemanticEnrichmentResult, SemanticFeatureSpec
+from app.services.semantic_enrichment import save_semantic_enrichment
 from server.app import create_app
 
 
@@ -113,6 +115,11 @@ def test_discover_and_generate_plan_bundle(tmp_path: Path) -> None:
         assert run.json()["status"] == "completed"
         assert run.json()["plan_bundle_json"]["schema_version"] == "1.0"
 
+        runs = client.get(f"/api/workspaces/{workspace_id}/plan-runs")
+        assert runs.status_code == 200
+        assert [item["id"] for item in runs.json()] == [body["run_id"]]
+        assert runs.json()[0]["feature_request"].startswith("Allow users")
+
 
 def test_plan_bundle_api_threads_semantic_flag(tmp_path: Path, monkeypatch) -> None:
     captured: dict[str, Any] = {}
@@ -163,6 +170,59 @@ def test_plan_bundle_api_threads_semantic_flag(tmp_path: Path, monkeypatch) -> N
     assert captured["use_semantic"] is True
     assert response.json()["plan_bundle"]["semantic_enrichment"]["available"] is True
     assert response.json()["plan_bundle"]["semantic_missing_details"] == ["Storage strategy is unknown."]
+
+
+def test_reset_local_data_clears_api_state_and_app_caches(tmp_path: Path, monkeypatch) -> None:
+    registry_path = tmp_path / ".workspace-control" / "discovery_targets.json"
+    learning_root = tmp_path / "data" / "learning"
+    semantic_root = tmp_path / "data" / "semantic"
+    learning_report_root = tmp_path / "reports" / "learning"
+    for path in [learning_root, semantic_root, learning_report_root]:
+        path.mkdir(parents=True)
+        (path / "sentinel.txt").write_text("state\n", encoding="utf-8")
+    monkeypatch.setattr("server.routes.admin.DEFAULT_LEARNING_ROOT", learning_root)
+    monkeypatch.setattr("server.routes.admin.DEFAULT_SEMANTIC_ROOT", semantic_root)
+    monkeypatch.setattr("server.routes.admin.DEFAULT_LEARNING_REPORT_ROOT", learning_report_root)
+
+    app = create_app(
+        db_path=tmp_path / "workspace_control.db",
+        registry_path=registry_path,
+    )
+    with TestClient(app) as client:
+        workspace_id = client.post("/api/workspaces", json={"name": "Fixture"}).json()["id"]
+        client.post(
+            f"/api/workspaces/{workspace_id}/repos",
+            json={
+                "target_id": "fixture-stack",
+                "source_type": "local_path",
+                "locator": str(FIXTURE_STACK),
+            },
+        )
+        client.post(
+            f"/api/workspaces/{workspace_id}/plan-bundles",
+            json={
+                "feature_request": "Allow users to update their phone number from the profile screen",
+                "target_ids": ["fixture-stack"],
+            },
+        )
+        assert client.get("/api/workspaces").json()
+        assert client.get(f"/api/workspaces/{workspace_id}/repos").json()
+        assert client.get(f"/api/workspaces/{workspace_id}/plan-runs").json()
+        assert registry_path.exists()
+
+        rejected = client.post("/api/admin/reset-local-data", json={"confirm": "nope"})
+        assert rejected.status_code == 400
+
+        response = client.post("/api/admin/reset-local-data", json={"confirm": "RESET"})
+        assert response.status_code == 200
+        body = response.json()
+        assert body["status"] == "reset"
+        assert set(body["reset_tables"]) == {"workspaces", "repo_targets", "plan_runs"}
+        assert client.get("/api/workspaces").json() == []
+        assert not registry_path.exists()
+        assert not learning_root.exists()
+        assert not semantic_root.exists()
+        assert not learning_report_root.exists()
 
 
 def test_learning_status_missing_state_is_controlled_json(tmp_path: Path, monkeypatch) -> None:
@@ -251,6 +311,88 @@ def test_semantic_status_reports_cached_target_artifact(tmp_path: Path, monkeypa
     assert body["configured"] is False
     assert body["cached_artifact_available"] is True
     assert body["available"] is True
+
+
+def test_plan_bundle_skips_semantic_cache_for_different_prompt(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("STACKPILOT_SEMANTIC_BASE_URL", raising=False)
+    monkeypatch.delenv("STACKPILOT_SEMANTIC_API_KEY", raising=False)
+    monkeypatch.delenv("STACKPILOT_SEMANTIC_MODEL", raising=False)
+    semantic_root = tmp_path / "semantic"
+    monkeypatch.setattr("server.planner.DEFAULT_SEMANTIC_ROOT", semantic_root)
+    photo_prompt = "add the ability to upload a picture of your pet"
+    friends_prompt = "the ability to add other pets as friends"
+    save_semantic_enrichment(
+        SemanticEnrichmentResult(
+            feature_request=photo_prompt,
+            target_id="fixture-stack",
+            generated_at="2026-04-27T00:00:00+00:00",
+            feature_spec=SemanticFeatureSpec(
+                feature_request=photo_prompt,
+                normalized_request="add ability upload picture pet",
+                domain_concepts=["pet", "picture"],
+                technical_intents=["file upload", "pet picture storage"],
+                technical_intent_labels=["ui", "api", "file_upload", "media_upload", "storage"],
+                missing_details=["Storage strategy for pet pictures is unknown."],
+                clarifying_questions=["Where should uploaded pictures be stored?"],
+                confidence="high",
+            ),
+            annotations=[],
+            caveats=["Picture upload caveat"],
+            model_info={"provider": "test", "model": "mock-photo"},
+        ),
+        semantic_root=semantic_root,
+    )
+    app = create_app(
+        db_path=tmp_path / "workspace_control.db",
+        registry_path=tmp_path / "discovery_targets.json",
+    )
+    with TestClient(app) as client:
+        workspace_id = client.post("/api/workspaces", json={"name": "Fixture"}).json()["id"]
+        client.post(
+            f"/api/workspaces/{workspace_id}/repos",
+            json={
+                "target_id": "fixture-stack",
+                "source_type": "local_path",
+                "locator": str(FIXTURE_STACK),
+            },
+        )
+        response_a = client.post(
+            f"/api/workspaces/{workspace_id}/plan-bundles",
+            json={
+                "feature_request": photo_prompt,
+                "target_ids": ["fixture-stack"],
+                "use_semantic": True,
+            },
+        )
+        response_b = client.post(
+            f"/api/workspaces/{workspace_id}/plan-bundles",
+            json={
+                "feature_request": friends_prompt,
+                "target_ids": ["fixture-stack"],
+                "use_semantic": True,
+            },
+        )
+
+    assert response_a.status_code == 200
+    bundle_a = response_a.json()["plan_bundle"]
+    assert bundle_a["feature_request"] == photo_prompt
+    assert bundle_a["semantic_cache_status"] == "hit"
+    assert bundle_a["semantic_enrichment"]["available"] is True
+    assert response_b.status_code == 200
+    bundle_b = response_b.json()["plan_bundle"]
+    assert bundle_b["feature_request"] == friends_prompt
+    assert bundle_b["semantic_cache_status"] == "skipped_prompt_mismatch"
+    assert bundle_b["semantic_enrichment"]["available"] is False
+    rendered = str(bundle_b).lower()
+    for forbidden in [
+        "picture upload",
+        "file_upload",
+        "media_upload",
+        "storage strategy",
+        "image metadata",
+        "picture preview",
+    ]:
+        assert forbidden not in rendered
 
 
 def test_git_url_repo_is_stored_but_discovery_is_stubbed(tmp_path: Path) -> None:

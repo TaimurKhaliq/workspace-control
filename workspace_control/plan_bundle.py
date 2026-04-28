@@ -180,6 +180,14 @@ class PlanBundle(BaseModel):
     concept_grounding: list[PlanBundleConceptGrounding] = Field(default_factory=list)
     source_graph_evidence: list[PlanBundleGraphEvidence] = Field(default_factory=list)
     semantic_enrichment: dict[str, Any] = Field(default_factory=dict)
+    semantic_cache_status: Literal[
+        "hit",
+        "miss",
+        "skipped_prompt_mismatch",
+        "regenerated",
+        "unavailable",
+    ] = "unavailable"
+    semantic_cache_message: str | None = None
     semantic_missing_details: list[str] = Field(default_factory=list)
     semantic_clarifying_questions: list[str] = Field(default_factory=list)
     semantic_caveats: list[str] = Field(default_factory=list)
@@ -203,6 +211,8 @@ def create_plan_bundle(
     generated_at: datetime | None = None,
     recipe_catalog: Sequence[ChangeRecipe] | None = None,
     semantic_result: SemanticEnrichmentResult | None = None,
+    semantic_cache_status: str = "unavailable",
+    semantic_cache_message: str | None = None,
 ) -> PlanBundle:
     """Create a UI-friendly Plan Bundle from existing pipeline outputs."""
 
@@ -255,6 +265,8 @@ def create_plan_bundle(
         concept_grounding=_concept_grounding(plan),
         source_graph_evidence=graph_evidence,
         semantic_enrichment=semantic_explanation_payload(semantic_result),
+        semantic_cache_status=semantic_cache_status,  # type: ignore[arg-type]
+        semantic_cache_message=semantic_cache_message,
         semantic_missing_details=list(plan.semantic_missing_details or proposal.semantic_missing_details),
         semantic_clarifying_questions=list(plan.semantic_clarifying_questions or proposal.semantic_clarifying_questions),
         semantic_caveats=list(plan.semantic_caveats or proposal.semantic_caveats),
@@ -305,6 +317,8 @@ def format_plan_bundle_markdown(bundle: PlanBundle) -> str:
         f"- planning mode: `{bundle.summary.planning_mode}`",
         f"- planner native available: `{bundle.summary.planner_native_available}`",
         f"- recipe assisted: `{bundle.summary.recipe_assisted}`",
+        f"- semantic cache status: `{bundle.semantic_cache_status}`",
+        f"- semantic cache message: `{bundle.semantic_cache_message or '-'}`",
         f"- backend required: `{bundle.summary.backend_required}`",
         f"- backend available: `{bundle.summary.backend_available}`",
         f"- missing backend required: `{bundle.summary.missing_backend_required}`",

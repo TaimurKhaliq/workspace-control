@@ -4,13 +4,17 @@ import {
   RepoTarget,
   PlanBundle,
   PlanBundleChangeItem,
+  PlanRun,
   addRepo,
   createWorkspace,
   discoverRepo,
   generatePlanBundle,
+  getPlanRun,
   getSemanticStatus,
   learningStatus,
   listRepos,
+  listPlanRuns,
+  resetLocalData,
   refreshLearning,
   listWorkspaces,
   validateRepoTarget,
@@ -25,6 +29,7 @@ type PlanTab = 'overview' | 'changes' | 'recipes' | 'graph' | 'validation' | 'ha
 type SourceFilter = 'all' | 'planner' | 'recipe' | 'semantic_enrichment' | 'both';
 type ActionFilter = 'all' | 'modify' | 'create' | 'inspect' | 'inspect-only';
 type SectionFilter = 'all' | 'frontend' | 'backend' | 'api' | 'persistence' | 'config' | 'unknown';
+type AppPage = 'workspaces' | 'repositories' | 'plan-runs' | 'learning' | 'settings';
 type PlanRunSemanticContext = {
   requested: boolean;
   sent: boolean;
@@ -39,6 +44,8 @@ export default function App() {
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState('');
   const [repos, setRepos] = useState<RepoTarget[]>([]);
+  const [planRuns, setPlanRuns] = useState<PlanRun[]>([]);
+  const [activePage, setActivePage] = useState<AppPage>('plan-runs');
   const [workspaceName, setWorkspaceName] = useState('PetClinic local');
   const [repoTargetId, setRepoTargetId] = useState('petclinic-react');
   const [sourceType, setSourceType] = useState<'local_path' | 'git_url'>('local_path');
@@ -57,6 +64,7 @@ export default function App() {
   const [error, setError] = useState('');
   const [workspaceModalOpen, setWorkspaceModalOpen] = useState(false);
   const [repoModalOpen, setRepoModalOpen] = useState(false);
+  const [resetModalOpen, setResetModalOpen] = useState(false);
   const [activePlanTab, setActivePlanTab] = useState<PlanTab>('overview');
   const [sourceFilter, setSourceFilter] = useState<SourceFilter>('all');
   const [actionFilter, setActionFilter] = useState<ActionFilter>('all');
@@ -101,9 +109,15 @@ export default function App() {
   useEffect(() => {
     if (selectedWorkspaceId) {
       void refreshRepos(selectedWorkspaceId);
+      void refreshPlanRuns(selectedWorkspaceId);
     } else {
       setRepos([]);
+      setPlanRuns([]);
     }
+    setPlanBundle(null);
+    setRunId('');
+    setSelectedChange(null);
+    setActivePlanTab('overview');
   }, [selectedWorkspaceId]);
 
   useEffect(() => {
@@ -197,12 +211,18 @@ export default function App() {
     if (rows) setRepos(rows);
   }
 
+  async function refreshPlanRuns(workspaceId: string) {
+    const rows = await runTask('Loading plan runs', () => listPlanRuns(workspaceId));
+    if (rows) setPlanRuns(rows);
+  }
+
   async function onCreateWorkspace(event: FormEvent) {
     event.preventDefault();
     const workspace = await runTask('Creating workspace', () => createWorkspace(workspaceName));
     if (!workspace) return;
     setWorkspaces((current) => [...current, workspace]);
     setSelectedWorkspaceId(workspace.id);
+    setActivePage('workspaces');
     setWorkspaceModalOpen(false);
   }
 
@@ -226,6 +246,7 @@ export default function App() {
     setRepos((current) => [...current, repo]);
     setSelectedTargetId(repo.target_id);
     rememberRecentPath(locator, setRecentPaths);
+    setActivePage('repositories');
     setRepoModalOpen(false);
   }
 
@@ -289,6 +310,8 @@ export default function App() {
       setRunId(result.run_id);
       setPlanBundle(result.plan_bundle);
       setPlanStatusMessage('');
+      setActivePage('plan-runs');
+      void refreshPlanRuns(selectedWorkspaceId);
     } catch (err) {
       if (controller.signal.aborted || requestId !== planRequestId.current) return;
       setError(err instanceof Error ? err.message : String(err));
@@ -299,6 +322,28 @@ export default function App() {
         planAbort.current = null;
       }
     }
+  }
+
+  async function onReopenPlanRun(planRun: PlanRun) {
+    const row = await runTask('Loading plan run', () => getPlanRun(planRun.id));
+    if (!row) return;
+    if (!row.plan_bundle_json) {
+      setError('This plan run does not have a completed Plan Bundle to reopen.');
+      return;
+    }
+    setRunId(row.id);
+    setPlanBundle(row.plan_bundle_json);
+    setFeatureRequest(row.feature_request);
+    setSelectedTargetId(row.target_ids[0] ?? selectedTargetId);
+    setActivePlanTab('overview');
+    setSelectedChange(row.plan_bundle_json.recommended_change_set?.[0] ?? null);
+    setLastRunSemantic({
+      requested: Boolean(row.plan_bundle_json.semantic_enrichment?.available),
+      sent: Boolean(row.plan_bundle_json.semantic_enrichment?.available),
+      status: semanticStatus
+    });
+    setPlanStatusMessage(`Reopened plan run from ${formatDateTime(row.created_at)}.`);
+    setActivePage('plan-runs');
   }
 
   async function onPickFolder() {
@@ -314,6 +359,139 @@ export default function App() {
     );
   }
 
+  function clearClientStateAfterReset(message: string) {
+    clearStackPilotLocalStorage();
+    setWorkspaces([]);
+    setSelectedWorkspaceId('');
+    setRepos([]);
+    setPlanRuns([]);
+    setSelectedTargetId('');
+    setPlanBundle(null);
+    setRunId('');
+    setRecipeCounts({});
+    setLearningStates({});
+    setRepoValidation(null);
+    setRepoValidations({});
+    setRecentPaths([]);
+    setUseSemantic(false);
+    setSemanticStatus(null);
+    setLastRunSemantic({ requested: false, sent: false, status: null });
+    setSelectedChange(null);
+    setActivePlanTab('overview');
+    setActivePage('workspaces');
+    setPlanStatusMessage(message);
+  }
+
+  async function onResetLocalData(confirm: string) {
+    const result = await runTask('Resetting local data', () => resetLocalData(confirm));
+    if (!result) return;
+    setResetModalOpen(false);
+    clearClientStateAfterReset(result.message);
+  }
+
+  function renderPage() {
+    if (activePage === 'workspaces') {
+      return (
+        <WorkspacePage
+          workspaces={workspaces}
+          selectedWorkspaceId={selectedWorkspaceId}
+          onSelectWorkspace={setSelectedWorkspaceId}
+          onOpenWorkspace={() => setWorkspaceModalOpen(true)}
+        />
+      );
+    }
+    if (activePage === 'repositories') {
+      return (
+        <PageFrame>
+          <RepoList
+            repos={repos}
+            validations={repoValidations}
+            selectedTargetId={selectedTargetId}
+            recipeCounts={recipeCounts}
+            learningStates={learningStates}
+            busy={busy}
+            onSelectRepo={setSelectedTargetId}
+            onDiscover={onDiscover}
+            onRefreshLearning={onRefreshLearning}
+            onOpenRepo={() => setRepoModalOpen(true)}
+          />
+        </PageFrame>
+      );
+    }
+    if (activePage === 'learning') {
+      return (
+        <LearningPage
+          repos={repos}
+          recipeCounts={recipeCounts}
+          learningStates={learningStates}
+          busy={busy}
+          onRefreshLearning={onRefreshLearning}
+          onDiscover={onDiscover}
+        />
+      );
+    }
+    if (activePage === 'settings') {
+      return (
+            <SettingsPage
+              semanticStatus={semanticStatus}
+              selectedRepo={selectedRepo}
+              useSemantic={useSemantic}
+              onUseSemanticChange={setUseSemantic}
+              onOpenReset={() => setResetModalOpen(true)}
+            />
+      );
+    }
+    return (
+      <section className="workflow-grid">
+        <div className="work-surface">
+          <PromptComposer
+            featureRequest={featureRequest}
+            selectedTargetId={selectedTargetId}
+            repos={repos}
+            runId={runId}
+            busy={busy}
+            semanticStatus={semanticStatus}
+            useSemantic={useSemantic}
+            selectedWorkspace={selectedWorkspace}
+            selectedRepo={selectedRepo}
+            onPromptChange={setFeatureRequest}
+            onTargetChange={setSelectedTargetId}
+            onUseSemanticChange={setUseSemantic}
+            onSubmit={onGeneratePlan}
+          />
+
+          <PlanRunsPanel
+            planRuns={planRuns}
+            activeRunId={runId}
+            onReopen={onReopenPlanRun}
+          />
+
+          {planBundle ? (
+            <PlanBundleView
+              bundle={planBundle}
+              runId={runId}
+              activeTab={activePlanTab}
+              onTabChange={setActivePlanTab}
+              sourceFilter={sourceFilter}
+              actionFilter={actionFilter}
+              sectionFilter={sectionFilter}
+              onSourceFilterChange={setSourceFilter}
+              onActionFilterChange={setActionFilter}
+              onSectionFilterChange={setSectionFilter}
+              selectedChange={selectedChange}
+              semanticContext={lastRunSemantic}
+              onSelectChange={setSelectedChange}
+            />
+          ) : (
+            <EmptyPlanState />
+          )}
+        </div>
+
+        <RightInspector bundle={planBundle} selectedChange={selectedChange} />
+      </section>
+    );
+  }
+
   return (
     <div className="app-shell">
       <Sidebar
@@ -321,7 +499,9 @@ export default function App() {
         repos={repos}
         selectedWorkspaceId={selectedWorkspaceId}
         recipeCounts={recipeCounts}
+        activePage={activePage}
         onSelectWorkspace={setSelectedWorkspaceId}
+        onNavigate={setActivePage}
         onOpenWorkspace={() => setWorkspaceModalOpen(true)}
         onOpenRepo={() => setRepoModalOpen(true)}
       />
@@ -331,68 +511,18 @@ export default function App() {
           workspaces={workspaces}
           selectedWorkspaceId={selectedWorkspaceId}
           onSelectWorkspace={setSelectedWorkspaceId}
-          onOpenWorkspace={() => setWorkspaceModalOpen(true)}
           workspace={selectedWorkspace}
           repo={selectedRepo}
           repoCount={repos.length}
           recipeCount={selectedTargetId ? recipeCounts[selectedTargetId] : undefined}
           learningState={selectedTargetId ? learningStates[selectedTargetId] : undefined}
+          semanticStatus={semanticStatus}
           busy={busy}
         />
         {error && <div className="error-card" role="alert">{error}</div>}
         {planStatusMessage && <div className="status-card" role="status">{planStatusMessage}</div>}
 
-        <section className="workflow-grid">
-          <div className="work-surface">
-            <RepoList
-              repos={repos}
-              validations={repoValidations}
-              selectedTargetId={selectedTargetId}
-              recipeCounts={recipeCounts}
-              learningStates={learningStates}
-              busy={busy}
-              onSelectRepo={setSelectedTargetId}
-              onDiscover={onDiscover}
-              onRefreshLearning={onRefreshLearning}
-              onOpenRepo={() => setRepoModalOpen(true)}
-            />
-
-            <PromptComposer
-              featureRequest={featureRequest}
-              selectedTargetId={selectedTargetId}
-              repos={repos}
-              runId={runId}
-              busy={busy}
-              semanticStatus={semanticStatus}
-              useSemantic={useSemantic}
-              onPromptChange={setFeatureRequest}
-              onTargetChange={setSelectedTargetId}
-              onUseSemanticChange={setUseSemantic}
-              onSubmit={onGeneratePlan}
-            />
-
-            {planBundle ? (
-              <PlanBundleView
-                bundle={planBundle}
-                activeTab={activePlanTab}
-                onTabChange={setActivePlanTab}
-                sourceFilter={sourceFilter}
-                actionFilter={actionFilter}
-                sectionFilter={sectionFilter}
-                onSourceFilterChange={setSourceFilter}
-                onActionFilterChange={setActionFilter}
-                onSectionFilterChange={setSectionFilter}
-                selectedChange={selectedChange}
-                semanticContext={lastRunSemantic}
-                onSelectChange={setSelectedChange}
-              />
-            ) : (
-              <EmptyPlanState />
-            )}
-          </div>
-
-          <RightInspector bundle={planBundle} selectedChange={selectedChange} />
-        </section>
+        {renderPage()}
       </main>
 
       {workspaceModalOpen && (
@@ -424,7 +554,241 @@ export default function App() {
           disabled={!selectedWorkspaceId}
         />
       )}
+
+      {resetModalOpen && (
+        <ResetLocalDataModal
+          busy={busy === 'Resetting local data'}
+          onSubmit={onResetLocalData}
+          onClose={() => setResetModalOpen(false)}
+        />
+      )}
     </div>
+  );
+}
+
+function PageFrame({ children }: { children: React.ReactNode }) {
+  return <section className="page-frame">{children}</section>;
+}
+
+function WorkspacePage({
+  workspaces,
+  selectedWorkspaceId,
+  onSelectWorkspace,
+  onOpenWorkspace
+}: {
+  workspaces: Workspace[];
+  selectedWorkspaceId: string;
+  onSelectWorkspace: (id: string) => void;
+  onOpenWorkspace: () => void;
+}) {
+  return (
+    <PageFrame>
+      <section className="card-panel workspace-page">
+        <div className="section-heading compact">
+          <div>
+            <p className="eyebrow">Workspaces</p>
+            <h2>Choose the local planning context</h2>
+          </div>
+          <button data-testid="workspace-page-new-workspace-button" onClick={onOpenWorkspace}>New workspace</button>
+        </div>
+        {workspaces.length === 0 ? (
+          <EmptyCard title="No workspaces yet" text="Create a workspace to group repo targets and Plan Bundle runs." />
+        ) : (
+          <div className="workspace-card-list" data-testid="workspace-page-list">
+            {workspaces.map((workspace) => (
+              <button
+                key={workspace.id}
+                type="button"
+                data-testid="workspace-page-item"
+                className={`workspace-card-row ${workspace.id === selectedWorkspaceId ? 'active' : ''}`}
+                aria-label={`${workspace.name}. Created ${formatDate(workspace.created_at)}. ${workspace.id === selectedWorkspaceId ? 'Active workspace' : 'Available workspace'}.`}
+                onClick={() => onSelectWorkspace(workspace.id)}
+              >
+                <span>
+                  <strong>{workspace.name}</strong>
+                  <small>
+                    Created · {formatDate(workspace.created_at)} · {workspace.id === selectedWorkspaceId ? 'Active workspace' : 'Available workspace'}
+                  </small>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+    </PageFrame>
+  );
+}
+
+function PlanRunsPanel({
+  planRuns,
+  activeRunId,
+  onReopen
+}: {
+  planRuns: PlanRun[];
+  activeRunId: string;
+  onReopen: (run: PlanRun) => void;
+}) {
+  return (
+    <section className="card-panel plan-runs-panel">
+      <div className="section-heading compact">
+        <div>
+          <p className="eyebrow">History</p>
+          <h2>Plan Runs</h2>
+        </div>
+        <StatusChip label={`${planRuns.length} run${planRuns.length === 1 ? '' : 's'}`} tone={planRuns.length > 0 ? 'good' : 'muted'} />
+      </div>
+      {planRuns.length === 0 ? (
+        <EmptyCard title="No plan runs yet" text="Generate a plan bundle to see it here." />
+      ) : (
+        <div className="plan-runs-list" data-testid="plan-runs-list">
+          {planRuns.map((run) => (
+            <article key={run.id} className={`plan-run-item ${run.id === activeRunId ? 'active' : ''}`} data-testid="plan-run-item">
+              <div className="plan-run-main">
+                <p className="plan-run-prompt" data-testid="plan-run-prompt">{run.feature_request}</p>
+                <div className="plan-run-meta">
+                  <span data-testid="plan-run-target">{run.target_ids.join(', ') || 'no target'}</span>
+                  <span data-testid="plan-run-created-at">{formatDateTime(run.created_at)}</span>
+                  <StatusChip label={run.status} tone={run.status === 'completed' ? 'good' : run.status === 'error' ? 'danger' : 'muted'} />
+                  <span data-testid="plan-run-status" className="sr-only">{run.status}</span>
+                  <StatusChip
+                    label={`Semantic ${run.plan_bundle_json?.semantic_enrichment?.available ? 'On' : 'Off'}`}
+                    tone={run.plan_bundle_json?.semantic_enrichment?.available ? 'good' : 'muted'}
+                  />
+                  <span data-testid="plan-run-semantic-chip" className="sr-only">
+                    Semantic {run.plan_bundle_json?.semantic_enrichment?.available ? 'On' : 'Off'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                data-testid="reopen-plan-run-button"
+                className="secondary-button"
+                onClick={() => onReopen(run)}
+              >
+                Reopen
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function LearningPage({
+  repos,
+  recipeCounts,
+  learningStates,
+  busy,
+  onRefreshLearning,
+  onDiscover
+}: {
+  repos: RepoTarget[];
+  recipeCounts: Record<string, number>;
+  learningStates: Record<string, string>;
+  busy: string;
+  onRefreshLearning: (targetId: string) => void;
+  onDiscover: (targetId: string) => void;
+}) {
+  return (
+    <PageFrame>
+      <section className="card-panel learning-page">
+        <div className="section-heading compact">
+          <div>
+            <p className="eyebrow">Learning</p>
+            <h2>Discovery and recipe state</h2>
+          </div>
+        </div>
+        {repos.length === 0 ? (
+          <EmptyCard title="No repo targets" text="Add a repository before refreshing discovery or learning." />
+        ) : (
+          <div className="learning-list">
+            {repos.map((repo) => (
+              <article key={repo.id} className="learning-row">
+                <div>
+                  <strong>{repo.repo_name}</strong>
+                  <p>{repo.target_id}</p>
+                </div>
+                <div className="chip-row">
+                  <StatusChip label={`learning ${learningStates[repo.target_id] ?? 'unknown'}`} tone={learningStates[repo.target_id] === 'fresh' ? 'good' : 'muted'} />
+                  <StatusChip label={`${recipeCounts[repo.target_id] ?? 0} recipes`} tone={(recipeCounts[repo.target_id] ?? 0) > 0 ? 'good' : 'muted'} />
+                </div>
+                <div className="repo-actions">
+                  <button className="secondary-button" onClick={() => onDiscover(repo.target_id)} disabled={Boolean(busy)}>Discover</button>
+                  <button className="secondary-button" onClick={() => onRefreshLearning(repo.target_id)} disabled={Boolean(busy)}>Refresh learning</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+    </PageFrame>
+  );
+}
+
+function SettingsPage({
+  semanticStatus,
+  selectedRepo,
+  useSemantic,
+  onUseSemanticChange,
+  onOpenReset
+}: {
+  semanticStatus: SemanticStatus | null;
+  selectedRepo: RepoTarget | null;
+  useSemantic: boolean;
+  onUseSemanticChange: (value: boolean) => void;
+  onOpenReset: () => void;
+}) {
+  const semanticAvailable = Boolean(semanticStatus?.available);
+  return (
+    <PageFrame>
+      <section className="card-panel settings-page">
+        <div className="section-heading compact">
+          <div>
+            <p className="eyebrow">Settings</p>
+            <h2>Local planner options</h2>
+          </div>
+        </div>
+        <div className="settings-grid">
+          <Metric label="Selected repo" value={selectedRepo?.target_id ?? '-'} />
+          <Metric label="Semantic provider" value={semanticStatus?.provider ?? 'not configured'} />
+          <Metric label="Semantic model" value={semanticStatus?.model ?? '-'} />
+          <Metric label="Semantic cache" value={semanticStatus?.cached_artifact_available ? 'available' : 'missing'} />
+        </div>
+        <label className={`semantic-toggle ${semanticAvailable ? '' : 'disabled'}`}>
+          <span>
+            <input
+              type="checkbox"
+              aria-label="Use semantic enrichment"
+              title={semanticAvailable ? 'Use semantic enrichment for generated plans.' : 'Semantic enrichment requires provider configuration or a cached target artifact.'}
+              checked={useSemantic && semanticAvailable}
+              disabled={!semanticAvailable}
+              onChange={(event) => onUseSemanticChange(event.target.checked)}
+            />
+            Use semantic enrichment
+          </span>
+          <small>Provider and cache status are read from the backend without exposing API keys.</small>
+        </label>
+        <section className="danger-zone">
+          <div>
+            <p className="eyebrow">Danger zone</p>
+            <h3>Reset local StackPilot data</h3>
+            <p>
+              Wipe workspaces, repo targets, plan runs, discovery registry, semantic cache, and learning cache.
+              Source repos and baseline reports are not touched.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="danger-button"
+            data-testid="reset-local-data-button"
+            onClick={onOpenReset}
+          >
+            Reset local data
+          </button>
+        </section>
+      </section>
+    </PageFrame>
   );
 }
 
@@ -433,7 +797,9 @@ function Sidebar({
   repos,
   selectedWorkspaceId,
   recipeCounts,
+  activePage,
   onSelectWorkspace,
+  onNavigate,
   onOpenWorkspace,
   onOpenRepo
 }: {
@@ -441,11 +807,20 @@ function Sidebar({
   repos: RepoTarget[];
   selectedWorkspaceId: string;
   recipeCounts: Record<string, number>;
+  activePage: AppPage;
   onSelectWorkspace: (id: string) => void;
+  onNavigate: (page: AppPage) => void;
   onOpenWorkspace: () => void;
   onOpenRepo: () => void;
 }) {
   const recipeTotal = Object.values(recipeCounts).reduce((total, count) => total + count, 0);
+  const navItems: Array<[AppPage, string]> = [
+    ['workspaces', 'Workspaces'],
+    ['repositories', 'Repositories'],
+    ['plan-runs', 'Plan Runs'],
+    ['learning', 'Learning'],
+    ['settings', 'Settings']
+  ];
   return (
     <aside className="sidebar">
       <div className="sidebar-product">
@@ -457,29 +832,47 @@ function Sidebar({
       </div>
 
       <nav className="sidebar-nav" aria-label="Primary navigation">
-        <a className="nav-item active" href="#workspaces">Workspaces</a>
-        <a className="nav-item" href="#repositories">Repositories</a>
-        <a className="nav-item" href="#prompt">Plan Runs</a>
-        <a className="nav-item" href="#learning">Learning</a>
-        <a className="nav-item" href="#settings">Settings</a>
+        {navItems.map(([page, label]) => (
+          <button
+            key={page}
+            type="button"
+            className={`nav-item ${activePage === page ? 'active' : ''}`}
+            aria-current={activePage === page ? 'page' : undefined}
+            onClick={() => onNavigate(page)}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
 
       <section className="sidebar-section">
         <div className="sidebar-title-row">
           <span>Workspaces</span>
-          <button className="icon-button" onClick={onOpenWorkspace} title="Add workspace" aria-label="Add">+</button>
+          <button
+            className="icon-button"
+            data-testid="new-workspace-button"
+            onClick={onOpenWorkspace}
+            title="New workspace"
+            aria-label="Create workspace from sidebar"
+          >
+            +
+          </button>
         </div>
-        <div className="workspace-list">
+        <div className="workspace-list" data-testid="workspace-list">
           {workspaces.length === 0 && <p className="sidebar-empty">Create a workspace to begin.</p>}
           {workspaces.map((workspace) => (
             <button
               key={workspace.id}
+              data-testid="workspace-item"
               className={`sidebar-item ${workspace.id === selectedWorkspaceId ? 'active' : ''}`}
               aria-label={`Select workspace ${workspace.name}`}
               onClick={() => onSelectWorkspace(workspace.id)}
             >
               <span>{workspace.name}</span>
-              <small> • Updated {new Date(workspace.updated_at).toLocaleDateString()}</small>
+              <small>
+                Updated · {new Date(workspace.updated_at).toLocaleDateString()}
+                {workspace.id === selectedWorkspaceId ? ' · Active workspace' : ''}
+              </small>
             </button>
           ))}
         </div>
@@ -494,7 +887,7 @@ function Sidebar({
           <span>Learned recipes</span>
           <strong>{recipeTotal}</strong>
         </div>
-        <button className="sidebar-primary" onClick={onOpenRepo}>Add repository</button>
+        <button className="sidebar-primary" data-testid="add-repo-button" onClick={onOpenRepo}>Add repository</button>
       </section>
     </aside>
   );
@@ -504,23 +897,23 @@ function TopBar({
   workspaces,
   selectedWorkspaceId,
   onSelectWorkspace,
-  onOpenWorkspace,
   workspace,
   repo,
   repoCount,
   recipeCount,
   learningState,
+  semanticStatus,
   busy
 }: {
   workspaces: Workspace[];
   selectedWorkspaceId: string;
   onSelectWorkspace: (id: string) => void;
-  onOpenWorkspace: () => void;
   workspace: Workspace | null;
   repo: RepoTarget | null;
   repoCount: number;
   recipeCount?: number;
   learningState?: string;
+  semanticStatus: SemanticStatus | null;
   busy: string;
 }) {
   return (
@@ -534,7 +927,12 @@ function TopBar({
       </div>
       <label className="workspace-select">
         Workspace
-        <select value={selectedWorkspaceId} onChange={(event) => onSelectWorkspace(event.target.value)}>
+        <select
+          data-testid="workspace-selector"
+          aria-label="Workspace selector"
+          value={selectedWorkspaceId}
+          onChange={(event) => onSelectWorkspace(event.target.value)}
+        >
           <option value="">Select workspace</option>
           {workspaces.map((item) => (
             <option key={item.id} value={item.id}>{item.name}</option>
@@ -547,9 +945,12 @@ function TopBar({
         <StatusChip label={repo?.status ?? 'not registered'} tone={repo?.status === 'discovered' ? 'good' : 'warn'} />
         <StatusChip label={`learning ${learningState ?? 'unknown'}`} tone={learningState === 'fresh' ? 'good' : 'muted'} />
         <StatusChip label={`${recipeCount ?? 0} recipes`} tone={(recipeCount ?? 0) > 0 ? 'good' : 'muted'} />
+        <StatusChip
+          label={`Semantic: ${semanticStatus?.available ? 'available' : 'off'}`}
+          tone={semanticStatus?.available ? 'good' : 'muted'}
+        />
         <StatusChip label={busy || 'ready'} tone={busy ? 'warn' : 'good'} />
       </div>
-      <button className="secondary-button top-action" onClick={onOpenWorkspace}>New workspace</button>
     </header>
   );
 }
@@ -578,13 +979,13 @@ function RepoList({
   onOpenRepo: () => void;
 }) {
   return (
-    <section id="repositories" className="repo-panel card-panel">
+    <section id="repositories" className="repo-panel card-panel" data-testid="repo-list">
       <div className="section-heading compact">
         <div>
           <p className="eyebrow">Repositories</p>
           <h2>Discovery targets</h2>
         </div>
-        <button onClick={onOpenRepo}>Add repo</button>
+        <button data-testid="repo-list-add-repo-button" onClick={onOpenRepo}>Add repository</button>
       </div>
       {repos.length === 0 ? (
         <EmptyCard
@@ -673,8 +1074,8 @@ function RepoTableRow({
         </button>
       </div>
       <div className="repo-actions">
-        <button className="secondary-button" onClick={onDiscover} disabled={Boolean(busy)} title={busy ? `Waiting for ${busy}` : 'Refresh architecture discovery'}>Discover</button>
-        <button className="secondary-button" onClick={onRefreshLearning} disabled={Boolean(busy)} title={busy ? `Waiting for ${busy}` : 'Refresh learning recipes'}>Refresh learning</button>
+        <button data-testid="repo-discover-button" className="secondary-button" onClick={onDiscover} disabled={Boolean(busy)} title={busy ? `Waiting for ${busy}` : 'Refresh architecture discovery'}>Discover</button>
+        <button data-testid="repo-refresh-learning-button" className="secondary-button" onClick={onRefreshLearning} disabled={Boolean(busy)} title={busy ? `Waiting for ${busy}` : 'Refresh learning recipes'}>Refresh learning</button>
         <button className="secondary-button" onClick={onSelect}>View details</button>
       </div>
     </div>
@@ -697,11 +1098,57 @@ function WorkspaceModal({
       <form onSubmit={onSubmit} className="modal-form">
         <label>
           Workspace name
-          <input value={workspaceName} onChange={(event) => onNameChange(event.target.value)} autoFocus />
+          <input data-testid="workspace-name-input" value={workspaceName} onChange={(event) => onNameChange(event.target.value)} autoFocus />
         </label>
         <div className="modal-actions">
           <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
-          <button type="submit">Create workspace</button>
+          <button data-testid="create-workspace-button" type="submit">Create workspace</button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function ResetLocalDataModal({
+  busy,
+  onSubmit,
+  onClose
+}: {
+  busy: boolean;
+  onSubmit: (confirm: string) => void;
+  onClose: () => void;
+}) {
+  const [confirmText, setConfirmText] = useState('');
+  function handleSubmit(event: FormEvent) {
+    event.preventDefault();
+    onSubmit(confirmText);
+  }
+  return (
+    <Modal title="Reset local data" onClose={onClose} testId="reset-local-data-modal">
+      <form onSubmit={handleSubmit} className="modal-form">
+        <div className="notice danger">
+          This deletes local StackPilot app state: workspaces, repo targets, plan runs, discovery registry,
+          semantic cache, and learning cache. Source repos and baseline reports are preserved.
+        </div>
+        <label>
+          Type RESET to confirm
+          <input
+            value={confirmText}
+            onChange={(event) => setConfirmText(event.target.value)}
+            autoFocus
+            data-testid="reset-confirm-input"
+          />
+        </label>
+        <div className="modal-actions">
+          <button type="button" className="secondary-button" onClick={onClose} disabled={busy}>Cancel</button>
+          <button
+            type="submit"
+            className="danger-button"
+            disabled={busy || confirmText !== 'RESET'}
+            data-testid="confirm-reset-local-data-button"
+          >
+            {busy ? 'Resetting...' : 'Reset local data'}
+          </button>
         </div>
       </form>
     </Modal>
@@ -744,23 +1191,23 @@ function AddRepoModal({
   disabled: boolean;
 }) {
   return (
-    <Modal title="Add repository" onClose={onClose} wide>
+    <Modal title="Add repository" onClose={onClose} wide testId="add-repo-dialog">
       <form onSubmit={onSubmit} className="add-repo-layout">
         <div className="modal-form">
           <label htmlFor="repo-target-id-input">
             Target id
-            <input id="repo-target-id-input" value={repoTargetId} onChange={(event) => onTargetIdChange(event.target.value)} autoFocus />
+            <input id="repo-target-id-input" data-testid="repo-target-id-input" value={repoTargetId} onChange={(event) => onTargetIdChange(event.target.value)} autoFocus />
           </label>
           <label htmlFor="repo-source-type-input">
             Source type
-            <select id="repo-source-type-input" value={sourceType} onChange={(event) => onSourceTypeChange(event.target.value as 'local_path' | 'git_url')}>
+            <select id="repo-source-type-input" data-testid="repo-source-type-select" value={sourceType} onChange={(event) => onSourceTypeChange(event.target.value as 'local_path' | 'git_url')}>
               <option value="local_path">local path</option>
               <option value="git_url">git URL (stored only)</option>
             </select>
           </label>
           <label htmlFor="repo-locator-input">
             Path or URL
-            <input id="repo-locator-input" value={locator} onChange={(event) => onLocatorChange(event.target.value)} />
+            <input id="repo-locator-input" data-testid="repo-locator-input" value={locator} onChange={(event) => onLocatorChange(event.target.value)} />
           </label>
           <div className="inline-actions">
             <button type="button" className="secondary-button" onClick={onPickFolder}>Try browser folder picker</button>
@@ -771,7 +1218,7 @@ function AddRepoModal({
             )}
           </div>
           <p className="helper-text">
-            Paste an absolute path. Native folder picker can be added in desktop/Tauri mode.
+            Paste an absolute local path or GitHub URL. Native folder picker can be added in desktop/Tauri mode.
           </p>
           {folderPickerNote && <p className="helper-text">{folderPickerNote}</p>}
           {recentPaths.length > 0 && (
@@ -783,8 +1230,8 @@ function AddRepoModal({
             </div>
           )}
           <div className="modal-actions">
-            <button type="button" className="secondary-button" onClick={onClose}>Cancel</button>
-            <button type="submit" disabled={disabled}>Add repo</button>
+            <button type="button" className="secondary-button" data-testid="add-repo-cancel" onClick={onClose}>Cancel</button>
+            <button type="submit" data-testid="add-repo-submit" disabled={disabled}>Add repo</button>
           </div>
         </div>
         <RepoValidationPreview validation={validation} busy={validationBusy} error={validationError} />
@@ -796,7 +1243,7 @@ function AddRepoModal({
 function RepoValidationPreview({ validation, busy, error }: { validation: RepoTargetValidation | null; busy: boolean; error: string }) {
   if (busy) {
     return (
-      <aside className="validation-preview empty" role="status" aria-live="polite" aria-busy="true">
+      <aside className="validation-preview empty" data-testid="repo-validation-status" role="status" aria-live="polite" aria-busy="true">
         <span>Validation preview</span>
         <p>Validating repo path...</p>
       </aside>
@@ -804,7 +1251,7 @@ function RepoValidationPreview({ validation, busy, error }: { validation: RepoTa
   }
   if (error) {
     return (
-      <aside className="validation-preview empty" role="alert">
+      <aside className="validation-preview empty" data-testid="repo-validation-status" role="alert">
         <span>Validation preview</span>
         <p>{error}</p>
       </aside>
@@ -812,14 +1259,14 @@ function RepoValidationPreview({ validation, busy, error }: { validation: RepoTa
   }
   if (!validation) {
     return (
-      <aside className="validation-preview empty" role="status" aria-live="polite">
+      <aside className="validation-preview empty" data-testid="repo-validation-status" role="status" aria-live="polite">
         <span>Validation preview</span>
         <p>Enter a local path to detect repo type, frameworks, and common client-subfolder mistakes.</p>
       </aside>
     );
   }
   return (
-    <aside className="validation-preview" role="status" aria-live="polite">
+    <aside className="validation-preview" data-testid="repo-validation-status" role="status" aria-live="polite">
       <div className="preview-head">
         <span>Validation preview</span>
         <StatusChip label={validation.detected_repo_type} tone={validation.detected_repo_type.includes('frontend') ? 'warn' : 'good'} />
@@ -853,6 +1300,8 @@ function PromptComposer({
   busy,
   semanticStatus,
   useSemantic,
+  selectedWorkspace,
+  selectedRepo,
   onPromptChange,
   onTargetChange,
   onUseSemanticChange,
@@ -865,6 +1314,8 @@ function PromptComposer({
   busy: string;
   semanticStatus: SemanticStatus | null;
   useSemantic: boolean;
+  selectedWorkspace: Workspace | null;
+  selectedRepo: RepoTarget | null;
   onPromptChange: (value: string) => void;
   onTargetChange: (value: string) => void;
   onUseSemanticChange: (value: boolean) => void;
@@ -877,11 +1328,16 @@ function PromptComposer({
       ? 'Latest cached semantic enrichment is available for this target.'
       : 'Semantic enrichment requires provider configuration or a cached target artifact.';
   return (
-    <section className="composer-card">
+    <section className="composer-card" data-testid="prompt-composer">
       <div className="section-heading compact">
         <div>
           <p className="eyebrow">Prompt</p>
           <h2>Ask StackPilot for a Plan Bundle</h2>
+          <p className="context-line">
+            Workspace: <strong>{selectedWorkspace?.name ?? 'none'}</strong>
+            {' · '}
+            Target: <strong>{selectedRepo?.target_id ?? 'none'}</strong>
+          </p>
         </div>
         {runId && <StatusChip label={`run ${runId.slice(0, 8)}`} tone="muted" />}
       </div>
@@ -891,6 +1347,7 @@ function PromptComposer({
             Feature request
             <textarea
               id="feature-request-input"
+              data-testid="feature-request-textarea"
               value={featureRequest}
               onChange={(event) => onPromptChange(event.target.value)}
               rows={3}
@@ -900,8 +1357,13 @@ function PromptComposer({
           </label>
           <div className="composer-actions">
             <label>
-              Target
-              <select value={selectedTargetId} onChange={(event) => onTargetChange(event.target.value)}>
+              Target repository
+              <select
+                data-testid="target-repo-select"
+                aria-label="Target repository"
+                value={selectedTargetId}
+                onChange={(event) => onTargetChange(event.target.value)}
+              >
                 <option value="">Choose target</option>
                 {repos.map((repo) => (
                   <option key={repo.id} value={repo.target_id}>{repo.target_id}</option>
@@ -912,7 +1374,10 @@ function PromptComposer({
               <span>
                 <input
                   type="checkbox"
+                  data-testid="use-semantic-checkbox"
+                  aria-label="Use semantic enrichment"
                   aria-describedby="semantic-toggle-helper"
+                  title={semanticAvailable ? 'Use semantic enrichment for generated plans.' : semanticHelpText}
                   checked={useSemantic && semanticAvailable}
                   disabled={!semanticAvailable}
                   onChange={(event) => onUseSemanticChange(event.target.checked)}
@@ -921,7 +1386,7 @@ function PromptComposer({
               </span>
               <small id="semantic-toggle-helper">{semanticHelpText}</small>
             </label>
-            <button type="submit" disabled={!selectedTargetId || Boolean(busy)}>
+            <button type="submit" data-testid="generate-plan-button" disabled={!selectedTargetId || Boolean(busy)}>
               {busy === 'Generating Plan Bundle' ? 'Generating...' : 'Generate Plan Bundle'}
             </button>
           </div>
@@ -929,6 +1394,7 @@ function PromptComposer({
         <div className="example-row" aria-label="Example prompts">
           {[
             'Add OwnersPage (no actions yet)',
+            'add the ability to upload a picture of your pet',
             'Add Layout and Welcome page',
             'create a new contact-us page with the proper backend objects and api'
           ].map((example) => (
@@ -944,6 +1410,7 @@ function PromptComposer({
 
 function PlanBundleView({
   bundle,
+  runId,
   activeTab,
   onTabChange,
   sourceFilter,
@@ -957,6 +1424,7 @@ function PlanBundleView({
   onSelectChange
 }: {
   bundle: PlanBundle;
+  runId: string;
   activeTab: PlanTab;
   onTabChange: (tab: PlanTab) => void;
   sourceFilter: SourceFilter;
@@ -978,7 +1446,7 @@ function PlanBundleView({
   });
 
   return (
-    <section className="bundle-panel">
+    <section className="bundle-panel" data-testid="plan-bundle-view">
       <div className="bundle-header">
         <div>
           <p className="eyebrow">Plan Bundle</p>
@@ -993,8 +1461,8 @@ function PlanBundleView({
           />
           {semanticContext.status && (
             <StatusChip
-              label={`Semantic cache: ${semanticContext.status.cached_artifact_available ? 'hit' : 'miss'}`}
-              tone={semanticContext.status.cached_artifact_available ? 'good' : 'muted'}
+              label={`Semantic cache: ${bundle.semantic_cache_status ?? (semanticContext.status.cached_artifact_available ? 'target artifact' : 'miss')}`}
+              tone={bundle.semantic_cache_status === 'hit' || bundle.semantic_cache_status === 'regenerated' ? 'good' : bundle.semantic_cache_status === 'skipped_prompt_mismatch' ? 'warn' : 'muted'}
             />
           )}
           {semanticProviderLabel(bundle, semanticContext) && <StatusChip label={semanticProviderLabel(bundle, semanticContext)} tone="muted" />}
@@ -1004,7 +1472,7 @@ function PlanBundleView({
       {semanticContext.requested && !bundle.semantic_enrichment?.available && (
         <Notice
           tone="warning"
-          text="Semantic enrichment was requested but no provider or cached semantic artifact was available."
+          text={bundle.semantic_cache_message || "Semantic enrichment was requested but no provider or matching cached semantic artifact was available."}
         />
       )}
       <Tabs active={activeTab} onChange={onTabChange} />
@@ -1026,7 +1494,7 @@ function PlanBundleView({
         {activeTab === 'recipes' && <RecipesTab bundle={bundle} />}
         {activeTab === 'graph' && <GraphEvidenceTab bundle={bundle} />}
         {activeTab === 'validation' && <ValidationTab bundle={bundle} />}
-        {activeTab === 'handoff' && <HandoffTab bundle={bundle} />}
+        {activeTab === 'handoff' && <HandoffTab bundle={bundle} runId={runId} />}
         {activeTab === 'json' && <JsonViewer bundle={bundle} />}
       </div>
     </section>
@@ -1083,12 +1551,26 @@ function OverviewTab({ bundle }: { bundle: PlanBundle }) {
             New domain candidate: {bundle.summary.new_domain_candidates.join(', ')}. Plan conservatively until source structure confirms it.
           </div>
         )}
+        {bundle.recommended_change_set.length > 0 && (
+          <div className="overview-recommendations">
+            <h3>Top recommendations</h3>
+            <div className="recommendation-path-list">
+              {bundle.recommended_change_set.slice(0, 10).map((item) => (
+                <div key={`${item.priority}-${item.path}`} className="recommendation-path-row">
+                  <span className="priority-badge">{item.priority}</span>
+                  <code title={item.path}>{item.path}</code>
+                  <StatusChip label={item.source} tone={item.source === 'both' || item.source === 'semantic_enrichment' ? 'good' : 'muted'} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {bundle.semantic_enrichment?.available && (
           <div className="semantic-summary">
             <h3>Semantic enrichment</h3>
             <div className="chip-row">
               <StatusChip label="semantic_enrichment" tone="good" />
-              {semanticLabels.slice(0, 10).map((label) => <StatusChip key={label} label={label} tone="muted" />)}
+              {semanticLabels.slice(0, 16).map((label) => <StatusChip key={label} label={label} tone="muted" />)}
             </div>
             {bundle.semantic_enrichment.model_info && (
               <p className="muted">
@@ -1142,7 +1624,7 @@ function ChangeSetTab({
         <FilterSelect label="Action" value={actionFilter} values={['all', 'modify', 'create', 'inspect', 'inspect-only']} onChange={(value) => onActionFilterChange(value as ActionFilter)} />
         <FilterSelect label="Section" value={sectionFilter} values={['all', 'frontend', 'backend', 'api', 'persistence', 'config', 'unknown']} onChange={(value) => onSectionFilterChange(value as SectionFilter)} />
       </div>
-      <div className="change-card-list">
+      <div className="change-card-list" data-testid="change-set-list">
         {changes.length === 0 && <p className="muted">No recommendations match these filters.</p>}
         {groupedChanges.map(([area, items]) => (
           <section key={area} className="change-group" aria-label={`${area} recommendations`}>
@@ -1307,12 +1789,19 @@ function ValidationTab({ bundle }: { bundle: PlanBundle }) {
   );
 }
 
-function HandoffTab({ bundle }: { bundle: PlanBundle }) {
+function HandoffTab({ bundle, runId }: { bundle: PlanBundle; runId: string }) {
   if (bundle.handoff_prompts.length === 0) {
     return <EmptyCard title="No handoff prompt" text="Generate a Plan Bundle with concrete recommendations to create a repo handoff prompt." />;
   }
   return (
-    <div className="handoff-list">
+    <div className="handoff-list" data-testid="handoff-prompt-panel">
+      <div className="run-metadata card-panel" data-testid="run-metadata">
+        <h3>Current run</h3>
+        <p><strong>Prompt:</strong> {bundle.feature_request}</p>
+        <p><strong>Run id:</strong> {runId || '-'}</p>
+        <p><strong>Semantic cache:</strong> {bundle.semantic_cache_status ?? 'unavailable'}</p>
+        {bundle.semantic_cache_message && <p><strong>Semantic note:</strong> {bundle.semantic_cache_message}</p>}
+      </div>
       {bundle.handoff_prompts.map((handoff) => <HandoffPromptCard key={handoff.repo_name} handoff={handoff} bundle={bundle} />)}
     </div>
   );
@@ -1321,6 +1810,18 @@ function HandoffTab({ bundle }: { bundle: PlanBundle }) {
 function HandoffPromptCard({ handoff, bundle }: { handoff: PlanBundle['handoff_prompts'][number]; bundle: PlanBundle }) {
   const semanticLabels = semanticIntentLabels(bundle);
   const caveats = [...(bundle.semantic_caveats ?? []), ...(bundle.semantic_missing_details ?? [])];
+  if (import.meta.env.DEV) {
+    const promptText = handoff.prompt.toLowerCase();
+    const hasUploadText = /file upload|picture upload|media_upload|file_upload|storage strategy|image metadata|picture preview/.test(promptText);
+    const hasUploadSemantics = semanticLabels.some((label) => ['file_upload', 'media_upload', 'storage'].includes(label));
+    if (hasUploadText && !hasUploadSemantics) {
+      console.warn('[StackPilot] handoff prompt may contain stale upload semantics absent from current bundle', {
+        feature_request: bundle.feature_request,
+        semantic_cache_status: bundle.semantic_cache_status,
+        semanticLabels
+      });
+    }
+  }
   return (
     <article className="handoff-card card-panel">
       <div className="section-heading compact">
@@ -1339,7 +1840,7 @@ function HandoffPromptCard({ handoff, bundle }: { handoff: PlanBundle['handoff_p
       </div>
       {semanticLabels.length > 0 && (
         <div className="chip-row" aria-label="Semantic handoff labels">
-          {semanticLabels.slice(0, 10).map((label) => <StatusChip key={label} label={label} tone="muted" />)}
+          {semanticLabels.slice(0, 16).map((label) => <StatusChip key={label} label={label} tone="muted" />)}
         </div>
       )}
       {caveats.length > 0 && (
@@ -1355,7 +1856,7 @@ function HandoffPromptCard({ handoff, bundle }: { handoff: PlanBundle['handoff_p
 function JsonViewer({ bundle }: { bundle: PlanBundle }) {
   const text = JSON.stringify(bundle, null, 2);
   return (
-    <article className="json-viewer card-panel">
+    <article className="json-viewer card-panel" data-testid="plan-json-viewer">
       <div className="section-heading compact">
         <div>
           <p className="eyebrow">UI contract</p>
@@ -1505,7 +2006,19 @@ function EmptyPlanState() {
   );
 }
 
-function Modal({ title, children, onClose, wide = false }: { title: string; children: React.ReactNode; onClose: () => void; wide?: boolean }) {
+function Modal({
+  title,
+  children,
+  onClose,
+  wide = false,
+  testId
+}: {
+  title: string;
+  children: React.ReactNode;
+  onClose: () => void;
+  wide?: boolean;
+  testId?: string;
+}) {
   const titleId = `modal-title-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
@@ -1517,7 +2030,7 @@ function Modal({ title, children, onClose, wide = false }: { title: string; chil
 
   return (
     <div className="modal-backdrop">
-      <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <div className={`modal ${wide ? 'wide' : ''}`} role="dialog" aria-modal="true" aria-labelledby={titleId} data-testid={testId}>
         <div className="modal-head">
           <h2 id={titleId}>{title}</h2>
           <button className="icon-button" onClick={onClose} aria-label="Close">×</button>
@@ -1534,6 +2047,16 @@ function loadRecentPaths(): string[] {
     return value ? JSON.parse(value).slice(0, 5) : [];
   } catch {
     return [];
+  }
+}
+
+function clearStackPilotLocalStorage() {
+  try {
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith('stackpilot.'))
+      .forEach((key) => window.localStorage.removeItem(key));
+  } catch {
+    // Local storage is best-effort only; backend reset is authoritative.
   }
 }
 
@@ -1556,6 +2079,19 @@ function compactPathLabel(value: string): string {
   const parts = value.split(/[\\/]+/).filter(Boolean);
   if (parts.length <= 3) return middleEllipsis(value, 64);
   return `…/${parts.slice(-3).join('/')}`;
+}
+
+function formatDate(value: string): string {
+  return new Date(value).toLocaleDateString();
+}
+
+function formatDateTime(value: string): string {
+  return new Date(value).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
+  });
 }
 
 function copyText(text: string) {

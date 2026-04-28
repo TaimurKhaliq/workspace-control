@@ -72,6 +72,17 @@ class SemanticStatusResponse(BaseModel):
     available: bool = False
 
 
+class ResetLocalDataRequest(BaseModel):
+    confirm: str = Field(min_length=1)
+
+
+class ResetLocalDataResponse(BaseModel):
+    status: str
+    deleted_paths: list[str] = Field(default_factory=list)
+    reset_tables: list[str] = Field(default_factory=list)
+    message: str
+
+
 class PlanRunOut(BaseModel):
     id: str
     workspace_id: str

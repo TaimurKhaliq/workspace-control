@@ -250,10 +250,12 @@
       "unknown"
     ],
     "predicted_files": [
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"
@@ -750,10 +752,12 @@
       "unknown"
     ],
     "predicted_files": [
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/client/src/components/form/Input.tsx"
@@ -806,17 +810,12 @@
       "unknown"
     ],
     "predicted_files": [
-      "spring-petclinic-reactjs/Run PetClinicApplication.launch",
-      "spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx",
       "spring-petclinic-reactjs/client/src/components/pets/NewPetPage.tsx",
-      "spring-petclinic-reactjs/client/src/components/pets/PetEditor.tsx",
       "spring-petclinic-reactjs/client/src/components/pets/createPetEditorModel.tsx",
-      "spring-petclinic-reactjs/client/src/types/index.ts",
+      "spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx",
+      "spring-petclinic-reactjs/Run PetClinicApplication.launch",
       "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/PetClinicApplication.java",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/client/README.md",
@@ -824,7 +823,7 @@
     ],
     "exact_precision": 0.0,
     "exact_recall": 0.0,
-    "category_precision": 0.4,
+    "category_precision": 0.6667,
     "category_recall": 1.0,
     "high_signal_precision": 0.0,
     "high_signal_recall": 0.0,
@@ -1511,10 +1510,12 @@
       "unknown"
     ],
     "predicted_files": [
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/client/src/components/form/Input.tsx"
@@ -2588,17 +2589,11 @@
       "unknown"
     ],
     "predicted_files": [
-      "spring-petclinic-reactjs/Run PetClinicApplication.launch",
-      "spring-petclinic-reactjs/client/src/components/owners/PetsTable.tsx",
-      "spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx",
       "spring-petclinic-reactjs/client/src/components/pets/NewPetPage.tsx",
-      "spring-petclinic-reactjs/client/src/components/pets/PetEditor.tsx",
       "spring-petclinic-reactjs/client/src/components/pets/createPetEditorModel.ts",
-      "spring-petclinic-reactjs/client/src/components/visits/PetDetails.tsx",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
+      "spring-petclinic-reactjs/client/src/components/pets/EditPetPage.tsx",
+      "spring-petclinic-reactjs/Run PetClinicApplication.launch",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/PetController.java"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/PetRequest.java"
@@ -2753,10 +2748,12 @@
       "unknown"
     ],
     "predicted_files": [
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service",
-      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/repository"
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CustomErrorController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/FailingApiController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/CrashController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/OwnerController.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/web/api/ErrorResource.java",
+      "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/service/ClinicService.java"
     ],
     "actual_files": [
       "spring-petclinic-reactjs/src/main/java/org/springframework/samples/petclinic/model/Person.java"

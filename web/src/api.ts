@@ -43,7 +43,7 @@ export type PlanBundleChangeItem = {
   action: 'modify' | 'create' | 'inspect' | 'inspect-only' | string;
   priority: number;
   confidence: 'high' | 'medium' | 'low' | string;
-  source: 'planner' | 'recipe' | 'both' | string;
+  source: 'planner' | 'recipe' | 'semantic_enrichment' | 'both' | string;
   node_type: string;
   reason: string;
   evidence: string[];
@@ -134,6 +134,8 @@ export type PlanBundle = {
     caveats?: string[];
     [key: string]: unknown;
   };
+  semantic_cache_status?: 'hit' | 'miss' | 'skipped_prompt_mismatch' | 'regenerated' | 'unavailable' | string;
+  semantic_cache_message?: string | null;
   semantic_missing_details?: string[];
   semantic_clarifying_questions?: string[];
   semantic_caveats?: string[];
@@ -159,6 +161,23 @@ export type PlanBundle = {
 export type PlanBundleResponse = {
   run_id: string;
   plan_bundle: PlanBundle;
+};
+
+export type PlanRun = {
+  id: string;
+  workspace_id: string;
+  feature_request: string;
+  target_ids: string[];
+  status: string;
+  plan_bundle_json: PlanBundle | null;
+  created_at: string;
+};
+
+export type ResetLocalDataResponse = {
+  status: string;
+  deleted_paths: string[];
+  reset_tables: string[];
+  message: string;
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? '';
@@ -232,5 +251,20 @@ export function generatePlanBundle(
     method: 'POST',
     signal: options?.signal,
     body: JSON.stringify({ feature_request: featureRequest, target_ids: targetIds, use_semantic: useSemantic })
+  });
+}
+
+export function listPlanRuns(workspaceId: string) {
+  return request<PlanRun[]>(`/api/workspaces/${workspaceId}/plan-runs`);
+}
+
+export function getPlanRun(runId: string) {
+  return request<PlanRun>(`/api/plan-bundles/${runId}`);
+}
+
+export function resetLocalData(confirm: string) {
+  return request<ResetLocalDataResponse>('/api/admin/reset-local-data', {
+    method: 'POST',
+    body: JSON.stringify({ confirm })
   });
 }

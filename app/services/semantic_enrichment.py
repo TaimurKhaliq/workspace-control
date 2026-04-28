@@ -7,6 +7,7 @@ import os
 import re
 import urllib.error
 import urllib.request
+from hashlib import sha256
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
@@ -645,6 +646,7 @@ def save_semantic_enrichment(
 ) -> Path:
     """Persist latest semantic enrichment for a target."""
 
+    result = _with_cache_metadata(result)
     path = semantic_result_path(result.target_id, semantic_root=semantic_root)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(format_semantic_enrichment_json(result) + "\n", encoding="utf-8")
@@ -655,13 +657,17 @@ def load_latest_semantic_enrichment(
     target_id: str,
     *,
     semantic_root: Path = DEFAULT_SEMANTIC_ROOT,
+    feature_request: str | None = None,
 ) -> SemanticEnrichmentResult | None:
     """Load the latest semantic enrichment artifact for a target if present."""
 
     path = semantic_result_path(target_id, semantic_root=semantic_root)
     if not path.is_file():
         return None
-    return SemanticEnrichmentResult.model_validate_json(path.read_text(encoding="utf-8"))
+    result = SemanticEnrichmentResult.model_validate_json(path.read_text(encoding="utf-8"))
+    if feature_request is not None and not semantic_result_matches_request(result, feature_request):
+        return None
+    return result
 
 
 def semantic_result_path(target_id: str, *, semantic_root: Path = DEFAULT_SEMANTIC_ROOT) -> Path:
@@ -671,10 +677,54 @@ def semantic_result_path(target_id: str, *, semantic_root: Path = DEFAULT_SEMANT
     return semantic_root / safe / "latest_semantic_enrichment.json"
 
 
+def semantic_result_matches_request(
+    result: SemanticEnrichmentResult,
+    feature_request: str,
+) -> bool:
+    """Return whether a cached semantic result belongs to the current request."""
+
+    if result.feature_request.strip() == feature_request.strip():
+        return True
+    current_normalized = normalize_text(feature_request)
+    cached_normalized = (
+        result.normalized_feature_request
+        or result.feature_spec.normalized_request
+        or normalize_text(result.feature_request)
+    )
+    return bool(current_normalized and cached_normalized and current_normalized == cached_normalized)
+
+
+def semantic_request_hash(feature_request: str) -> str:
+    """Return a stable hash for prompt-cache matching metadata."""
+
+    return sha256(normalize_text(feature_request).encode("utf-8")).hexdigest()
+
+
 def format_semantic_enrichment_json(result: SemanticEnrichmentResult) -> str:
     """Render semantic enrichment as stable JSON."""
 
+    result = _with_cache_metadata(result)
     return json.dumps(result.model_dump(mode="python"), indent=2, sort_keys=False)
+
+
+def _with_cache_metadata(result: SemanticEnrichmentResult) -> SemanticEnrichmentResult:
+    normalized = (
+        result.normalized_feature_request
+        or result.feature_spec.normalized_request
+        or normalize_text(result.feature_request)
+    )
+    request_hash = result.request_hash or semantic_request_hash(result.feature_request)
+    without_content_hash = result.model_dump(mode="python", exclude={"content_hash"})
+    content_hash = sha256(
+        json.dumps(without_content_hash, sort_keys=True, default=str).encode("utf-8")
+    ).hexdigest()
+    return result.model_copy(
+        update={
+            "normalized_feature_request": normalized,
+            "request_hash": request_hash,
+            "content_hash": content_hash,
+        }
+    )
 
 
 def _node_relevance(node: GraphNode, request_tokens: set[str]) -> int:

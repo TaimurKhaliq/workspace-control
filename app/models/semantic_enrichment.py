@@ -81,6 +81,9 @@ class SemanticEnrichmentResult(BaseModel):
     feature_request: str
     target_id: str
     generated_at: str
+    normalized_feature_request: str | None = None
+    request_hash: str | None = None
+    content_hash: str | None = None
     feature_spec: SemanticFeatureSpec
     annotations: list[SemanticGraphAnnotation] = Field(default_factory=list)
     caveats: list[str] = Field(default_factory=list)

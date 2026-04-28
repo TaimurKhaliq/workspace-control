@@ -1093,6 +1093,7 @@ def _semantic_result_for_args(args):
         return load_latest_semantic_enrichment(
             target_id,
             semantic_root=getattr(args, "semantic_root", DEFAULT_SEMANTIC_ROOT),
+            feature_request=getattr(args, "feature_description", None),
         )
     except (OSError, ValidationError, ValueError):
         return None

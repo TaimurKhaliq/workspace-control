@@ -5,9 +5,9 @@
 - current head: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - previous last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
 - last analyzed: `4a6c26d99f48d8bfac97352130b9fae4feab2509`
-- commits considered: 300
-- commits analyzed: 66
-- recipes discovered/updated: 8
+- commits considered: 0
+- commits analyzed: 0
+- recipes discovered/updated: 0
 - validation results: 67
 
 ## Recipe Counts

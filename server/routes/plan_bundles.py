@@ -117,6 +117,24 @@ def create_plan_bundle_run(
     return PlanBundleRunResponse(run_id=run_id, plan_bundle=bundle_json)
 
 
+@router.get("/api/workspaces/{workspace_id}/plan-runs", response_model=list[PlanRunOut])
+def list_plan_bundle_runs(
+    workspace_id: str,
+    db: sqlite3.Connection = Depends(get_db),
+) -> list[PlanRunOut]:
+    require_workspace(db, workspace_id)
+    rows = db.execute(
+        """
+        SELECT *
+        FROM plan_runs
+        WHERE workspace_id = ?
+        ORDER BY created_at DESC, id DESC
+        """,
+        (workspace_id,),
+    ).fetchall()
+    return [plan_run_from_row(row) for row in rows]
+
+
 @router.get("/api/plan-bundles/{run_id}", response_model=PlanRunOut)
 def get_plan_bundle_run(
     run_id: str,
