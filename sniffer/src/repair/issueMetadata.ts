@@ -27,6 +27,7 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
   const evidence = issue.evidence.join('\n')
   const files = new Set<string>()
   const normalizedPatterns = normalizedEvidencePatterns(issue)
+  const issueText = `${issue.title}\n${issue.description}\n${evidence}`.toLowerCase()
 
   for (const surface of sourceGraph.uiSurfaces) {
     if (issue.description.includes(surface.display_name) || issue.evidence.some((item) => item.includes(surface.surface_type) || item.includes(surface.display_name))) {
@@ -76,7 +77,20 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
     'visual_clutter'
   ].includes(issue.type)) {
     files.add('src/App.tsx')
-    sourceGraph.uiSurfaces.forEach((surface) => files.add(surface.file))
+    if (issue.type === 'layout_issue' || issue.type === 'visual_clutter') {
+      files.add('src/styles.css')
+      files.add('src/App.css')
+    }
+    for (const workflow of sourceGraph.sourceWorkflows) {
+      if (matchesIssueText(issueText, [workflow.name, ...workflow.evidence, ...workflow.likelyUserActions])) {
+        workflow.sourceFiles.forEach((file) => files.add(file))
+      }
+    }
+    for (const surface of sourceGraph.uiSurfaces) {
+      if (matchesIssueText(issueText, [surface.surface_type, surface.display_name, ...surface.evidence, ...surface.relatedButtons, ...surface.relatedInputs])) {
+        files.add(surface.file)
+      }
+    }
   }
   if (['semantic_mismatch', 'stale_output'].includes(issue.type)) {
     files.add('src/App.tsx')
@@ -86,7 +100,72 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
     files.add('../app/services/semantic_enrichment.py')
   }
 
-  return [...files].sort()
+  return rankAndLimitSuspectedFiles(issue, sourceGraph, [...files])
+}
+
+function rankAndLimitSuspectedFiles(issue: Issue, sourceGraph: SourceGraph, files: string[]): string[] {
+  const issueText = `${issue.title}\n${issue.description}\n${issue.evidence.join('\n')}`.toLowerCase()
+  const workflowFiles = new Set(sourceGraph.sourceWorkflows
+    .filter((workflow) => matchesIssueText(issueText, [workflow.name, ...workflow.evidence, ...workflow.likelyUserActions]))
+    .flatMap((workflow) => workflow.sourceFiles))
+  const surfaceFiles = new Set(sourceGraph.uiSurfaces
+    .filter((surface) => matchesIssueText(issueText, [surface.surface_type, surface.display_name, ...surface.evidence, ...surface.relatedButtons, ...surface.relatedInputs]))
+    .map((surface) => surface.file))
+  const apiFiles = new Set(sourceGraph.apiCalls
+    .filter((apiCall) => issueText.includes(apiCall.endpoint.toLowerCase()) || Boolean(apiCall.functionName && issueText.includes(apiCall.functionName.toLowerCase())) || Boolean(apiCall.likelyWorkflow && issueText.includes(apiCall.likelyWorkflow.toLowerCase())))
+    .map((apiCall) => apiCall.sourceFile))
+  const maxFiles = issue.type === 'layout_issue' || issue.type === 'visual_clutter' ? 10 : 8
+  const scoredFiles = [...new Set(files)]
+    .map((file) => ({ file, score: suspectedFileScore(file, issueText, workflowFiles, surfaceFiles, apiFiles, issue.type) }))
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.file.localeCompare(right.file))
+  const nonTestFiles = scoredFiles.filter((item) => !isTestFile(item.file))
+  const candidates = issue.type === 'test_bug' || nonTestFiles.length === 0 ? scoredFiles : nonTestFiles
+  return candidates
+    .slice(0, maxFiles)
+    .map((item) => item.file)
+}
+
+function suspectedFileScore(
+  file: string,
+  issueText: string,
+  workflowFiles: Set<string>,
+  surfaceFiles: Set<string>,
+  apiFiles: Set<string>,
+  type: Issue['type']
+): number {
+  let score = 0
+  if (apiFiles.has(file)) score += 12
+  if (workflowFiles.has(file)) score += 8
+  if (surfaceFiles.has(file)) score += 6
+  if (/src\/api\.(ts|tsx|js|jsx)$/.test(file)) score += /api|network|endpoint|console|stale|semantic/i.test(issueText) ? 7 : 1
+  if (/src\/App\.(tsx|jsx|ts|js)$/.test(file)) score += 4
+  if (/styles?\.(css|scss|sass)$/.test(file)) score += type === 'layout_issue' || type === 'visual_clutter' ? 8 : 0
+  if (issueText.includes(file.toLowerCase())) score += 10
+  if (/server\/routes|server\/app|planner|semantic/i.test(file)) score += /api|endpoint|semantic|stale|plan/i.test(issueText) ? 5 : 0
+  if (isTestFile(file) && type !== 'test_bug') score -= 6
+  if (score === 0 && /src\/components\//.test(file)) score = 1
+  return score
+}
+
+function isTestFile(file: string): boolean {
+  return /(^|\/)(tests?|__tests__)\/|\.test\.|\.spec\./i.test(file)
+}
+
+function matchesIssueText(issueText: string, signals: Array<string | undefined>): boolean {
+  return signals
+    .filter((signal): signal is string => Boolean(signal && signal.trim().length >= 3))
+    .some((signal) => {
+      const normalized = signal.toLowerCase()
+      return issueText.includes(normalized) || importantTokens(normalized).some((token) => issueText.includes(token))
+    })
+}
+
+function importantTokens(value: string): string[] {
+  return value
+    .split(/[^a-z0-9]+/i)
+    .map((token) => token.toLowerCase())
+    .filter((token) => token.length >= 5 && !['button', 'input', 'scenario', 'workflow', 'source', 'runtime', 'visible', 'control'].includes(token))
 }
 
 function addLearningStatusSuspects(files: Set<string>, sourceGraph: SourceGraph, issue: Issue): void {

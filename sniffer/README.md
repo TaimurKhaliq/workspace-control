@@ -323,8 +323,8 @@ Expected console shape:
 
 ```text
 Verification matrix PASSED
-- PASS tiny-react-fixture: react / crud_app · source=... runtime=... generated=... runs=...
-- PASS static-html-fixture: unknown / crud_app · source=... runtime=... generated=... runs=...
+- PASS tiny-react-fixture: react / crud_app · source=... runtime=... generated=... runs=... issues=... groups=... fixes=... screenshots=...
+- PASS static-html-fixture: unknown / crud_app · source=... runtime=... generated=... runs=... issues=... groups=... fixes=... screenshots=...
 - SKIP workspace-control-web: App URL not reachable: http://127.0.0.1:5173
 - PASS dogfood: http://127.0.0.1:<port>
 Wrote reports/sniffer/matrix/latest_matrix.md
@@ -340,12 +340,16 @@ Matrix pass criteria:
 - screenshots directory exists
 - report text does not say `No workflows` when runtime workflows were discovered
 
+The matrix also records real issue count, triaged repair group count, generated fix packet count, and screenshot count for each target. Those counts are not pass/fail criteria by themselves; they are there to make regressions obvious.
+
 Failing counts usually mean:
 
 - `runtimeWorkflows = 0`: the app URL did not render useful controls, or the runtime DOM model needs more generic heuristics.
 - `generatedScenarios = 0`: app profile inference did not find enough navigation/form/list/auth/dashboard evidence.
 - `scenarioRuns = 0`: run with `--execute-generated-scenarios`, or check that the target URL is reachable.
 - `framework` mismatch: static adapter detection missed the framework/package signals.
+- `fixPackets = 0`: the run had no actionable repair groups, or `generate-fixes` could not produce a safe packet.
+- high `issues` with passing matrix criteria: Sniffer is functioning, but the target has reported QA findings to inspect.
 
 To add a new matrix target, add a `MatrixTarget` entry in `src/verification/matrix.ts` with repo path, app URL, expected framework/profile, and minimum workflow/scenario counts. Prefer low minimums for arbitrary apps and rely on the detailed target report for quality.
 
@@ -609,6 +613,34 @@ npm run sniffer -- apply-fix \
 
 Manual mode prints the Codex-ready packet and does not modify files.
 
+For a dry-run repair proof that writes a machine-readable result without invoking an agent:
+
+```bash
+npm run sniffer -- repair-proof \
+  --issue <issue_id> \
+  --report reports/sniffer/latest/latest_report.json \
+  --agent manual
+```
+
+This loads the existing fix packet and writes:
+
+```text
+reports/sniffer/latest/repair_attempts/<issue_id>/<timestamp>/repair_result.json
+reports/sniffer/latest/repair_attempts/<issue_id>/<timestamp>/repair_result.md
+```
+
+Manual repair proof records:
+
+- `agent_invoked=false`
+- `changed_files=[]`
+- `verification=not_run`
+- repair root
+- allowed paths
+- fix packet path
+- verification command
+
+It does not modify code.
+
 Use Codex mode only when configured. Sniffer writes the prompt to the repair attempt directory, runs Codex from `repair_root`, captures stdout/stderr, records git status/diff, and then you can run verification.
 
 ```bash
@@ -658,6 +690,14 @@ npm run sniffer -- repair-loop \
 ```
 
 Repair attempts record git status before, git diff after, commands run, agent output, and verification results under `reports/sniffer/latest/repair_attempts/`.
+
+## Known Limitations
+
+- Framework adapters are heuristic and do not compile Angular/React/Vue/Svelte source.
+- Runtime app profile inference can see secondary ecommerce/admin/dashboard words in report data; high-confidence source/product evidence takes precedence for the final app profile.
+- Built-in workspace-control scenarios are only appropriate for planning/control-panel apps. Arbitrary apps should use hybrid discovery with generated generic scenarios.
+- Matrix external targets are skipped, not failed, when their app URLs are not running.
+- Manual repair proof proves packet handoff safety; it does not verify that a human or agent applied a fix.
 
 Repair root and path safety:
 

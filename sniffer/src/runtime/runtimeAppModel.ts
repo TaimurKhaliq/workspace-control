@@ -7,7 +7,7 @@ export function buildRuntimeAppModel(input: {
   llmIntent?: RuntimeLlmIntent
 }): RuntimeAppModel {
   const runtimeType = inferRuntimeAppType(input.snapshot)
-  const appType = normalizeAppType(input.llmIntent?.app_type) ?? (runtimeType === 'unknown' ? input.appProfile?.profile_type : runtimeType) ?? 'unknown'
+  const appType = chooseAppType(runtimeType, input.appProfile, input.llmIntent)
   const actions = planRuntimeActions(input.snapshot)
   const workflows = [
     ...inferRuntimeWorkflows(input.snapshot, appType),
@@ -36,14 +36,24 @@ export function buildRuntimeAppModel(input: {
     evidence: [
       `url:${input.snapshot.url}`,
       `title:${input.snapshot.title}`,
+      `runtime_type:${runtimeType}`,
+      input.appProfile ? `profile_type:${input.appProfile.profile_type} (${input.appProfile.confidence})` : undefined,
       `headings:${input.snapshot.headings.map(labelOf).filter(Boolean).join(', ') || 'none'}`,
       `forms:${input.snapshot.forms.length}`,
       `buttons:${input.snapshot.buttons.length}`,
       `links:${input.snapshot.links.length}`
-    ],
+    ].filter(Boolean) as string[],
     llmInferredWorkflows: input.llmIntent?.workflows,
     unsafe_actions: actions.filter((action) => !action.safe)
   }
+}
+
+function chooseAppType(runtimeType: AppProfileType, appProfile?: AppProfile, llmIntent?: RuntimeLlmIntent): AppProfileType {
+  const llmType = normalizeAppType(llmIntent?.app_type)
+  if (llmType && llmType !== 'unknown') return llmType
+  if (appProfile?.profile_type === 'planning_control_panel' && appProfile.confidence === 'high') return appProfile.profile_type
+  if (runtimeType === 'unknown') return appProfile?.profile_type ?? 'unknown'
+  return runtimeType
 }
 
 export function planRuntimeActions(snapshot: RuntimeDomSnapshot): RuntimeActionPlanItem[] {

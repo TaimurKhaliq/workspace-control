@@ -17,6 +17,34 @@ describe('inferSuspectedFiles', () => {
   it('does not suspect semantic route for learning-status without semantic evidence', () => {
     expect(inferSuspectedFiles(issue(), sourceGraph())).not.toContain('../server/routes/semantic.py')
   })
+
+  it('limits UI repair groups to ranked relevant files', () => {
+    const graph = sourceGraph()
+    graph.uiSurfaces = [
+      { file: 'src/components/AddRepoDialog.tsx', surface_type: 'add_repo_form', display_name: 'Add repository', evidence: ['Target id', 'Path or URL'], relatedButtons: ['Add repo'], relatedInputs: ['Target id'], confidence: 0.9 },
+      { file: 'src/components/RawJsonView.tsx', surface_type: 'raw_json_panel', display_name: 'Raw JSON', evidence: ['Copy JSON'], relatedButtons: ['Copy JSON'], relatedInputs: [], confidence: 0.8 },
+      { file: 'src/components/SettingsPanel.tsx', surface_type: 'unknown_ui_section', display_name: 'Settings', evidence: ['Settings'], relatedButtons: [], relatedInputs: [], confidence: 0.5 }
+    ]
+    graph.sourceWorkflows = [{
+      name: 'Add repo',
+      sourceFiles: ['src/components/AddRepoDialog.tsx', 'src/api.ts'],
+      evidence: ['Add repository', 'Target id'],
+      likelyUserActions: ['Open add repository form'],
+      confidence: 0.8
+    }]
+    const files = inferSuspectedFiles({
+      severity: 'medium',
+      type: 'workflow_confusion',
+      title: 'Add repo target workflow is not reliably discoverable',
+      description: 'The Add repo scenario failed to expose expected controls consistently.',
+      evidence: ['Missing expected scenario control/result: Target id input'],
+      suggestedFixPrompt: 'Fix add repo labels.'
+    }, graph)
+
+    expect(files).toContain('src/components/AddRepoDialog.tsx')
+    expect(files).not.toContain('src/components/SettingsPanel.tsx')
+    expect(files.length).toBeLessThanOrEqual(8)
+  })
 })
 
 function issue(): Issue {

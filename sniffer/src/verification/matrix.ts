@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createReadStream } from 'node:fs'
-import { access, cp, mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { access, cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import net from 'node:net'
 import path from 'node:path'
@@ -43,6 +43,10 @@ export interface MatrixTargetResult {
   runtimeWorkflows: number
   generatedScenarios: number
   scenarioRuns: number
+  realIssues: number
+  triagedRepairGroups: number
+  fixPackets: number
+  screenshotsCaptured: number
   reportPath?: string
   reportMarkdownPath?: string
   screenshotsDir?: string
@@ -231,6 +235,10 @@ async function runMatrixTarget(baseDir: string, target: MatrixTarget): Promise<M
       runtimeWorkflows: 0,
       generatedScenarios: 0,
       scenarioRuns: 0,
+      realIssues: 0,
+      triagedRepairGroups: 0,
+      fixPackets: 0,
+      screenshotsCaptured: 0,
       criteria: [],
       skipReason: !repoExists ? `Repo path not found: ${target.repoPath}` : `App URL not reachable: ${target.appUrl}`
     }
@@ -268,6 +276,10 @@ async function runMatrixTarget(baseDir: string, target: MatrixTarget): Promise<M
       runtimeWorkflows: 0,
       generatedScenarios: 0,
       scenarioRuns: 0,
+      realIssues: 0,
+      triagedRepairGroups: 0,
+      fixPackets: 0,
+      screenshotsCaptured: 0,
       criteria: [criterion('audit command exits cleanly', false, 'exit code 0', String(run.code))],
       command: run.command.join(' '),
       durationMs: Date.now() - started,
@@ -278,6 +290,7 @@ async function runMatrixTarget(baseDir: string, target: MatrixTarget): Promise<M
   }
 
   const adHocDir = projectLatestReportDir(AD_HOC_PROJECT_ID, baseDir)
+  const fixRun = await spawnProcess(tsxBin(baseDir), ['src/cli/index.ts', 'generate-fixes', '--report', path.join(adHocDir, 'latest_report.json')], baseDir)
   const targetDir = path.join(reportsRoot(baseDir), 'matrix', 'targets', safeProjectId(target.id))
   await rm(targetDir, { recursive: true, force: true })
   await mkdir(path.dirname(targetDir), { recursive: true })
@@ -287,12 +300,16 @@ async function runMatrixTarget(baseDir: string, target: MatrixTarget): Promise<M
   const markdownPath = path.join(targetDir, 'latest_report.md')
   const report = JSON.parse(await readFile(reportPath, 'utf8')) as SnifferReport
   const markdown = await readFile(markdownPath, 'utf8').catch(() => '')
+  const fixPackets = await countFiles(path.join(targetDir, 'fix_packets'), /\.(json)$/i)
+  const screenshotsCaptured = await countFiles(path.join(targetDir, 'screenshots'), /\.(png|jpe?g|webp)$/i)
   const evaluated = evaluateMatrixTarget({
     target,
     report,
     reportPath,
     markdown,
-    screenshotsDirExists: await exists(path.join(targetDir, 'screenshots'))
+    screenshotsDirExists: await exists(path.join(targetDir, 'screenshots')),
+    fixPackets,
+    screenshotsCaptured
   })
   return {
     ...evaluated,
@@ -301,7 +318,7 @@ async function runMatrixTarget(baseDir: string, target: MatrixTarget): Promise<M
     command: run.command.join(' '),
     durationMs: Date.now() - started,
     stdout: run.stdout,
-    stderr: run.stderr
+    stderr: [run.stderr, fixRun.stderr].filter(Boolean).join('\n')
   }
 }
 
@@ -311,14 +328,21 @@ export function evaluateMatrixTarget(input: {
   reportPath: string
   markdown: string
   screenshotsDirExists: boolean
+  fixPackets?: number
+  screenshotsCaptured?: number
 }): MatrixTargetResult {
   const sourceWorkflows = input.report.sourceGraph.sourceWorkflows.length
   const runtimeWorkflows = input.report.runtimeAppModel?.workflows.length ?? 0
   const generatedScenarios = input.report.generatedScenarios?.length ?? 0
   const scenarioRuns = input.report.scenarioRuns?.length ?? 0
+  const triagedRepairGroups = input.report.issues?.length ?? 0
+  const realIssues = input.report.issues?.filter((issue) => issue.type !== 'inconclusive' && issue.type !== 'test_bug').length ?? 0
+  const fixPackets = input.fixPackets ?? 0
+  const screenshotsCaptured = input.screenshotsCaptured ?? input.report.crawlGraph.screenshots.length
   const framework = input.report.sourceGraph.framework
   const profile = input.report.appProfile?.profile_type ?? 'unknown'
   const criteria = [
+    criterion('app loads', true, 'reachable and audit succeeded', true),
     criterion('framework detected or unknown handled', framework === input.target.expectedFramework || input.target.expectedFramework === 'unknown' && framework === 'unknown', input.target.expectedFramework, framework),
     criterion('expected profile family', input.target.expectedProfiles.includes(profile), input.target.expectedProfiles.join(' or '), profile),
     criterion('source + runtime workflows are nonzero', sourceWorkflows + runtimeWorkflows > 0, '> 0', sourceWorkflows + runtimeWorkflows),
@@ -343,6 +367,10 @@ export function evaluateMatrixTarget(input: {
     runtimeWorkflows,
     generatedScenarios,
     scenarioRuns,
+    realIssues,
+    triagedRepairGroups,
+    fixPackets,
+    screenshotsCaptured,
     reportPath: input.reportPath,
     criteria
   }
@@ -499,6 +527,10 @@ function renderMatrixMarkdown(matrix: MatrixResult): string {
       `- Runtime workflows: ${target.runtimeWorkflows}`,
       `- Generated scenarios: ${target.generatedScenarios}`,
       `- Executed scenario runs: ${target.scenarioRuns}`,
+      `- Real issues: ${target.realIssues}`,
+      `- Triaged repair groups: ${target.triagedRepairGroups}`,
+      `- Fix packets: ${target.fixPackets}`,
+      `- Screenshots captured: ${target.screenshotsCaptured}`,
       target.reportPath ? `- Report: ${target.reportPath}` : undefined,
       target.skipReason ? `- Skip reason: ${target.skipReason}` : undefined,
       target.error ? `- Error: ${target.error}` : undefined,
@@ -524,6 +556,22 @@ function renderMatrixMarkdown(matrix: MatrixResult): string {
       : ['| n/a | n/a | n/a | n/a |']),
     ''
   ].filter((line): line is string => Boolean(line !== undefined)).join('\n')
+}
+
+async function countFiles(dir: string, pattern: RegExp): Promise<number> {
+  const files = await walkFiles(dir).catch(() => [])
+  return files.filter((file) => pattern.test(file)).length
+}
+
+async function walkFiles(dir: string): Promise<string[]> {
+  const entries = await readdir(dir, { withFileTypes: true })
+  const files: string[] = []
+  for (const entry of entries) {
+    const full = path.join(dir, entry.name)
+    if (entry.isDirectory()) files.push(...await walkFiles(full))
+    if (entry.isFile()) files.push(full)
+  }
+  return files
 }
 
 function statusIcon(status: 'passed' | 'failed' | 'skipped'): string {

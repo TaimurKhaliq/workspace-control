@@ -13,6 +13,8 @@ describe('verification matrix criteria', () => {
     })
 
     expect(result.status).toBe('passed')
+    expect(result.triagedRepairGroups).toBe(1)
+    expect(result.realIssues).toBe(1)
     expect(result.criteria.find((item) => item.name.includes('source + runtime'))?.passed).toBe(true)
   })
 
@@ -22,10 +24,14 @@ describe('verification matrix criteria', () => {
       report: report({ sourceWorkflows: 0, runtimeWorkflows: 2, generatedScenarios: 5, scenarioRuns: 5 }),
       reportPath: '/tmp/latest_report.json',
       markdown: 'No workflows discovered.',
-      screenshotsDirExists: true
+      screenshotsDirExists: true,
+      fixPackets: 2,
+      screenshotsCaptured: 4
     })
 
     expect(result.status).toBe('failed')
+    expect(result.fixPackets).toBe(2)
+    expect(result.screenshotsCaptured).toBe(4)
     expect(result.criteria.find((item) => item.name.includes('misleading'))?.passed).toBe(false)
   })
 })
@@ -144,7 +150,14 @@ function report(input: {
     deferredFindings: [],
     blockedChecks: [],
     needsMoreCrawling: [],
-    issues: [],
+    issues: [{
+      severity: 'medium',
+      type: 'usability_issue',
+      title: 'Fixture issue',
+      description: 'Fixture issue',
+      evidence: ['fixture'],
+      suggestedFixPrompt: 'Fix fixture issue.'
+    }],
     generatedAt: new Date().toISOString()
   } as unknown as SnifferReport
 }

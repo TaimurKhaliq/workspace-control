@@ -13,7 +13,7 @@ import { writeAuditReports } from '../reporting/reportWriter.js'
 import { generatePlaywrightSpecs, writeGeneratedSpecs } from '../testgen/specWriter.js'
 import { runGeneratedTests } from '../runtime/testRunner.js'
 import { verifyRuntimeIntent } from '../runtime/workflowVerifier.js'
-import { generateFixPackets } from '../repair/fixPackets.js'
+import { generateFixPackets, loadFixPacket } from '../repair/fixPackets.js'
 import { applyFix } from '../repair/applyFix.js'
 import { verifyIssue } from '../repair/verify.js'
 import { runRepairLoop } from '../repair/repairLoop.js'
@@ -54,7 +54,7 @@ async function main(): Promise<void> {
     for (const target of matrix.targets) {
       const detail = target.status === 'skipped'
         ? target.skipReason
-        : `${target.framework ?? 'unknown'} / ${target.profile ?? 'unknown'} · source=${target.sourceWorkflows} runtime=${target.runtimeWorkflows} generated=${target.generatedScenarios} runs=${target.scenarioRuns}`
+        : `${target.framework ?? 'unknown'} / ${target.profile ?? 'unknown'} · source=${target.sourceWorkflows} runtime=${target.runtimeWorkflows} generated=${target.generatedScenarios} runs=${target.scenarioRuns} issues=${target.realIssues} groups=${target.triagedRepairGroups} fixes=${target.fixPackets} screenshots=${target.screenshotsCaptured}`
       console.log(`- ${target.status.toUpperCase()} ${target.id}: ${detail}`)
     }
     console.log(`- ${matrix.dogfood.status.toUpperCase()} dogfood: ${matrix.dogfood.appUrl ?? matrix.dogfood.skipReason ?? ''}`)
@@ -318,6 +318,29 @@ async function main(): Promise<void> {
     const report = requireArg(args, 'report')
     const packets = await generateFixPackets(report, boolArg(args, 'allow-destructive'))
     console.log(`Wrote ${packets.length} fix packet(s)`)
+    return
+  }
+
+  if (command === 'repair-proof') {
+    const issueId = requireArg(args, 'issue')
+    const report = requireArg(args, 'report')
+    const agent = typeof args.agent === 'string' ? args.agent : 'manual'
+    if (agent !== 'manual') throw new Error('repair-proof is a dry-run proof command and only supports --agent manual.')
+    const packet = await loadFixPacket(report, issueId)
+    const result = await applyFix({
+      issueId,
+      reportPath: report,
+      agentName: 'manual',
+      allowDestructive: false
+    })
+    console.log(`Repair proof written for ${issueId}`)
+    console.log(`agent_invoked=false`)
+    console.log(`changed_files=[]`)
+    console.log(`Repair root: ${packet.repair_root}`)
+    console.log(`Allowed paths: ${packet.allowed_paths.join(', ') || 'none'}`)
+    console.log(`Fix packet: ${path.join(path.dirname(path.resolve(report)), 'fix_packets', `${issueId}.md`)}`)
+    console.log(`Verification command: ${packet.verification_command}`)
+    console.log(`Repair result: ${path.join(result.attemptDir, 'repair_result.md')}`)
     return
   }
 
@@ -663,6 +686,7 @@ Commands:
   sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
   sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
+  sniffer repair-proof --issue <issue_id> --report <path> --agent manual
   sniffer apply-fix [--issue <issue_id>] [--report <path>] [--agent manual|mock|codex]
   sniffer verify --issue <issue_id> --url <url> --report <path>
   sniffer repair-loop --repo <path> --url <url> | --project <id> [--agent manual|mock|codex] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--provider mock|openai-compatible|auto] [--max-iterations 3]

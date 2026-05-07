@@ -61,6 +61,35 @@ describe('runtime DOM snapshot', () => {
     expect(model.actions.some((action) => action.target === 'Add Article' && action.safe)).toBe(true)
   })
 
+  it('keeps high-confidence planning profiles ahead of weaker runtime commerce words', async () => {
+    await page.setContent(`
+      <main>
+        <h1>Sniffer Dashboard</h1>
+        <button>Fix Packets</button>
+        <button>Open Latest Report</button>
+        <p>Review product intent findings and repair groups.</p>
+      </main>
+    `)
+    const snapshot = await captureRuntimeDomSnapshot(page)
+
+    const model = buildRuntimeAppModel({
+      snapshot,
+      appProfile: {
+        profile_type: 'planning_control_panel',
+        confidence: 'high',
+        evidence: ['source workflow: plan bundle'],
+        core_entities: ['plan bundle'],
+        primary_user_jobs: ['review generated plan bundles'],
+        expected_navigation_patterns: [],
+        expected_workflows: [],
+        expected_output_surfaces: []
+      }
+    })
+
+    expect(model.inferred_app_type).toBe('planning_control_panel')
+    expect(model.evidence).toEqual(expect.arrayContaining(['runtime_type:ecommerce_app', 'profile_type:planning_control_panel (high)']))
+  })
+
   it('lets the mock LLM infer runtime workflows from the compact context', async () => {
     await page.setContent(loginHtml())
     const snapshot = await captureRuntimeDomSnapshot(page)
