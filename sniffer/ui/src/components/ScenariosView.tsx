@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { SnifferReport } from '../api'
 import { buildScenarioViews, type ScenarioView } from '../report/journey'
-import { ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
+import { ScreenshotImage, ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
 
 export function ScenariosView({ report, projectId }: { report?: SnifferReport | null; projectId?: string }) {
   const scenarios = useMemo(() => buildScenarioViews(report), [report])
@@ -101,7 +101,7 @@ function ScenarioDetail({ view, projectId, onScreenshot }: { view: ScenarioView;
                   details: step.evidence
                 })}
               >
-                <img src={artifactUrl(step.screenshot, projectId)} alt={`${view.scenario.name} step ${step.index + 1}`} />
+                <ScreenshotImage src={artifactUrl(step.screenshot, projectId)} alt={`${view.scenario.name} step ${step.index + 1}`} />
                 <span>Open screenshot</span>
               </button>
             )}

@@ -1,3 +1,6 @@
+import { useMemo, useState } from 'react'
+import { artifactUrl } from '../artifacts'
+
 export interface ScreenshotContext {
   src: string
   title: string
@@ -20,7 +23,7 @@ export function ScreenshotModal({ screenshot, projectId, onClose }: { screenshot
           <button type="button" className="ghost-button" onClick={onClose} aria-label="Close screenshot preview">Close</button>
         </div>
         <div className="screenshot-modal-grid">
-          <img src={src} alt={screenshot.title} />
+          <ScreenshotImage src={src} alt={screenshot.title} />
           <aside>
             <h3>Context</h3>
             <ul className="evidence-list">
@@ -34,12 +37,28 @@ export function ScreenshotModal({ screenshot, projectId, onClose }: { screenshot
   )
 }
 
-export function artifactUrl(path: string, projectId?: string): string {
-  if (/^https?:\/\//.test(path) || path.startsWith('/api/')) return path
-  const normalized = path.replace(/\\/g, '/')
-  const projectMatch = normalized.match(/\/reports\/sniffer\/[^/]+\/latest\/(.+)$/)
-  const latestMatch = normalized.match(/\/reports\/sniffer\/latest\/(.+)$/)
-  const relative = (projectMatch?.[1] ?? latestMatch?.[1] ?? normalized.replace(/^\/+/, '')).replace(/^(\.\.\/)+/, '')
-  const query = projectId ? `?project=${encodeURIComponent(projectId)}` : ''
-  return `/api/reports/latest/artifacts/${encodeURIComponent(relative)}${query}`
+export function ScreenshotImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [failedSrc, setFailedSrc] = useState('')
+  const failed = failedSrc === src
+  const label = useMemo(() => {
+    try {
+      const url = new URL(src, window.location.origin)
+      return decodeURIComponent(url.pathname.split('/').pop() ?? 'screenshot')
+    } catch {
+      return 'screenshot'
+    }
+  }, [src])
+
+  if (failed) {
+    return (
+      <div className={`screenshot-placeholder ${className ?? ''}`} role="status" aria-label={`${alt} unavailable`}>
+        <strong>Screenshot unavailable</strong>
+        <span>{label}</span>
+      </div>
+    )
+  }
+
+  return <img className={className} src={src} alt={alt} onError={() => setFailedSrc(src)} />
 }
+
+export { artifactUrl }

@@ -190,7 +190,7 @@ function textJamIssues(elements: DomUxElement[], bodyText: string, screenshotPat
 
 function overflowIssues(elements: DomUxElement[], screenshotPath: string): Issue[] {
   const overflow = elements
-    .filter((el) => el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 8 && !['pre', 'code'].includes(el.tag))
+    .filter((el) => el.clientWidth > 0 && el.scrollWidth > el.clientWidth + 8 && !['pre', 'code', 'input', 'textarea', 'select'].includes(el.tag))
     .slice(0, 8)
   if (overflow.length === 0) return []
   return [issue('medium', 'layout_issue', 'Content overflows horizontally', 'One or more visible UI elements have horizontal overflow that can hide content or force page scrolling.', overflow.map((el) => `${describe(el)} scrollWidth=${el.scrollWidth} clientWidth=${el.clientWidth}`), screenshotPath, 'Add wrapping/truncation rules for long paths, tables, cards, and status text; avoid page-level horizontal overflow.')]
@@ -203,8 +203,8 @@ function longPathIssues(elements: DomUxElement[], screenshotPath: string): Issue
 }
 
 function verticalClutterIssues(elements: DomUxElement[], screenshotPath: string): Issue[] {
-  const sections = elements.filter((el) => /section|panel|card/i.test(`${el.tag} ${el.className}`) && el.height > 80)
-  if (sections.length < 8) return []
+  const sections = elements.filter((el) => /section|panel|card/i.test(`${el.tag} ${el.className}`) && !/\b(metric-card|status-chip)\b/.test(el.className) && el.height > 80)
+  if (sections.length < 13) return []
   return [issue('low', 'visual_clutter', 'Many large vertical sections compete on one screen', 'The screen shows many large stacked panels, which can make primary workflows hard to scan.', [`large sections/panels visible: ${sections.length}`], screenshotPath, 'Group secondary details behind tabs/collapsible sections and keep the primary workflow compact and scannable.')]
 }
 

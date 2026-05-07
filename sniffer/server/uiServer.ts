@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 import { loadSnifferEnv } from '../src/config/env.js'
 import { initProject, listProjects, getProject, removeProject } from '../src/projects/registry.js'
 import { latestReportDir, projectLatestReportDir } from '../src/reporting/paths.js'
+import { resolveReportArtifact } from './artifacts.js'
 
 loadSnifferEnv()
 
@@ -123,7 +124,7 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return json(res, 200, await screenshotList(latestDirFor(parsed), projectQuery(parsed)))
   }
   if (req.method === 'GET' && parsed.pathname.startsWith('/api/reports/latest/artifacts/')) {
-    return sendReportArtifact(res, latestDirFor(parsed), decodeURIComponent(parsed.pathname.replace('/api/reports/latest/artifacts/', '')))
+    return sendReportArtifact(res, latestDirFor(parsed), parsed.pathname.replace('/api/reports/latest/artifacts/', ''))
   }
   if (req.method === 'GET' && parsed.pathname === '/api/reports/latest/fix-packets') {
     return json(res, 200, await fixPacketList(latestDirFor(parsed)))
@@ -334,10 +335,10 @@ async function sendFixPacket(res: ServerResponse, baseDir: string, issueId: stri
 }
 
 async function sendReportArtifact(res: ServerResponse, baseDir: string, relativePath: string): Promise<void> {
-  const file = safeJoin(baseDir, relativePath)
-  if (!file) return json(res, 400, { error: 'Invalid artifact path' })
-  const type = contentType(file)
-  await sendFile(res, file, type)
+  const resolved = resolveReportArtifact(baseDir, relativePath)
+  if (!resolved.file) return json(res, 400, { error: 'Invalid artifact path' })
+  const type = contentType(resolved.file)
+  await sendFile(res, resolved.file, type)
 }
 
 async function serveStaticUi(req: IncomingMessage, res: ServerResponse, pathname: string): Promise<void> {

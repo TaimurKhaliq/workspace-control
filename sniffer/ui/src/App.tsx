@@ -34,6 +34,7 @@ import { WorkflowEvidenceView } from './components/WorkflowEvidenceView'
 import { RawJsonView } from './components/RawJsonView'
 import { ProjectsView } from './components/ProjectsView'
 import type { MascotState } from './components/SnifferMascot'
+import { projectIdFromReportArtifacts } from './artifacts'
 
 const emptyForm: AuditForm = {
   repoPath: '',
@@ -121,6 +122,15 @@ export default function App() {
     if (run?.status === 'success') return 'success'
     return 'idle'
   }, [run])
+  const reportArtifactProjectId = useMemo(() => projectIdFromReportArtifacts(reportArtifactPaths(report), selectedProjectId || undefined), [report, selectedProjectId])
+
+  useEffect(() => {
+    if (!reportArtifactProjectId || reportArtifactProjectId === selectedProjectId) return
+    void Promise.all([
+      getScreenshots(reportArtifactProjectId).then(setScreenshots).catch(() => setScreenshots([])),
+      getFixPackets(reportArtifactProjectId).then(setFixPackets).catch(() => setFixPackets([]))
+    ])
+  }, [reportArtifactProjectId, selectedProjectId])
 
   async function refreshAll() {
     await Promise.all([
@@ -250,6 +260,7 @@ export default function App() {
           form={form}
           mascotState={mascotState}
           error={error}
+          isRunning={run?.status === 'running' || status?.status === 'running'}
           onFormChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
           onRunAudit={() => void runAudit()}
           onRunConsistency={() => void runAudit({ scenario: 'off', consistencyCheck: true })}
@@ -262,15 +273,28 @@ export default function App() {
         />
       )}
       {screen === 'timeline' && <ReportTimeline report={report} fixPackets={fixPackets} run={run} />}
-      {screen === 'scenarios' && <ScenariosView report={report} projectId={selectedProjectId || undefined} />}
-      {screen === 'crawl' && <CrawlPathView report={report} projectId={selectedProjectId || undefined} />}
+      {screen === 'scenarios' && <ScenariosView report={report} projectId={reportArtifactProjectId} />}
+      {screen === 'crawl' && <CrawlPathView report={report} projectId={reportArtifactProjectId} />}
       {screen === 'workflows' && <WorkflowEvidenceView report={report} />}
-      {screen === 'graph' && <DiscoveryGraph report={report} fixPackets={fixPackets} screenshots={screenshots} projectId={selectedProjectId || undefined} />}
+      {screen === 'graph' && <DiscoveryGraph report={report} fixPackets={fixPackets} screenshots={screenshots} projectId={reportArtifactProjectId} />}
       {screen === 'issues' && <IssueSummary report={report} selectedIssue={selectedIssue} onSelectIssue={setSelectedIssue} onCopyFixPrompt={copyFixPrompt} onVerifyIssue={(issue) => void runVerification(issue)} />}
-      {screen === 'fixes' && <FixPacketViewer report={report} packets={fixPackets} projectId={selectedProjectId || undefined} onGenerateFixes={() => void generateFixes()} />}
+      {screen === 'fixes' && <FixPacketViewer report={report} packets={fixPackets} projectId={reportArtifactProjectId} onGenerateFixes={() => void generateFixes()} />}
       {screen === 'screenshots' && <ScreenshotGallery screenshots={screenshots} />}
       {screen === 'raw' && <RawJsonView report={report} />}
       {screen === 'settings' && <SettingsPanel status={status} />}
     </AppShell>
   )
+}
+
+function reportArtifactPaths(report: SnifferReport | null): Array<string | undefined> {
+  return [
+    ...(report?.crawlGraph?.screenshots ?? []),
+    ...(report?.crawlGraph?.states ?? []).map((state) => state.screenshotPath),
+    ...(report?.scenarioRuns ?? []).flatMap((run) => [
+      ...(run.screenshots ?? []),
+      ...(run.assertions ?? []).map((assertion) => assertion.screenshotPath)
+    ]),
+    ...(report?.issues ?? []).map((issue) => issue.screenshotPath),
+    report?.runtimeDomSnapshot?.screenshotPath
+  ]
 }

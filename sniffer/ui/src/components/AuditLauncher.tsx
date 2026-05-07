@@ -6,6 +6,7 @@ export function AuditLauncher({
   status,
   mascotState,
   error,
+  isRunning,
   onChange,
   onRunAudit,
   onRunConsistency,
@@ -16,6 +17,7 @@ export function AuditLauncher({
   status?: ServerStatus
   mascotState: MascotState
   error?: string
+  isRunning?: boolean
   onChange: (patch: Partial<AuditForm>) => void
   onRunAudit: () => void
   onRunConsistency: () => void
@@ -36,15 +38,19 @@ export function AuditLauncher({
             <p className="eyebrow">Run launcher</p>
             <h2>Audit a running UI</h2>
           </div>
-          <button type="submit" className="primary-button">Run Audit</button>
+          <button type="submit" className="primary-button" disabled={isRunning}>{isRunning ? 'Running audit...' : 'Run Audit'}</button>
         </div>
 
         {error && <div className="alert danger" role="alert">{error}</div>}
+        <div className="status-note" role="status" aria-live="polite">
+          Loading status: {isRunning ? 'running audit' : 'idle'}
+        </div>
 
         <div className="form-grid">
           <label>
             Repo path
             <input
+              className="path-input"
               value={form.repoPath}
               onChange={(event) => onChange({ repoPath: event.target.value })}
               placeholder="/path/to/ui/repo"
@@ -99,8 +105,8 @@ export function AuditLauncher({
         </div>
 
         <div className="action-row">
-          <button type="button" className="secondary-button" onClick={onRunConsistency}>Run Consistency Check</button>
-          <button type="button" className="secondary-button" onClick={onGenerateFixes}>Generate Fix Packets</button>
+          <button type="button" className="secondary-button" disabled={isRunning} onClick={onRunConsistency}>{isRunning ? 'Consistency queued...' : 'Run Consistency Check'}</button>
+          <button type="button" className="secondary-button" disabled={isRunning} onClick={onGenerateFixes}>{isRunning ? 'Generating...' : 'Generate Fix Packets'}</button>
           <button type="button" className="ghost-button" onClick={onOpenReport}>Open Latest Report</button>
         </div>
       </form>

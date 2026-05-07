@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { SnifferReport } from '../api'
 import { buildCrawlCoverage, buildCrawlPath } from '../report/journey'
-import { ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
+import { ScreenshotImage, ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
 
 export function CrawlPathView({ report, projectId }: { report?: SnifferReport | null; projectId?: string }) {
   const states = useMemo(() => buildCrawlPath(report), [report])
@@ -68,7 +68,7 @@ export function CrawlPathView({ report, projectId }: { report?: SnifferReport | 
                 })}>Screenshot</button>
               )}
             </div>
-            {state.screenshot && <img className="crawl-thumbnail" src={artifactUrl(state.screenshot, projectId)} alt={`State ${state.sequenceNumber} ${state.screenName}`} />}
+            {state.screenshot && <ScreenshotImage className="crawl-thumbnail" src={artifactUrl(state.screenshot, projectId)} alt={`State ${state.sequenceNumber} ${state.screenName}`} />}
             {state.repeatedActionLabels.length > 0 && (
               <div className="notice warning">
                 Repeated action without obvious route change: {state.repeatedActionLabels.join(', ')}

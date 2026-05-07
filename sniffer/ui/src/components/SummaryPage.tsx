@@ -12,6 +12,7 @@ export function SummaryPage({
   form,
   mascotState,
   error,
+  isRunning,
   onFormChange,
   onRunAudit,
   onRunConsistency,
@@ -26,6 +27,7 @@ export function SummaryPage({
   form: AuditForm
   mascotState: MascotState
   error?: string
+  isRunning?: boolean
   onFormChange: (patch: Partial<AuditForm>) => void
   onRunAudit: () => void
   onRunConsistency: () => void
@@ -76,6 +78,7 @@ export function SummaryPage({
         status={status}
         mascotState={mascotState}
         error={error}
+        isRunning={isRunning}
         onChange={onFormChange}
         onRunAudit={onRunAudit}
         onRunConsistency={onRunConsistency}

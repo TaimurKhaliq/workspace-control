@@ -1,4 +1,5 @@
 import type { ScreenshotItem } from '../api'
+import { ScreenshotImage } from './ScreenshotModal'
 
 export function ScreenshotGallery({ screenshots }: { screenshots: ScreenshotItem[] }) {
   const groups = screenshots.reduce<Record<string, ScreenshotItem[]>>((acc, item) => {
@@ -28,7 +29,7 @@ export function ScreenshotGallery({ screenshots }: { screenshots: ScreenshotItem
           <div className="screenshot-grid">
             {rows.map((item) => (
               <a key={item.relativePath} href={item.url} target="_blank" rel="noreferrer" className="screenshot-card">
-                <img src={item.url} alt={`Sniffer screenshot ${item.name}`} />
+                <ScreenshotImage src={item.url} alt={`Sniffer screenshot ${item.name}`} />
                 <span>{item.name}</span>
               </a>
             ))}

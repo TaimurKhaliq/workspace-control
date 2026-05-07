@@ -61,6 +61,7 @@ a:focus-visible {
 input,
 select,
 textarea {
+  min-width: 0;
   width: 100%;
   border: 1px solid var(--border-strong);
   border-radius: 8px;
@@ -173,6 +174,8 @@ code {
 
 .main-panel {
   min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
 }
 
 .top-bar {
@@ -249,6 +252,7 @@ code {
 .metric-card,
 .mini-card,
 .settings-card {
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
@@ -283,6 +287,18 @@ code {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.85rem;
+}
+
+.form-grid label,
+.controls-grid label {
+  min-width: 0;
+}
+
+.path-input {
+  overflow: hidden;
+  direction: ltr;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .controls-grid {
@@ -342,6 +358,16 @@ code {
 .alert.danger {
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.status-note {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
 }
 
 .muted-text {
@@ -768,6 +794,13 @@ code {
   background: var(--surface-subtle);
 }
 
+.inline-screenshot .screenshot-placeholder,
+.crawl-thumbnail.screenshot-placeholder,
+.node-screenshot .screenshot-placeholder {
+  aspect-ratio: 16 / 9;
+  min-height: 0;
+}
+
 .crawl-state-card {
   display: grid;
   gap: 0.85rem;
@@ -958,6 +991,25 @@ code {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-subtle);
+}
+
+.screenshot-placeholder {
+  display: grid;
+  width: 100%;
+  min-height: 120px;
+  place-content: center;
+  gap: 0.25rem;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  color: var(--muted);
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.screenshot-placeholder span {
+  overflow-wrap: anywhere;
+  font-size: 0.76rem;
 }
 
 .screenshot-card span {

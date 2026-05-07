@@ -5,6 +5,7 @@ export interface NormalizedEndpoint {
   pattern: string
   url: string
   targetId?: string
+  artifactPath?: string
 }
 
 interface EndpointFailureGroup {
@@ -13,6 +14,7 @@ interface EndpointFailureGroup {
   pattern: string
   urls: string[]
   targetIds: string[]
+  artifactPaths: string[]
   messages: string[]
   statusCodes: number[]
   responseBodies: string[]
@@ -46,6 +48,16 @@ export function normalizeEndpoint(input: { url: string; method?: string }): Norm
     }
   }
 
+  const reportArtifact = pathname.match(/^\/api\/reports\/latest\/artifacts\/(.+)$/)
+  if (reportArtifact) {
+    return {
+      method: input.method ?? 'GET',
+      pattern: '/api/reports/latest/artifacts/{artifactPath}',
+      url: input.url,
+      artifactPath: safeDecode(reportArtifact[1])
+    }
+  }
+
   return pathname.includes('/api/') ? { method: input.method ?? 'GET', pattern: pathname, url: input.url } : undefined
 }
 
@@ -72,8 +84,11 @@ export function groupedEndpointIssues(input: {
 
   return [...groups.values()].map((group) => {
     const isLearningStatus = group.pattern === '/api/repos/{targetId}/learning-status'
+    const isReportArtifact = group.pattern === '/api/reports/latest/artifacts/{artifactPath}'
     const title = isLearningStatus && group.urls.length > 1
       ? 'Learning status endpoint returns 500 for multiple repo targets'
+      : isReportArtifact
+        ? 'Screenshot artifact route returns 404 for captured report screenshots'
       : `${group.method} ${group.pattern} failed during crawl`
     const expected = isLearningStatus
       ? [
@@ -82,6 +97,13 @@ export function groupedEndpointIssues(input: {
         '- unknown target may return controlled 404.',
         '- registered target with missing learning data should return status=missing, recipe_count=0.'
       ].join('\n')
+      : isReportArtifact
+        ? [
+          'Expected behavior:',
+          '- captured report screenshots should resolve through the artifact endpoint.',
+          '- artifact paths should be resolved against the report directory that produced the loaded report.',
+          '- missing screenshots should render a friendly placeholder without repeated browser errors.'
+        ].join('\n')
       : 'Expected behavior: API endpoints should return controlled responses that the UI can handle.'
 
     return {
@@ -98,6 +120,7 @@ export function groupedEndpointIssues(input: {
         `method: ${group.method}`,
         ...group.statusCodes.map((code) => `status_code: ${code}`),
         ...group.targetIds.map((id) => `target_id: ${id}`),
+        ...group.artifactPaths.map((artifactPath) => `artifact_path: ${artifactPath}`),
         ...group.urls.map((url) => `url: ${url}`),
         ...[...new Set(group.messages)].map((message) => `runtime_error: ${message}`),
         ...[...new Set(group.responseBodies)].filter(Boolean).map((body) => `response_body: ${body}`)
@@ -126,14 +149,24 @@ function addToGroup(groups: Map<string, EndpointFailureGroup>, endpoint: Normali
     pattern: endpoint.pattern,
     urls: [],
     targetIds: [],
+    artifactPaths: [],
     messages: [],
     statusCodes: [],
     responseBodies: []
   }
   if (!group.urls.includes(endpoint.url)) group.urls.push(endpoint.url)
   if (endpoint.targetId && !group.targetIds.includes(endpoint.targetId)) group.targetIds.push(endpoint.targetId)
+  if (endpoint.artifactPath && !group.artifactPaths.includes(endpoint.artifactPath)) group.artifactPaths.push(endpoint.artifactPath)
   group.messages.push(message)
   if (statusCode && !group.statusCodes.includes(statusCode)) group.statusCodes.push(statusCode)
   if (responseBody && !group.responseBodies.includes(responseBody)) group.responseBodies.push(responseBody)
   groups.set(key, group)
+}
+
+function safeDecode(value: string): string {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
 }

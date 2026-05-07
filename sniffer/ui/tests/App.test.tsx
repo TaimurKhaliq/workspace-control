@@ -5,6 +5,7 @@ import { IssueGroupCard } from '../src/components/IssueGroupCard'
 import { FixPacketViewer } from '../src/components/FixPacketViewer'
 import { SnifferMascot } from '../src/components/SnifferMascot'
 import { ScenariosView } from '../src/components/ScenariosView'
+import { ScreenshotImage } from '../src/components/ScreenshotModal'
 import type { Issue, SnifferReport } from '../src/api'
 
 const report: SnifferReport = {
@@ -173,6 +174,14 @@ describe('mascot', () => {
   it('switches to sniffing state', () => {
     render(<SnifferMascot state="sniffing" />)
     expect(screen.getByText('Sniffing the UI')).toBeInTheDocument()
+  })
+})
+
+describe('screenshots', () => {
+  it('shows a placeholder when a screenshot artifact is missing', () => {
+    render(<ScreenshotImage src="/api/reports/latest/artifacts/screenshots%2Fmissing.png" alt="Missing screenshot" />)
+    fireEvent.error(screen.getByAltText('Missing screenshot'))
+    expect(screen.getByText('Screenshot unavailable')).toBeInTheDocument()
   })
 })
 

@@ -13,7 +13,7 @@ import type { FixPacketItem, ScreenshotItem, SnifferReport } from '../api'
 import { getFixPacket } from '../api'
 import { buildSnifferGraph } from '../graph/graphBuilder'
 import type { GraphStatus, SnifferGraph, SnifferGraphEdge, SnifferGraphNode } from '../graph/graphModel'
-import { artifactUrl } from './ScreenshotModal'
+import { ScreenshotImage, artifactUrl } from './ScreenshotModal'
 
 type LayoutMode = 'layered' | 'workflow'
 type GraphScopeMode = 'crawl' | 'scenario' | 'workflow' | 'issue' | 'source' | 'full'
@@ -237,7 +237,7 @@ export function GraphNodeDetailPanel({ node, projectId }: { node?: SnifferGraphN
         <div className="node-screenshot">
           <h3>Screenshot</h3>
           <a href={artifactUrl(screenshot, projectId)} target="_blank" rel="noreferrer">
-            <img src={artifactUrl(screenshot, projectId)} alt={`Screenshot evidence for ${node.label}`} />
+            <ScreenshotImage src={artifactUrl(screenshot, projectId)} alt={`Screenshot evidence for ${node.label}`} />
           </a>
         </div>
       )}

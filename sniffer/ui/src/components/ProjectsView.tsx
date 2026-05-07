@@ -35,6 +35,7 @@ export function ProjectsView({
   const [showForm, setShowForm] = useState(projects.length === 0)
   const [form, setForm] = useState<AddProjectForm>(emptyProjectForm)
   const [busy, setBusy] = useState(false)
+  const [removingId, setRemovingId] = useState('')
   const [error, setError] = useState('')
 
   async function submit() {
@@ -81,6 +82,9 @@ export function ProjectsView({
             <span className="status-chip muted">local registry</span>
           </div>
           {error && <div className="alert danger" role="alert">{error}</div>}
+          <div className="status-note" role="status" aria-live="polite">
+            Project registry loading status: {busy ? 'saving project' : removingId ? 'removing project' : 'idle'}
+          </div>
           <div className="form-grid">
             <label>
               Project id
@@ -92,7 +96,7 @@ export function ProjectsView({
             </label>
             <label>
               Repo path
-              <input value={form.repoPath} onChange={(event) => setForm({ ...form, repoPath: event.target.value })} placeholder="/path/to/ui/repo" aria-label="Repo path" />
+              <input className="path-input" value={form.repoPath} onChange={(event) => setForm({ ...form, repoPath: event.target.value })} placeholder="/path/to/ui/repo" aria-label="Repo path" />
             </label>
             <label>
               App URL
@@ -138,7 +142,20 @@ export function ProjectsView({
             <div className="action-row">
               <button type="button" className="secondary-button" onClick={() => onSelectProject(project)}>Select</button>
               <button type="button" className="primary-button" onClick={() => onAuditProject(project)}>Audit</button>
-              <button type="button" className="ghost-button" onClick={() => void onRemoveProject(project)}>Remove</button>
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={removingId === project.id}
+                onClick={() => {
+                  setRemovingId(project.id)
+                  setError('')
+                  void onRemoveProject(project)
+                    .catch((err) => setError(err instanceof Error ? err.message : String(err)))
+                    .finally(() => setRemovingId(''))
+                }}
+              >
+                {removingId === project.id ? 'Removing...' : 'Remove'}
+              </button>
             </div>
           </article>
         ))}
