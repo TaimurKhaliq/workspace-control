@@ -4,18 +4,25 @@ import { createReadStream } from 'node:fs'
 import { access, mkdir, readdir, readFile, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { loadSnifferEnv } from '../src/config/env.js'
+import { initProject, listProjects, getProject, removeProject } from '../src/projects/registry.js'
+import { latestReportDir, projectLatestReportDir } from '../src/reporting/paths.js'
+
+loadSnifferEnv()
 
 type RunStatus = 'queued' | 'running' | 'success' | 'error'
 
 interface AuditRequest {
-  repoPath: string
-  url: string
+  projectId?: string
+  repoPath?: string
+  url?: string
   productGoal?: string
   scenario?: string
   criticMode?: string
   uxCritic?: string
   intentMode?: string
   provider?: string
+  discoveryMode?: string
   maxIterations?: number
   consistencyCheck?: boolean
 }
@@ -32,12 +39,13 @@ interface RunRecord {
   completedAt?: string
   exitCode?: number | null
   reportPath?: string
+  projectId?: string
 }
 
 const serverFile = fileURLToPath(import.meta.url)
 const snifferRoot = path.resolve(path.dirname(serverFile), '..')
 const reportsRoot = path.join(snifferRoot, 'reports', 'sniffer')
-const latestDir = path.join(reportsRoot, 'latest')
+const latestDir = latestReportDir(snifferRoot)
 const latestReportPath = path.join(latestDir, 'latest_report.json')
 const latestMarkdownPath = path.join(latestDir, 'latest_report.md')
 const runs = new Map<string, RunRecord>()
@@ -68,6 +76,36 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'GET' && parsed.pathname === '/api/status') {
     return json(res, 200, await statusPayload())
   }
+  if (req.method === 'GET' && parsed.pathname === '/api/projects') {
+    return json(res, 200, await listProjects(snifferRoot))
+  }
+  if (req.method === 'POST' && parsed.pathname === '/api/projects') {
+    const body = await readJsonBody<{ id?: string; name?: string; repoPath?: string; appUrl?: string; url?: string; productGoal?: string; devCommand?: string; buildCommand?: string; testCommand?: string }>(req)
+    if (!body.name?.trim()) return json(res, 400, { error: 'Project name is required' })
+    if (!body.repoPath?.trim()) return json(res, 400, { error: 'Repo path is required' })
+    const appUrl = body.appUrl ?? body.url
+    if (!appUrl?.trim()) return json(res, 400, { error: 'App URL is required' })
+    const project = await initProject({
+      id: body.id,
+      name: body.name,
+      repoPath: body.repoPath,
+      appUrl,
+      productGoal: body.productGoal,
+      devCommand: body.devCommand,
+      buildCommand: body.buildCommand,
+      testCommand: body.testCommand
+    }, snifferRoot)
+    return json(res, 201, project)
+  }
+  const projectMatch = parsed.pathname.match(/^\/api\/projects\/([^/]+)$/)
+  if (req.method === 'GET' && projectMatch) {
+    const project = await getProject(decodeURIComponent(projectMatch[1]), snifferRoot)
+    return project ? json(res, 200, project) : json(res, 404, { error: 'Project not found' })
+  }
+  if (req.method === 'DELETE' && projectMatch) {
+    const removed = await removeProject(decodeURIComponent(projectMatch[1]), snifferRoot)
+    return removed ? json(res, 200, { removed: true }) : json(res, 404, { error: 'Project not found' })
+  }
   if (req.method === 'POST' && parsed.pathname === '/api/audits') {
     return startAudit(req, res)
   }
@@ -76,31 +114,31 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     return json(res, 200, runs.get(auditMatch[1]) ?? { error: 'Run not found' })
   }
   if (req.method === 'GET' && parsed.pathname === '/api/reports/latest') {
-    return sendJsonFile(res, latestReportPath)
+    return sendJsonFile(res, latestReportPathFor(parsed))
   }
   if (req.method === 'GET' && parsed.pathname === '/api/reports/latest/markdown') {
-    return sendTextFile(res, latestMarkdownPath, 'text/markdown; charset=utf-8')
+    return sendTextFile(res, path.join(latestDirFor(parsed), 'latest_report.md'), 'text/markdown; charset=utf-8')
   }
   if (req.method === 'GET' && parsed.pathname === '/api/reports/latest/screenshots') {
-    return json(res, 200, await screenshotList())
+    return json(res, 200, await screenshotList(latestDirFor(parsed), projectQuery(parsed)))
   }
   if (req.method === 'GET' && parsed.pathname.startsWith('/api/reports/latest/artifacts/')) {
-    return sendReportArtifact(res, decodeURIComponent(parsed.pathname.replace('/api/reports/latest/artifacts/', '')))
+    return sendReportArtifact(res, latestDirFor(parsed), decodeURIComponent(parsed.pathname.replace('/api/reports/latest/artifacts/', '')))
   }
   if (req.method === 'GET' && parsed.pathname === '/api/reports/latest/fix-packets') {
-    return json(res, 200, await fixPacketList())
+    return json(res, 200, await fixPacketList(latestDirFor(parsed)))
   }
   const fixPacketMatch = parsed.pathname.match(/^\/api\/reports\/latest\/fix-packets\/([^/]+)$/)
   if (req.method === 'GET' && fixPacketMatch) {
-    return sendFixPacket(res, decodeURIComponent(fixPacketMatch[1]))
+    return sendFixPacket(res, latestDirFor(parsed), decodeURIComponent(fixPacketMatch[1]))
   }
   if (req.method === 'POST' && parsed.pathname === '/api/reports/latest/fix-packets/generate') {
-    return startGenerateFixes(res)
+    return startGenerateFixes(res, latestReportPathFor(parsed), projectQuery(parsed))
   }
   const verifyMatch = parsed.pathname.match(/^\/api\/reports\/latest\/issues\/([^/]+)\/verify$/)
   if (req.method === 'POST' && verifyMatch) {
     const body = await readJsonBody<{ url?: string }>(req)
-    return startVerify(res, decodeURIComponent(verifyMatch[1]), body.url)
+    return startVerify(res, latestReportPathFor(parsed), decodeURIComponent(verifyMatch[1]), body.url, projectQuery(parsed))
   }
 
   return serveStaticUi(req, res, parsed.pathname)
@@ -111,40 +149,47 @@ async function startAudit(req: IncomingMessage, res: ServerResponse): Promise<vo
     return json(res, 409, { error: 'A Sniffer run is already active.' })
   }
   const body = await readJsonBody<AuditRequest>(req)
-  if (!body.repoPath?.trim()) return json(res, 400, { error: 'repoPath is required' })
-  if (!body.url?.trim()) return json(res, 400, { error: 'url is required' })
+  if (!body.projectId && !body.repoPath?.trim()) return json(res, 400, { error: 'repoPath is required' })
+  if (!body.projectId && !body.url?.trim()) return json(res, 400, { error: 'url is required' })
+  const reportPath = body.projectId
+    ? path.join(projectLatestReportDir(body.projectId, snifferRoot), 'latest_report.json')
+    : latestReportPath
   const args = [
     'audit',
-    '--repo', body.repoPath,
-    '--url', body.url,
     '--critic-mode', body.criticMode ?? 'deterministic',
     '--ux-critic', body.uxCritic ?? 'deterministic',
     '--intent-mode', body.intentMode ?? 'deterministic',
+    '--discovery-mode', body.discoveryMode ?? 'hybrid',
     '--provider', body.provider ?? 'auto',
     '--max-iterations', String(body.maxIterations ?? 3)
   ]
+  if (body.projectId) {
+    args.splice(1, 0, '--project', body.projectId)
+  } else {
+    args.splice(1, 0, '--repo', body.repoPath ?? '', '--url', body.url ?? '')
+  }
   if (body.scenario && body.scenario !== 'off' && body.scenario !== 'selected') args.push('--scenario', body.scenario)
   if (body.consistencyCheck) args.push('--consistency-check')
   if (body.productGoal?.trim()) args.push('--product-goal', body.productGoal.trim())
-  const run = spawnCliRun('audit', args)
+  const run = spawnCliRun('audit', args, reportPath, body.projectId)
   return json(res, 202, { runId: run.runId })
 }
 
-function startGenerateFixes(res: ServerResponse): void {
-  const run = spawnCliRun('generate-fixes', ['generate-fixes', '--report', latestReportPath])
+function startGenerateFixes(res: ServerResponse, reportPath: string, projectId?: string): void {
+  const run = spawnCliRun('generate-fixes', ['generate-fixes', '--report', reportPath], reportPath, projectId)
   json(res, 202, { runId: run.runId })
 }
 
-function startVerify(res: ServerResponse, issueId: string, url?: string): void {
+function startVerify(res: ServerResponse, reportPath: string, issueId: string, url?: string, projectId?: string): void {
   if (!url) {
     json(res, 400, { error: 'url is required to verify an issue' })
     return
   }
-  const run = spawnCliRun('verify', ['verify', '--issue', issueId, '--url', url, '--report', latestReportPath])
+  const run = spawnCliRun('verify', ['verify', '--issue', issueId, '--url', url, '--report', reportPath], reportPath, projectId)
   json(res, 202, { runId: run.runId })
 }
 
-function spawnCliRun(phase: string, cliArgs: string[]): RunRecord {
+function spawnCliRun(phase: string, cliArgs: string[], reportPath = latestReportPath, projectId?: string): RunRecord {
   const runId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
   const command = [tsxBin(), 'src/cli/index.ts', ...cliArgs]
   const run: RunRecord = {
@@ -156,7 +201,8 @@ function spawnCliRun(phase: string, cliArgs: string[]): RunRecord {
     stdout: '',
     stderr: '',
     startedAt: new Date().toISOString(),
-    reportPath: latestReportPath
+    reportPath,
+    projectId
   }
   runs.set(runId, run)
   void writeRunLog(run)
@@ -210,6 +256,7 @@ async function writeRunLog(run: RunRecord): Promise<void> {
 async function statusPayload(): Promise<Record<string, unknown>> {
   const pkg = JSON.parse(await readFile(path.join(snifferRoot, 'package.json'), 'utf8')) as { version?: string }
   const latest = await readJsonFile<Record<string, unknown>>(latestReportPath).catch(() => undefined)
+  const projects = await listProjects(snifferRoot).catch(() => [])
   return {
     version: pkg.version ?? '0.0.0',
     status: [...runs.values()].some((run) => run.status === 'running') ? 'running' : 'idle',
@@ -223,6 +270,7 @@ async function statusPayload(): Promise<Record<string, unknown>> {
       configured: Boolean(process.env.SNIFFER_CODEX_COMMAND),
       name: process.env.SNIFFER_AGENT ?? 'manual'
     },
+    projects,
     latestReport: latest
       ? {
         path: latestReportPath,
@@ -237,42 +285,56 @@ async function statusPayload(): Promise<Record<string, unknown>> {
   }
 }
 
-async function screenshotList(): Promise<Array<Record<string, string>>> {
-  const dir = path.join(latestDir, 'screenshots')
+function projectQuery(parsed: URL): string | undefined {
+  const project = parsed.searchParams.get('project')
+  return project?.trim() || undefined
+}
+
+function latestDirFor(parsed: URL): string {
+  const project = projectQuery(parsed)
+  return project ? projectLatestReportDir(project, snifferRoot) : latestDir
+}
+
+function latestReportPathFor(parsed: URL): string {
+  return path.join(latestDirFor(parsed), 'latest_report.json')
+}
+
+async function screenshotList(baseDir = latestDir, projectId?: string): Promise<Array<Record<string, string>>> {
+  const dir = path.join(baseDir, 'screenshots')
   const files = await walkFiles(dir).catch(() => [])
   return files
     .filter((file) => /\.(png|jpe?g|webp)$/i.test(file))
     .map((file) => {
-      const rel = path.relative(latestDir, file)
+      const rel = path.relative(baseDir, file)
       return {
         name: path.basename(file),
         relativePath: rel,
         group: path.dirname(rel).replace(/^screenshots\/?/, '') || 'states',
-        url: `/api/reports/latest/artifacts/${encodeURIComponent(rel)}`
+        url: `/api/reports/latest/artifacts/${encodeURIComponent(rel)}${projectId ? `?project=${encodeURIComponent(projectId)}` : ''}`
       }
     })
 }
 
-async function fixPacketList(): Promise<Array<Record<string, string>>> {
-  const dir = path.join(latestDir, 'fix_packets')
+async function fixPacketList(baseDir = latestDir): Promise<Array<Record<string, string>>> {
+  const dir = path.join(baseDir, 'fix_packets')
   const files = await walkFiles(dir).catch(() => [])
   return files
     .filter((file) => file.endsWith('.json') || file.endsWith('.md'))
     .map((file) => {
       const issueId = path.basename(file).replace(/\.(json|md)$/i, '')
-      const rel = path.relative(latestDir, file)
+      const rel = path.relative(baseDir, file)
       return { issueId, name: path.basename(file), relativePath: rel, kind: path.extname(file).slice(1) }
     })
 }
 
-async function sendFixPacket(res: ServerResponse, issueId: string): Promise<void> {
-  const base = safeJoin(path.join(latestDir, 'fix_packets'), `${issueId}.md`)
+async function sendFixPacket(res: ServerResponse, baseDir: string, issueId: string): Promise<void> {
+  const base = safeJoin(path.join(baseDir, 'fix_packets'), `${issueId}.md`)
   if (!base) return json(res, 400, { error: 'Invalid issue id' })
   return sendTextFile(res, base, 'text/markdown; charset=utf-8')
 }
 
-async function sendReportArtifact(res: ServerResponse, relativePath: string): Promise<void> {
-  const file = safeJoin(latestDir, relativePath)
+async function sendReportArtifact(res: ServerResponse, baseDir: string, relativePath: string): Promise<void> {
+  const file = safeJoin(baseDir, relativePath)
   if (!file) return json(res, 400, { error: 'Invalid artifact path' })
   const type = contentType(file)
   await sendFile(res, file, type)
@@ -324,7 +386,7 @@ function json(res: ServerResponse, status: number, body: unknown): void {
 
 function setCorsHeaders(res: ServerResponse): void {
   res.setHeader('Access-Control-Allow-Origin', process.env.SNIFFER_UI_CORS_ORIGIN ?? '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,DELETE,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
 }
 

@@ -3,8 +3,9 @@ import type { SnifferReport } from '../api'
 import { buildScenarioViews, type ScenarioView } from '../report/journey'
 import { ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
 
-export function ScenariosView({ report }: { report?: SnifferReport | null }) {
+export function ScenariosView({ report, projectId }: { report?: SnifferReport | null; projectId?: string }) {
   const scenarios = useMemo(() => buildScenarioViews(report), [report])
+  const generated = report?.generatedScenarios ?? []
   const [selectedSlug, setSelectedSlug] = useState('')
   const [screenshot, setScreenshot] = useState<ScreenshotContext | null>(null)
   const selected = scenarios.find((scenario) => (scenario.scenario.slug ?? scenario.scenario.name) === selectedSlug) ?? scenarios[0]
@@ -15,7 +16,29 @@ export function ScenariosView({ report }: { report?: SnifferReport | null }) {
           <p className="eyebrow">Scenarios</p>
           <h2>Workflow execution</h2>
           <p className="muted">Each scenario is a safe workflow Sniffer attempted, with assertions and screenshots.</p>
+          <div className="chip-row">
+            <span className="status-chip muted">Generated: {generated.length}</span>
+            <span className="status-chip muted">Executed: {scenarios.length}</span>
+          </div>
         </section>
+        {generated.length > 0 && (
+          <section className="card-panel">
+            <h3>Generated Scenarios</h3>
+            <div className="scenario-card-list">
+              {generated.map((scenario) => {
+                const run = report?.scenarioRuns?.find((item) => item.slug === scenario.id || item.name === scenario.name)
+                return (
+                  <article key={scenario.id} className="scenario-card">
+                    <span className={`status-chip ${run?.status === 'failed' ? 'danger' : run?.status === 'passed' ? 'good' : 'muted'}`}>{run ? run.status : 'not executed'}</span>
+                    <strong>{scenario.name}</strong>
+                    <small>{scenario.confidence} · {scenario.destructiveRisk ?? 'none'} risk · {scenario.steps?.length ?? 0} steps</small>
+                  </article>
+                )
+              })}
+            </div>
+            {scenarios.length === 0 && <p className="muted">Scenarios were generated but not executed. Run with `--execute-generated-scenarios` or use `--scenario auto/all`.</p>}
+          </section>
+        )}
         <div className="scenario-card-list">
           {scenarios.map((view) => (
             <button
@@ -32,14 +55,14 @@ export function ScenariosView({ report }: { report?: SnifferReport | null }) {
         </div>
       </div>
       <aside className="detail-column">
-        {selected ? <ScenarioDetail view={selected} onScreenshot={setScreenshot} /> : <EmptyScenario />}
+        {selected ? <ScenarioDetail view={selected} projectId={projectId} onScreenshot={setScreenshot} /> : <EmptyScenario />}
       </aside>
-      <ScreenshotModal screenshot={screenshot} onClose={() => setScreenshot(null)} />
+      <ScreenshotModal screenshot={screenshot} projectId={projectId} onClose={() => setScreenshot(null)} />
     </section>
   )
 }
 
-function ScenarioDetail({ view, onScreenshot }: { view: ScenarioView; onScreenshot: (screenshot: ScreenshotContext) => void }) {
+function ScenarioDetail({ view, projectId, onScreenshot }: { view: ScenarioView; projectId?: string; onScreenshot: (screenshot: ScreenshotContext) => void }) {
   return (
     <section className="card-panel sticky-detail">
       <div className="section-heading compact">
@@ -78,7 +101,7 @@ function ScenarioDetail({ view, onScreenshot }: { view: ScenarioView; onScreensh
                   details: step.evidence
                 })}
               >
-                <img src={artifactUrl(step.screenshot)} alt={`${view.scenario.name} step ${step.index + 1}`} />
+                <img src={artifactUrl(step.screenshot, projectId)} alt={`${view.scenario.name} step ${step.index + 1}`} />
                 <span>Open screenshot</span>
               </button>
             )}
@@ -100,8 +123,8 @@ function ScenarioDetail({ view, onScreenshot }: { view: ScenarioView; onScreensh
 function EmptyScenario() {
   return (
     <section className="card-panel sticky-detail">
-      <h2>No scenarios</h2>
-      <p className="muted">Run an audit with `--scenario all` to populate scenario execution.</p>
+      <h2>No executed scenarios</h2>
+      <p className="muted">Generated scenario plans appear in the left column. Enable generic scenario execution to produce step-by-step runs.</p>
     </section>
   )
 }

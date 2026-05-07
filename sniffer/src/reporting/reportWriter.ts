@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppIntent, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, Issue, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeWorkflowVerification, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { AppIntent, AppProfile, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, DiscoveryMode, GeneratedScenario, Issue, LocatorRepairResult, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent, RuntimeWorkflowVerification, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 import { enrichIssues } from '../repair/issueMetadata.js'
@@ -10,6 +10,13 @@ export async function writeAuditReports(reportDir: string, input: {
   sourceGraph: SourceGraph
   crawlGraph: CrawlGraph
   appIntent: AppIntent
+  appProfile?: AppProfile
+  discoveryMode?: DiscoveryMode
+  runtimeDomSnapshot?: RuntimeDomSnapshot
+  runtimeAppModel?: RuntimeAppModel
+  llmRuntimeIntent?: RuntimeLlmIntent
+  locatorFailures?: LocatorRepairResult[]
+  generatedScenarios?: GeneratedScenario[]
   productIntent?: ProductIntentModel
   productIntentFindings?: ProductIntentFinding[]
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
@@ -24,31 +31,53 @@ export async function writeAuditReports(reportDir: string, input: {
   issues: Issue[]
 }): Promise<SnifferReport> {
   await mkdir(reportDir, { recursive: true })
-  const rawFindings = enrichIssues(input.rawFindings ?? input.issues, input.sourceGraph, input.crawlGraph)
+  const sourceGraph: SourceGraph = {
+    ...input.sourceGraph,
+    workflowDiscoverySummary: {
+      ...(input.sourceGraph.workflowDiscoverySummary ?? { source_workflows_count: input.sourceGraph.sourceWorkflows.length }),
+      source_workflows_count: input.sourceGraph.sourceWorkflows.length,
+      runtime_workflows_count: input.runtimeAppModel?.workflows.length ?? 0,
+      llm_workflows_count: input.llmRuntimeIntent?.workflows.length ?? input.runtimeAppModel?.llmInferredWorkflows?.length ?? 0,
+      generated_scenarios_count: input.generatedScenarios?.length ?? 0,
+      executed_scenarios_count: input.scenarioRuns?.length ?? 0
+    }
+  }
+  const rawFindings = enrichIssues(input.rawFindings ?? input.issues, sourceGraph, input.crawlGraph)
   const triagedIssues = input.rawFindings
-    ? enrichIssues(input.issues, input.sourceGraph, input.crawlGraph)
+    ? enrichIssues(input.issues, sourceGraph, input.crawlGraph)
     : enrichIssues(triageIssues({
       rawFindings,
-      sourceGraph: input.sourceGraph,
+      sourceGraph,
       workflowVerifications: input.runtimeWorkflowVerifications
-    }), input.sourceGraph, input.crawlGraph)
-  const crawlGraph = enrichCrawlGraphForReport(input.crawlGraph, input.sourceGraph, triagedIssues, input.runtimeWorkflowVerifications, input.scenarioRuns ?? [])
+    }), sourceGraph, input.crawlGraph)
+  const crawlGraph = enrichCrawlGraphForReport(input.crawlGraph, sourceGraph, triagedIssues, input.runtimeWorkflowVerifications, input.scenarioRuns ?? [])
   const report: SnifferReport = {
     ...input,
+    sourceGraph,
     crawlGraph,
     rawFindings,
     issues: triagedIssues,
+    appProfile: input.appProfile,
+    discoveryMode: input.discoveryMode,
+    runtimeDomSnapshot: input.runtimeDomSnapshot,
+    runtimeAppModel: input.runtimeAppModel,
+    llmRuntimeIntent: input.llmRuntimeIntent,
+    locatorFailures: input.locatorFailures ?? [],
+    generatedScenarios: input.generatedScenarios ?? [],
     scenarioRuns: input.scenarioRuns ?? [],
     criticDecisions: input.criticDecisions ?? [],
     uxCriticFindings: input.uxCriticFindings ?? [],
     deferredFindings: input.deferredFindings ?? [],
     blockedChecks: input.blockedChecks ?? [],
     needsMoreCrawling: input.needsMoreCrawling ?? [],
-    runtimeSurfaceMatches: matchRuntimeSurfaces(input.sourceGraph, crawlGraph),
+    runtimeSurfaceMatches: matchRuntimeSurfaces(sourceGraph, crawlGraph),
     generatedAt: new Date().toISOString()
   }
-  await writeJson(path.join(reportDir, 'source_graph.json'), input.sourceGraph)
+  await writeJson(path.join(reportDir, 'source_graph.json'), sourceGraph)
   await writeJson(path.join(reportDir, 'app_intent.json'), input.appIntent)
+  if (input.appProfile) await writeJson(path.join(reportDir, 'app_profile.json'), input.appProfile)
+  if (input.runtimeDomSnapshot) await writeJson(path.join(reportDir, 'runtime_dom_snapshot.json'), input.runtimeDomSnapshot)
+  if (input.runtimeAppModel) await writeJson(path.join(reportDir, 'runtime_app_model.json'), input.runtimeAppModel)
   if (input.productIntent) await writeJson(path.join(reportDir, 'product_intent.json'), input.productIntent)
   await writeJson(path.join(reportDir, 'crawl_graph.json'), crawlGraph)
   await writeJson(path.join(reportDir, 'latest_report.json'), report)
@@ -92,6 +121,18 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderProductIntentModel(report.productIntent),
     '',
+    '## App Profile',
+    '',
+    renderAppProfile(report),
+    '',
+    '## Discovery Adapters',
+    '',
+    renderDiscoveryAdapters(report),
+    '',
+    '## Workflow Discovery Sources',
+    '',
+    renderWorkflowDiscoverySources(report),
+    '',
     '## Runtime Summary',
     '',
     `- Start URL: ${report.crawlGraph.startUrl}`,
@@ -100,6 +141,7 @@ export function renderMarkdown(report: SnifferReport): string {
     `- Actions attempted: ${report.crawlGraph.actions.length}`,
     `- Console errors: ${report.crawlGraph.consoleErrors.length}`,
     `- Network failures: ${report.crawlGraph.networkFailures.length}`,
+    `- Discovery mode: ${report.discoveryMode ?? 'source'}`,
     `- Raw findings: ${rawFindings.length}`,
     `- Triaged issues / repair groups: ${report.issues.length}`,
     '',
@@ -107,13 +149,49 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderSurfaceSummary(report),
     '',
+    '## Runtime DOM Discovery',
+    '',
+    renderRuntimeDomDiscovery(report),
+    '',
+    '## Inferred Runtime App Model',
+    '',
+    renderRuntimeAppModel(report),
+    '',
+    '## Locator Inventory',
+    '',
+    renderLocatorInventory(report),
+    '',
+    '## LLM Inferred Workflows',
+    '',
+    renderLlmRuntimeIntent(report),
+    '',
+    '## Safe/Unsafe Action Plan',
+    '',
+    renderRuntimeActionPlan(report),
+    '',
+    '## Locator Failures / Repairs',
+    '',
+    renderLocatorFailures(report),
+    '',
     '## Source Workflows',
     '',
     renderWorkflowSummary(report),
     '',
+    '## Runtime Workflows',
+    '',
+    renderRuntimeWorkflowSummary(report),
+    '',
+    '## Scenario Execution Coverage',
+    '',
+    renderScenarioExecutionCoverage(report),
+    '',
     '## Scenario Runs',
     '',
     renderScenarioSummary(report),
+    '',
+    '## Generated Generic Scenarios',
+    '',
+    renderGeneratedScenarioSummary(report),
     '',
     '## Prompt/Output Consistency',
     '',
@@ -349,6 +427,89 @@ function renderScenarioSummary(report: SnifferReport): string {
   ].join('\n')).join('\n\n')
 }
 
+function renderAppProfile(report: SnifferReport): string {
+  const profile = report.appProfile
+  if (!profile) return 'No app profile was generated.'
+  return [
+    `- Profile type: ${profile.profile_type}`,
+    `- Confidence: ${profile.confidence}`,
+    `- Core entities: ${profile.core_entities.join(', ') || 'unknown'}`,
+    `- Primary user jobs: ${profile.primary_user_jobs.join('; ') || 'unknown'}`,
+    `- Expected navigation: ${profile.expected_navigation_patterns.join('; ') || 'unknown'}`,
+    `- Expected workflows: ${profile.expected_workflows.join('; ') || 'unknown'}`,
+    `- Expected output surfaces: ${profile.expected_output_surfaces.join('; ') || 'unknown'}`,
+    `- Evidence: ${profile.evidence.join('; ') || 'none'}`
+  ].join('\n')
+}
+
+function renderGeneratedScenarioSummary(report: SnifferReport): string {
+  const scenarios = report.generatedScenarios ?? []
+  if (scenarios.length === 0) return 'No generic scenarios were generated.'
+  return scenarios.map((scenario) => [
+    `### ${scenario.name}`,
+    '',
+    `- ID: ${scenario.id}`,
+    `- Applies to: ${scenario.profileApplicability.join(', ')}`,
+    `- Confidence: ${scenario.confidence}`,
+    `- Expected controls: ${scenario.expectedControls.join(', ') || 'none'}`,
+    `- Expected outcomes: ${scenario.expectedOutcomes.join('; ') || 'none'}`,
+    `- Evidence: ${scenario.evidence.join('; ') || 'none'}`
+  ].join('\n')).join('\n\n')
+}
+
+function renderDiscoveryAdapters(report: SnifferReport): string {
+  const adapters = report.sourceGraph.discoveryAdapters ?? []
+  if (adapters.length === 0) return 'No framework discovery adapters recorded.'
+  return adapters.map((adapter) => [
+    `### ${adapter.adapterId}`,
+    '',
+    `- Framework: ${adapter.framework}`,
+    `- Confidence: ${adapter.confidence}`,
+    `- Evidence: ${adapter.evidence.join('; ') || 'none'}`,
+    adapter.warnings?.length ? `- Warnings: ${adapter.warnings.join('; ')}` : undefined
+  ].filter(Boolean).join('\n')).join('\n\n')
+}
+
+function renderWorkflowDiscoverySources(report: SnifferReport): string {
+  const summary = report.sourceGraph.workflowDiscoverySummary
+  return [
+    `- Source workflows: ${summary?.source_workflows_count ?? report.sourceGraph.sourceWorkflows.length}`,
+    `- Runtime workflows: ${summary?.runtime_workflows_count ?? report.runtimeAppModel?.workflows.length ?? 0}`,
+    `- LLM workflows: ${summary?.llm_workflows_count ?? report.llmRuntimeIntent?.workflows.length ?? 0}`,
+    `- Generated scenarios: ${summary?.generated_scenarios_count ?? report.generatedScenarios?.length ?? 0}`,
+    `- Executed scenarios: ${summary?.executed_scenarios_count ?? report.scenarioRuns?.length ?? 0}`
+  ].join('\n')
+}
+
+function renderRuntimeWorkflowSummary(report: SnifferReport): string {
+  const workflows = report.runtimeAppModel?.workflows ?? []
+  if (workflows.length === 0) return 'No runtime workflows discovered.'
+  return workflows.map((workflow) => [
+    `### ${workflow.name}`,
+    '',
+    `- Source: ${workflow.source}`,
+    `- Confidence: ${workflow.confidence}`,
+    `- Evidence: ${workflow.evidence.join('; ') || 'none'}`,
+    `- Steps: ${workflow.steps.map((step) => `${step.action} ${step.target_name}`).join('; ') || 'none'}`
+  ].join('\n')).join('\n\n')
+}
+
+function renderScenarioExecutionCoverage(report: SnifferReport): string {
+  const generated = report.generatedScenarios ?? []
+  const runs = report.scenarioRuns ?? []
+  const executed = new Set(runs.map((run) => run.slug))
+  const skipped = generated.filter((scenario) => !executed.has(scenario.id))
+  return [
+    `- Generated scenarios: ${generated.length}`,
+    `- Executed scenarios: ${runs.length}`,
+    `- Skipped/not executed: ${skipped.length}`,
+    `- Passed: ${runs.filter((run) => run.status === 'passed').length}`,
+    `- Failed: ${runs.filter((run) => run.status === 'failed').length}`,
+    `- Blocked: ${runs.filter((run) => run.status === 'blocked').length}`,
+    skipped.length ? `- Not executed IDs: ${skipped.map((scenario) => scenario.id).join(', ')}` : undefined
+  ].filter(Boolean).join('\n')
+}
+
 function renderPromptConsistency(report: SnifferReport): string {
   const consistency = report.promptConsistency
   if (!consistency?.enabled) return 'Prompt/output consistency check was not run.'
@@ -471,6 +632,99 @@ function renderSurfaceSummary(report: SnifferReport): string {
     const evidence = match.matchingDomEvidence.length > 0 ? `; DOM evidence: ${match.matchingDomEvidence.join(', ')}` : ''
     return `- ${match.display_name} (${match.surface_type}) from ${match.file}: runtime ${match.seenInRuntime}${evidence}`
   }).join('\n')
+}
+
+function renderRuntimeDomDiscovery(report: SnifferReport): string {
+  const snapshot = report.runtimeDomSnapshot
+  if (!snapshot) return 'Runtime DOM discovery was not captured.'
+  return [
+    `- URL: ${snapshot.url}`,
+    `- Title: ${snapshot.title || 'untitled'}`,
+    `- Screenshot: ${snapshot.screenshotPath ?? 'none'}`,
+    `- Headings: ${snapshot.headings.map(controlLabel).filter(Boolean).join(', ') || 'none'}`,
+    `- Landmarks/regions: ${snapshot.landmarks.map(controlLabel).filter(Boolean).slice(0, 12).join(', ') || 'none'}`,
+    `- Links: ${snapshot.links.length}`,
+    `- Buttons: ${snapshot.buttons.length}`,
+    `- Inputs/selects/textareas: ${snapshot.inputs.length + snapshot.selects.length + snapshot.textareas.length}`,
+    `- Forms: ${snapshot.forms.length}`,
+    `- Tables: ${snapshot.tables.length}`,
+    `- Tabs/tablists: ${snapshot.tabs.length}/${snapshot.tablists.length}`,
+    `- Dialogs/modals: ${snapshot.dialogs.length}`,
+    `- Visible text blocks: ${snapshot.visibleTextBlocks.slice(0, 8).join(' | ') || 'none'}`
+  ].join('\n')
+}
+
+function renderRuntimeAppModel(report: SnifferReport): string {
+  const model = report.runtimeAppModel
+  if (!model) return 'No runtime app model generated.'
+  return [
+    `- App name: ${model.app_name}`,
+    `- Inferred app type: ${model.inferred_app_type}`,
+    `- Confidence: ${model.confidence}`,
+    `- Screens: ${model.screens.map((screen) => screen.name).join(', ') || 'unknown'}`,
+    `- Entities: ${model.entities.join(', ') || 'unknown'}`,
+    `- Runtime workflows: ${model.workflows.map((workflow) => `${workflow.name} (${workflow.confidence})`).join('; ') || 'none'}`,
+    `- Route candidates: ${model.route_candidates.join(', ') || 'none'}`,
+    `- Evidence: ${model.evidence.join('; ')}`
+  ].join('\n')
+}
+
+function renderLocatorInventory(report: SnifferReport): string {
+  const controls = report.runtimeAppModel?.locator_inventory ?? report.runtimeDomSnapshot?.controls ?? []
+  if (controls.length === 0) return 'No runtime locator inventory captured.'
+  return controls.slice(0, 40).map((control) => {
+    const locator = control.locatorCandidates[0]
+    return `- ${control.kind}: ${controlLabel(control)} -> ${locator?.playwright ?? 'no reliable locator'} (${locator?.reason ?? 'no locator'})`
+  }).join('\n')
+}
+
+function renderLlmRuntimeIntent(report: SnifferReport): string {
+  const intent = report.llmRuntimeIntent
+  if (!intent) return 'No LLM runtime workflow inference was run.'
+  return [
+    `- App type: ${intent.app_type}`,
+    `- Primary user jobs: ${intent.primary_user_jobs.join(', ') || 'none'}`,
+    `- Notes: ${intent.notes.join('; ') || 'none'}`,
+    '',
+    ...intent.workflows.map((workflow) => [
+      `### ${workflow.name}`,
+      '',
+      `- Confidence: ${workflow.confidence}`,
+      `- Evidence: ${workflow.evidence.join('; ') || 'none'}`,
+      `- Steps: ${workflow.steps.map((step) => `${step.action} ${step.target_name} via ${step.locator_strategy}:${step.locator_value}`).join('; ') || 'none'}`
+    ].join('\n'))
+  ].join('\n')
+}
+
+function renderRuntimeActionPlan(report: SnifferReport): string {
+  const model = report.runtimeAppModel
+  if (!model) return 'No runtime action plan generated.'
+  const safe = model.actions.filter((action) => action.safe).slice(0, 20)
+  const unsafe = model.actions.filter((action) => !action.safe).slice(0, 20)
+  return [
+    '### Safe next actions',
+    '',
+    safe.length ? safe.map((action) => `- ${action.action} ${action.target}: ${action.reason}; locator=${action.locator?.playwright ?? 'none'}`).join('\n') : 'None.',
+    '',
+    '### Unsafe/skipped actions',
+    '',
+    unsafe.length ? unsafe.map((action) => `- ${action.target}: ${action.reason}`).join('\n') : 'None.'
+  ].join('\n')
+}
+
+function renderLocatorFailures(report: SnifferReport): string {
+  const failures = report.locatorFailures ?? []
+  if (failures.length === 0) return 'No locator failures or repairs recorded.'
+  return failures.map((failure) => [
+    `- Status: ${failure.status}`,
+    `  - Reason: ${failure.reason}`,
+    `  - Resolved locator: ${failure.locator?.playwright ?? 'none'}`,
+    `  - Attempted: ${failure.attempted.map((candidate) => candidate.playwright).join('; ') || 'none'}`
+  ].join('\n')).join('\n')
+}
+
+function controlLabel(control: { accessibleName?: string; visibleText?: string; labelText?: string; placeholder?: string; dataTestId?: string; href?: string; id?: string }): string {
+  return (control.accessibleName ?? control.visibleText ?? control.labelText ?? control.placeholder ?? control.dataTestId ?? control.href ?? control.id ?? '').replace(/\s+/g, ' ').trim()
 }
 
 function renderWorkflowSummary(report: SnifferReport): string {

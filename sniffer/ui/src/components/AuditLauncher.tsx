@@ -72,7 +72,8 @@ export function AuditLauncher({
         </div>
 
         <div className="controls-grid">
-          <Select label="Scenario mode" value={form.scenario} values={['off', 'all', 'selected']} onChange={(scenario) => onChange({ scenario })} />
+          <Select label="Discovery mode" value={form.discoveryMode} values={['hybrid', 'runtime', 'source']} onChange={(discoveryMode) => onChange({ discoveryMode })} />
+          <Select label="Scenario mode" value={form.scenario} values={['auto', 'off', 'all']} onChange={(scenario) => onChange({ scenario })} />
           <Select label="Critic mode" value={form.criticMode} values={['deterministic', 'llm', 'auto']} onChange={(criticMode) => onChange({ criticMode })} />
           <Select label="UX critic" value={form.uxCritic} values={['off', 'deterministic', 'llm']} onChange={(uxCritic) => onChange({ uxCritic })} />
           <Select label="Intent mode" value={form.intentMode} values={['deterministic', 'llm', 'auto']} onChange={(intentMode) => onChange({ intentMode })} />

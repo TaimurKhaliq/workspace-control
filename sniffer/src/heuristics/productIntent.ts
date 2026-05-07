@@ -54,6 +54,7 @@ export function buildDeterministicProductIntent(input: Pick<ProductIntentInput, 
   const all = `${source}\n${runtime}\n${goal}`
   const category = inferCategory(all)
   const isPlanning = category === 'planning_control_panel'
+  if (!isPlanning) return buildGenericProductIntent(input, category)
   const evidence = evidenceForTerms(source, runtime, goal, [
     'workspace',
     'repo',
@@ -121,6 +122,89 @@ export function buildDeterministicProductIntent(input: Pick<ProductIntentInput, 
       ...(goal ? ['User-provided product goal is treated as strong evidence for intended jobs.'] : []),
       ...(isPlanning ? ['Plan run browsing is expected because source/runtime expose plan-run or plan-bundle concepts.'] : [])
     ],
+    risks_of_hallucination: [
+      'Common UI/product patterns are not reportable issues unless source, runtime, or user evidence supports them.',
+      'Sniffer does not infer backend data semantics beyond discovered API/state names.'
+    ],
+    product_goal: input.productGoal,
+    llmUsed: false
+  }
+}
+
+function buildGenericProductIntent(
+  input: Pick<ProductIntentInput, 'sourceGraph' | 'crawlGraph' | 'appIntent' | 'productGoal'>,
+  category: ProductAppCategory
+): ProductIntentModel {
+  const goal = input.productGoal ?? ''
+  const evidence = evidenceForTerms(sourceText(input.sourceGraph), runtimeText(input.crawlGraph), goal, [
+    'dashboard',
+    'metrics',
+    'analytics',
+    'admin',
+    'users',
+    'roles',
+    'create',
+    'edit',
+    'delete',
+    'list',
+    'search',
+    'filter',
+    'login',
+    'sign in',
+    'password',
+    'form',
+    'table',
+    'detail'
+  ]).slice(0, 18)
+  const coreEntities = [
+    entity('record', 'A domain item shown in a list, table, card, or detail view.', ['record', 'article', 'item', 'entry', 'row'], input),
+    entity('list', 'A collection surface for browsing records.', ['list', 'table', 'feed', 'cards', 'rows'], input),
+    entity('detail view', 'A focused screen for one record or item.', ['detail', 'profile', 'article', 'view'], input),
+    entity('form', 'A labelled data-entry or filtering surface.', ['form', 'input', 'textarea', 'select', 'field'], input),
+    entity('account/session', 'Authentication or user-session state.', ['login', 'sign in', 'password', 'session', 'register', 'account'], input),
+    entity('dashboard metric', 'A dashboard or analytics value.', ['dashboard', 'metric', 'analytics', 'chart', 'graph'], input)
+  ].filter((item) => item.evidence.length > 0)
+  const primaryJobs = [
+    workflowItem('navigate primary app sections', ['Home', 'nav', 'routerLink', 'href', 'route'], input),
+    workflowItem('browse list/table/card content', ['list', 'table', 'feed', 'cards', 'rows', 'Global Feed'], input),
+    workflowItem('open detail views', ['detail', 'profile', 'article', 'view', 'Read more'], input),
+    workflowItem('create or edit records', ['create', 'edit', 'save', 'publish', 'update', 'delete'], input),
+    workflowItem('search or filter content', ['search', 'filter', 'tag'], input),
+    workflowItem('complete authentication forms', ['login', 'sign in', 'password', 'register'], input)
+  ].filter((item) => item.evidence.length > 0 || item.support.includes('user_stated'))
+  const expectedNavigation = [
+    workflowItem('primary navigation should expose safe app sections', ['Home', 'nav', 'routerLink', 'href', 'route'], input),
+    workflowItem('current screen context should be clear from headings or active nav', ['h1', 'heading', 'active', 'title'], input)
+  ].filter((item) => item.evidence.length > 0 || item.support.includes('user_stated'))
+  const expectedPersistence = [
+    workflowItem('mutating form actions should communicate success or validation errors', ['save', 'publish', 'create', 'update', 'error', 'validation'], input),
+    workflowItem('auth/session actions should show controlled error states', ['login', 'sign in', 'session', 'password', 'error'], input)
+  ].filter((item) => item.evidence.length > 0 || item.support.includes('user_stated'))
+  const outputReview = [
+    workflowItem('lists and tables should be scan-friendly without horizontal overflow', ['list', 'table', 'feed', 'rows', 'cards'], input),
+    workflowItem('forms should have accessible labels and inline help/errors', ['form', 'label', 'placeholder', 'error', 'validation'], input),
+    workflowItem('copy/export actions should be labelled when present', ['copy', 'export', 'download'], input)
+  ].filter((item) => item.evidence.length > 0 || item.support.includes('user_stated'))
+  const summaryByCategory: Record<ProductAppCategory, string> = {
+    planning_control_panel: 'A planning/control-panel UI.',
+    local_dev_tool: 'A local development tool UI with project/repository-oriented workflows.',
+    admin_console: 'An administrative UI for managing users, roles, settings, or operational records.',
+    dashboard: 'A dashboard-style UI for reviewing metrics, lists, and operational status.',
+    crud_app: 'A CRUD-style UI for browsing, creating, editing, and reviewing records.',
+    design_unknown: 'A UI application with partially inferred product intent.'
+  }
+  return {
+    app_category: category,
+    product_summary: input.appIntent.summary || summaryByCategory[category],
+    primary_user_jobs: primaryJobs,
+    core_entities: coreEntities,
+    expected_workflows: primaryJobs,
+    expected_navigation_model: expectedNavigation,
+    expected_persistence_model: expectedPersistence,
+    expected_output_review_model: outputReview,
+    confidence: coreEntities.length >= 3 && primaryJobs.length >= 3 ? 'medium' : evidence.length >= 3 ? 'medium' : 'low',
+    evidence,
+    assumptions: goal ? ['User-provided product goal is treated as strong evidence for intended jobs.'] : [],
     risks_of_hallucination: [
       'Common UI/product patterns are not reportable issues unless source, runtime, or user evidence supports them.',
       'Sniffer does not infer backend data semantics beyond discovered API/state names.'
@@ -325,8 +409,20 @@ function evidenceForTerms(source: string, runtime: string, goal: string, terms: 
 }
 
 function inferCategory(text: string): ProductAppCategory {
-  if (/plan bundle|feature request|handoff|repo target|learning|workspace/i.test(text)) return 'planning_control_panel'
-  if (/admin|users|roles|permissions/i.test(text)) return 'admin_console'
+  const planningSignals = [
+    /plan bundle/i,
+    /plan-bundles/i,
+    /feature request/i,
+    /handoff/i,
+    /repo target/i,
+    /target_id/i,
+    /plan runs?/i,
+    /semantic enrichment/i,
+    /learning-status/i,
+    /refresh learning/i
+  ].filter((pattern) => pattern.test(text)).length
+  if (planningSignals >= 2 || /plan bundle|feature request|handoff|repo target/i.test(text)) return 'planning_control_panel'
+  if (/\badmin\b|roles|permissions|user management/i.test(text)) return 'admin_console'
   if (/dashboard|metrics|analytics/i.test(text)) return 'dashboard'
   if (/create|edit|delete|list|record/i.test(text)) return 'crud_app'
   if (/localhost|repo|dev/i.test(text)) return 'local_dev_tool'

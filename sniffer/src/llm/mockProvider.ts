@@ -1,4 +1,4 @@
-import type { AppIntent, Issue, IssueTriageContext, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, UxCriticContext, UxCriticFinding } from '../types.js'
+import type { AppIntent, Issue, IssueTriageContext, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, UxCriticContext, UxCriticFinding } from '../types.js'
 import type { SnifferCriticContext, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 import { deterministicDecision } from '../critic/workflowCritic.js'
@@ -48,6 +48,39 @@ export class MockLlmProvider implements LlmProvider {
         'mock_llm_product_intent: structured product intent returned without external calls.'
       ],
       llmUsed: true
+    }
+  }
+
+  async inferRuntimeIntent(context: RuntimeIntentContext): Promise<RuntimeLlmIntent> {
+    const firstButton = context.runtime_snapshot.buttons.find((button) => button.accessibleName || button.visibleText)
+    const firstForm = context.runtime_snapshot.forms[0]
+    return {
+      app_type: context.runtime_snapshot.forms.length > 0 ? 'crud_app' : 'dashboard_app',
+      primary_user_jobs: [
+        'navigate primary screens',
+        firstForm ? 'complete visible forms' : 'inspect dashboard content'
+      ],
+      workflows: [
+        {
+          name: firstForm ? 'Inspect visible form' : 'Navigation smoke test',
+          confidence: 'medium',
+          evidence: firstForm ? [`form:${firstForm.name ?? firstForm.id}`] : context.runtime_snapshot.headings.map((heading) => heading.accessibleName ?? heading.visibleText ?? heading.id).slice(0, 3),
+          source: 'llm',
+          steps: firstButton ? [{
+            action: 'click',
+            target_name: firstButton.accessibleName ?? firstButton.visibleText ?? 'primary button',
+            locator_strategy: firstButton.locatorCandidates[0]?.strategy ?? 'text',
+            locator_value: firstButton.locatorCandidates[0]?.value ?? firstButton.accessibleName ?? firstButton.visibleText ?? '',
+            safe: firstButton.safeAction.safe,
+            expected_result: 'UI responds without console or network errors.',
+            confidence: 'medium',
+            evidence: [firstButton.accessibleName ?? firstButton.visibleText ?? firstButton.id]
+          }] : []
+        }
+      ],
+      safe_next_actions: context.candidate_actions.filter((action) => action.safe).slice(0, 5),
+      unsafe_actions: context.candidate_actions.filter((action) => !action.safe).slice(0, 5),
+      notes: ['mock_runtime_intent: inferred from compact runtime DOM context']
     }
   }
 

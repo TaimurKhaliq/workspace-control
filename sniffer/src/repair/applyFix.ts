@@ -53,7 +53,46 @@ export async function applyFix(input: {
   await writeFile(path.join(attemptDir, 'git_diff_after.patch'), gitDiffAfter, 'utf8')
   await writeFile(path.join(attemptDir, 'git_diff_summary.txt'), gitDiffSummary, 'utf8')
   await writeJson(path.join(attemptDir, 'repair_attempt.json'), attempt)
+  await writeRepairResult(attemptDir, input.issueId, reportDir, agentResult, changedFiles)
   return attempt
+}
+
+async function writeRepairResult(
+  attemptDir: string,
+  issueId: string,
+  reportDir: string,
+  agentResult: RepairAttempt['agentResult'],
+  changedFiles: string[]
+): Promise<void> {
+  const fixPacketPath = path.join(reportDir, 'fix_packets', `${issueId}.md`)
+  const agentInvoked = agentResult.agent !== 'manual' && agentResult.status !== 'not_run'
+  const result = {
+    issue_id: issueId,
+    agent: agentResult.agent,
+    agent_invoked: agentInvoked,
+    changed_files: changedFiles,
+    verification: 'not_run',
+    manual_mode: agentResult.agent === 'manual',
+    fix_packet_path: fixPacketPath,
+    attempt_dir: attemptDir,
+    status: agentResult.status,
+    notes: agentResult.notes
+  }
+  await writeJson(path.join(attemptDir, 'repair_result.json'), result)
+  await writeFile(path.join(attemptDir, 'repair_result.md'), [
+    `# Repair Result: ${issueId}`,
+    '',
+    `- Agent: ${agentResult.agent}`,
+    `- Agent invoked: ${agentInvoked ? 'true' : 'false'}`,
+    `- Changed files: ${changedFiles.length ? changedFiles.join(', ') : 'none'}`,
+    '- Verification: not_run',
+    `- Fix packet: ${fixPacketPath}`,
+    '',
+    '## Notes',
+    '',
+    agentResult.notes.map((note) => `- ${note}`).join('\n') || '- none',
+    ''
+  ].join('\n'), 'utf8')
 }
 
 function git(args: string[], cwd: string): string {

@@ -1,10 +1,25 @@
 import { readFile, readdir, stat } from 'node:fs/promises'
 import path from 'node:path'
 import type { SourceFileSummary, SourceForm, SourceGraph, SourceRoute } from '../types.js'
-import { discoverReactUi } from './reactUiDiscovery.js'
+import { mergeAdapterResults, runDiscoveryAdapters } from './adapters/registry.js'
+import type { DiscoveryContext } from './adapters/types.js'
 
-const ignoredDirs = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage', 'reports'])
-const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.vue', '.svelte'])
+const ignoredDirs = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'out',
+  '.next',
+  '.angular',
+  '.cache',
+  '.turbo',
+  '.vite',
+  '.svelte-kit',
+  'coverage',
+  'reports'
+])
+const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.html', '.vue', '.svelte', '.astro', '.hbs', '.ejs'])
 
 export async function discoverSource(repoPath: string): Promise<SourceGraph> {
   const absoluteRepo = path.resolve(repoPath)
@@ -15,27 +30,35 @@ export async function discoverSource(repoPath: string): Promise<SourceGraph> {
     ...asRecord(packageJson.devDependencies)
   }
 
-  const pages = files.filter(isLikelyPage).map((file) => summarizeFile(absoluteRepo, file))
-  const components = files.filter(isLikelyComponent).map((file) => summarizeFile(absoluteRepo, file))
   const fileContents = await Promise.all(files.map(async (file) => [file, await readFile(file, 'utf8')] as const))
-  const reactUi = discoverReactUi(absoluteRepo, fileContents)
-
-  return {
+  const inventory = fileContents.map(([file, content]) => ({
+    file,
+    relative: path.relative(absoluteRepo, file).split(path.sep).join('/'),
+    content
+  }))
+  const context: DiscoveryContext = {
+    repoPath: absoluteRepo,
+    packageJson,
+    dependencies,
+    files: inventory
+  }
+  const adapterResults = runDiscoveryAdapters(context)
+  const base: Omit<SourceGraph, 'generatedAt'> = {
     repoPath: absoluteRepo,
     packageName: typeof packageJson.name === 'string' ? packageJson.name : undefined,
     framework: detectFramework(dependencies, files),
     buildTool: detectBuildTool(dependencies, packageJson),
     routes: discoverRoutes(absoluteRepo, fileContents),
-    pages,
-    components,
+    pages: files.filter(isLikelyPage).map((file) => summarizeFile(absoluteRepo, file)),
+    components: files.filter(isLikelyComponent).map((file) => summarizeFile(absoluteRepo, file)),
     forms: discoverForms(absoluteRepo, fileContents),
-    uiSurfaces: reactUi.uiSurfaces,
-    sourceWorkflows: reactUi.sourceWorkflows,
-    apiCalls: reactUi.apiCalls,
-    stateActions: reactUi.stateActions,
-    packageScripts: asRecord(packageJson.scripts),
-    generatedAt: new Date().toISOString()
+    uiSurfaces: [],
+    sourceWorkflows: [],
+    apiCalls: [],
+    stateActions: [],
+    packageScripts: asRecord(packageJson.scripts)
   }
+  return mergeAdapterResults({ base, results: adapterResults, generatedAt: new Date().toISOString() })
 }
 
 async function readPackageJson(repoPath: string): Promise<Record<string, unknown>> {
@@ -64,8 +87,8 @@ async function listSourceFiles(repoPath: string): Promise<string[]> {
 }
 
 function detectFramework(dependencies: Record<string, string>, files: string[]): string {
-  if (dependencies.next || files.some((file) => file.includes(`${path.sep}app${path.sep}`))) return 'next'
   if (dependencies['@angular/core']) return 'angular'
+  if (dependencies.next || files.some(isNextAppRouterFile)) return 'next'
   if (dependencies.vue) return 'vue'
   if (dependencies.svelte || dependencies['@sveltejs/kit']) return 'svelte'
   if (dependencies.react) return 'react'
@@ -75,11 +98,17 @@ function detectFramework(dependencies: Record<string, string>, files: string[]):
 function detectBuildTool(dependencies: Record<string, string>, packageJson: Record<string, unknown>): string {
   const scripts = asRecord(packageJson.scripts)
   const scriptText = Object.values(scripts).join(' ')
-  if (dependencies.vite || scriptText.includes('vite')) return 'vite'
-  if (dependencies.next || scriptText.includes('next')) return 'next'
-  if (dependencies.webpack || scriptText.includes('webpack')) return 'webpack'
-  if (dependencies.parcel || scriptText.includes('parcel')) return 'parcel'
+  if (dependencies['@angular/cli'] || scripts.ng || /\bng\s+(?:serve|build|test)\b/.test(scriptText)) return 'angular-cli'
+  if (dependencies.next || /\bnext\b/.test(scriptText)) return 'next'
+  if (dependencies.vite || /\bvite(?:\s|$)/.test(scriptText)) return 'vite'
+  if (dependencies.webpack || /\bwebpack\b/.test(scriptText)) return 'webpack'
+  if (dependencies.parcel || /\bparcel\b/.test(scriptText)) return 'parcel'
   return 'unknown'
+}
+
+function isNextAppRouterFile(file: string): boolean {
+  if (/[\\/]src[\\/]app[\\/]/.test(file)) return false
+  return /[\\/]app[\\/](?:page|layout|route)\.(?:tsx|ts|jsx|js)$/.test(file)
 }
 
 function discoverRoutes(repoPath: string, files: readonly (readonly [string, string])[]): SourceRoute[] {
@@ -98,7 +127,7 @@ function discoverRoutes(repoPath: string, files: readonly (readonly [string, str
     for (const route of regexMatches(content, /path=["']([^"']+)["']/g)) {
       routes.set(`${route}:${file}`, { path: route, file: relative, source: 'router' })
     }
-    for (const route of regexMatches(content, /(?:href|to)=["'](\/[^"']*)["']/g)) {
+    for (const route of regexMatches(content, /(?:href|to|routerLink)=["'](\/[^"']*)["']/g)) {
       routes.set(`${route}:${file}`, { path: route, file: relative, source: 'link' })
     }
   }
@@ -123,15 +152,26 @@ function pageFilesystemRoute(normalized: string): string | undefined {
 function discoverForms(repoPath: string, files: readonly (readonly [string, string])[]): SourceForm[] {
   return files.flatMap(([file, content]) => {
     if (!/<form[\s>]/i.test(content)) return []
-    const inputs = [
-      ...regexMatches(content, /<(?:input|textarea|select)[^>]+(?:name|aria-label|placeholder)=["']([^"']+)["']/gi)
-    ]
-    return [{
-      file: path.relative(repoPath, file),
-      name: path.basename(file, path.extname(file)),
-      inputs: [...new Set(inputs)]
-    }]
+    return [...content.matchAll(/<form\b[^>]*>([\s\S]*?)<\/form>/gi)].map((match, index) => {
+      const body = match[1]
+      const inputs = [
+        ...regexMatches(body, /\b(?:name|aria-label|placeholder|formControlName)=["']([^"']+)["']/gi),
+        ...tagText(body, 'label'),
+        ...tagText(body, 'button')
+      ]
+      return {
+        file: path.relative(repoPath, file),
+        name: index === 0 ? path.basename(file, path.extname(file)) : `${path.basename(file, path.extname(file))} ${index + 1}`,
+        inputs: [...new Set(inputs.filter(Boolean))]
+      }
+    })
   })
+}
+
+function tagText(content: string, tag: string): string[] {
+  return regexMatches(content, new RegExp(`<${tag}\\b[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'gi'))
+    .map((value) => value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim())
+    .filter((value) => /[A-Za-z]/.test(value))
 }
 
 function isLikelyPage(file: string): boolean {
@@ -141,7 +181,7 @@ function isLikelyPage(file: string): boolean {
 
 function isLikelyComponent(file: string): boolean {
   const normalized = file.split(path.sep).join('/')
-  return /\/(components|ui)\//.test(normalized) || /[A-Z][A-Za-z0-9]+\.(tsx|jsx|vue|svelte)$/.test(path.basename(file))
+  return /\/(components|ui)\//.test(normalized) || /\.component\.(ts|html)$/.test(normalized) || /[A-Z][A-Za-z0-9]+\.(tsx|jsx|vue|svelte)$/.test(path.basename(file))
 }
 
 function summarizeFile(repoPath: string, file: string): SourceFileSummary {

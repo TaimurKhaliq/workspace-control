@@ -36,24 +36,54 @@ export interface SourceGraph {
   apiCalls: ApiCall[]
   stateActions: StateActionHints[]
   packageScripts: Record<string, string>
+  discoveryAdapters?: DiscoveryAdapterSummary[]
+  workflowDiscoverySummary?: WorkflowDiscoverySummary
   generatedAt: string
+}
+
+export interface DiscoveryAdapterSummary {
+  adapterId: string
+  framework: string
+  confidence: number
+  evidence: string[]
+  warnings?: string[]
+}
+
+export interface WorkflowDiscoverySummary {
+  source_workflows_count: number
+  runtime_workflows_count?: number
+  llm_workflows_count?: number
+  generated_scenarios_count?: number
+  executed_scenarios_count?: number
 }
 
 export interface SourceRoute {
   path: string
   file: string
   source: 'filesystem' | 'router' | 'link'
+  discoveredBy?: string[]
+  confidence?: number
+  evidence?: string[]
+  framework?: string
 }
 
 export interface SourceFileSummary {
   file: string
   name: string
+  discoveredBy?: string[]
+  confidence?: number
+  evidence?: string[]
+  framework?: string
 }
 
 export interface SourceForm {
   file: string
   name: string
   inputs: string[]
+  discoveredBy?: string[]
+  confidence?: number
+  evidence?: string[]
+  framework?: string
 }
 
 export type UiSurfaceType =
@@ -83,6 +113,8 @@ export interface UiSurface {
   relatedButtons: string[]
   relatedInputs: string[]
   confidence: number
+  discoveredBy?: string[]
+  framework?: string
 }
 
 export interface SourceWorkflow {
@@ -91,6 +123,8 @@ export interface SourceWorkflow {
   evidence: string[]
   likelyUserActions: string[]
   confidence: number
+  discoveredBy?: string[]
+  framework?: string
 }
 
 export interface ApiCall {
@@ -99,6 +133,10 @@ export interface ApiCall {
   sourceFile: string
   functionName?: string
   likelyWorkflow?: string
+  discoveredBy?: string[]
+  confidence?: number
+  evidence?: string[]
+  framework?: string
 }
 
 export interface StateActionHints {
@@ -108,6 +146,10 @@ export interface StateActionHints {
   submitHandlers: string[]
   loadingStateVariables: string[]
   errorStateVariables: string[]
+  discoveredBy?: string[]
+  confidence?: number
+  evidence?: string[]
+  framework?: string
 }
 
 export interface CrawlGraph {
@@ -122,6 +164,215 @@ export interface CrawlGraph {
   networkFailures: NetworkFailure[]
   screenshots: string[]
   generatedAt: string
+}
+
+export type DiscoveryMode = 'source' | 'runtime' | 'hybrid'
+
+export type RuntimeControlKind =
+  | 'link'
+  | 'button'
+  | 'input'
+  | 'select'
+  | 'textarea'
+  | 'form'
+  | 'table'
+  | 'tab'
+  | 'tablist'
+  | 'dialog'
+  | 'landmark'
+  | 'heading'
+  | 'text'
+
+export type LocatorStrategy =
+  | 'role'
+  | 'label'
+  | 'placeholder'
+  | 'testid'
+  | 'text'
+  | 'css'
+
+export interface LocatorCandidate {
+  strategy: LocatorStrategy
+  value: string
+  playwright: string
+  confidence: number
+  reason: string
+}
+
+export interface RuntimeDomControl {
+  id: string
+  kind: RuntimeControlKind
+  tagName: string
+  role?: string
+  visibleText?: string
+  accessibleName?: string
+  labelText?: string
+  placeholder?: string
+  dataTestId?: string
+  name?: string
+  type?: string
+  href?: string
+  value?: string
+  disabled: boolean
+  visible: boolean
+  selectorHint?: string
+  boundingBox?: {
+    x: number
+    y: number
+    width: number
+    height: number
+  }
+  locatorCandidates: LocatorCandidate[]
+  confidence: number
+  safeAction: SafeActionDecision
+}
+
+export interface RuntimeDomForm {
+  id: string
+  name?: string
+  action?: string
+  method?: string
+  controls: RuntimeDomControl[]
+  locatorCandidates: LocatorCandidate[]
+}
+
+export interface RuntimeDomTable {
+  id: string
+  caption?: string
+  headers: string[]
+  rowCount: number
+  locatorCandidates: LocatorCandidate[]
+}
+
+export interface RuntimeDomSnapshot {
+  url: string
+  title: string
+  htmlExcerpt: string
+  domText: string
+  accessibilitySnapshot?: unknown
+  headings: RuntimeDomControl[]
+  landmarks: RuntimeDomControl[]
+  links: RuntimeDomControl[]
+  buttons: RuntimeDomControl[]
+  inputs: RuntimeDomControl[]
+  selects: RuntimeDomControl[]
+  textareas: RuntimeDomControl[]
+  forms: RuntimeDomForm[]
+  tables: RuntimeDomTable[]
+  tabs: RuntimeDomControl[]
+  tablists: RuntimeDomControl[]
+  dialogs: RuntimeDomControl[]
+  visibleTextBlocks: string[]
+  controls: RuntimeDomControl[]
+  screenshotPath?: string
+  capturedAt: string
+}
+
+export interface RuntimeWorkflowStep {
+  action: 'click' | 'type' | 'select' | 'assert'
+  target_name: string
+  locator_strategy: LocatorStrategy
+  locator_value: string
+  safe: boolean
+  expected_result: string
+  confidence: ProductIntentConfidence
+  evidence: string[]
+}
+
+export interface RuntimeInferredWorkflow {
+  name: string
+  confidence: ProductIntentConfidence
+  evidence: string[]
+  steps: RuntimeWorkflowStep[]
+  source: 'runtime' | 'source' | 'llm' | 'hybrid'
+}
+
+export interface RuntimeActionPlanItem {
+  action: 'click' | 'type' | 'select' | 'assert' | 'skip'
+  target: string
+  locator?: LocatorCandidate
+  safe: boolean
+  reason: string
+  expectedStateChange?: string
+  controlId?: string
+  priority: number
+}
+
+export interface RuntimeAppModel {
+  app_name: string
+  inferred_app_type: AppProfileType
+  screens: Array<{
+    name: string
+    url: string
+    evidence: string[]
+    confidence: ProductIntentConfidence
+  }>
+  nav_items: RuntimeDomControl[]
+  forms: RuntimeDomForm[]
+  workflows: RuntimeInferredWorkflow[]
+  entities: string[]
+  actions: RuntimeActionPlanItem[]
+  route_candidates: string[]
+  locator_inventory: RuntimeDomControl[]
+  confidence: ProductIntentConfidence
+  evidence: string[]
+  llmInferredWorkflows?: RuntimeInferredWorkflow[]
+  unsafe_actions?: RuntimeActionPlanItem[]
+}
+
+export interface RuntimeIntentContext {
+  project: {
+    id?: string
+    name?: string
+    repoPath?: string
+    appUrl: string
+    framework?: string
+    buildTool?: string
+    packageName?: string
+  }
+  source_summary?: {
+    workflows: SourceWorkflow[]
+    uiSurfaces: UiSurface[]
+    apiCalls: ApiCall[]
+    routes: SourceRoute[]
+  }
+  runtime_snapshot: {
+    url: string
+    title: string
+    headings: RuntimeDomControl[]
+    nav_items: RuntimeDomControl[]
+    buttons: RuntimeDomControl[]
+    links: RuntimeDomControl[]
+    forms: RuntimeDomForm[]
+    inputs: RuntimeDomControl[]
+    tables: RuntimeDomTable[]
+    dialogs: RuntimeDomControl[]
+    visible_text_blocks: string[]
+    screenshot_path?: string
+  }
+  candidate_actions: RuntimeActionPlanItem[]
+  question_for_llm: string
+}
+
+export interface RuntimeLlmIntent {
+  app_type: AppProfileType | string
+  primary_user_jobs: string[]
+  workflows: RuntimeInferredWorkflow[]
+  safe_next_actions: RuntimeActionPlanItem[]
+  unsafe_actions: RuntimeActionPlanItem[]
+  notes: string[]
+}
+
+export interface LocatorRepairResult {
+  status: 'resolved' | 'bad_locator' | 'missing_control' | 'blocked_by_state' | 'inconclusive'
+  locator?: LocatorCandidate
+  attempted: LocatorCandidate[]
+  reason: string
+}
+
+export interface SafeActionDecision {
+  safe: boolean
+  reason: string
 }
 
 export interface CrawlState {
@@ -266,6 +517,13 @@ export interface SnifferReport {
   sourceGraph: SourceGraph
   crawlGraph: CrawlGraph
   appIntent: AppIntent
+  appProfile?: AppProfile
+  discoveryMode?: DiscoveryMode
+  runtimeDomSnapshot?: RuntimeDomSnapshot
+  runtimeAppModel?: RuntimeAppModel
+  llmRuntimeIntent?: RuntimeLlmIntent
+  locatorFailures?: LocatorRepairResult[]
+  generatedScenarios?: GeneratedScenario[]
   productIntent?: ProductIntentModel
   productIntentFindings?: ProductIntentFinding[]
   promptConsistency?: PromptConsistencyResult
@@ -280,6 +538,72 @@ export interface SnifferReport {
   rawFindings?: Issue[]
   issues: Issue[]
   generatedAt: string
+}
+
+export type AppProfileType =
+  | 'planning_control_panel'
+  | 'admin_console'
+  | 'dashboard_app'
+  | 'crud_app'
+  | 'ecommerce_app'
+  | 'docs_site'
+  | 'marketing_site'
+  | 'auth_app'
+  | 'unknown'
+
+export interface AppProfile {
+  profile_type: AppProfileType
+  confidence: ProductIntentConfidence
+  evidence: string[]
+  core_entities: string[]
+  primary_user_jobs: string[]
+  expected_navigation_patterns: string[]
+  expected_workflows: string[]
+  expected_output_surfaces: string[]
+}
+
+export interface SnifferProject {
+  id: string
+  name: string
+  repoPath: string
+  appUrl: string
+  framework: string
+  buildTool: string
+  packageName?: string
+  workingDirectory: string
+  devCommand?: string
+  buildCommand?: string
+  testCommand?: string
+  env: Record<string, string>
+  profile: AppProfile
+  createdAt: string
+  updatedAt: string
+  latestReportPath?: string
+  latestRunId?: string
+  discoveryMode?: DiscoveryMode
+  lastRuntimeDomSnapshotPath?: string
+  inferredAppProfile?: AppProfile
+  generatedScenarioPack?: GeneratedScenario[]
+  lastCrawlCoverage?: CrawlCoverage
+}
+
+export interface ProjectRegistryFile {
+  version: 1
+  projects: SnifferProject[]
+  updatedAt: string
+}
+
+export interface GeneratedScenario {
+  id: string
+  name: string
+  profileApplicability: AppProfileType[]
+  prerequisites: string[]
+  steps: ScenarioStep[]
+  expectedControls: string[]
+  expectedOutcomes: string[]
+  destructiveRisk: 'none' | 'low' | 'medium' | 'high'
+  confidence: ProductIntentConfidence
+  evidence: string[]
 }
 
 export type ProductIntentMode = 'deterministic' | 'llm' | 'auto'
@@ -639,6 +963,7 @@ export interface KnownRuntimeState {
 
 export type ScenarioSlug =
   | 'all'
+  | 'auto'
   | 'create-select-workspace'
   | 'add-repo-target'
   | 'validate-local-repo-path'
@@ -660,7 +985,7 @@ export interface ScenarioStep {
 }
 
 export interface ScenarioDefinition {
-  slug: Exclude<ScenarioSlug, 'all'>
+  slug: Exclude<ScenarioSlug, 'all' | 'auto'>
   name: string
   prerequisites: string[]
   steps: ScenarioStep[]

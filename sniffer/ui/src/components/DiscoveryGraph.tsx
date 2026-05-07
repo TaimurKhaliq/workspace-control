@@ -13,6 +13,7 @@ import type { FixPacketItem, ScreenshotItem, SnifferReport } from '../api'
 import { getFixPacket } from '../api'
 import { buildSnifferGraph } from '../graph/graphBuilder'
 import type { GraphStatus, SnifferGraph, SnifferGraphEdge, SnifferGraphNode } from '../graph/graphModel'
+import { artifactUrl } from './ScreenshotModal'
 
 type LayoutMode = 'layered' | 'workflow'
 type GraphScopeMode = 'crawl' | 'scenario' | 'workflow' | 'issue' | 'source' | 'full'
@@ -40,11 +41,13 @@ const defaultFilters: GraphFilters = {
 export function DiscoveryGraph({
   report,
   fixPackets,
-  screenshots
+  screenshots,
+  projectId
 }: {
   report?: SnifferReport | null
   fixPackets: FixPacketItem[]
   screenshots: ScreenshotItem[]
+  projectId?: string
 }) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('layered')
   const [scope, setScope] = useState<{ mode: GraphScopeMode; workflow: string; issue: string }>({ mode: 'crawl', workflow: '', issue: '' })
@@ -107,7 +110,7 @@ export function DiscoveryGraph({
             </div>
           )}
         </div>
-        <GraphNodeDetailPanel node={selectedNode} />
+        <GraphNodeDetailPanel node={selectedNode} projectId={projectId} />
       </div>
 
       <GraphLegend />
@@ -176,14 +179,14 @@ export function GraphFilterPanel({
   )
 }
 
-export function GraphNodeDetailPanel({ node }: { node?: SnifferGraphNode }) {
+export function GraphNodeDetailPanel({ node, projectId }: { node?: SnifferGraphNode; projectId?: string }) {
   const [fixPacketMarkdown, setFixPacketMarkdown] = useState('')
   useEffect(() => {
     setFixPacketMarkdown('')
     if (node?.type === 'fix_packet' && node.fixPacketIds[0]) {
-      void getFixPacket(node.fixPacketIds[0]).then(setFixPacketMarkdown).catch(() => setFixPacketMarkdown(''))
+      void getFixPacket(node.fixPacketIds[0], projectId).then(setFixPacketMarkdown).catch(() => setFixPacketMarkdown(''))
     }
-  }, [node])
+  }, [node, projectId])
 
   if (!node) {
     return (
@@ -233,8 +236,8 @@ export function GraphNodeDetailPanel({ node }: { node?: SnifferGraphNode }) {
       {screenshot && (
         <div className="node-screenshot">
           <h3>Screenshot</h3>
-          <a href={artifactUrl(screenshot)} target="_blank" rel="noreferrer">
-            <img src={artifactUrl(screenshot)} alt={`Screenshot evidence for ${node.label}`} />
+          <a href={artifactUrl(screenshot, projectId)} target="_blank" rel="noreferrer">
+            <img src={artifactUrl(screenshot, projectId)} alt={`Screenshot evidence for ${node.label}`} />
           </a>
         </div>
       )}
@@ -625,14 +628,6 @@ function routeLabel(value: string): string {
   } catch {
     return value
   }
-}
-
-function artifactUrl(path: string): string {
-  if (/^https?:\/\//.test(path) || path.startsWith('/api/')) return path
-  const marker = '/reports/sniffer/latest/'
-  const index = path.indexOf(marker)
-  const relative = index >= 0 ? path.slice(index + marker.length) : path.replace(/^\/+/, '')
-  return `/api/reports/latest/artifacts/${encodeURIComponent(relative)}`
 }
 
 function nodeMeaning(node: SnifferGraphNode): string {

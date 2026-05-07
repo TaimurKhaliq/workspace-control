@@ -197,6 +197,20 @@ code {
   gap: 0.45rem;
 }
 
+.project-select {
+  min-width: 210px;
+  display: grid;
+  grid-template-columns: auto minmax(150px, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--muted);
+}
+
+.project-select select {
+  min-height: 2.25rem;
+  padding: 0.35rem 0.55rem;
+}
+
 .run-status-bar {
   display: flex;
   align-items: center;
@@ -306,6 +320,10 @@ code {
   color: var(--text);
 }
 
+.secondary-button.small {
+  padding: 0.4rem 0.65rem;
+}
+
 .secondary-button:hover,
 .ghost-button:hover {
   background: var(--surface-subtle);
@@ -324,6 +342,55 @@ code {
 .alert.danger {
   background: var(--danger-soft);
   color: var(--danger);
+}
+
+.muted-text {
+  color: var(--muted);
+}
+
+.project-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+}
+
+.project-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  padding: 1rem;
+}
+
+.project-card.active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.project-details {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.project-details div {
+  min-width: 0;
+}
+
+.project-details dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.project-details dd {
+  overflow: hidden;
+  margin: 0.15rem 0 0;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .mascot-column {

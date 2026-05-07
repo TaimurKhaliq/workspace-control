@@ -67,9 +67,19 @@ The UI never receives API keys. It only displays configured/unconfigured status,
 ## Commands
 
 ```bash
+npm run sniffer -- init-project --id workspace-control --name "Workspace Control" --repo ../web --url http://localhost:3000
+npm run sniffer -- projects list
+npm run sniffer -- projects inspect --id workspace-control
+npm run sniffer -- projects remove --id workspace-control
+npm run sniffer -- inspect-url --url http://localhost:3000
+npm run sniffer -- inspect-url --project workspace-control
+npm run sniffer -- discover --project workspace-control
+npm run sniffer -- crawl --project workspace-control
+npm run sniffer -- audit --project workspace-control --discovery-mode hybrid --scenario all
+npm run sniffer -- audit --project sample-app --discovery-mode hybrid --scenario all --execute-generated-scenarios
 npm run sniffer -- discover --repo ../web
 npm run sniffer -- crawl --url http://localhost:3000
-npm run sniffer -- audit --repo ../web --url http://localhost:3000
+npm run sniffer -- audit --repo ../web --url http://localhost:3000 --discovery-mode hybrid
 npm run sniffer -- audit --repo ../web --url http://localhost:3000 --scenario all --ux-critic deterministic
 npm run sniffer -- audit --repo ../web --url http://localhost:3000 --scenario generate-plan-bundle
 npm run sniffer -- audit --repo ../web --url http://localhost:3000 --critic-mode deterministic
@@ -82,6 +92,265 @@ npm run sniffer -- generate-tests --repo ../web --url http://localhost:3000
 npm run sniffer -- run-tests
 ```
 
+## Multi-Project Mode
+
+Sniffer can register multiple UI targets so audits, reports, screenshots, fix packets, and dashboard views are scoped by project.
+
+The project registry is local JSON:
+
+```text
+.sniffer/projects.json
+```
+
+Register a project:
+
+```bash
+npm run sniffer -- init-project \
+  --id workspace-control \
+  --name "Workspace Control" \
+  --repo /path/to/workspace-control/web \
+  --url http://127.0.0.1:5173
+```
+
+Then run project-aware commands:
+
+```bash
+npm run sniffer -- projects list
+npm run sniffer -- discover --project workspace-control
+npm run sniffer -- crawl --project workspace-control
+npm run sniffer -- audit --project workspace-control --scenario all
+```
+
+Direct mode still works:
+
+```bash
+npm run sniffer -- audit --repo /path/to/ui-repo --url http://localhost:3000
+```
+
+Direct runs are stored under `reports/sniffer/ad_hoc/latest/` and also mirrored to `reports/sniffer/latest/` for backwards compatibility.
+
+Project-scoped reports use:
+
+```text
+reports/sniffer/<project_id>/latest/
+reports/sniffer/<project_id>/runs/<run_id>/
+```
+
+`init-project` inspects `package.json`, detects React/Vite, Next.js, Angular, Vue, Svelte, or unknown projects where possible, infers dev/build/test commands, runs source discovery, and saves an initial app profile.
+
+## App Profiles And Generic Scenarios
+
+Sniffer infers a target-agnostic `AppProfile` from source workflows, UI surfaces, API calls, state names, route/nav labels, visible text, and optional product goal context.
+
+Profile types include:
+
+- `planning_control_panel`
+- `admin_console`
+- `dashboard_app`
+- `crud_app`
+- `ecommerce_app`
+- `docs_site`
+- `marketing_site`
+- `auth_app`
+- `unknown`
+
+The profile drives generic scenario generation such as navigation smoke tests, form discoverability, no-console/network checks, accessibility label checks, overflow/readability checks, CRUD create/detail discoverability, auth form checks, and planning/control-panel output/history/copy flows. Common-pattern-only expectations are suggestions unless source, runtime, or user evidence supports reporting them as issues.
+
+The dashboard top bar includes a project selector, and the Projects page lets you add/select/audit registered projects without exposing secrets to the browser.
+
+## Source Discovery Adapters
+
+Source discovery is framework-adapter based. Each adapter emits the same normalized `SourceGraph` model so the rest of Sniffer does not depend on React-specific code paths.
+
+- `ReactDiscoveryAdapter` for JSX/TSX component surfaces, state hooks, handlers, forms, and API calls.
+- `AngularDiscoveryAdapter` for Angular component classes, component templates, routes, form bindings, click/submit handlers, services, and `HttpClient` calls.
+- `HtmlTemplateDiscoveryAdapter` as a lower-confidence fallback for `.html`, `.vue`, `.svelte`, `.astro`, `.hbs`, and `.ejs` templates.
+
+The adapter runner:
+
+- detects package/framework signals from `package.json`, `angular.json`, routes, component files, and template files
+- runs all applicable adapters
+- runs the generic template fallback whenever template files are present
+- merges duplicate routes, forms, workflows, API calls, UI surfaces, and state/action hints
+- preserves `discoveredBy`, framework, confidence, and evidence on normalized graph items
+
+Reports include a `Discovery Adapters` section with adapter confidence/evidence and separate workflow counts for source-discovered workflows, runtime-discovered workflows, generated scenarios, and executed scenarios.
+
+For arbitrary apps, prefer hybrid discovery and generic scenario execution:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/app \
+  --url http://localhost:4200 \
+  --discovery-mode hybrid \
+  --scenario all \
+  --execute-generated-scenarios
+```
+
+For an Angular app:
+
+```bash
+npm run sniffer -- audit \
+  --repo /Users/taimurkhaliq/ai_projects/angular-realworld-example-app \
+  --url http://localhost:4200 \
+  --discovery-mode hybrid \
+  --scenario all \
+  --execute-generated-scenarios \
+  --critic-mode deterministic \
+  --ux-critic deterministic \
+  --intent-mode deterministic
+```
+
+Expected report shape for a healthy arbitrary-app run:
+
+```json
+{
+  "sourceWorkflows": 6,
+  "runtimeWorkflows": 2,
+  "generatedScenarios": 7,
+  "scenarioRuns": 7,
+  "discoveryAdapters": ["angular", "html-template"]
+}
+```
+
+If `sourceWorkflows` is low but `runtimeWorkflows` or `generatedScenarios` are present, that is not an empty discovery. It means Sniffer is relying on runtime DOM discovery and generated generic scenarios instead of static source workflows.
+
+## Runtime DOM Discovery
+
+For arbitrary apps, Sniffer can inspect the running URL first instead of assuming source structure:
+
+```bash
+npm run sniffer -- inspect-url --url http://localhost:4200
+npm run sniffer -- audit --project sample-app --discovery-mode runtime --scenario auto
+npm run sniffer -- audit --project sample-app --discovery-mode hybrid --scenario auto --execute-generated-scenarios
+npm run sniffer -- audit --project sample-app --discovery-mode hybrid --intent-mode llm --critic-mode llm --scenario auto --execute-generated-scenarios
+```
+
+Discovery modes:
+
+- `source`: use source discovery only.
+- `runtime`: infer from the rendered app URL and skip source assumptions.
+- `hybrid`: merge source discovery, runtime DOM discovery, crawl evidence, and optional LLM inference.
+
+Runtime inspection writes:
+
+```text
+reports/sniffer/<project_id>/latest/runtime_dom_snapshot.json
+reports/sniffer/<project_id>/latest/runtime_dom_snapshot.html
+reports/sniffer/<project_id>/latest/runtime_app_model.json
+reports/sniffer/<project_id>/latest/screenshots/initial.png
+```
+
+The runtime DOM snapshot captures URL/title, cleaned HTML/text, headings, landmarks, links, buttons, inputs, selects, textareas, forms, tables, tabs, dialogs, visible text blocks, disabled state, bounding boxes, ARIA labels, placeholders, `data-testid` values, roles, screenshot path, safe action classification, and Playwright locator candidates.
+
+Locator candidates are ordered by reliability:
+
+1. `getByRole(role, { name })`
+2. `getByLabel(label)`
+3. `getByPlaceholder(placeholder)`
+4. `getByTestId(testid)`
+5. `getByText(text)`
+6. CSS selector fallback
+
+When LLM runtime inference is enabled with `--intent-mode llm|auto` or `--use-llm`, Sniffer sends a compact context packet containing project metadata, source summary, runtime controls/forms/nav/table/dialog evidence, screenshot metadata, and safe candidate actions. The LLM returns structured JSON only: app type, user jobs, evidence-backed workflows, safe next actions, unsafe actions, and locator suggestions. The LLM does not execute actions; the safe action policy remains authoritative.
+
+Runtime reports now include:
+
+- Discovery Adapters
+- Workflow Discovery Sources
+- Runtime DOM Discovery
+- Inferred Runtime App Model
+- Locator Inventory
+- LLM Inferred Workflows
+- Safe/Unsafe Action Plan
+- Crawl Coverage
+- Locator Failures / Repairs
+- Generated Scenarios
+- Scenario Execution Coverage
+
+## Verification Matrix
+
+Use the matrix to prove Sniffer still works across multiple app shapes and its own dashboard:
+
+```bash
+npm run verify:matrix
+```
+
+This is equivalent to:
+
+```bash
+npm run sniffer -- verify-matrix
+```
+
+The matrix currently covers:
+
+- `workspace-control-web`: the workspace-control React/Vite app, when `http://127.0.0.1:5173` is reachable.
+- `sample-angular-app`: `/Users/taimurkhaliq/ai_projects/angular-realworld-example-app`, when `http://localhost:4200` is reachable.
+- `tiny-react-fixture`: a self-contained React/Vite source fixture served by the matrix runner.
+- `static-html-fixture`: a self-contained static HTML/template fixture served by the matrix runner.
+- `sniffer-dashboard-ui`: Sniffer's own dashboard, served locally from `ui/dist` when the UI has been built.
+
+External target URLs can be overridden:
+
+```bash
+SNIFFER_MATRIX_WORKSPACE_URL=http://127.0.0.1:5173 \
+SNIFFER_MATRIX_ANGULAR_REPO=/path/to/angular-app \
+SNIFFER_MATRIX_ANGULAR_URL=http://localhost:4200 \
+npm run verify:matrix
+```
+
+For each target, the matrix runs:
+
+```bash
+sniffer audit \
+  --discovery-mode hybrid \
+  --scenario all \
+  --execute-generated-scenarios \
+  --critic-mode deterministic \
+  --ux-critic deterministic \
+  --intent-mode deterministic
+```
+
+It writes:
+
+```text
+reports/sniffer/matrix/latest_matrix.json
+reports/sniffer/matrix/latest_matrix.md
+reports/sniffer/matrix/targets/<target_id>/
+```
+
+Expected console shape:
+
+```text
+Verification matrix PASSED
+- PASS tiny-react-fixture: react / crud_app · source=... runtime=... generated=... runs=...
+- PASS static-html-fixture: unknown / crud_app · source=... runtime=... generated=... runs=...
+- SKIP workspace-control-web: App URL not reachable: http://127.0.0.1:5173
+- PASS dogfood: http://127.0.0.1:<port>
+Wrote reports/sniffer/matrix/latest_matrix.md
+```
+
+Matrix pass criteria:
+
+- framework is detected, or `unknown` is handled gracefully for static/template apps
+- `sourceWorkflows + runtimeWorkflows > 0`
+- generated scenarios are present
+- executed scenario runs are present when generic execution is enabled
+- report file exists
+- screenshots directory exists
+- report text does not say `No workflows` when runtime workflows were discovered
+
+Failing counts usually mean:
+
+- `runtimeWorkflows = 0`: the app URL did not render useful controls, or the runtime DOM model needs more generic heuristics.
+- `generatedScenarios = 0`: app profile inference did not find enough navigation/form/list/auth/dashboard evidence.
+- `scenarioRuns = 0`: run with `--execute-generated-scenarios`, or check that the target URL is reachable.
+- `framework` mismatch: static adapter detection missed the framework/package signals.
+
+To add a new matrix target, add a `MatrixTarget` entry in `src/verification/matrix.ts` with repo path, app URL, expected framework/profile, and minimum workflow/scenario counts. Prefer low minimums for arbitrary apps and rely on the detailed target report for quality.
+
+The matrix also dogfoods the Sniffer UI. It starts the local dashboard server when `ui/dist/index.html` exists and verifies that the dashboard loads, project selector is visible, run launcher is visible, report navigation is visible, and Timeline/Crawl/Graph/Screenshots/Fix Packet pages open without crashing.
+
 ## Deterministic Audit
 
 Start the target app separately, then run:
@@ -93,8 +362,9 @@ npm run sniffer -- audit --repo /path/to/ui-repo --url http://localhost:3000
 This writes reports to:
 
 ```text
-reports/sniffer/latest/
+reports/sniffer/ad_hoc/latest/
   source_graph.json
+  app_profile.json
   app_intent.json
   crawl_graph.json
   latest_report.md
@@ -131,7 +401,7 @@ Keys are used only by the Node CLI process. Sniffer never sends secrets to brows
 
 ## What Sniffer Collects
 
-Source discovery reads `package.json`, detects likely framework and build tool, and scans source files for route, page, component, link, and form signals.
+Source discovery reads `package.json`, detects likely framework and build tool, runs applicable framework adapters, and scans source/template files for routes, pages, components, forms, UI surfaces, source workflows, state/actions, and API calls.
 
 Runtime crawling opens the app with Playwright and collects:
 
@@ -169,7 +439,7 @@ npm run sniffer -- audit \
 Provider flags:
 
 - `--critic-mode deterministic|llm|auto`
-- `--provider mock|openai|auto`
+- `--provider mock|openai-compatible|auto`
 - `--use-llm`
 - `--max-iterations`
 
@@ -179,7 +449,9 @@ Conditional UI is deferred instead of reported when a precondition is missing. F
 
 ## Scenario Packs And UX Audit
 
-Sniffer can run safe workflow scenarios instead of only inspecting the first visible DOM state:
+Sniffer can run safe workflow scenarios instead of only inspecting the first visible DOM state.
+
+For workspace-control/planning-control-panel apps, `--scenario all` runs the built-in workflow pack:
 
 ```bash
 npm run sniffer -- audit \
@@ -201,6 +473,31 @@ Built-in scenarios cover workspace-control style apps:
 - copy handoff prompt
 - inspect raw JSON
 - semantic enrichment toggle
+
+For arbitrary apps, Sniffer generates generic scenarios from the app profile, source adapters, and runtime DOM model. Use `--execute-generated-scenarios` to execute them:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:4200 \
+  --discovery-mode hybrid \
+  --scenario all \
+  --execute-generated-scenarios \
+  --ux-critic deterministic
+```
+
+Generated generic scenarios include:
+
+- navigation smoke test
+- forms discoverability
+- accessibility labels check
+- overflow/readability check
+- login form discoverability when auth controls are detected
+- table/list scan when lists, feeds, tables, or repeated cards are detected
+- CRUD list/create/detail smoke tests when create/edit/detail signals exist
+- tab switching when tabs are detected
+
+If generated scenarios exist but `scenarioRuns` is `0`, run again with `--execute-generated-scenarios`. The dashboard Scenarios page shows generated scenarios as planned/not executed instead of hiding them.
 
 Scenario execution only performs safe actions: selecting visible workspace/repo controls, opening modals, typing the sample prompt `Add OwnersPage (no actions yet)`, clicking generate/refresh-style actions, opening tabs, and clicking copy controls. It does not delete, reset, overwrite, or submit destructive actions.
 
@@ -241,7 +538,7 @@ npm run sniffer -- audit \
   --url http://localhost:3000 \
   --scenario all \
   --ux-critic llm \
-  --provider openai \
+  --provider openai-compatible \
   --use-llm
 ```
 

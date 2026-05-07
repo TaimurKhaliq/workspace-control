@@ -66,10 +66,12 @@ export interface ScenarioView {
 
 export interface WorkflowEvidence {
   workflow: SourceWorkflow
+  discoverySource: 'source' | 'runtime' | 'generated'
   verification?: RuntimeWorkflowVerification
   surfaces: UiSurface[]
   apiCalls: ApiCall[]
   scenarios: ScenarioRun[]
+  generatedScenarios: NonNullable<SnifferReport['generatedScenarios']>
   issues: Issue[]
   criticDecisions: string[]
   status: JourneyStatus
@@ -84,6 +86,10 @@ export interface ReportSummary {
   uxIssues: number
   fixPackets: number
   screenshots: number
+  sourceWorkflows: number
+  runtimeWorkflows: number
+  generatedScenarios: number
+  executedScenarios: number
   topIssues: Issue[]
 }
 
@@ -103,6 +109,10 @@ export function buildReportSummary(report: SnifferReport | null | undefined, fix
     uxIssues,
     fixPackets: unique(fixPackets.map((packet) => packet.issueId)).length,
     screenshots: screenshots.length || report?.crawlGraph?.screenshots?.length || 0,
+    sourceWorkflows: report?.sourceGraph?.sourceWorkflows?.length ?? 0,
+    runtimeWorkflows: report?.runtimeAppModel?.workflows?.length ?? 0,
+    generatedScenarios: report?.generatedScenarios?.length ?? 0,
+    executedScenarios: report?.scenarioRuns?.length ?? 0,
     topIssues: issues.slice(0, 5)
   }
 }
@@ -142,9 +152,12 @@ export function buildRunPhases(report: SnifferReport | null | undefined, fixPack
       id: 'scenarios',
       title: 'Scenario execution',
       status: scenarioFailures.length ? 'failed' : (report.scenarioRuns?.length ? 'passed' : 'skipped'),
-      summary: `${report.scenarioRuns?.length ?? 0} scenarios executed; ${scenarioFailures.length} failed.`,
+      summary: `${report.generatedScenarios?.length ?? 0} generated; ${report.scenarioRuns?.length ?? 0} executed; ${scenarioFailures.length} failed.`,
       count: report.scenarioRuns?.length ?? 0,
-      details: (report.scenarioRuns ?? []).map((scenario) => `${scenario.status}: ${scenario.name}`)
+      details: [
+        ...(report.generatedScenarios ?? []).map((scenario) => `planned: ${scenario.name}`),
+        ...(report.scenarioRuns ?? []).map((scenario) => `${scenario.status}: ${scenario.name}`)
+      ]
     },
     {
       id: 'workflow-critic',
@@ -232,7 +245,7 @@ export function buildCrawlCoverage(report: SnifferReport | null | undefined) {
     sourceRoutes: [],
     visitedRoutes: unique(states.map(stateRoute)),
     missedRoutes: [],
-    workflowsDiscovered: report?.sourceGraph?.sourceWorkflows?.length ?? 0,
+    workflowsDiscovered: (report?.sourceGraph?.sourceWorkflows?.length ?? 0) + (report?.runtimeAppModel?.workflows?.length ?? 0),
     workflowsExercised: 0,
     scenariosPassed: report?.scenarioRuns?.filter((scenario) => scenario.status === 'passed').length ?? 0,
     scenariosFailed: report?.scenarioRuns?.filter((scenario) => scenario.status === 'failed').length ?? 0,
@@ -283,27 +296,81 @@ export function buildWorkflowEvidence(report: SnifferReport | null | undefined):
   const surfaces = report?.sourceGraph?.uiSurfaces ?? []
   const apiCalls = report?.sourceGraph?.apiCalls ?? []
   const scenarios = report?.scenarioRuns ?? []
+  const generatedScenarios = report?.generatedScenarios ?? []
   const issues = report?.issues ?? []
-  return workflows.map((workflow) => {
+  const views: WorkflowEvidence[] = workflows.map((workflow) => {
     const verification = verifications.find((item) => textOverlaps(item.name, workflow.name))
     const relatedSurfaces = surfaces.filter((surface) => evidenceOverlaps([...workflow.evidence, workflow.name], [...surface.evidence, surface.display_name, surface.surface_type]))
     const relatedApi = apiCalls.filter((api) => textOverlaps(api.likelyWorkflow ?? '', workflow.name) || evidenceOverlaps(workflow.evidence, [api.endpoint, api.functionName ?? '']))
     const relatedScenarios = scenarios.filter((scenario) => textOverlaps(scenario.name, workflow.name))
+    const relatedGenerated = generatedScenarios.filter((scenario) => textOverlaps(scenario.name, workflow.name) || evidenceOverlaps(scenario.evidence ?? [], [...workflow.evidence, workflow.name]))
     const relatedIssues = issues.filter((issue) => textOverlaps(issue.title, workflow.name) || issue.evidence.some((item) => evidenceOverlaps([item], [...workflow.evidence, workflow.name])))
     const criticDecisions = (report?.criticDecisions ?? [])
       .filter((decision) => relatedIssues.some((issue) => issue.issue_id === decision.finding_id) || evidenceOverlaps(decision.evidence ?? [], [...workflow.evidence, workflow.name]))
       .map((decision) => decision.classification)
     return {
       workflow,
+      discoverySource: 'source',
       verification,
       surfaces: relatedSurfaces,
       apiCalls: relatedApi,
       scenarios: relatedScenarios,
+      generatedScenarios: relatedGenerated,
       issues: relatedIssues,
       criticDecisions,
       status: relatedIssues.length ? 'failed' : relatedScenarios.some((scenario) => scenario.status === 'failed') ? 'warning' : verification?.status === 'verified' ? 'passed' : 'skipped'
     }
   })
+  const existingNames = new Set(views.map((view) => view.workflow.name.toLowerCase()))
+  for (const runtimeWorkflow of report?.runtimeAppModel?.workflows ?? []) {
+    if (existingNames.has(runtimeWorkflow.name.toLowerCase())) continue
+    const relatedScenarios = scenarios.filter((scenario) => textOverlaps(scenario.name, runtimeWorkflow.name))
+    const relatedGenerated = generatedScenarios.filter((scenario) => textOverlaps(scenario.name, runtimeWorkflow.name))
+    const relatedIssues = issues.filter((issue) => textOverlaps(issue.title, runtimeWorkflow.name) || issue.evidence.some((item) => evidenceOverlaps([item], runtimeWorkflow.evidence ?? [])))
+    views.push({
+      workflow: {
+        name: runtimeWorkflow.name,
+        sourceFiles: [],
+        evidence: runtimeWorkflow.evidence ?? [],
+        likelyUserActions: (runtimeWorkflow.steps ?? []).map((step) => `${step.action} ${step.target_name}`),
+        confidence: runtimeWorkflow.confidence === 'high' ? 0.85 : runtimeWorkflow.confidence === 'medium' ? 0.6 : 0.35,
+        discoveredBy: [runtimeWorkflow.source ?? 'runtime_dom'],
+        framework: 'runtime'
+      },
+      discoverySource: runtimeWorkflow.source === 'llm' ? 'runtime' : 'runtime',
+      surfaces: [],
+      apiCalls: [],
+      scenarios: relatedScenarios,
+      generatedScenarios: relatedGenerated,
+      issues: relatedIssues,
+      criticDecisions: [],
+      status: relatedIssues.length ? 'failed' : relatedScenarios.some((scenario) => scenario.status === 'failed') ? 'warning' : relatedScenarios.some((scenario) => scenario.status === 'passed') ? 'passed' : 'skipped'
+    })
+  }
+  for (const scenario of generatedScenarios) {
+    if (views.some((view) => textOverlaps(view.workflow.name, scenario.name))) continue
+    const run = scenarios.filter((item) => item.slug === scenario.id || item.name === scenario.name)
+    views.push({
+      workflow: {
+        name: scenario.name,
+        sourceFiles: [],
+        evidence: scenario.evidence ?? [],
+        likelyUserActions: (scenario.steps ?? []).map((step) => step.name),
+        confidence: scenario.confidence === 'high' ? 0.8 : scenario.confidence === 'medium' ? 0.55 : 0.3,
+        discoveredBy: ['generated_scenario'],
+        framework: 'generated'
+      },
+      discoverySource: 'generated',
+      surfaces: [],
+      apiCalls: [],
+      scenarios: run,
+      generatedScenarios: [scenario],
+      issues: [],
+      criticDecisions: [],
+      status: run.some((item) => item.status === 'failed') ? 'warning' : run.some((item) => item.status === 'passed') ? 'passed' : 'skipped'
+    })
+  }
+  return views
 }
 
 function groupControls(state: CrawlState): Record<string, Array<{ label: string; selector?: string; type?: string }>> {
@@ -328,9 +395,13 @@ function repeatedLabels(actions: CrawlAction[]): string[] {
 
 function relatedWorkflowsForState(report: SnifferReport | null | undefined, state: CrawlState): string[] {
   const text = state.visible.map((control) => `${control.text ?? ''} ${control.name ?? ''}`).join(' ').toLowerCase()
-  return (report?.sourceGraph?.sourceWorkflows ?? [])
+  const source = (report?.sourceGraph?.sourceWorkflows ?? [])
     .filter((workflow) => workflow.evidence.some((item) => text.includes(item.toLowerCase())) || text.includes(workflow.name.toLowerCase()))
     .map((workflow) => workflow.name)
+  const runtime = (report?.runtimeAppModel?.workflows ?? [])
+    .filter((workflow) => (workflow.evidence ?? []).some((item) => text.includes(item.toLowerCase())) || text.includes(workflow.name.toLowerCase()))
+    .map((workflow) => workflow.name)
+  return unique([...source, ...runtime])
     .slice(0, 8)
 }
 

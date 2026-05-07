@@ -24,7 +24,7 @@ export interface Issue {
 export interface ScenarioRun {
   slug?: string
   name: string
-  status: 'passed' | 'failed' | 'skipped'
+  status: 'passed' | 'failed' | 'skipped' | 'blocked'
   prerequisites?: string[]
   stepsAttempted?: string[]
   assertions?: Array<{ label: string; status: string; evidence?: string[]; screenshotPath?: string }>
@@ -37,6 +37,39 @@ export interface SnifferReport {
   generatedAt: string
   issues: Issue[]
   rawFindings?: Issue[]
+  appProfile?: AppProfile
+  discoveryMode?: string
+  runtimeDomSnapshot?: {
+    url: string
+    title: string
+    headings: Array<{ accessibleName?: string; visibleText?: string }>
+    buttons: unknown[]
+    links: unknown[]
+    inputs: unknown[]
+    selects: unknown[]
+    textareas: unknown[]
+    forms: unknown[]
+    tables: unknown[]
+    controls: unknown[]
+    screenshotPath?: string
+  }
+  runtimeAppModel?: {
+    app_name: string
+    inferred_app_type: string
+    workflows: Array<{ name: string; confidence: string; evidence?: string[]; source?: string; steps?: Array<{ action: string; target_name: string; expected_result?: string }> }>
+    route_candidates: string[]
+    actions: Array<{ target: string; safe: boolean; reason: string }>
+    locator_inventory: unknown[]
+    confidence: string
+    evidence: string[]
+  }
+  llmRuntimeIntent?: {
+    app_type: string
+    primary_user_jobs: string[]
+    workflows: Array<{ name: string; confidence: string }>
+    notes: string[]
+  }
+  generatedScenarios?: GeneratedScenario[]
   deferredFindings?: CandidateFinding[]
   blockedChecks?: CandidateFinding[]
   needsMoreCrawling?: CandidateFinding[]
@@ -85,7 +118,61 @@ export interface SnifferReport {
     sourceWorkflows?: SourceWorkflow[]
     apiCalls?: ApiCall[]
     stateActions?: StateAction[]
+    discoveryAdapters?: Array<{ adapterId: string; framework: string; confidence: number; evidence: string[]; warnings?: string[] }>
+    workflowDiscoverySummary?: {
+      source_workflows_count: number
+      runtime_workflows_count?: number
+      llm_workflows_count?: number
+      generated_scenarios_count?: number
+      executed_scenarios_count?: number
+    }
   }
+}
+
+export interface AppProfile {
+  profile_type: string
+  confidence: string
+  evidence: string[]
+  core_entities: string[]
+  primary_user_jobs: string[]
+  expected_navigation_patterns: string[]
+  expected_workflows: string[]
+  expected_output_surfaces: string[]
+}
+
+export interface GeneratedScenario {
+  id: string
+  name: string
+  profileApplicability: string[]
+  prerequisites: string[]
+  expectedControls: string[]
+  expectedOutcomes: string[]
+  steps?: Array<{ name: string; action: string; expectedControls: string[]; safe: boolean; unsafeReason?: string }>
+  destructiveRisk?: string
+  confidence: string
+  evidence: string[]
+}
+
+export interface SnifferProject {
+  id: string
+  name: string
+  repoPath: string
+  appUrl: string
+  framework: string
+  buildTool: string
+  packageName?: string
+  workingDirectory: string
+  devCommand?: string
+  buildCommand?: string
+  testCommand?: string
+  profile?: AppProfile
+  createdAt: string
+  updatedAt: string
+  latestReportPath?: string
+  latestRunId?: string
+  discoveryMode?: string
+  lastRuntimeDomSnapshotPath?: string
+  inferredAppProfile?: AppProfile
 }
 
 export interface RuntimeWorkflowVerification {
@@ -160,6 +247,8 @@ export interface SourceWorkflow {
   evidence: string[]
   likelyUserActions: string[]
   confidence: number
+  discoveredBy?: string[]
+  framework?: string
 }
 
 export interface ApiCall {
@@ -301,12 +390,15 @@ export interface ServerStatus {
     appUrl?: string
   } | null
   reportDir: string
+  projects?: SnifferProject[]
 }
 
 export interface AuditForm {
+  projectId?: string
   repoPath: string
   url: string
   productGoal: string
+  discoveryMode: string
   scenario: string
   criticMode: string
   uxCritic: string
@@ -347,6 +439,25 @@ export async function getStatus(): Promise<ServerStatus> {
   return request('/api/status')
 }
 
+export async function getProjects(): Promise<SnifferProject[]> {
+  return request('/api/projects')
+}
+
+export async function addProject(input: {
+  id?: string
+  name: string
+  repoPath: string
+  appUrl: string
+  productGoal?: string
+  devCommand?: string
+}): Promise<SnifferProject> {
+  return request('/api/projects', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export async function removeProject(id: string): Promise<{ removed: boolean }> {
+  return request(`/api/projects/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
 export async function startAudit(form: AuditForm): Promise<{ runId: string }> {
   return request('/api/audits', { method: 'POST', body: JSON.stringify(form) })
 }
@@ -355,39 +466,45 @@ export async function getRun(runId: string): Promise<RunRecord> {
   return request(`/api/audits/${encodeURIComponent(runId)}`)
 }
 
-export async function getLatestReport(): Promise<SnifferReport> {
-  return request('/api/reports/latest')
+export async function getLatestReport(projectId?: string): Promise<SnifferReport> {
+  return request(projectPath('/api/reports/latest', projectId))
 }
 
-export async function getLatestMarkdown(): Promise<string> {
-  const response = await fetch('/api/reports/latest/markdown')
+export async function getLatestMarkdown(projectId?: string): Promise<string> {
+  const response = await fetch(projectPath('/api/reports/latest/markdown', projectId))
   if (!response.ok) throw new Error(await response.text())
   return response.text()
 }
 
-export async function getScreenshots(): Promise<ScreenshotItem[]> {
-  return request('/api/reports/latest/screenshots')
+export async function getScreenshots(projectId?: string): Promise<ScreenshotItem[]> {
+  return request(projectPath('/api/reports/latest/screenshots', projectId))
 }
 
-export async function getFixPackets(): Promise<FixPacketItem[]> {
-  return request('/api/reports/latest/fix-packets')
+export async function getFixPackets(projectId?: string): Promise<FixPacketItem[]> {
+  return request(projectPath('/api/reports/latest/fix-packets', projectId))
 }
 
-export async function getFixPacket(issueId: string): Promise<string> {
-  const response = await fetch(`/api/reports/latest/fix-packets/${encodeURIComponent(issueId)}`)
+export async function getFixPacket(issueId: string, projectId?: string): Promise<string> {
+  const response = await fetch(projectPath(`/api/reports/latest/fix-packets/${encodeURIComponent(issueId)}`, projectId))
   if (!response.ok) throw new Error(await response.text())
   return response.text()
 }
 
-export async function generateFixPackets(): Promise<{ runId: string }> {
-  return request('/api/reports/latest/fix-packets/generate', { method: 'POST' })
+export async function generateFixPackets(projectId?: string): Promise<{ runId: string }> {
+  return request(projectPath('/api/reports/latest/fix-packets/generate', projectId), { method: 'POST' })
 }
 
-export async function verifyIssue(issueId: string, url: string): Promise<{ runId: string }> {
-  return request(`/api/reports/latest/issues/${encodeURIComponent(issueId)}/verify`, {
+export async function verifyIssue(issueId: string, url: string, projectId?: string): Promise<{ runId: string }> {
+  return request(projectPath(`/api/reports/latest/issues/${encodeURIComponent(issueId)}/verify`, projectId), {
     method: 'POST',
     body: JSON.stringify({ url })
   })
+}
+
+function projectPath(path: string, projectId?: string): string {
+  if (!projectId) return path
+  const joiner = path.includes('?') ? '&' : '?'
+  return `${path}${joiner}project=${encodeURIComponent(projectId)}`
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {

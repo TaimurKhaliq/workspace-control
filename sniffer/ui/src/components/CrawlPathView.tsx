@@ -3,7 +3,7 @@ import type { SnifferReport } from '../api'
 import { buildCrawlCoverage, buildCrawlPath } from '../report/journey'
 import { ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
 
-export function CrawlPathView({ report }: { report?: SnifferReport | null }) {
+export function CrawlPathView({ report, projectId }: { report?: SnifferReport | null; projectId?: string }) {
   const states = useMemo(() => buildCrawlPath(report), [report])
   const coverage = useMemo(() => buildCrawlCoverage(report), [report])
   const [screenshot, setScreenshot] = useState<ScreenshotContext | null>(null)
@@ -68,7 +68,7 @@ export function CrawlPathView({ report }: { report?: SnifferReport | null }) {
                 })}>Screenshot</button>
               )}
             </div>
-            {state.screenshot && <img className="crawl-thumbnail" src={artifactUrl(state.screenshot)} alt={`State ${state.sequenceNumber} ${state.screenName}`} />}
+            {state.screenshot && <img className="crawl-thumbnail" src={artifactUrl(state.screenshot, projectId)} alt={`State ${state.sequenceNumber} ${state.screenName}`} />}
             {state.repeatedActionLabels.length > 0 && (
               <div className="notice warning">
                 Repeated action without obvious route change: {state.repeatedActionLabels.join(', ')}
@@ -112,7 +112,7 @@ export function CrawlPathView({ report }: { report?: SnifferReport | null }) {
           <pre>{JSON.stringify(errors, null, 2)}</pre>
         </section>
       )}
-      <ScreenshotModal screenshot={screenshot} onClose={() => setScreenshot(null)} />
+      <ScreenshotModal screenshot={screenshot} projectId={projectId} onClose={() => setScreenshot(null)} />
     </section>
   )
 }

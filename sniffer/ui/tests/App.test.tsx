@@ -4,6 +4,7 @@ import App from '../src/App'
 import { IssueGroupCard } from '../src/components/IssueGroupCard'
 import { FixPacketViewer } from '../src/components/FixPacketViewer'
 import { SnifferMascot } from '../src/components/SnifferMascot'
+import { ScenariosView } from '../src/components/ScenariosView'
 import type { Issue, SnifferReport } from '../src/api'
 
 const report: SnifferReport = {
@@ -51,10 +52,22 @@ beforeEach(() => {
         reportDir: '/tmp/reports'
       })
     }
-    if (url === '/api/reports/latest') return response(report)
-    if (url === '/api/reports/latest/markdown') return new Response('# Latest Report', { status: 200 })
-    if (url === '/api/reports/latest/screenshots') return response([])
-    if (url === '/api/reports/latest/fix-packets') return response([])
+    if (url === '/api/projects') return response([{
+      id: 'demo',
+      name: 'Demo UI',
+      repoPath: '/tmp/web',
+      appUrl: 'http://127.0.0.1:5173',
+      framework: 'react',
+      buildTool: 'vite',
+      workingDirectory: '/tmp/web',
+      profile: { profile_type: 'dashboard_app', confidence: 'medium', evidence: [], core_entities: [], primary_user_jobs: [], expected_navigation_patterns: [], expected_workflows: [], expected_output_surfaces: [] },
+      createdAt: '2026-04-28T12:00:00.000Z',
+      updatedAt: '2026-04-28T12:00:00.000Z'
+    }])
+    if (url.startsWith('/api/reports/latest?') || url === '/api/reports/latest') return response(report)
+    if (url.startsWith('/api/reports/latest/markdown')) return new Response('# Latest Report', { status: 200 })
+    if (url.startsWith('/api/reports/latest/screenshots')) return response([])
+    if (url.startsWith('/api/reports/latest/fix-packets')) return response([])
     if (url === '/api/audits' && init?.method === 'POST') return response({ runId: 'run-1' }, 202)
     return response({})
   }))
@@ -85,10 +98,11 @@ describe('Sniffer UI dashboard', () => {
           reportDir: '/tmp/reports'
         })
       }
-      if (url === '/api/reports/latest') return response({ ...report, issues: [] })
-      if (url === '/api/reports/latest/markdown') return new Response('', { status: 200 })
-      if (url === '/api/reports/latest/screenshots') return response([])
-      if (url === '/api/reports/latest/fix-packets') return response([])
+      if (url === '/api/projects') return response([])
+      if (url.startsWith('/api/reports/latest?') || url === '/api/reports/latest') return response({ ...report, issues: [] })
+      if (url.startsWith('/api/reports/latest/markdown')) return new Response('', { status: 200 })
+      if (url.startsWith('/api/reports/latest/screenshots')) return response([])
+      if (url.startsWith('/api/reports/latest/fix-packets')) return response([])
       return response({})
     })
     render(<App />)
@@ -102,6 +116,14 @@ describe('Sniffer UI dashboard', () => {
     await screen.findByDisplayValue('/tmp/web')
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/audits', expect.objectContaining({ method: 'POST' })))
+  })
+
+  it('shows the project selector and Projects page', async () => {
+    render(<App />)
+    expect(await screen.findByLabelText('Selected Sniffer project')).toHaveValue('demo')
+    fireEvent.click(screen.getByRole('button', { name: 'Projects' }))
+    expect(await screen.findByTestId('projects-view')).toBeInTheDocument()
+    expect(screen.getAllByText('Demo UI').length).toBeGreaterThan(0)
   })
 })
 
@@ -121,6 +143,29 @@ describe('issue and fix packet components', () => {
     render(<FixPacketViewer report={report} packets={[{ issueId: 'issue-1', name: 'issue-1.md', relativePath: 'fix_packets/issue-1.md', kind: 'md' }]} onGenerateFixes={() => undefined} />)
     expect(await screen.findByRole('button', { name: 'Copy prompt' })).toBeInTheDocument()
     expect(await screen.findByText((content) => content.includes('# Fix Packet'))).toBeInTheDocument()
+  })
+})
+
+describe('scenario planning view', () => {
+  it('shows generated scenarios when nothing was executed', () => {
+    render(<ScenariosView report={{
+      ...report,
+      scenarioRuns: [],
+      generatedScenarios: [{
+        id: 'navigation-smoke',
+        name: 'Navigation smoke test',
+        profileApplicability: ['auth_app'],
+        prerequisites: [],
+        steps: [{ name: 'Open nav', action: 'open_primary_navigation', expectedControls: ['links'], safe: true }],
+        expectedControls: ['navigation'],
+        expectedOutcomes: ['routes open'],
+        confidence: 'medium',
+        evidence: ['runtime DOM']
+      }]
+    }} />)
+    expect(screen.getByText('Generated Scenarios')).toBeInTheDocument()
+    expect(screen.getByText('not executed')).toBeInTheDocument()
+    expect(screen.getByText(/Scenarios were generated but not executed/)).toBeInTheDocument()
   })
 })
 

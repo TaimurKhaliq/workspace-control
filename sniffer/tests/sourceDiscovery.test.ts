@@ -111,6 +111,116 @@ describe('discoverSource', () => {
     expect(graph.stateActions[0].stateVariables).toEqual(expect.arrayContaining(['workspaceName', 'repoTargetId', 'featureRequest', 'busy', 'error']))
     expect(graph.stateActions[0].submitHandlers).toEqual(expect.arrayContaining(['onCreateWorkspace', 'onAddRepo', 'onGeneratePlan']))
   })
+
+  it('detects Angular apps without mistaking src/app for Next app router', async () => {
+    const repo = await tempRepo()
+    await writeFile(path.join(repo, 'package.json'), JSON.stringify({
+      name: 'angular-realworld',
+      scripts: { start: 'ng serve', build: 'ng build', test: 'vitest' },
+      dependencies: { '@angular/core': '^19.0.0', '@angular/router': '^19.0.0' },
+      devDependencies: { '@angular/cli': '^19.0.0', vitest: '^2.0.0' }
+    }))
+    await mkdir(path.join(repo, 'src', 'app'), { recursive: true })
+    await writeFile(path.join(repo, 'src', 'app', 'app.component.ts'), 'export class AppComponent {}')
+
+    const graph = await discoverSource(repo)
+
+    expect(graph.framework).toBe('angular')
+    expect(graph.buildTool).toBe('angular-cli')
+    expect(graph.discoveryAdapters?.map((adapter) => adapter.adapterId)).toContain('angular')
+  })
+
+  it('ignores generated framework cache directories', async () => {
+    const repo = await tempRepo()
+    await writeFile(path.join(repo, 'package.json'), JSON.stringify({
+      name: 'cache-noise',
+      scripts: { start: 'ng serve' },
+      dependencies: { '@angular/core': '^19.0.0' },
+      devDependencies: { '@angular/cli': '^19.0.0' }
+    }))
+    await mkdir(path.join(repo, 'src', 'app'), { recursive: true })
+    await mkdir(path.join(repo, '.angular', 'cache', 'vite', 'deps'), { recursive: true })
+    await writeFile(path.join(repo, 'src', 'app', 'app.component.ts'), 'export class AppComponent {}')
+    await writeFile(path.join(repo, '.angular', 'cache', 'vite', 'deps', 'generated.js'), '<form><input name="generated-noise" /></form>')
+
+    const graph = await discoverSource(repo)
+
+    expect(graph.forms.flatMap((form) => form.inputs)).not.toContain('generated-noise')
+  })
+
+  it('extracts Angular templates, routes, services, and workflows', async () => {
+    const repo = await tempRepo()
+    await writeFile(path.join(repo, 'package.json'), JSON.stringify({
+      name: 'angular-realworld',
+      scripts: { start: 'ng serve' },
+      dependencies: { '@angular/core': '^19.0.0', '@angular/router': '^19.0.0', '@angular/common': '^19.0.0' },
+      devDependencies: { '@angular/cli': '^19.0.0' }
+    }))
+    await writeFile(path.join(repo, 'angular.json'), '{}')
+    await mkdir(path.join(repo, 'src', 'app', 'auth'), { recursive: true })
+    await writeFile(path.join(repo, 'src', 'app', 'app.routes.ts'), `
+      import { Routes } from '@angular/router'
+      export const routes: Routes = [
+        { path: '', redirectTo: 'articles' },
+        { path: 'login', component: LoginComponent },
+        { path: 'articles', component: ArticleListComponent }
+      ]
+    `)
+    await writeFile(path.join(repo, 'src', 'app', 'auth', 'login.component.ts'), `
+      import { Component } from '@angular/core'
+      @Component({ selector: 'app-login', templateUrl: './login.component.html' })
+      export class LoginComponent {
+        isLoading = false
+        errorMessage = ''
+        login() {}
+      }
+    `)
+    await writeFile(path.join(repo, 'src', 'app', 'auth', 'login.component.html'), `
+      <h1>Sign in</h1>
+      <form (ngSubmit)="login()">
+        <label>Email <input formControlName="email" placeholder="Email" /></label>
+        <label>Password <input type="password" formControlName="password" /></label>
+        <button type="submit">Sign in</button>
+      </form>
+      <a routerLink="/articles">Articles</a>
+    `)
+    await writeFile(path.join(repo, 'src', 'app', 'article.service.ts'), `
+      import { HttpClient } from '@angular/common/http'
+      export class ArticleService {
+        constructor(private http: HttpClient) {}
+        listArticles() { return this.http.get('/api/articles') }
+        publishArticle(body: unknown) { return this.http.post('/api/articles', body) }
+      }
+    `)
+
+    const graph = await discoverSource(repo)
+
+    expect(graph.routes.map((route) => route.path)).toEqual(expect.arrayContaining(['/login', '/articles']))
+    expect(graph.forms[0].inputs).toEqual(expect.arrayContaining(['Email', 'email', 'Password', 'password']))
+    expect(graph.uiSurfaces.map((surface) => surface.display_name)).toContain('Sign in')
+    expect(graph.sourceWorkflows.map((workflow) => workflow.name)).toEqual(expect.arrayContaining(['Login form', 'Submit form', 'Navigation route', 'Table/list scan', 'Create/edit entity']))
+    expect(graph.apiCalls.map((call) => `${call.method} ${call.endpoint}`)).toEqual(expect.arrayContaining(['GET /api/articles', 'POST /api/articles']))
+    expect(graph.stateActions[0].handlerNames).toContain('login')
+  })
+
+  it('uses HTML template fallback for generic repos', async () => {
+    const repo = await tempRepo()
+    await writeFile(path.join(repo, 'package.json'), JSON.stringify({ name: 'plain-html', scripts: {}, dependencies: {} }))
+    await mkdir(path.join(repo, 'templates'), { recursive: true })
+    await writeFile(path.join(repo, 'templates', 'dashboard.html'), `
+      <h1>Reports</h1>
+      <form action="/search"><label>Search <input name="q" placeholder="Search reports" /></label><button>Search</button></form>
+      <a href="/reports">Reports</a>
+      <table><tr><th>Name</th></tr><tr><td>Q1</td></tr></table>
+    `)
+
+    const graph = await discoverSource(repo)
+
+    expect(graph.discoveryAdapters?.map((adapter) => adapter.adapterId)).toContain('html-template')
+    expect(graph.uiSurfaces.map((surface) => surface.display_name)).toContain('Reports')
+    expect(graph.forms[0].inputs).toEqual(expect.arrayContaining(['Search', 'q', 'Search reports']))
+    expect(graph.sourceWorkflows.map((workflow) => workflow.name)).toEqual(expect.arrayContaining(['Submit form', 'Navigation route', 'Table/list scan', 'Search/filter']))
+  })
 })
 
 async function tempRepo(): Promise<string> {

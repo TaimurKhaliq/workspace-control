@@ -1,19 +1,27 @@
 import type { ReactNode } from 'react'
-import type { RunRecord, ServerStatus } from '../api'
+import type { RunRecord, ServerStatus, SnifferProject } from '../api'
 
-export type Screen = 'summary' | 'timeline' | 'scenarios' | 'crawl' | 'workflows' | 'issues' | 'fixes' | 'screenshots' | 'graph' | 'raw' | 'settings'
+export type Screen = 'summary' | 'projects' | 'timeline' | 'scenarios' | 'crawl' | 'workflows' | 'issues' | 'fixes' | 'screenshots' | 'graph' | 'raw' | 'settings'
 
 export function AppShell({
   screen,
   onScreenChange,
   status,
   run,
+  projects,
+  selectedProjectId,
+  onProjectChange,
+  onAddProject,
   children
 }: {
   screen: Screen
   onScreenChange: (screen: Screen) => void
   status?: ServerStatus
   run?: RunRecord | null
+  projects?: SnifferProject[]
+  selectedProjectId?: string
+  onProjectChange?: (projectId: string) => void
+  onAddProject?: () => void
   children: ReactNode
 }) {
   const running = run?.status === 'running' || status?.status === 'running'
@@ -48,6 +56,20 @@ export function AppShell({
             <h1>Sniffer Dashboard</h1>
           </div>
           <div className="top-status">
+            <label className="project-select">
+              <span>Project</span>
+              <select
+                aria-label="Selected Sniffer project"
+                value={selectedProjectId ?? ''}
+                onChange={(event) => onProjectChange?.(event.target.value)}
+              >
+                <option value="">Latest / ad hoc</option>
+                {(projects ?? []).map((project) => (
+                  <option key={project.id} value={project.id}>{project.name}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="secondary-button small" onClick={onAddProject}>Add project</button>
             <span className={`status-chip ${running ? 'warn' : 'good'}`}>{running ? 'Running' : 'Idle'}</span>
             <span className="status-chip muted">v{status?.version ?? '0.1.0'}</span>
             <span className={`status-chip ${status?.provider.configured ? 'good' : 'muted'}`}>
@@ -70,6 +92,7 @@ export function AppShell({
 
 const navItems: Array<{ screen: Screen; label: string }> = [
   { screen: 'summary', label: 'Summary' },
+  { screen: 'projects', label: 'Projects' },
   { screen: 'timeline', label: 'Run Timeline' },
   { screen: 'scenarios', label: 'Scenarios' },
   { screen: 'crawl', label: 'Crawl Path' },

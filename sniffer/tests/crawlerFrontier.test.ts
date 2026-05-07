@@ -35,6 +35,16 @@ describe('crawl frontier', () => {
     expect(candidate?.actionType).toBe('type')
     expect(candidate?.label).toBe('Feature request')
   })
+
+  it('does not follow external links by default', () => {
+    const state = crawlState('/', [
+      { kind: 'link', text: 'GitHub', href: 'https://github.com/example/repo' },
+      { kind: 'link', text: 'Sign in', href: 'http://127.0.0.1:5173/login' }
+    ])
+    const { next, skipped } = buildCrawlCandidates(state, context())
+    expect(next?.label).toBe('Sign in')
+    expect(skipped.some((item) => item.label === 'GitHub' && /external origin skipped/.test(item.reason))).toBe(true)
+  })
 })
 
 function crawlState(route: string, visible: CrawlState['visible']): CrawlState {
@@ -55,6 +65,7 @@ function context() {
     ineffectiveActionKeys: new Map<string, number>(),
     routeVisitCounts: new Map<string, number>(),
     maxPerRoute: 8,
-    maxDuplicateActions: 1
+    maxDuplicateActions: 1,
+    allowedOrigin: 'http://127.0.0.1:5173'
   }
 }

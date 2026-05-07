@@ -200,7 +200,7 @@ function scenarioIssue(definition: ScenarioDefinition, assertion: string, eviden
   }
 }
 
-function scenario(slug: Exclude<ScenarioSlug, 'all'>, name: string, prerequisites: string[], steps: ScenarioStep[], expectedResult: string, assertions: string[]): ScenarioDefinition {
+function scenario(slug: Exclude<ScenarioSlug, 'all' | 'auto'>, name: string, prerequisites: string[], steps: ScenarioStep[], expectedResult: string, assertions: string[]): ScenarioDefinition {
   return { slug, name, prerequisites, steps, expectedResult, assertions }
 }
 

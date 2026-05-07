@@ -47,6 +47,8 @@ export interface CrawlFrontierContext {
   routeVisitCounts: Map<string, number>
   maxPerRoute: number
   maxDuplicateActions: number
+  allowedOrigin?: string
+  allowExternalOrigins?: boolean
 }
 
 export async function crawlApp(url: string, options: CrawlOptions): Promise<CrawlGraph> {
@@ -132,7 +134,8 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
       ineffectiveActionKeys,
       routeVisitCounts,
       maxPerRoute,
-      maxDuplicateActions
+      maxDuplicateActions,
+      allowedOrigin: new URL(url).origin
     })
     recordSkippedFrontier(captured, candidates.skipped, unvisitedSafeActions)
     const candidate = candidates.next
@@ -362,6 +365,10 @@ function candidateFromElement(state: CrawlState, element: VisibleElement, contex
     skipped.push({ label, reason: decision.reason, stateId: state.id, route: state.hashRoute })
     return undefined
   }
+  if (element.kind === 'link' && element.href && isExternalHref(element.href, context.allowedOrigin) && !context.allowExternalOrigins) {
+    skipped.push({ label, reason: `external origin skipped: ${linkOrigin(element.href)}`, stateId: state.id, route: state.hashRoute })
+    return undefined
+  }
   const targetRoute = inferTargetRoute(element, label)
   const currentRoute = stateRouteKey(state)
   const actionKey = `${state.hash}:${role}:${label}:${element.href ?? ''}:${element.selectorHint ?? ''}:${wantsTyping ? 'type' : 'click'}`
@@ -425,6 +432,24 @@ function inferTargetRoute(element: VisibleElement, label: string): string | unde
   if (element.href) return routeKey(element.href)
   const normalized = label.toLowerCase().replace(/\s+/g, ' ').trim()
   return navRouteByLabel.get(normalized)
+}
+
+function isExternalHref(href: string, allowedOrigin?: string): boolean {
+  if (!allowedOrigin) return false
+  try {
+    const target = new URL(href)
+    return target.origin !== allowedOrigin
+  } catch {
+    return false
+  }
+}
+
+function linkOrigin(href: string): string {
+  try {
+    return new URL(href).origin
+  } catch {
+    return href
+  }
 }
 
 function routeKey(value: string): string {
@@ -515,8 +540,21 @@ function inferScreen(url: string, visible: VisibleElement[], primaryVisibleText:
   if (route === '#repositories') return { name: 'Repositories', pageType: 'repo_management' }
   if (route === '#learning') return { name: 'Learning', pageType: 'learning' }
   if (route === '#settings') return { name: 'Settings', pageType: 'settings' }
-  if (route === '#prompt' || route === '/' || route === '') return { name: 'Prompt composer / Plan Runs', pageType: 'planning' }
-  return { name: route.replace(/^#/, '') || 'Runtime screen', pageType: 'unknown' }
+  if (route === '#prompt' || ((route === '/' || route === '') && /feature request|generate plan|plan bundle|handoff prompt|workspace control/.test(text))) {
+    return { name: 'Prompt composer / Plan Runs', pageType: 'planning' }
+  }
+  if (route === '/' || route === '') return { name: 'Home', pageType: 'home' }
+  return { name: formatRouteName(route), pageType: 'runtime_screen' }
+}
+
+function formatRouteName(route: string): string {
+  const cleaned = route.replace(/^#/, '').replace(/[?#].*$/, '').replace(/^\/+|\/+$/g, '')
+  if (!cleaned) return 'Runtime screen'
+  const parts = cleaned.split('/').filter(Boolean)
+  const last = parts.at(-1) ?? cleaned
+  return last
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
 }
 
 function summarizeVisibleControls(visible: VisibleElement[]): VisibleControlSummary {

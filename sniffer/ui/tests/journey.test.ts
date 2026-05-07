@@ -42,6 +42,40 @@ describe('journey report builders', () => {
     expect(workflow.scenarios[0].name).toBe('Generate plan bundle')
     expect(workflow.issues[0].title).toBe('Generate plan bundle is not reviewable')
   })
+
+  it('renders runtime workflows when source workflows are empty', () => {
+    const report = fixtureReport()
+    report.sourceGraph!.sourceWorkflows = []
+    report.runtimeAppModel = {
+      app_name: 'Conduit',
+      inferred_app_type: 'auth_app',
+      workflows: [{ name: 'Navigation smoke test', confidence: 'medium', evidence: ['Home Sign in Sign up'], source: 'runtime', steps: [] }],
+      route_candidates: ['/login'],
+      actions: [],
+      locator_inventory: [],
+      confidence: 'medium',
+      evidence: ['runtime DOM']
+    }
+    report.generatedScenarios = [{
+      id: 'navigation-smoke',
+      name: 'Navigation smoke test',
+      profileApplicability: ['auth_app'],
+      prerequisites: [],
+      steps: [{ name: 'Open nav', action: 'open_primary_navigation', expectedControls: ['links'], safe: true }],
+      expectedControls: ['navigation'],
+      expectedOutcomes: ['routes open'],
+      confidence: 'medium',
+      evidence: ['runtime DOM']
+    }]
+    report.scenarioRuns = []
+
+    const workflows = buildWorkflowEvidence(report)
+
+    expect(workflows.map((workflow) => workflow.workflow.name)).toContain('Navigation smoke test')
+    expect(workflows[0].discoverySource).toBe('runtime')
+    expect(workflows[0].generatedScenarios[0].id).toBe('navigation-smoke')
+    expect(workflows[0].status).toBe('skipped')
+  })
 })
 
 function fixtureReport(): SnifferReport {

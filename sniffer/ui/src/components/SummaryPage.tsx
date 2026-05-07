@@ -47,12 +47,12 @@ export function SummaryPage({
         </span>
       </section>
       <div className="summary-cards">
-        <Metric label="Scenarios" value={`${summary.scenariosPassed} passed / ${summary.scenariosFailed} failed`} tone={summary.scenariosFailed ? 'danger' : 'good'} />
+        <Metric label="Source workflows" value={summary.sourceWorkflows} />
+        <Metric label="Runtime workflows" value={summary.runtimeWorkflows} tone={summary.runtimeWorkflows ? 'good' : 'muted'} />
+        <Metric label="Generated scenarios" value={summary.generatedScenarios} />
+        <Metric label="Executed scenarios" value={`${summary.executedScenarios} run`} tone={summary.scenariosFailed ? 'danger' : summary.executedScenarios ? 'good' : 'muted'} />
         <Metric label="Real issues" value={summary.realIssues} tone={summary.realIssues ? 'warn' : 'good'} />
-        <Metric label="Product gaps" value={summary.productGaps} tone={summary.productGaps ? 'warn' : 'good'} />
-        <Metric label="UX/accessibility" value={summary.uxIssues} tone={summary.uxIssues ? 'warn' : 'good'} />
         <Metric label="Fix packets" value={summary.fixPackets} />
-        <Metric label="Screenshots" value={summary.screenshots} />
       </div>
       {summary.topIssues.length > 0 && (
         <section className="card-panel">

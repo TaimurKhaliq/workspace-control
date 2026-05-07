@@ -54,9 +54,19 @@ export async function runPromptConsistencyCheck(input: {
     await page.goto(input.url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
     await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
     await ensurePlanningContext(page)
+    if (!await hasPromptGenerationControls(page)) {
+      return {
+        enabled: true,
+        prompts,
+        runs,
+        decisions,
+        issues: [],
+        screenshots
+      }
+    }
 
     for (const prompt of prompts) {
-      await generatePrompt(page, prompt.input_prompt)
+      if (!await generatePrompt(page, prompt.input_prompt)) break
       const screenshotPath = path.join(screenshotsDir, `${prompt.id}.png`)
       await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined)
       screenshots.push(screenshotPath)
@@ -228,15 +238,34 @@ async function ensurePlanningContext(page: Page): Promise<void> {
   await selectFirstOption(page.getByTestId('target-repo-select'))
 }
 
-async function generatePrompt(page: Page, prompt: string): Promise<void> {
+async function generatePrompt(page: Page, prompt: string): Promise<boolean> {
   await clickFirst(page, [page.getByRole('button', { name: /^Plan Runs$/i })])
-  const promptField = page.getByTestId('feature-request-textarea')
-    .or(page.getByLabel(/feature request|prompt/i))
-    .or(page.locator('textarea').first())
-  await promptField.first().fill(prompt, { timeout: 2_000 })
-  await page.getByTestId('generate-plan-button').or(page.getByRole('button', { name: /generate.*plan/i })).first().click({ timeout: 2_000 })
+  const promptField = promptFieldLocator(page)
+  if (!await isVisible(promptField)) return false
+  const filled = await promptField.first().fill(prompt, { timeout: 2_000 }).then(() => true).catch(() => false)
+  if (!filled) return false
+  const generateButton = generateButtonLocator(page)
+  if (!await isVisible(generateButton)) return false
+  const clicked = await generateButton.first().click({ timeout: 2_000 }).then(() => true).catch(() => false)
+  if (!clicked) return false
   await page.getByTestId('plan-bundle-view').waitFor({ timeout: 20_000 }).catch(() => undefined)
   await page.waitForLoadState('networkidle', { timeout: 4_000 }).catch(() => undefined)
+  return true
+}
+
+async function hasPromptGenerationControls(page: Page): Promise<boolean> {
+  return await isVisible(promptFieldLocator(page)) && await isVisible(generateButtonLocator(page))
+}
+
+function promptFieldLocator(page: Page): Locator {
+  return page.getByTestId('feature-request-textarea')
+    .or(page.getByLabel(/feature request|prompt/i))
+    .or(page.locator('textarea').first())
+}
+
+function generateButtonLocator(page: Page): Locator {
+  return page.getByTestId('generate-plan-button')
+    .or(page.getByRole('button', { name: /generate.*plan/i }))
 }
 
 async function extractPromptOutput(page: Page, prompt: PromptConsistencyPrompt, screenshotPath: string): Promise<PromptConsistencyRun> {
@@ -343,12 +372,16 @@ function escapeRegex(value: string): string {
 
 async function clickFirst(page: Page, locators: Locator[]): Promise<void> {
   for (const locator of locators) {
-    if (await locator.first().isVisible({ timeout: 500 }).catch(() => false)) {
+    if (await isVisible(locator)) {
       await locator.first().click({ timeout: 1_500 }).catch(() => undefined)
       await page.waitForTimeout(150)
       return
     }
   }
+}
+
+async function isVisible(locator: Locator): Promise<boolean> {
+  return locator.first().isVisible({ timeout: 500 }).catch(() => false)
 }
 
 async function selectFirstOption(locator: Locator): Promise<boolean> {

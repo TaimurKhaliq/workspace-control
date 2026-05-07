@@ -1,5 +1,5 @@
 import type { AppIntent } from '../types.js'
-import type { Issue, IssueTriageContext, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { Issue, IssueTriageContext, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 
 type ApiStyle = 'responses' | 'chat_completions' | 'auto'
@@ -99,6 +99,22 @@ export class OpenAICompatibleProvider implements LlmProvider {
     ].join('\n\n')
     const text = await this.complete(prompt)
     return parseJsonFromText<ProductIntentModel>(text)
+  }
+
+  async inferRuntimeIntent(context: RuntimeIntentContext): Promise<RuntimeLlmIntent> {
+    if (!this.isConfigured()) throw new Error('LLM provider is not configured')
+    const prompt = [
+      'You are a runtime UI workflow analyst for Sniffer.',
+      'Use the rendered DOM/accessibility/control snapshot plus compact source summary.',
+      'Infer app type, evidence-backed user jobs, safe workflows, important controls, and recommended Playwright locators.',
+      'Do not invent unsupported workflows. Common-pattern guesses must be low confidence unless source/runtime supports them.',
+      'Do not suggest destructive actions. Safe action policy is authoritative. Prefer accessible locators.',
+      'Return JSON only matching this shape:',
+      '{"app_type":"planning_control_panel|admin_console|dashboard_app|crud_app|ecommerce_app|docs_site|marketing_site|auth_app|unknown","primary_user_jobs":["..."],"workflows":[{"name":"...","confidence":"low|medium|high","evidence":["..."],"source":"llm","steps":[{"action":"click|type|select|assert","target_name":"...","locator_strategy":"role|label|placeholder|testid|text|css","locator_value":"...","safe":true,"expected_result":"...","confidence":"low|medium|high","evidence":["..."]}]}],"safe_next_actions":[],"unsafe_actions":[],"notes":["..."]}',
+      JSON.stringify(context)
+    ].join('\n\n')
+    const text = await this.complete(prompt)
+    return parseJsonFromText<RuntimeLlmIntent>(text)
   }
 
   async critiquePromptConsistency(context: PromptConsistencyContext): Promise<PromptConsistencyDecision> {

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tiny React Fixture</title>
+    <style>
+      body { margin: 0; font-family: Arial, sans-serif; background: #f8fafc; color: #111827; }
+      main { max-width: 920px; margin: 0 auto; padding: 32px; }
+      nav { display: flex; gap: 16px; margin-bottom: 24px; }
+      a { color: #1d4ed8; }
+      section, form, table { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+      form { display: grid; gap: 12px; margin: 16px 0; }
+      label { display: grid; gap: 6px; }
+      input { max-width: 360px; padding: 8px; }
+      button { width: max-content; padding: 8px 12px; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { border-top: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Primary navigation">
+        <a href="#dashboard">Dashboard</a>
+        <a href="#projects">Projects</a>
+        <a href="#reports">Reports</a>
+      </nav>
+      <section aria-labelledby="dashboard-title">
+        <h1 id="dashboard-title">Project Dashboard</h1>
+        <button type="button">Create project</button>
+        <form aria-label="Project search">
+          <label for="project-search">Search projects</label>
+          <input id="project-search" placeholder="Search projects" />
+          <button type="button">Filter</button>
+        </form>
+        <table>
+          <thead>
+            <tr><th>Name</th><th>Status</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Website refresh</td><td>Active</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </body>
+</html>

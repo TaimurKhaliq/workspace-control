@@ -5,10 +5,12 @@ import { getFixPacket } from '../api'
 export function FixPacketViewer({
   report,
   packets,
+  projectId,
   onGenerateFixes
 }: {
   report?: SnifferReport | null
   packets: FixPacketItem[]
+  projectId?: string
   onGenerateFixes: () => void
 }) {
   const [selected, setSelected] = useState(packets[0]?.issueId ?? '')
@@ -20,8 +22,8 @@ export function FixPacketViewer({
       setMarkdown('')
       return
     }
-    void getFixPacket(selected).then(setMarkdown).catch((error) => setMarkdown(String(error)))
-  }, [selected])
+    void getFixPacket(selected, projectId).then(setMarkdown).catch((error) => setMarkdown(String(error)))
+  }, [selected, projectId])
 
   return (
     <section className="report-grid">

@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Static HTML Fixture</title>
+    <style>
+      body { margin: 0; font-family: Arial, sans-serif; background: #f9fafb; color: #111827; }
+      main { max-width: 900px; margin: 0 auto; padding: 32px; }
+      nav { display: flex; gap: 16px; margin-bottom: 24px; }
+      form, section { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; }
+      label { display: block; margin-bottom: 6px; }
+      input, select { display: block; margin-bottom: 12px; padding: 8px; width: min(100%, 360px); }
+      ul { padding-left: 20px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <nav aria-label="Primary navigation">
+        <a href="#overview">Overview</a>
+        <a href="#orders">Orders</a>
+        <a href="#settings">Settings</a>
+      </nav>
+      <section id="overview">
+        <h1>Operations Dashboard</h1>
+        <p>Review orders, filter status, and inspect account activity.</p>
+      </section>
+      <form aria-label="Order filter" action="/orders">
+        <label for="query">Search orders</label>
+        <input id="query" name="q" placeholder="Search orders" />
+        <label for="status">Status</label>
+        <select id="status" name="status">
+          <option>Open</option>
+          <option>Closed</option>
+        </select>
+        <button type="button">Apply filter</button>
+      </form>
+      <section id="orders">
+        <h2>Recent orders</h2>
+        <ul>
+          <li>Order 1001 - Open</li>
+          <li>Order 1002 - Closed</li>
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>
