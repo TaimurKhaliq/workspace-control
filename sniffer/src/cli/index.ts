@@ -31,7 +31,7 @@ import { initProject, getProject, listProjects, removeProject, upsertProject, cr
 import { augmentAppProfileWithProductIntent, inferAppProfile } from '../profile/appProfile.js'
 import { generateGenericScenarios } from '../runtime/genericScenarios.js'
 import { executeGeneratedScenarios } from '../runtime/generatedScenarioExecutor.js'
-import { shouldRunBuiltInScenarioPack, shouldRunPromptConsistency } from '../runtime/scenarioSelection.js'
+import { selectScenarioPack, shouldRunBuiltInScenarioPack, shouldRunPromptConsistency, sourceGraphForRuntimeValidation } from '../runtime/scenarioSelection.js'
 import { inspectUrl, writeRuntimeDomArtifacts } from '../runtime/domSnapshot.js'
 import { buildRuntimeAppModel, buildRuntimeIntentContext } from '../runtime/runtimeAppModel.js'
 import type { DiscoveryMode, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent } from '../types.js'
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
 
   if (command === 'discover') {
     const ctx = await resolveTarget(args, { needRepo: true, needUrl: false })
-    const graph = await discoverSource(ctx.repo)
+    const graph = await discoverSource(ctx.repo, sourceDiscoveryOptions(args))
     const profile = inferAppProfile({ sourceGraph: graph, productGoal: productGoalArg(args) })
     await writeJson(path.join(ctx.reportDir, 'source_graph.json'), graph)
     await writeJson(path.join(ctx.reportDir, 'app_profile.json'), profile)
@@ -102,7 +102,7 @@ async function main(): Promise<void> {
   if (command === 'inspect-url') {
     const ctx = await resolveTarget(args, { needRepo: false, needUrl: true })
     const snapshot = await inspectUrl({ url: ctx.url, reportDir: ctx.reportDir })
-    const runtimeAppModel = buildRuntimeAppModel({ snapshot, sourceGraph: ctx.repo ? await discoverSource(ctx.repo).catch(() => undefined) : undefined, appProfile: ctx.project?.profile })
+    const runtimeAppModel = buildRuntimeAppModel({ snapshot, sourceGraph: ctx.repo ? await discoverSource(ctx.repo, sourceDiscoveryOptions(args)).catch(() => undefined) : undefined, appProfile: ctx.project?.profile })
     await writeRuntimeDomArtifacts(ctx.reportDir, snapshot)
     await writeJson(path.join(ctx.reportDir, 'runtime_app_model.json'), runtimeAppModel)
     await mirrorReportDirs(ctx)
@@ -117,17 +117,25 @@ async function main(): Promise<void> {
     const repo = ctx.repo
     const url = ctx.url
     const reportDir = ctx.reportDir
-    const sourceGraph = discoveryMode === 'runtime' ? emptySourceGraph(repo || url, ctx.project) : await discoverSource(repo)
+    const sourceGraph = discoveryMode === 'runtime' ? emptySourceGraph(repo || url, ctx.project) : await discoverSource(repo, sourceDiscoveryOptions(args))
     const crawlGraph = await crawlApp(url, crawlOptions(args, reportDir))
     const runtimeDomSnapshot = discoveryMode === 'source' ? undefined : await inspectUrl({ url, reportDir })
     const productGoal = typeof args['product-goal'] === 'string' ? args['product-goal'] : undefined
     const sourceOnlyAppProfile = inferAppProfile({ sourceGraph, productGoal })
     const deterministicAppProfile = inferAppProfile({ sourceGraph, crawlGraph, productGoal })
     const scenarioSlug = (typeof args.scenario === 'string' ? args.scenario : undefined) as ScenarioSlug | undefined
-    let scenarioRuns = shouldRunBuiltInScenarioPack({ scenarioSlug, appProfile: sourceOnlyAppProfile })
+    const scenarioSelection = selectScenarioPack({
+      scenarioSlug,
+      appProfile: sourceOnlyAppProfile,
+      sourceGraph,
+      runtimeDomSnapshot,
+      productGoal
+    })
+    let scenarioRuns = shouldRunBuiltInScenarioPack({ scenarioSlug, appProfile: sourceOnlyAppProfile, scenarioSelection })
       ? await runScenarios({ url, reportDir, scenario: scenarioSlug as ScenarioSlug })
       : []
     let appIntent = buildDeterministicIntent(sourceGraph)
+    const runtimeValidationSourceGraph = sourceGraphForRuntimeValidation(sourceGraph, scenarioSelection)
     const intentMode = (typeof args['intent-mode'] === 'string' ? args['intent-mode'] : 'deterministic') as ProductIntentMode
     const providerName = typeof args.provider === 'string' ? args.provider : args['use-llm'] ? 'auto' : 'auto'
     const provider = args['use-llm'] || args['critic-mode'] === 'llm' || args['ux-critic'] === 'llm' || intentMode === 'llm' || intentMode === 'auto' || providerName === 'mock'
@@ -155,12 +163,12 @@ async function main(): Promise<void> {
       })).catch(() => undefined)
     }
     let activeCrawlGraph = crawlGraph
-    let runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph })
-    let candidateIssues = classifyRuntimeIssues(sourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
+    let runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph: runtimeValidationSourceGraph })
+    let candidateIssues = classifyRuntimeIssues(runtimeValidationSourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
     const criticMode = (typeof args['critic-mode'] === 'string' ? args['critic-mode'] : args['use-llm'] ? 'llm' : 'deterministic') as CriticMode
     const criticProvider: LlmCriticProvider | undefined = provider?.critiqueWorkflow ? provider as LlmCriticProvider : undefined
     let critic = await critiqueFindings({
-      sourceGraph,
+      sourceGraph: runtimeValidationSourceGraph,
       crawlGraph: activeCrawlGraph,
       workflowVerifications: runtimeWorkflowVerifications,
       candidateIssues,
@@ -173,10 +181,10 @@ async function main(): Promise<void> {
       const executed = await executeNextSafeActions({ url, decisions: critic.criticDecisions, maxIterations })
       if (executed.length > 0) {
         activeCrawlGraph = await crawlApp(url, crawlOptions(args, reportDir))
-        runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph })
-        candidateIssues = classifyRuntimeIssues(sourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
+        runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph: runtimeValidationSourceGraph })
+        candidateIssues = classifyRuntimeIssues(runtimeValidationSourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
         critic = await critiqueFindings({
-          sourceGraph,
+          sourceGraph: runtimeValidationSourceGraph,
           crawlGraph: activeCrawlGraph,
           workflowVerifications: runtimeWorkflowVerifications,
           candidateIssues,
@@ -202,7 +210,7 @@ async function main(): Promise<void> {
     })
     const consistencyCheckEnabled = boolArg(args, 'consistency-check') || scenarioSlug === 'prompt-output-consistency'
     const promptsSource = typeof args['consistency-prompts'] === 'string' ? args['consistency-prompts'] : 'built-in'
-    const promptConsistency = shouldRunPromptConsistency({ consistencyCheckEnabled, scenarioSlug, promptsSource, appProfile: sourceOnlyAppProfile })
+    const promptConsistency = shouldRunPromptConsistency({ consistencyCheckEnabled, scenarioSlug, promptsSource, appProfile: sourceOnlyAppProfile, scenarioSelection })
       ? await runPromptConsistencyCheck({
         url,
         reportDir,
@@ -226,7 +234,7 @@ async function main(): Promise<void> {
     const runtimeAppModel = runtimeDomSnapshot
       ? buildRuntimeAppModel({ snapshot: runtimeDomSnapshot, sourceGraph, appProfile, llmIntent: llmRuntimeIntent })
       : undefined
-    const generatedScenarios = generateGenericScenarios({ appProfile, sourceGraph, runtimeAppModel })
+    const generatedScenarios = generateGenericScenarios({ appProfile, sourceGraph, runtimeAppModel, scenarioSelection })
     if (shouldExecuteGeneratedScenarios(args, scenarioSlug, generatedScenarios.length)) {
       const executedGenericRuns = await executeGeneratedScenarios({ url, reportDir, scenarios: generatedScenarios })
       const existingSlugs = new Set(scenarioRuns.map((run) => run.slug))
@@ -262,6 +270,8 @@ async function main(): Promise<void> {
       crawlGraph: activeCrawlGraph,
       appIntent,
       appProfile,
+      appSubtype: scenarioSelection.appSubtype,
+      scenarioSelection,
       discoveryMode,
       runtimeDomSnapshot,
       runtimeAppModel,
@@ -288,7 +298,7 @@ async function main(): Promise<void> {
     const ctx = await resolveTarget(args, { needRepo: true, needUrl: true })
     const repo = ctx.repo
     const url = ctx.url
-    const sourceGraph = await discoverSource(repo)
+    const sourceGraph = await discoverSource(repo, sourceDiscoveryOptions(args))
     let appIntent = buildDeterministicIntent(sourceGraph)
     if (args['use-llm']) {
       const provider = createLlmProvider(typeof args.provider === 'string' ? args.provider : 'auto')
@@ -541,6 +551,12 @@ function discoveryModeArg(args: Record<string, string | boolean>): DiscoveryMode
   return value === 'source' || value === 'runtime' || value === 'hybrid' ? value : 'hybrid'
 }
 
+function sourceDiscoveryOptions(args: Record<string, string | boolean>) {
+  return {
+    includeTestSources: boolArg(args, 'include-test-sources')
+  }
+}
+
 function emptySourceGraph(identity: string, project?: SnifferProject): SourceGraph {
   return {
     repoPath: identity,
@@ -682,15 +698,15 @@ Commands:
   sniffer projects inspect --id <id>
   sniffer projects remove --id <id>
   sniffer inspect-url --url <url> | --project <id>
-  sniffer discover --repo <path> | --project <id>
+  sniffer discover --repo <path> | --project <id> [--include-test-sources]
   sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
-  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
+  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
   sniffer repair-proof --issue <issue_id> --report <path> --agent manual
   sniffer apply-fix [--issue <issue_id>] [--report <path>] [--agent manual|mock|codex]
   sniffer verify --issue <issue_id> --url <url> --report <path>
   sniffer repair-loop --repo <path> --url <url> | --project <id> [--agent manual|mock|codex] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--provider mock|openai-compatible|auto] [--max-iterations 3]
-  sniffer generate-tests --repo <path> --url <url> | --project <id> [--use-llm]
+  sniffer generate-tests --repo <path> --url <url> | --project <id> [--use-llm] [--include-test-sources]
   sniffer run-tests [--project <id>] [--use-llm]
   sniffer verify-matrix
 `)

@@ -44,6 +44,8 @@ async function executeScenario(page: Page, scenario: GeneratedScenario, screensh
 
   if (scenario.id === 'navigation-smoke') {
     assertions.push(...await navigationAssertions(page, snapshot, shot))
+  } else if (scenario.id.startsWith('sniffer-')) {
+    assertions.push(...await snifferDashboardAssertions(page, scenario, snapshot, shot))
   } else if (scenario.id === 'forms-discoverability') {
     assertions.push(formAssertion(snapshot, initialShot))
   } else if (scenario.id === 'accessibility-labels') {
@@ -79,7 +81,8 @@ async function executeScenario(page: Page, scenario: GeneratedScenario, screensh
 
 async function navigationAssertions(page: Page, snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>, shot: (name: string) => Promise<string | undefined>): Promise<ScenarioAssertionResult[]> {
   const sameOrigin = new URL(snapshot.url).origin
-  const links = snapshot.links
+  const navControls = navigationControls(snapshot)
+  const links = navControls
     .filter((link) => link.href)
     .filter((link) => {
       try {
@@ -89,34 +92,118 @@ async function navigationAssertions(page: Page, snapshot: Awaited<ReturnType<typ
       }
     })
     .slice(0, 4)
-  if (links.length === 0) {
-    return [{ label: 'Safe navigation links visible', status: 'blocked', evidence: ['No same-origin navigation links found.'], screenshotPath: snapshot.screenshotPath }]
+  const buttons = navControls
+    .filter((control) => !control.href && ['button', 'tab'].includes(control.kind) && control.safeAction.safe)
+    .slice(0, 8)
+  const controls = [...links, ...buttons].slice(0, 10)
+  if (controls.length === 0) {
+    return [{ label: 'Safe navigation controls visible', status: 'blocked', evidence: ['No same-origin navigation links or navigation buttons found.'], screenshotPath: snapshot.screenshotPath }]
   }
   const evidence: string[] = []
-  for (const link of links) {
-    const locator = link.locatorCandidates[0]
+  for (const control of controls) {
+    const locator = control.locatorCandidates[0]
     const before = page.url()
+    const beforeSignature = await pageSignature(page)
     try {
-      if (locator?.strategy === 'role' && (link.accessibleName || link.visibleText)) {
-        await page.getByRole('link', { name: link.accessibleName ?? link.visibleText }).first().click({ timeout: 2_000 })
+      if (locator?.strategy === 'role' && (control.accessibleName || control.visibleText)) {
+        const role = control.kind === 'tab' ? 'tab' : control.kind === 'button' ? 'button' : 'link'
+        await page.getByRole(role, { name: control.accessibleName ?? control.visibleText }).first().click({ timeout: 2_000 })
       } else {
-        await page.locator(link.selectorHint ?? 'a').first().click({ timeout: 2_000 })
+        await page.locator(control.selectorHint ?? (control.kind === 'button' ? 'button' : 'a')).first().click({ timeout: 2_000 })
       }
       await page.waitForLoadState('domcontentloaded', { timeout: 2_000 }).catch(() => undefined)
       await page.waitForTimeout(100)
-      evidence.push(`${labelOf(link)}: ${before} -> ${page.url()}`)
+      const afterSignature = await pageSignature(page)
+      const changed = before !== page.url() || beforeSignature !== afterSignature
+      evidence.push(`${labelOf(control)}: ${before} -> ${page.url()}${changed ? ' changed' : ' unchanged'}`)
       await shot(`nav-${evidence.length}`)
-      await page.goBack({ waitUntil: 'domcontentloaded', timeout: 2_000 }).catch(() => undefined)
+      if (control.href) await page.goBack({ waitUntil: 'domcontentloaded', timeout: 2_000 }).catch(() => undefined)
     } catch (error) {
-      evidence.push(`${labelOf(link)} failed: ${error instanceof Error ? error.message : String(error)}`)
+      evidence.push(`${labelOf(control)} failed: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
   return [{
-    label: 'Safe navigation links can be opened',
-    status: evidence.some((item) => /->/.test(item)) ? 'passed' : 'failed',
+    label: 'Safe navigation controls can be opened',
+    status: evidence.some((item) => /changed/.test(item) || /->/.test(item)) ? 'passed' : 'failed',
     evidence,
     screenshotPath: snapshot.screenshotPath
   }]
+}
+
+async function snifferDashboardAssertions(
+  page: Page,
+  scenario: GeneratedScenario,
+  snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>,
+  shot: (name: string) => Promise<string | undefined>
+): Promise<ScenarioAssertionResult[]> {
+  if (scenario.id === 'sniffer-dashboard-navigation') {
+    return [await clickRequiredButtons(page, 'Dashboard sidebar sections are reachable', ['Summary', 'Projects', 'Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues', 'Fix Packets', 'Screenshots', 'Graph Explorer', 'Raw JSON', 'Settings'], shot, 8)]
+  }
+  if (scenario.id === 'sniffer-project-selector') {
+    const evidence: string[] = []
+    const hasSelector = await visibleByRole(page, 'combobox', /selected sniffer project|project/i)
+    const hasAddProject = await visibleButton(page, /add project/i)
+    evidence.push(`project selector:${hasSelector}`, `add project:${hasAddProject}`)
+    if (hasAddProject) {
+      await page.getByRole('button', { name: /add project/i }).first().click({ timeout: 2_000 }).catch(() => undefined)
+      await page.waitForTimeout(150)
+      evidence.push(`dialog/control after click:${await page.getByText(/project name|repo path|app url|add project/i).first().isVisible({ timeout: 500 }).catch(() => false)}`)
+      await shot('add-project')
+      await page.keyboard.press('Escape').catch(() => undefined)
+    }
+    return [{ label: 'Project selector and Add project controls are discoverable', status: hasSelector && hasAddProject ? 'passed' : 'failed', evidence, screenshotPath: snapshot.screenshotPath }]
+  }
+  if (scenario.id === 'sniffer-audit-launcher') {
+    return [await controlsVisible(page, 'Audit launcher form controls are visible', [/repo path/i, /app url/i, /product goal/i, /run audit/i, /run consistency check/i, /generate fix packets/i, /open latest report/i], snapshot.screenshotPath)]
+  }
+  if (scenario.id === 'sniffer-report-sections') {
+    return [await clickRequiredButtons(page, 'Report section navigation is reachable', ['Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues'], shot, 4)]
+  }
+  if (scenario.id === 'sniffer-issues-fix-packets') {
+    return [await clickRequiredButtons(page, 'Issues and fix packets are reachable', ['Issues', 'Fix Packets'], shot, 2)]
+  }
+  if (scenario.id === 'sniffer-screenshots-gallery') {
+    return [await clickRequiredButtons(page, 'Screenshot gallery is reachable', ['Screenshots'], shot, 1)]
+  }
+  if (scenario.id === 'sniffer-graph-raw-settings') {
+    return [await clickRequiredButtons(page, 'Graph, Raw JSON, and Settings are reachable', ['Graph Explorer', 'Raw JSON', 'Settings'], shot, 2)]
+  }
+  return [{ label: 'Sniffer dashboard scenario planned', status: 'blocked', evidence: [`No deterministic executor for ${scenario.id}.`], screenshotPath: snapshot.screenshotPath }]
+}
+
+async function clickRequiredButtons(page: Page, label: string, names: string[], shot: (name: string) => Promise<string | undefined>, minimum: number): Promise<ScenarioAssertionResult> {
+  const evidence: string[] = []
+  let passed = 0
+  for (const name of names) {
+    const before = await pageSignature(page)
+    const locator = page.getByRole('button', { name: new RegExp(`^${escapeRegex(name)}$`, 'i') }).first()
+    const visible = await locator.isVisible({ timeout: 500 }).catch(() => false)
+    if (!visible) {
+      evidence.push(`${name}:missing`)
+      continue
+    }
+    await locator.click({ timeout: 2_000 }).catch((error) => evidence.push(`${name}:click failed:${error instanceof Error ? error.message : String(error)}`))
+    await page.waitForTimeout(120)
+    const after = await pageSignature(page)
+    if (before !== after || name === 'Summary') passed += 1
+    evidence.push(`${name}:${before !== after ? 'changed' : 'visible'}`)
+    await shot(`sniffer-${passed}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`)
+  }
+  return { label, status: passed >= minimum ? 'passed' : 'failed', evidence, screenshotPath: undefined }
+}
+
+async function controlsVisible(page: Page, label: string, patterns: RegExp[], screenshotPath?: string): Promise<ScenarioAssertionResult> {
+  const evidence: string[] = []
+  let found = 0
+  for (const pattern of patterns) {
+    const visible = await page.getByRole('button', { name: pattern }).first().isVisible({ timeout: 300 }).catch(() => false) ||
+      await page.getByRole('textbox', { name: pattern }).first().isVisible({ timeout: 300 }).catch(() => false) ||
+      await page.getByLabel(pattern).first().isVisible({ timeout: 300 }).catch(() => false) ||
+      await page.getByText(pattern).first().isVisible({ timeout: 300 }).catch(() => false)
+    if (visible) found += 1
+    evidence.push(`${pattern.source}:${visible}`)
+  }
+  return { label, status: found === patterns.length ? 'passed' : 'failed', evidence, screenshotPath }
 }
 
 function formAssertion(snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>, screenshotPath?: string): ScenarioAssertionResult {
@@ -183,6 +270,41 @@ function tableListAssertion(snapshot: Awaited<ReturnType<typeof captureRuntimeDo
   }
 }
 
+function navigationControls(snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>) {
+  const landmarkNavText = snapshot.landmarks
+    .filter((item) => item.role === 'navigation' || item.tagName === 'nav' || item.tagName === 'aside')
+    .map(labelOf)
+    .join(' ')
+  const candidates = [...snapshot.links, ...snapshot.buttons, ...snapshot.tabs]
+  if (!landmarkNavText) return candidates.filter((control) => /home|summary|dashboard|projects|timeline|scenarios|crawl|workflow|issues|fix packets|screenshots|graph|raw json|settings|reports|users|articles|login|sign in/i.test(labelOf(control)))
+  const inLandmark = candidates.filter((control) => {
+    const label = labelOf(control)
+    return label && landmarkNavText.includes(label)
+  })
+  if (inLandmark.length > 0) return inLandmark
+  return candidates.filter((control) => /home|summary|dashboard|projects|timeline|scenarios|crawl|workflow|issues|fix packets|screenshots|graph|raw json|settings|reports|users|articles|login|sign in/i.test(labelOf(control)))
+}
+
+async function pageSignature(page: Page): Promise<string> {
+  return page.evaluate(() => [
+    location.href,
+    document.querySelector('main')?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 500) ?? '',
+    document.body?.textContent?.replace(/\s+/g, ' ').trim().slice(0, 500) ?? ''
+  ].join('|')).catch(() => page.url())
+}
+
+async function visibleButton(page: Page, name: RegExp): Promise<boolean> {
+  return page.getByRole('button', { name }).first().isVisible({ timeout: 500 }).catch(() => false)
+}
+
+async function visibleByRole(page: Page, role: Parameters<Page['getByRole']>[0], name: RegExp): Promise<boolean> {
+  return page.getByRole(role, { name }).first().isVisible({ timeout: 500 }).catch(() => false)
+}
+
 function labelOf(control: { accessibleName?: string; visibleText?: string; labelText?: string; placeholder?: string; dataTestId?: string; href?: string; id?: string }): string {
   return (control.accessibleName ?? control.visibleText ?? control.labelText ?? control.placeholder ?? control.dataTestId ?? control.href ?? control.id ?? '').replace(/\s+/g, ' ').trim()
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }

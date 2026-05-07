@@ -518,6 +518,8 @@ export interface SnifferReport {
   crawlGraph: CrawlGraph
   appIntent: AppIntent
   appProfile?: AppProfile
+  appSubtype?: AppSubtype
+  scenarioSelection?: ScenarioPackSelection
   discoveryMode?: DiscoveryMode
   runtimeDomSnapshot?: RuntimeDomSnapshot
   runtimeAppModel?: RuntimeAppModel
@@ -549,6 +551,13 @@ export type AppProfileType =
   | 'docs_site'
   | 'marketing_site'
   | 'auth_app'
+  | 'unknown'
+
+export type AppSubtype =
+  | 'workspace_control'
+  | 'sniffer_dashboard'
+  | 'generic_control_panel'
+  | 'generic_app'
   | 'unknown'
 
 export interface AppProfile {
@@ -597,6 +606,9 @@ export interface GeneratedScenario {
   id: string
   name: string
   profileApplicability: AppProfileType[]
+  appSubtype?: AppSubtype
+  scenarioPack?: string
+  applicability?: ScenarioApplicability
   prerequisites: string[]
   steps: ScenarioStep[]
   expectedControls: string[]
@@ -604,6 +616,34 @@ export interface GeneratedScenario {
   destructiveRisk: 'none' | 'low' | 'medium' | 'high'
   confidence: ProductIntentConfidence
   evidence: string[]
+}
+
+export interface ScenarioApplicability {
+  scenarioId: string
+  scenarioName: string
+  appProfileSupport: number
+  sourceEvidenceSupport: number
+  runtimeEvidenceSupport: number
+  productGoalSupport: number
+  negativeEvidence: string[]
+  confidence: ProductIntentConfidence
+  shouldRun: boolean
+  reason: string
+}
+
+export interface SkippedScenario {
+  scenarioId: string
+  scenarioName: string
+  reason: string
+}
+
+export interface ScenarioPackSelection {
+  appSubtype: AppSubtype
+  scenarioPack: 'workspace_control' | 'sniffer_dashboard' | 'generic_control_panel' | 'generic'
+  confidence: ProductIntentConfidence
+  reason: string
+  applicability: ScenarioApplicability[]
+  skippedScenarios: SkippedScenario[]
 }
 
 export type ProductIntentMode = 'deterministic' | 'llm' | 'auto'

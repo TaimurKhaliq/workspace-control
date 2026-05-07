@@ -19,7 +19,18 @@ describe('app profile inference and generic scenarios', () => {
     const sourceGraph = planningSourceGraph()
     const profile = inferAppProfile({ sourceGraph })
 
-    const scenarios = generateGenericScenarios({ appProfile: profile, sourceGraph })
+    const scenarios = generateGenericScenarios({
+      appProfile: profile,
+      sourceGraph,
+      scenarioSelection: {
+        appSubtype: 'workspace_control',
+        scenarioPack: 'workspace_control',
+        confidence: 'high',
+        reason: 'fixture',
+        applicability: [],
+        skippedScenarios: []
+      }
+    })
 
     expect(scenarios.map((scenario) => scenario.id)).toEqual(expect.arrayContaining([
       'navigation-smoke',

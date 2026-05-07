@@ -27,6 +27,26 @@ describe('discoverSource', () => {
     expect(graph.forms[0].inputs).toContain('email')
   })
 
+  it('excludes test source workflows by default but can include them explicitly', async () => {
+    const repo = await tempRepo()
+    await writeFile(path.join(repo, 'package.json'), JSON.stringify({
+      name: 'test-source-filter',
+      scripts: { dev: 'vite' },
+      dependencies: { react: '^18.0.0', vite: '^5.0.0' }
+    }))
+    await mkdir(path.join(repo, 'src'), { recursive: true })
+    await mkdir(path.join(repo, 'tests'), { recursive: true })
+    await writeFile(path.join(repo, 'src', 'App.tsx'), 'export default function App(){ return <button>Home</button> }')
+    await writeFile(path.join(repo, 'tests', 'App.test.tsx'), 'export function Fixture(){ return <button>Generate Plan Bundle</button> }')
+
+    const defaultGraph = await discoverSource(repo)
+    const testGraph = await discoverSource(repo, { includeTestSources: true })
+
+    expect(defaultGraph.sourceWorkflows.map((workflow) => workflow.name)).not.toContain('Generate plan bundle')
+    expect(defaultGraph.components.map((component) => component.file)).not.toContain('tests/App.test.tsx')
+    expect(testGraph.sourceWorkflows.map((workflow) => workflow.name)).toContain('Generate plan bundle')
+  })
+
   it('discovers intra-file React UI surfaces, workflows, controls, and API calls', async () => {
     const repo = await tempRepo()
     await writeFile(path.join(repo, 'package.json'), JSON.stringify({

@@ -251,7 +251,7 @@ export function buildProductIntentContext(input: ProductIntentInput, determinist
 
 export function buildProductIntentFindings(input: Pick<ProductIntentInput, 'sourceGraph' | 'crawlGraph' | 'productGoal'>, model: ProductIntentModel): ProductIntentFinding[] {
   const findings: ProductIntentFinding[] = []
-  if (model.app_category === 'planning_control_panel' || hasItem(model.core_entities, /plan run|plan bundle/i)) {
+  if (!isSnifferDashboard(input) && (model.app_category === 'planning_control_panel' || hasItem(model.core_entities, /plan run|plan bundle/i))) {
     findings.push(planRunHistoryFinding(input, model))
     findings.push(commonPatternSuggestion(input))
   }
@@ -259,6 +259,11 @@ export function buildProductIntentFindings(input: Pick<ProductIntentInput, 'sour
     ...finding,
     should_report: shouldReportFinding(finding)
   }))
+}
+
+function isSnifferDashboard(input: Pick<ProductIntentInput, 'sourceGraph' | 'crawlGraph'>): boolean {
+  const text = `${input.sourceGraph.packageName ?? ''}\n${sourceText(input.sourceGraph)}\n${runtimeText(input.crawlGraph)}`
+  return /sniffer-ui|Sniffer Dashboard|Run Timeline|Crawl Path|Workflow Evidence|Fix Packets|Graph Explorer/i.test(text)
 }
 
 function planRunHistoryFinding(input: Pick<ProductIntentInput, 'sourceGraph' | 'crawlGraph' | 'productGoal'>, model: ProductIntentModel): ProductIntentFinding {

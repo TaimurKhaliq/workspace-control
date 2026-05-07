@@ -71,6 +71,27 @@ describe('product intent synthesis', () => {
     })
   })
 
+  it('does not apply workspace-control plan-run gaps to the Sniffer dashboard', async () => {
+    const graph = workspaceControlGraph()
+    graph.packageName = 'sniffer-ui'
+    graph.uiSurfaces = [
+      surface('app_shell', 'Sniffer Dashboard', ['Run Timeline', 'Crawl Path', 'Workflow Evidence', 'Fix Packets', 'Graph Explorer'])
+    ]
+    graph.sourceWorkflows = []
+    graph.apiCalls = []
+
+    const result = await synthesizeProductIntent({
+      sourceGraph: graph,
+      crawlGraph: crawl(['Sniffer Dashboard', 'Run Timeline', 'Crawl Path', 'Workflow Evidence', 'Fix Packets', 'Graph Explorer']),
+      appIntent: { summary: 'React app', likelyWorkflows: [], sourceSignals: [], llmUsed: false },
+      runtimeWorkflowVerifications: [],
+      appUrl: 'http://127.0.0.1:4877',
+      mode: 'deterministic'
+    })
+
+    expect(result.issues.map((issue) => issue.title)).not.toContain('Plan run history is not usable for repeated prompt workflows')
+  })
+
   it('does not report plan-run gap when source exposes list, metadata, and reopen controls', async () => {
     const graph = workspaceControlGraph()
     graph.uiSurfaces.push(surface('plan_bundle_view', 'Plan runs history', [

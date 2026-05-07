@@ -7,6 +7,18 @@ import { classifyActionSafety } from './safeActions.js'
 
 const SAMPLE_PROMPT = 'Add OwnersPage (no actions yet)'
 const navRouteByLabel = new Map([
+  ['summary', '#summary'],
+  ['projects', '#projects'],
+  ['run timeline', '#timeline'],
+  ['timeline', '#timeline'],
+  ['scenarios', '#scenarios'],
+  ['crawl path', '#crawl'],
+  ['workflow evidence', '#workflows'],
+  ['issues', '#issues'],
+  ['fix packets', '#fix-packets'],
+  ['screenshots', '#screenshots'],
+  ['graph explorer', '#graph'],
+  ['raw json', '#raw-json'],
   ['workspaces', '#workspaces'],
   ['repositories', '#repositories'],
   ['repos', '#repositories'],
@@ -412,7 +424,7 @@ function actionPriority(label: string, role: string, currentRoute: string, targe
   if (/cancel|close|×|esc/.test(text)) score += 90
   if (targetRoute && targetRoute !== currentRoute) score += 100
   if (targetRoute && targetRoute === currentRoute) score -= 80
-  if (/repositories|workspaces|plan runs|learning|settings/.test(text)) score += 70
+  if (/summary|projects|run timeline|scenarios|crawl path|workflow evidence|issues|fix packets|screenshots|graph explorer|raw json|repositories|workspaces|plan runs|learning|settings/.test(text)) score += 70
   if (/add repo|add repository|new workspace|create workspace|view details/.test(text)) score += 60
   if (wantsTyping) score += 55
   if (/generate.*plan|generate plan bundle/.test(text)) score += 50
@@ -492,6 +504,17 @@ function inferScreenFromRoute(route: string): { name: string; pageType: string }
   if (route === '#learning') return { name: 'Learning', pageType: 'learning' }
   if (route === '#settings') return { name: 'Settings', pageType: 'settings' }
   if (route === '#prompt') return { name: 'Prompt composer / Plan Runs', pageType: 'planning' }
+  if (route === '#summary') return { name: 'Summary', pageType: 'dashboard_summary' }
+  if (route === '#projects') return { name: 'Projects', pageType: 'project_registry' }
+  if (route === '#timeline') return { name: 'Run Timeline', pageType: 'report_timeline' }
+  if (route === '#scenarios') return { name: 'Scenarios', pageType: 'scenario_report' }
+  if (route === '#crawl') return { name: 'Crawl Path', pageType: 'crawl_report' }
+  if (route === '#workflows') return { name: 'Workflow Evidence', pageType: 'workflow_report' }
+  if (route === '#issues') return { name: 'Issues', pageType: 'issue_report' }
+  if (route === '#fix-packets') return { name: 'Fix Packets', pageType: 'fix_packet_report' }
+  if (route === '#screenshots') return { name: 'Screenshots', pageType: 'screenshot_gallery' }
+  if (route === '#graph') return { name: 'Graph Explorer', pageType: 'graph_report' }
+  if (route === '#raw-json') return { name: 'Raw JSON', pageType: 'raw_json_report' }
   return { name: route.replace(/^#/, '') || 'Runtime screen', pageType: 'unknown' }
 }
 

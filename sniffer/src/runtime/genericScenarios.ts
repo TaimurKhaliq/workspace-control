@@ -1,11 +1,13 @@
-import type { AppProfile, GeneratedScenario, RuntimeAppModel, ScenarioStep, SourceGraph } from '../types.js'
+import type { AppProfile, GeneratedScenario, RuntimeAppModel, ScenarioPackSelection, ScenarioStep, SourceGraph } from '../types.js'
 
 export function generateGenericScenarios(input: {
   appProfile: AppProfile
   sourceGraph: SourceGraph
   runtimeAppModel?: RuntimeAppModel
+  scenarioSelection?: ScenarioPackSelection
 }): GeneratedScenario[] {
   const profile = input.appProfile.profile_type
+  const scenarioPack = input.scenarioSelection?.scenarioPack ?? 'generic'
   const scenarios: GeneratedScenario[] = [
     generatedScenario('navigation-smoke', 'Navigation smoke test', ['unknown', profile], [], [
       step('Open primary navigation items', 'open_primary_navigation', ['links or navigation buttons']),
@@ -23,7 +25,7 @@ export function generateGenericScenarios(input: {
     ], ['readable lists/cards/tables'], ['long text wraps or truncates safely'], 'medium', input.appProfile.evidence)
   ]
 
-  if (profile === 'planning_control_panel') {
+  if (profile === 'planning_control_panel' && scenarioPack === 'workspace_control') {
     scenarios.push(
       generatedScenario('planning-generation-flow', 'Run creation/generation flow', ['planning_control_panel'], ['workspace or project selected', 'target entity selected'], [
         step('Select workspace/project', 'select_context', ['workspace/project selector']),
@@ -39,6 +41,22 @@ export function generateGenericScenarios(input: {
         step('Open history/list', 'open_history', ['plan runs/history list']),
         step('Reopen previous output', 'reopen_previous_run', ['reopen/view details button'])
       ], ['history list', 'run metadata', 'reopen action'], ['previous outputs can be distinguished and reopened'], 'medium', planningEvidence(input.sourceGraph))
+    )
+  }
+
+  if (profile === 'planning_control_panel' && scenarioPack === 'sniffer_dashboard') {
+    scenarios.push(...snifferDashboardScenarios(input.scenarioSelection))
+  }
+
+  if (profile === 'planning_control_panel' && scenarioPack === 'generic_control_panel') {
+    scenarios.push(
+      generatedScenario('control-panel-report-navigation', 'Report/viewer navigation', ['planning_control_panel'], [], [
+        step('Open report/viewer sections', 'open_report_sections', ['summary, timeline, issues, screenshots, raw JSON, or settings navigation']),
+        step('Verify section content changes', 'verify_navigation_change', ['changed content or active section'])
+      ], ['report/viewer navigation'], ['control-panel sections can be inspected without errors'], 'medium', input.appProfile.evidence),
+      generatedScenario('control-panel-copy-export', 'Copy/export actions availability', ['planning_control_panel'], [], [
+        step('Find copy/export actions', 'inspect_copy_export', ['copy/export/download buttons if output is present'])
+      ], ['copy/export controls when applicable'], ['generated or report output has clear copy/export affordances'], 'low', input.appProfile.evidence)
     )
   }
 
@@ -82,6 +100,50 @@ export function generateGenericScenarios(input: {
   }
 
   return dedupeScenarios(scenarios)
+}
+
+function snifferDashboardScenarios(selection?: ScenarioPackSelection): GeneratedScenario[] {
+  const evidence = selection ? [selection.reason, ...selection.applicability.flatMap((item) => item.negativeEvidence).slice(0, 4)] : []
+  return [
+    dashboardScenario('sniffer-dashboard-navigation', 'Dashboard navigation smoke test', [
+      step('Open dashboard sidebar sections', 'open_sniffer_navigation', ['Summary', 'Projects', 'Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues', 'Fix Packets', 'Screenshots', 'Graph Explorer', 'Raw JSON', 'Settings'])
+    ], ['dashboard sidebar navigation'], ['primary dashboard sections are reachable'], 'high', evidence),
+    dashboardScenario('sniffer-project-selector', 'Project selector/add project discoverability', [
+      step('Inspect project selector', 'inspect_project_selector', ['Selected Sniffer project', 'Add project']),
+      step('Open add project dialog', 'open_add_project_dialog', ['Add project dialog'])
+    ], ['project selector', 'Add project'], ['project registration controls are discoverable'], 'medium', evidence),
+    dashboardScenario('sniffer-audit-launcher', 'Audit launcher form discoverability', [
+      step('Inspect audit launcher form', 'inspect_audit_launcher', ['Repo path', 'App URL', 'Product goal', 'Run Audit', 'Run Consistency Check', 'Generate Fix Packets', 'Open Latest Report'])
+    ], ['audit launcher form controls'], ['audit launch controls are visible and labelled'], 'high', evidence),
+    dashboardScenario('sniffer-report-sections', 'Report section navigation', [
+      step('Open report section tabs', 'open_report_sections', ['Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues'])
+    ], ['report navigation controls'], ['report sections can be opened safely'], 'high', evidence),
+    dashboardScenario('sniffer-issues-fix-packets', 'Issue/fix packet browsing', [
+      step('Open issues and fix packets', 'open_issues_fixes', ['Issues', 'Fix Packets', 'Copy fix prompt'])
+    ], ['Issues', 'Fix Packets'], ['issues and fix packets are browseable'], 'medium', evidence),
+    dashboardScenario('sniffer-screenshots-gallery', 'Screenshot gallery browsing', [
+      step('Open screenshots view', 'open_screenshots', ['Screenshots'])
+    ], ['Screenshots'], ['screenshot evidence page is reachable'], 'medium', evidence),
+    dashboardScenario('sniffer-graph-raw-settings', 'Graph, Raw JSON, and Settings availability', [
+      step('Open graph/raw/settings views', 'open_graph_raw_settings', ['Graph Explorer', 'Raw JSON', 'Settings'])
+    ], ['Graph Explorer', 'Raw JSON', 'Settings'], ['advanced evidence and configuration views are reachable'], 'medium', evidence)
+  ]
+}
+
+function dashboardScenario(
+  id: string,
+  name: string,
+  steps: ScenarioStep[],
+  expectedControls: string[],
+  expectedOutcomes: string[],
+  confidence: GeneratedScenario['confidence'],
+  evidence: string[]
+): GeneratedScenario {
+  return {
+    ...generatedScenario(id, name, ['planning_control_panel'], [], steps, expectedControls, expectedOutcomes, confidence, evidence),
+    appSubtype: 'sniffer_dashboard',
+    scenarioPack: 'sniffer_dashboard'
+  }
 }
 
 function generatedScenario(

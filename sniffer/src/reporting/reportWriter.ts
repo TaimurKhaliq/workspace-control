@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppIntent, AppProfile, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, DiscoveryMode, GeneratedScenario, Issue, LocatorRepairResult, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent, RuntimeWorkflowVerification, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { AppIntent, AppProfile, AppSubtype, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, DiscoveryMode, GeneratedScenario, Issue, LocatorRepairResult, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent, RuntimeWorkflowVerification, ScenarioPackSelection, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 import { enrichIssues } from '../repair/issueMetadata.js'
@@ -11,6 +11,8 @@ export async function writeAuditReports(reportDir: string, input: {
   crawlGraph: CrawlGraph
   appIntent: AppIntent
   appProfile?: AppProfile
+  appSubtype?: AppSubtype
+  scenarioSelection?: ScenarioPackSelection
   discoveryMode?: DiscoveryMode
   runtimeDomSnapshot?: RuntimeDomSnapshot
   runtimeAppModel?: RuntimeAppModel
@@ -58,6 +60,8 @@ export async function writeAuditReports(reportDir: string, input: {
     rawFindings,
     issues: triagedIssues,
     appProfile: input.appProfile,
+    appSubtype: input.appSubtype,
+    scenarioSelection: input.scenarioSelection,
     discoveryMode: input.discoveryMode,
     runtimeDomSnapshot: input.runtimeDomSnapshot,
     runtimeAppModel: input.runtimeAppModel,
@@ -124,6 +128,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '## App Profile',
     '',
     renderAppProfile(report),
+    '',
+    '## Scenario Selection',
+    '',
+    renderScenarioSelection(report),
     '',
     '## Discovery Adapters',
     '',
@@ -432,6 +440,7 @@ function renderAppProfile(report: SnifferReport): string {
   if (!profile) return 'No app profile was generated.'
   return [
     `- Profile type: ${profile.profile_type}`,
+    `- App subtype: ${report.appSubtype ?? report.scenarioSelection?.appSubtype ?? 'unknown'}`,
     `- Confidence: ${profile.confidence}`,
     `- Core entities: ${profile.core_entities.join(', ') || 'unknown'}`,
     `- Primary user jobs: ${profile.primary_user_jobs.join('; ') || 'unknown'}`,
@@ -442,6 +451,25 @@ function renderAppProfile(report: SnifferReport): string {
   ].join('\n')
 }
 
+function renderScenarioSelection(report: SnifferReport): string {
+  const selection = report.scenarioSelection
+  if (!selection) return 'No scenario selection metadata recorded.'
+  const skippedWorkspace = selection.skippedScenarios.filter((scenario) => /workspace|repo|learning|plan|semantic|json|handoff/i.test(`${scenario.scenarioId} ${scenario.scenarioName}`))
+  return [
+    `- Scenario pack: ${selection.scenarioPack}`,
+    `- App subtype: ${selection.appSubtype}`,
+    `- Confidence: ${selection.confidence}`,
+    `- Reason: ${selection.reason}`,
+    skippedWorkspace.length && selection.scenarioPack !== 'workspace_control'
+      ? '- Skipped workspace-control scenario pack: insufficient evidence for workspace/repo target management in this app subtype.'
+      : undefined,
+    `- Applicability decisions: ${selection.applicability.map((item) => `${item.scenarioId}=${item.shouldRun ? 'run' : 'skip'} (${item.confidence})`).join('; ') || 'none'}`,
+    selection.skippedScenarios.length
+      ? `- Skipped scenarios: ${selection.skippedScenarios.slice(0, 12).map((item) => `${item.scenarioName}: ${item.reason}`).join('; ')}`
+      : '- Skipped scenarios: none'
+  ].filter(Boolean).join('\n')
+}
+
 function renderGeneratedScenarioSummary(report: SnifferReport): string {
   const scenarios = report.generatedScenarios ?? []
   if (scenarios.length === 0) return 'No generic scenarios were generated.'
@@ -449,12 +477,14 @@ function renderGeneratedScenarioSummary(report: SnifferReport): string {
     `### ${scenario.name}`,
     '',
     `- ID: ${scenario.id}`,
+    scenario.scenarioPack ? `- Scenario pack: ${scenario.scenarioPack}` : undefined,
+    scenario.appSubtype ? `- App subtype: ${scenario.appSubtype}` : undefined,
     `- Applies to: ${scenario.profileApplicability.join(', ')}`,
     `- Confidence: ${scenario.confidence}`,
     `- Expected controls: ${scenario.expectedControls.join(', ') || 'none'}`,
     `- Expected outcomes: ${scenario.expectedOutcomes.join('; ') || 'none'}`,
     `- Evidence: ${scenario.evidence.join('; ') || 'none'}`
-  ].join('\n')).join('\n\n')
+  ].filter(Boolean).join('\n')).join('\n\n')
 }
 
 function renderDiscoveryAdapters(report: SnifferReport): string {

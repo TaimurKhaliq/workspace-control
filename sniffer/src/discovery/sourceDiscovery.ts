@@ -21,10 +21,14 @@ const ignoredDirs = new Set([
 ])
 const sourceExtensions = new Set(['.ts', '.tsx', '.js', '.jsx', '.html', '.vue', '.svelte', '.astro', '.hbs', '.ejs'])
 
-export async function discoverSource(repoPath: string): Promise<SourceGraph> {
+export interface SourceDiscoveryOptions {
+  includeTestSources?: boolean
+}
+
+export async function discoverSource(repoPath: string, options: SourceDiscoveryOptions = {}): Promise<SourceGraph> {
   const absoluteRepo = path.resolve(repoPath)
   const packageJson = await readPackageJson(absoluteRepo)
-  const files = await listSourceFiles(absoluteRepo)
+  const files = await listSourceFiles(absoluteRepo, options)
   const dependencies = {
     ...asRecord(packageJson.dependencies),
     ...asRecord(packageJson.devDependencies)
@@ -66,7 +70,7 @@ async function readPackageJson(repoPath: string): Promise<Record<string, unknown
   return JSON.parse(await readFile(packagePath, 'utf8')) as Record<string, unknown>
 }
 
-async function listSourceFiles(repoPath: string): Promise<string[]> {
+async function listSourceFiles(repoPath: string, options: SourceDiscoveryOptions): Promise<string[]> {
   const out: string[] = []
 
   async function walk(dir: string): Promise<void> {
@@ -76,7 +80,7 @@ async function listSourceFiles(repoPath: string): Promise<string[]> {
       const info = await stat(full)
       if (info.isDirectory()) {
         await walk(full)
-      } else if (sourceExtensions.has(path.extname(entry))) {
+      } else if (sourceExtensions.has(path.extname(entry)) && (options.includeTestSources || !isTestSourceFile(path.relative(repoPath, full)))) {
         out.push(full)
       }
     }
@@ -84,6 +88,11 @@ async function listSourceFiles(repoPath: string): Promise<string[]> {
 
   await walk(repoPath)
   return out.sort()
+}
+
+function isTestSourceFile(relativePath: string): boolean {
+  const normalized = relativePath.split(path.sep).join('/')
+  return /(^|\/)(tests?|__tests__)\/|\.test\.|\.spec\./i.test(normalized)
 }
 
 function detectFramework(dependencies: Record<string, string>, files: string[]): string {

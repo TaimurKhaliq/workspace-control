@@ -210,9 +210,20 @@ function inferScreenName(snapshot: RuntimeDomSnapshot): string {
 }
 
 function navItems(snapshot: RuntimeDomSnapshot): RuntimeDomControl[] {
-  const landmarkNavText = snapshot.landmarks.filter((item) => item.role === 'navigation' || item.tagName === 'nav').map((item) => item.visibleText).join(' ')
-  if (!landmarkNavText) return snapshot.links.slice(0, 12)
-  return snapshot.links.filter((link) => landmarkNavText.includes(link.visibleText ?? link.accessibleName ?? '')).slice(0, 24)
+  const landmarkNavText = snapshot.landmarks
+    .filter((item) => item.role === 'navigation' || item.tagName === 'nav' || item.tagName === 'aside')
+    .map((item) => item.visibleText)
+    .join(' ')
+  const candidates = [...snapshot.links, ...snapshot.buttons, ...snapshot.tabs]
+  if (!landmarkNavText) {
+    return candidates
+      .filter((control) => /home|summary|dashboard|projects|timeline|scenarios|crawl|workflow|issues|fix packets|screenshots|graph|raw json|settings|reports|users|articles|login|sign in/i.test(labelOf(control)))
+      .slice(0, 24)
+  }
+  return candidates.filter((control) => {
+    const label = labelOf(control)
+    return label && landmarkNavText.includes(label)
+  }).slice(0, 24)
 }
 
 function routeCandidates(snapshot: RuntimeDomSnapshot): string[] {
