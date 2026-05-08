@@ -36,6 +36,8 @@ import { inspectUrl, writeRuntimeDomArtifacts } from '../runtime/domSnapshot.js'
 import { buildRuntimeAppModel, buildRuntimeIntentContext } from '../runtime/runtimeAppModel.js'
 import type { DiscoveryMode, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent } from '../types.js'
 import { runVerificationMatrix } from '../verification/matrix.js'
+import { runProductExperienceCritic } from '../critic/productExperienceCritic.js'
+import type { ProductExperienceCriticMode } from '../types.js'
 
 loadSnifferEnv()
 
@@ -137,8 +139,9 @@ async function main(): Promise<void> {
     let appIntent = buildDeterministicIntent(sourceGraph)
     const runtimeValidationSourceGraph = sourceGraphForRuntimeValidation(sourceGraph, scenarioSelection)
     const intentMode = (typeof args['intent-mode'] === 'string' ? args['intent-mode'] : 'deterministic') as ProductIntentMode
+    const productExperienceMode = productExperienceCriticModeArg(args)
     const providerName = typeof args.provider === 'string' ? args.provider : args['use-llm'] ? 'auto' : 'auto'
-    const provider = args['use-llm'] || args['critic-mode'] === 'llm' || args['ux-critic'] === 'llm' || intentMode === 'llm' || intentMode === 'auto' || providerName === 'mock'
+    const provider = args['use-llm'] || args['critic-mode'] === 'llm' || args['ux-critic'] === 'llm' || productExperienceMode === 'llm' || productExperienceMode === 'auto' || intentMode === 'llm' || intentMode === 'auto' || providerName === 'mock'
       ? createLlmProvider(providerName)
       : undefined
     if (args['use-llm']) {
@@ -240,9 +243,24 @@ async function main(): Promise<void> {
       const existingSlugs = new Set(scenarioRuns.map((run) => run.slug))
       scenarioRuns = [...scenarioRuns, ...executedGenericRuns.filter((run) => !existingSlugs.has(run.slug))]
     }
+    const productExperience = await runProductExperienceCritic({
+      mode: productExperienceMode,
+      provider,
+      sourceGraph,
+      crawlGraph: activeCrawlGraph,
+      appProfile,
+      appSubtype: scenarioSelection.appSubtype,
+      productIntent: productIntent.productIntent,
+      runtimeDomSnapshot,
+      runtimeAppModel,
+      scenarioRuns,
+      productGoal,
+      reportDir,
+      projectId: ctx.projectId
+    })
     const scenarioRuntimeIssues = scenarioIssues(scenarioRuns)
-    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues]
-    const shouldUseLlmTriage = (criticMode === 'llm' || uxMode === 'llm') && provider?.triageIssues
+    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues, ...productExperience.issues]
+    const shouldUseLlmTriage = (criticMode === 'llm' || uxMode === 'llm' || productExperienceMode === 'llm') && provider?.triageIssues
     let triagedIssues = shouldUseLlmTriage
       ? await provider.triageIssues!({
         sourceGraph,
@@ -282,6 +300,7 @@ async function main(): Promise<void> {
       promptConsistency,
       productIntent: productIntent.productIntent,
       productIntentFindings: productIntent.productIntentFindings,
+      productExperience,
       ...critic,
       rawFindings,
       issues: triagedIssues,
@@ -551,6 +570,11 @@ function discoveryModeArg(args: Record<string, string | boolean>): DiscoveryMode
   return value === 'source' || value === 'runtime' || value === 'hybrid' ? value : 'hybrid'
 }
 
+function productExperienceCriticModeArg(args: Record<string, string | boolean>): ProductExperienceCriticMode {
+  const value = typeof args['product-experience-critic'] === 'string' ? args['product-experience-critic'] : undefined
+  return value === 'deterministic' || value === 'llm' || value === 'auto' || value === 'off' ? value : 'off'
+}
+
 function sourceDiscoveryOptions(args: Record<string, string | boolean>) {
   return {
     includeTestSources: boolArg(args, 'include-test-sources')
@@ -700,7 +724,7 @@ Commands:
   sniffer inspect-url --url <url> | --project <id>
   sniffer discover --repo <path> | --project <id> [--include-test-sources]
   sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
-  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
+  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--product-experience-critic off|deterministic|llm|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
   sniffer repair-proof --issue <issue_id> --report <path> --agent manual
   sniffer apply-fix [--issue <issue_id>] [--report <path>] [--agent manual|mock|codex]

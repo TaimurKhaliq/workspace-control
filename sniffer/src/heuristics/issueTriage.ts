@@ -23,10 +23,12 @@ export function triageIssues(input: TriageInput): Issue[] {
   if (loading) groups.push(loading)
   const productIntent = groupedByTypes(raw, ['product_intent_gap'], 'Plan run history is not usable for repeated prompt workflows', 'Product-intent evidence indicates repeated prompt workflows need browseable/reopenable plan runs.', 'Improve plan run browsing so users can see prior prompts by time/target/status, reopen previous plan bundles, and copy handoff prompts from prior runs.')
   if (productIntent) groups.push(productIntent)
+  const productExperience = productExperienceGroup(raw)
+  if (productExperience) groups.push(productExperience)
 
   const groupedIds = new Set(groups.flatMap((group) => childIds(group)))
   const ungrouped = raw.filter((issue) => !issue.issue_id || !groupedIds.has(issue.issue_id))
-    .filter((issue) => !['workflow_confusion', 'layout_issue', 'visual_clutter', 'accessibility_issue', 'usability_issue', 'product_intent_gap', 'semantic_mismatch', 'stale_output', 'api_error', 'console_error', 'network_error', 'functional_bug', 'inconclusive', 'test_bug'].includes(issue.type))
+    .filter((issue) => !['workflow_confusion', 'layout_issue', 'visual_clutter', 'accessibility_issue', 'usability_issue', 'product_intent_gap', 'product_experience_gap', 'semantic_mismatch', 'stale_output', 'api_error', 'console_error', 'network_error', 'functional_bug', 'inconclusive', 'test_bug'].includes(issue.type))
   return [...groups, ...ungrouped]
 }
 
@@ -82,6 +84,22 @@ function groupedByTitle(raw: Issue[], titlePattern: RegExp, title: string, descr
   const items = raw.filter((issue) => titlePattern.test(issue.title))
   if (items.length === 0) return undefined
   return groupIssue({ title, description, severity: strongest(items), type: 'usability_issue', items, suggestedFixPrompt })
+}
+
+function productExperienceGroup(raw: Issue[]): Issue | undefined {
+  const items = raw.filter((issue) => issue.type === 'product_experience_gap')
+  if (items.length === 0) return undefined
+  const hasRunContext = items.some((issue) => issue.evidence.some((item) => /context_clarity|context_gap|run\/report/i.test(item)))
+  const title = hasRunContext
+    ? 'Run/report screens need clearer product context'
+    : 'Product experience does not fully match the intended workflow'
+  const description = hasRunContext
+    ? 'Product Experience Critic found screens where users may not know which run/report, project, timestamp, or status they are inspecting.'
+    : 'Product Experience Critic found evidence-backed gaps between screen behavior and the intended user job.'
+  const suggestedFixPrompt = hasRunContext
+    ? 'Add compact run/report context to affected screens: latest/selected run, project/ad hoc context, generated timestamp, status, and nearby evidence links.'
+    : 'Align the affected screen with its intended user job, keeping fixes evidence-backed and avoiding purely aesthetic redesign.'
+  return groupIssue({ title, description, severity: strongest(items), type: 'product_experience_gap', items, suggestedFixPrompt })
 }
 
 function groupIssue(input: {

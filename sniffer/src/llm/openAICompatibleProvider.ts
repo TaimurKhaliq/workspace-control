@@ -1,5 +1,5 @@
 import type { AppIntent } from '../types.js'
-import type { Issue, IssueTriageContext, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 
 type ApiStyle = 'responses' | 'chat_completions' | 'auto'
@@ -101,6 +101,32 @@ export class OpenAICompatibleProvider implements LlmProvider {
     return parseJsonFromText<ProductIntentModel>(text)
   }
 
+  async critiqueProductExperience(context: ProductExperienceContext): Promise<ProductExperienceDecision> {
+    if (!this.isConfigured()) throw new Error('LLM provider is not configured')
+    const compact = {
+      ...context,
+      screenshot_binary_included: false,
+      dom_summary: context.dom_summary.slice(0, 18),
+      visible_controls: context.visible_controls.slice(0, 30),
+      source_evidence: context.source_evidence.slice(0, 12),
+      runtime_evidence: context.runtime_evidence.slice(0, 12),
+      candidate_findings: context.candidate_findings?.slice(0, 8)
+    }
+    const prompt = [
+      'You are an intent-aware Product Experience Critic for Sniffer.',
+      'Question: Given what this app is trying to do, does this screen make sense for the user job being tested?',
+      'Use product intent, app profile, workflow/page intent, scenario/runtime evidence, DOM summary, screenshot path/metadata, and the rubric implied by the candidate findings.',
+      'Do not freestyle redesign. Do not report vague visual opinions. Report only evidence-backed product/UX mismatches.',
+      'Distinguish aesthetic preference, generic UX improvement, product intent mismatch, workflow mismatch, missing context, misleading information architecture, and blocked/unclear next step.',
+      'If unsure, choose inconclusive or non_issues. Prefer minor_gap over major_gap unless the user cannot understand or complete the job.',
+      'Return JSON only matching this exact shape:',
+      '{"screen_name":"...","nav_label":"...","workflow_intent":"...","overall":{"classification":"aligned|minor_gap|major_gap|inconclusive","confidence":"low|medium|high","summary":"..."},"findings":[{"title":"...","type":"product_intent_mismatch|workflow_mismatch|context_gap|navigation_promise_gap|evidence_gap|information_hierarchy_gap|actionability_gap|empty_state_gap|safety_clarity_gap","severity":"low|medium|high|critical","rubric_ids":["..."],"expected":"...","observed":"...","evidence":["screenshot evidence","DOM evidence","workflow evidence"],"why_it_matters":"...","suggested_fix":"...","should_report":true}],"non_issues":[{"observation":"...","reason_not_reported":"..."}]}',
+      JSON.stringify(compact)
+    ].join('\n\n')
+    const text = await this.complete(prompt)
+    return parseJsonFromText<ProductExperienceDecision>(text)
+  }
+
   async inferRuntimeIntent(context: RuntimeIntentContext): Promise<RuntimeLlmIntent> {
     if (!this.isConfigured()) throw new Error('LLM provider is not configured')
     const prompt = [
@@ -156,7 +182,7 @@ export class OpenAICompatibleProvider implements LlmProvider {
       'You are triaging raw Sniffer UI QA findings into repair-sized groups.',
       'Group tiny missing-control findings into actionable themes. Preserve severe API issues. Mark likely locator/test issues as inconclusive in the evidence or status.',
       'Return JSON only with this shape:',
-      '{"issues":[{"severity":"critical|high|medium|low","type":"functional_bug|api_error|workflow_confusion|layout_issue|usability_issue|accessibility_issue|product_intent_gap|semantic_mismatch|stale_output|inconclusive","title":"...","description":"...","evidence":["..."],"suggestedFixPrompt":"...","screenshotPath":"..."}]}',
+      '{"issues":[{"severity":"critical|high|medium|low","type":"functional_bug|api_error|workflow_confusion|layout_issue|usability_issue|accessibility_issue|product_intent_gap|product_experience_gap|semantic_mismatch|stale_output|inconclusive","title":"...","description":"...","evidence":["..."],"suggestedFixPrompt":"...","screenshotPath":"..."}]}',
       JSON.stringify(compact)
     ].join('\n\n')
     const text = await this.complete(prompt)

@@ -1,0 +1,102 @@
+[
+  {
+    "id": "intent_fit",
+    "name": "Intent fit",
+    "description": "The screen should support the user job implied by the selected navigation item or workflow.",
+    "applies_to": ["all"],
+    "evidence_required": ["nav label", "screen heading or DOM summary", "workflow/page intent"],
+    "example_good": "Run Timeline shows ordered phases for the selected audit run.",
+    "example_bad": "Run Timeline shows a generic latest-report card without timeline content.",
+    "default_severity": "medium"
+  },
+  {
+    "id": "context_clarity",
+    "name": "Context clarity",
+    "description": "The screen identifies the current object being inspected, such as project, report, run, timestamp, and status.",
+    "applies_to": ["reports", "runs", "projects"],
+    "evidence_required": ["DOM text", "current screen", "expected context"],
+    "example_good": "The page says Latest run, Workspace Control, generated timestamp, and passed status.",
+    "example_bad": "The page lists phases without saying which run or report produced them.",
+    "default_severity": "medium"
+  },
+  {
+    "id": "workflow_continuity",
+    "name": "Workflow continuity",
+    "description": "Multi-step workflows show what happened before, where the user is now, and what to inspect next.",
+    "applies_to": ["scenarios", "crawl", "repair", "runs"],
+    "evidence_required": ["scenario trace or crawl action", "visible status", "next action"],
+    "example_good": "Scenario detail shows each step, status, screenshot, and failed assertion.",
+    "example_bad": "The screen only shows a final state with no preceding actions.",
+    "default_severity": "medium"
+  },
+  {
+    "id": "evidence_proximity",
+    "name": "Evidence proximity",
+    "description": "Claims in QA/reporting tools should be close to screenshots, traces, issues, or fix packets that support them.",
+    "applies_to": ["qa_reports", "issues", "screenshots", "graphs"],
+    "evidence_required": ["claim text", "evidence link or screenshot context"],
+    "example_good": "A failed scenario step includes its screenshot and evidence text.",
+    "example_bad": "The page states a scenario failed but the screenshot is only available elsewhere with no context.",
+    "default_severity": "medium"
+  },
+  {
+    "id": "information_hierarchy",
+    "name": "Information hierarchy",
+    "description": "Primary content is prominent and raw/debug detail stays behind tabs, details, or explicit debug views.",
+    "applies_to": ["all"],
+    "evidence_required": ["DOM summary", "headings", "visible controls"],
+    "example_good": "Summary cards show counts first, with Raw JSON behind a dedicated nav item.",
+    "example_bad": "Users must read raw JSON to understand whether a run passed.",
+    "default_severity": "low"
+  },
+  {
+    "id": "navigation_promise",
+    "name": "Navigation promise",
+    "description": "A navigation item should deliver content that matches its label and make that content identity clear.",
+    "applies_to": ["navigation"],
+    "evidence_required": ["nav label", "screen heading or page copy"],
+    "example_good": "Screenshots opens an evidence gallery labelled Screenshots.",
+    "example_bad": "Run Timeline opens a generic report page that never mentions timeline or phases.",
+    "default_severity": "medium"
+  },
+  {
+    "id": "state_empty_honesty",
+    "name": "State and empty-state honesty",
+    "description": "When content is empty or unavailable, explain why and what creates or loads it.",
+    "applies_to": ["empty_states", "reports", "lists"],
+    "evidence_required": ["empty-state text", "next action"],
+    "example_good": "No issues found explains the checks that ran and links to scenarios/screenshots.",
+    "example_bad": "No data is shown without explaining whether the app has not been audited yet.",
+    "default_severity": "low"
+  },
+  {
+    "id": "actionability",
+    "name": "Actionability",
+    "description": "The screen offers the next appropriate action such as open, copy, verify, generate, or inspect.",
+    "applies_to": ["issues", "fix_packets", "reports", "screenshots"],
+    "evidence_required": ["visible buttons", "workflow intent"],
+    "example_good": "A fix packet exposes Copy prompt and verification command.",
+    "example_bad": "A repair issue is shown without any way to copy or inspect the fix packet.",
+    "default_severity": "medium"
+  },
+  {
+    "id": "visual_comprehension",
+    "name": "Visual comprehension",
+    "description": "Related information is grouped, scan-friendly, and long paths/data are controlled.",
+    "applies_to": ["all"],
+    "evidence_required": ["screenshot or DOM layout evidence"],
+    "example_good": "Long paths truncate in list cards but remain available via title or detail.",
+    "example_bad": "A local path overflows its card and hides adjacent controls.",
+    "default_severity": "low"
+  },
+  {
+    "id": "safety_clarity",
+    "name": "Safety clarity",
+    "description": "Tools that can run agents or commands clearly distinguish manual, mock, Codex, and destructive behavior.",
+    "applies_to": ["repair", "settings", "agent_tools"],
+    "evidence_required": ["agent controls", "safety/status text"],
+    "example_good": "Settings says Codex is manual/unconfigured and no secrets are shown.",
+    "example_bad": "An Apply Fix button appears without explaining whether it will execute an agent.",
+    "default_severity": "high"
+  }
+]

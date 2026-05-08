@@ -17,6 +17,7 @@ export type IssueType =
   | 'workflow_confusion'
   | 'visual_clutter'
   | 'product_intent_gap'
+  | 'product_experience_gap'
   | 'semantic_mismatch'
   | 'stale_output'
   | 'test_bug'
@@ -528,6 +529,7 @@ export interface SnifferReport {
   generatedScenarios?: GeneratedScenario[]
   productIntent?: ProductIntentModel
   productIntentFindings?: ProductIntentFinding[]
+  productExperience?: ProductExperienceResult
   promptConsistency?: PromptConsistencyResult
   runtimeSurfaceMatches: RuntimeSurfaceMatch[]
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
@@ -735,6 +737,119 @@ export interface ProductIntentContext {
   user_product_goal?: string
   question_for_intent: string
   omitted_counts: Record<string, number>
+}
+
+export type ProductExperienceCriticMode = 'off' | 'deterministic' | 'llm' | 'auto'
+export type ProductExperienceClassification = 'aligned' | 'minor_gap' | 'major_gap' | 'inconclusive'
+export type ProductExperienceFindingType =
+  | 'product_intent_mismatch'
+  | 'workflow_mismatch'
+  | 'context_gap'
+  | 'navigation_promise_gap'
+  | 'evidence_gap'
+  | 'information_hierarchy_gap'
+  | 'actionability_gap'
+  | 'empty_state_gap'
+  | 'safety_clarity_gap'
+
+export interface ProductExperienceRubricItem {
+  id: string
+  name: string
+  description: string
+  applies_to: string[]
+  evidence_required: string[]
+  example_good: string
+  example_bad: string
+  default_severity: Severity
+}
+
+export interface ProductExperiencePageIntent {
+  screen_name: string
+  nav_label: string
+  page_intent: string
+  workflow_intent: string
+  expected_user_questions: string[]
+  expected_primary_content: string[]
+  expected_next_actions: string[]
+  required_context: string[]
+  evidence_keywords: string[]
+}
+
+export interface ProductExperienceContext {
+  app_name: string
+  app_profile?: AppProfile
+  app_subtype?: AppSubtype
+  product_intent_summary?: string
+  primary_user_jobs: string[]
+  current_screen_name: string
+  nav_label_clicked: string
+  page_intent: string
+  workflow_intent: string
+  scenario_name?: string
+  scenario_step?: string
+  user_goal?: string
+  expected_user_questions: string[]
+  expected_primary_content: string[]
+  expected_next_actions: string[]
+  required_context: string[]
+  screenshot_path?: string
+  screenshot_artifact_url?: string
+  dom_summary: string[]
+  headings: string[]
+  visible_controls: string[]
+  visible_status_text: string[]
+  visible_empty_states: string[]
+  visible_errors: string[]
+  active_nav_state?: string
+  run_project_report_context_visible: string[]
+  source_evidence: string[]
+  runtime_evidence: string[]
+  related_issues: string[]
+  related_fix_packets: string[]
+  candidate_findings?: ProductExperienceFinding[]
+}
+
+export interface ProductExperienceFinding {
+  title: string
+  type: ProductExperienceFindingType
+  severity: Severity
+  rubric_ids: string[]
+  expected: string
+  observed: string
+  evidence: string[]
+  why_it_matters: string
+  suggested_fix: string
+  should_report: boolean
+  screenshotPath?: string
+}
+
+export interface ProductExperienceDecision {
+  screen_name: string
+  nav_label: string
+  workflow_intent: string
+  overall: {
+    classification: ProductExperienceClassification
+    confidence: ProductIntentConfidence
+    summary: string
+  }
+  findings: ProductExperienceFinding[]
+  non_issues: Array<{
+    observation: string
+    reason_not_reported: string
+  }>
+}
+
+export interface ProductExperienceResult {
+  mode: ProductExperienceCriticMode
+  screensReviewed: number
+  aligned: number
+  minorGaps: number
+  majorGaps: number
+  inconclusive: number
+  rubric: ProductExperienceRubricItem[]
+  contexts: ProductExperienceContext[]
+  decisions: ProductExperienceDecision[]
+  issues: Issue[]
 }
 
 export interface IssueTriageContext {

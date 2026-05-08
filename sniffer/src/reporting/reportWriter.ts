@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppIntent, AppProfile, AppSubtype, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, DiscoveryMode, GeneratedScenario, Issue, LocatorRepairResult, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent, RuntimeWorkflowVerification, ScenarioPackSelection, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { AppIntent, AppProfile, AppSubtype, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, DiscoveryMode, GeneratedScenario, Issue, LocatorRepairResult, ProductExperienceResult, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent, RuntimeWorkflowVerification, ScenarioPackSelection, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 import { enrichIssues } from '../repair/issueMetadata.js'
@@ -21,6 +21,7 @@ export async function writeAuditReports(reportDir: string, input: {
   generatedScenarios?: GeneratedScenario[]
   productIntent?: ProductIntentModel
   productIntentFindings?: ProductIntentFinding[]
+  productExperience?: ProductExperienceResult
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
   scenarioRuns?: ScenarioRun[]
   promptConsistency?: PromptConsistencyResult
@@ -68,6 +69,7 @@ export async function writeAuditReports(reportDir: string, input: {
     llmRuntimeIntent: input.llmRuntimeIntent,
     locatorFailures: input.locatorFailures ?? [],
     generatedScenarios: input.generatedScenarios ?? [],
+    productExperience: input.productExperience,
     scenarioRuns: input.scenarioRuns ?? [],
     criticDecisions: input.criticDecisions ?? [],
     uxCriticFindings: input.uxCriticFindings ?? [],
@@ -83,6 +85,7 @@ export async function writeAuditReports(reportDir: string, input: {
   if (input.runtimeDomSnapshot) await writeJson(path.join(reportDir, 'runtime_dom_snapshot.json'), input.runtimeDomSnapshot)
   if (input.runtimeAppModel) await writeJson(path.join(reportDir, 'runtime_app_model.json'), input.runtimeAppModel)
   if (input.productIntent) await writeJson(path.join(reportDir, 'product_intent.json'), input.productIntent)
+  if (input.productExperience) await writeJson(path.join(reportDir, 'product_experience_critic.json'), input.productExperience)
   await writeJson(path.join(reportDir, 'crawl_graph.json'), crawlGraph)
   await writeJson(path.join(reportDir, 'latest_report.json'), report)
   await writeFile(path.join(reportDir, 'latest_report.md'), renderMarkdown(report), 'utf8')
@@ -220,6 +223,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '## Product Intent Gaps',
     '',
     renderProductIntentGaps(report),
+    '',
+    '## Product Experience Critic',
+    '',
+    renderProductExperienceCritic(report),
     '',
     '## UX/Layout Issues',
     '',
@@ -611,6 +618,46 @@ function renderProductIntentGaps(report: SnifferReport): string {
     })
     .filter(Boolean)
     .join('\n\n') || 'No product-intent gaps found.'
+}
+
+function renderProductExperienceCritic(report: SnifferReport): string {
+  const result = report.productExperience
+  if (!result || result.mode === 'off') return 'Product Experience Critic was not run.'
+  const screenBlocks = result.decisions.map((decision) => {
+    const findings = decision.findings.filter((finding) => finding.should_report)
+    return [
+      `### ${decision.screen_name}`,
+      '',
+      `- Nav label: ${decision.nav_label}`,
+      `- Intended job: ${decision.workflow_intent}`,
+      `- Classification: ${decision.overall.classification}`,
+      `- Confidence: ${decision.overall.confidence}`,
+      `- Summary: ${decision.overall.summary}`,
+      findings.length
+        ? [
+          '- Findings:',
+          ...findings.map((finding) => [
+            `  - ${finding.severity} ${finding.type}: ${finding.title}`,
+            `    - Rubric: ${finding.rubric_ids.join(', ') || 'none'}`,
+            `    - Expected: ${finding.expected}`,
+            `    - Observed: ${finding.observed}`,
+            `    - Evidence: ${finding.evidence.join('; ') || 'none'}`,
+            finding.screenshotPath ? `    - Screenshot: ${finding.screenshotPath}` : undefined
+          ].filter(Boolean).join('\n'))
+        ].join('\n')
+        : '- Findings: none'
+    ].join('\n')
+  }).join('\n\n')
+  return [
+    `- Mode: ${result.mode}`,
+    `- Screens reviewed: ${result.screensReviewed}`,
+    `- Aligned: ${result.aligned}`,
+    `- Minor gaps: ${result.minorGaps}`,
+    `- Major gaps: ${result.majorGaps}`,
+    `- Inconclusive: ${result.inconclusive}`,
+    '',
+    screenBlocks || 'No screen decisions recorded.'
+  ].join('\n')
 }
 
 function renderUxCriticSummary(report: SnifferReport): string {

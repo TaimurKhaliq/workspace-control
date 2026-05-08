@@ -71,6 +71,7 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
     'broken_interaction',
     'workflow_confusion',
     'product_intent_gap',
+    'product_experience_gap',
     'usability_issue',
     'layout_issue',
     'accessibility_issue',
@@ -98,6 +99,11 @@ export function inferSuspectedFiles(issue: Issue, sourceGraph: SourceGraph): str
     files.add('../server/routes/plan_bundles.py')
     files.add('../server/planner.py')
     files.add('../app/services/semantic_enrichment.py')
+  }
+  if (issue.type === 'product_experience_gap') {
+    files.add('src/App.tsx')
+    files.add('src/components/AppShell.tsx')
+    files.add('src/styles.css')
   }
 
   return rankAndLimitSuspectedFiles(issue, sourceGraph, [...files])
@@ -241,6 +247,30 @@ function buildFixPrompt(issue: Issue, suspectedFiles: string[]): string {
       '- Do not change planner/proposal behavior unless the UI/API wiring bug requires it.',
       '- Do not delete workspaces, repos, baselines, reports, or user data.',
       '- Add or update focused tests for prompt/output consistency.'
+    ].join('\n')
+  }
+  if (issue.type === 'product_experience_gap') {
+    return [
+      `Fix Sniffer product experience issue: ${issue.title}.`,
+      '',
+      `Severity: ${issue.severity}`,
+      '',
+      issue.description,
+      '',
+      `Evidence:\n${issue.evidence.map((item) => `- ${item}`).join('\n')}`,
+      '',
+      'Expected behavior:',
+      '- The affected screen should match the user job promised by its navigation label or workflow.',
+      '- Run/report pages should make latest/selected run, project/ad hoc context, timestamp/status, and related evidence clear.',
+      '- Keep raw/debug detail behind explicit debug views and avoid aesthetic-only redesign.',
+      '',
+      `Suspected files:\n${suspectedFiles.map((file) => `- ${file}`).join('\n') || '- unknown'}`,
+      '',
+      'Constraints:',
+      '- Do not change Sniffer CLI behavior.',
+      '- Do not expose secrets or raw local paths in browser-visible URLs.',
+      '- Keep UI changes focused on the affected screen and evidence-backed workflow clarity.',
+      '- Add or update focused tests for the product experience behavior.'
     ].join('\n')
   }
   return [

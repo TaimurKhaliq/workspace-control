@@ -60,6 +60,28 @@ describe('issue triage', () => {
     expect(findings[0].type).toBe('inconclusive')
     expect(findings[0].evidence.join('\n')).toContain('scenario locator may be too strict')
   })
+
+  it('groups product experience gaps into repair themes', () => {
+    const groups = triageIssues({
+      rawFindings: [{
+        issue_id: 'run-context',
+        severity: 'medium',
+        type: 'product_experience_gap',
+        title: 'Run Timeline lacks clear run/report context',
+        description: 'Run context is missing.',
+        evidence: ['rubric_id: context_clarity', 'finding_type: context_gap'],
+        suggestedFixPrompt: 'Add run context.'
+      }],
+      sourceGraph: graph(),
+      workflowVerifications: []
+    })
+
+    expect(groups).toHaveLength(1)
+    expect(groups[0]).toMatchObject({
+      type: 'product_experience_gap',
+      title: 'Run/report screens need clearer product context'
+    })
+  })
 })
 
 function scenarioIssue(scenario: string, control: string): Issue {

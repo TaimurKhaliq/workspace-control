@@ -56,6 +56,37 @@ describe('generateFixPackets', () => {
     expect(packets[0].suspected_files).toContain('src/App.tsx')
     await expect(readFile(path.join(dir, 'fix_packets', `${packets[0].issue_id}.md`), 'utf8')).resolves.toContain('card/table layout')
   })
+
+  it('generates product experience fix packets', async () => {
+    const dir = await tempDir()
+    const reportPath = path.join(dir, 'latest_report.json')
+    const peReport = report()
+    peReport.sourceGraph.uiSurfaces = [{
+      file: 'src/components/ReportTimeline.tsx',
+      surface_type: 'unknown_ui_section',
+      display_name: 'Run Timeline',
+      evidence: ['Run Timeline'],
+      relatedButtons: [],
+      relatedInputs: [],
+      confidence: 0.9
+    }]
+    peReport.issues = [{
+      issue_id: 'run-context',
+      severity: 'medium',
+      type: 'product_experience_gap',
+      title: 'Run Timeline lacks clear run/report context',
+      description: 'Screen: Run Timeline\nWorkflow intent: Replay what Sniffer did.',
+      evidence: ['rubric_id: context_clarity', 'screen: Run Timeline'],
+      suggestedFixPrompt: 'Add run context.'
+    }]
+    await writeFile(reportPath, JSON.stringify(peReport, null, 2))
+
+    const packets = await generateFixPackets(reportPath)
+
+    expect(packets).toHaveLength(1)
+    expect(packets[0].title).toBe('Run/report screens need clearer product context')
+    await expect(readFile(path.join(dir, 'fix_packets', `${packets[0].issue_id}.md`), 'utf8')).resolves.toContain('latest/selected run')
+  })
 })
 
 function report(): SnifferReport {

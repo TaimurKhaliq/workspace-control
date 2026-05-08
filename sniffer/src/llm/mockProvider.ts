@@ -1,4 +1,4 @@
-import type { AppIntent, Issue, IssueTriageContext, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, UxCriticContext, UxCriticFinding } from '../types.js'
+import type { AppIntent, Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, UxCriticContext, UxCriticFinding } from '../types.js'
 import type { SnifferCriticContext, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 import { deterministicDecision } from '../critic/workflowCritic.js'
@@ -48,6 +48,33 @@ export class MockLlmProvider implements LlmProvider {
         'mock_llm_product_intent: structured product intent returned without external calls.'
       ],
       llmUsed: true
+    }
+  }
+
+  async critiqueProductExperience(context: ProductExperienceContext): Promise<ProductExperienceDecision> {
+    const reportable = (context.candidate_findings ?? []).filter((finding) => {
+      const text = `${finding.title} ${finding.observed} ${finding.evidence.join(' ')}`.toLowerCase()
+      return !/prettier|aesthetic|style preference|looks nicer|visual opinion/.test(text)
+    })
+    return {
+      screen_name: context.current_screen_name,
+      nav_label: context.nav_label_clicked,
+      workflow_intent: context.workflow_intent,
+      overall: {
+        classification: reportable.length === 0 ? 'aligned' : reportable.some((finding) => finding.severity === 'high' || finding.severity === 'critical') ? 'major_gap' : 'minor_gap',
+        confidence: 'high',
+        summary: reportable.length === 0
+          ? 'Mock product experience critic: no evidence-backed product gaps.'
+          : `Mock product experience critic confirmed ${reportable.length} evidence-backed product gap(s).`
+      },
+      findings: reportable.map((finding) => ({
+        ...finding,
+        evidence: [...finding.evidence, 'mock_product_experience_critic: confirmed from deterministic evidence'],
+        should_report: true
+      })),
+      non_issues: (context.candidate_findings ?? []).length > reportable.length
+        ? [{ observation: 'Vague aesthetic observation', reason_not_reported: 'Mock critic rejects aesthetic-only comments without workflow evidence.' }]
+        : []
     }
   }
 
