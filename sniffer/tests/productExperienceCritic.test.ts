@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import { MockLlmProvider } from '../src/llm/mockProvider.js'
+import { OpenAICompatibleProvider } from '../src/llm/openAICompatibleProvider.js'
 import { buildProductExperienceContexts, deterministicProductExperienceDecision, loadProductExperienceRubric, runProductExperienceCritic, snifferDashboardPageIntents } from '../src/critic/productExperienceCritic.js'
-import type { AppProfile, CrawlGraph, ProductExperienceContext, ProductExperienceFinding, SourceGraph } from '../src/types.js'
+import type { AppProfile, CrawlGraph, ProductExperienceContext, ProductExperienceDecision, ProductExperienceFinding, SourceGraph } from '../src/types.js'
+import type { LlmProvider } from '../src/llm/provider.js'
 
 describe('Product Experience Critic', () => {
   it('loads the product experience rubric', async () => {
@@ -65,6 +67,387 @@ describe('Product Experience Critic', () => {
     expect(result.decisions.some((decision) => decision.findings.some((finding) => finding.evidence.some((item) => item.includes('mock_product_experience_critic'))))).toBe(true)
   })
 
+  it('uses the LLM as the evaluator in llm mode when configured', async () => {
+    const provider = new SpyProductExperienceProvider(() => llmFindingDecision('Run Timeline lacks clear run/report context'))
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did', '1 Source discovery passed']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(provider.contexts.length).toBeGreaterThan(0)
+    expect(result.llmScreensReviewed).toBeGreaterThan(0)
+    expect(result.decisions[0].llm_used).toBe(true)
+    expect(result.issues.some((issue) => issue.type === 'product_experience_gap')).toBe(true)
+  })
+
+  it('marks an openai-compatible fixture response as real LLM review', async () => {
+    const provider = new OpenAICompatibleProvider({
+      SNIFFER_LLM_BASE_URL: 'https://api.openai.com/v1',
+      SNIFFER_LLM_API_KEY: 'test-key',
+      SNIFFER_LLM_MODEL: 'gpt-test',
+      SNIFFER_LLM_API_STYLE: 'responses'
+    }, async () => new Response(JSON.stringify({ output: [{ content: [{ text: JSON.stringify(alignedDecision(timelineContext(['RUN TIMELINE', 'Latest run generated 5/7/2026 with status passed.']))) }] }] }), { status: 200 }))
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did', 'Latest run generated 5/7/2026 with status passed.']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.providerName).toBe('openai-compatible')
+    expect(result.status).toBe('completed')
+    expect(result.realLlmScreensReviewed).toBeGreaterThan(0)
+    expect(result.decisions[0].real_llm_used).toBe(true)
+  })
+
+  it('uses executed scenario screenshots as product critic context', async () => {
+    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context))
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['SUMMARY']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [scenarioRunWithTrace('Graph Explorer', '#graph')],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const graphContext = provider.contexts.find((context) => context.current_screen_name === 'Graph Explorer')
+    expect(graphContext?.scenario_name).toBe('Dashboard navigation smoke test')
+    expect(graphContext?.scenario_step).toBe('click Graph Explorer')
+    expect(graphContext?.scenario_screenshot_used).toBe(true)
+    expect(graphContext?.screenshot_path).toContain('graph-explorer.png')
+    expect(result.decisions.find((decision) => decision.screen_name === 'Graph Explorer')?.scenario_screenshot_used).toBe(true)
+  })
+
+  it('still calls the LLM with low context sufficiency after enrichment', async () => {
+    const provider = new SpyProductExperienceProvider((context) => ({
+      ...alignedDecision(context),
+      overall: { classification: 'inconclusive', confidence: 'low', summary: 'Context is too weak to judge.' }
+    }))
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: { ...sourceGraph(), uiSurfaces: [] },
+      crawlGraph: { ...crawlGraph([]), states: [{ ...crawlGraph([]).states[0], screenshotPath: undefined, primaryVisibleText: [], visible: [] }], screenshots: [] },
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const timeline = provider.contexts.find((context) => context.current_screen_name === 'Run Timeline')
+    expect(timeline?.context_sufficiency).toBe('low')
+    expect(timeline?.context_warnings.join('\n')).toContain('context_sufficiency=low')
+    expect(result.decisions[0].overall.classification).toBe('inconclusive')
+  })
+
+  it('does not call the LLM in deterministic mode', async () => {
+    const provider = new SpyProductExperienceProvider(() => llmFindingDecision('Should not be called'))
+
+    await runProductExperienceCritic({
+      mode: 'deterministic',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did', '1 Source discovery passed']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(provider.contexts).toHaveLength(0)
+  })
+
+  it('marks llm mode as not_run when the provider is unavailable', async () => {
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.status).toBe('not_run')
+    expect(result.notRunReason).toContain('LLM provider unavailable')
+    expect(result.issues).toHaveLength(0)
+    expect(result.decisions).toHaveLength(0)
+  })
+
+  it('marks llm mode as provider_error when provider preflight fails', async () => {
+    const provider = new SpyProductExperienceProvider(() => llmFindingDecision('Should not be called'))
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      providerPreflightError: 'LLM provider preflight failed status 401: Incorrect API key provided. Set SNIFFER_LLM_API_KEY or run sniffer providers check --provider openai-compatible.',
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(provider.contexts).toHaveLength(0)
+    expect(result.status).toBe('provider_error')
+    expect(result.notRunReason).toContain('preflight failed')
+    expect(result.decisions.length).toBeGreaterThan(0)
+    expect(result.decisions[0].llm_request_status).toBe('provider_error')
+    expect(result.decisions[0].llm_used).toBe(false)
+  })
+
+  it('marks mock provider LLM review as not real LLM', async () => {
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider: new MockLlmProvider(),
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did', '1 Source discovery passed']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.status).toBe('not_real_llm')
+    expect(result.providerName).toBe('mock')
+    expect(result.realLlmScreensReviewed).toBe(0)
+    expect(result.llmScreensReviewed).toBeGreaterThan(0)
+  })
+
+  it('sets vision_used when provider metadata supports vision and screenshots exist', async () => {
+    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context), { visionSupported: true })
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did', 'Latest run generated 5/7/2026 with status passed for project Ad hoc.']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(provider.contexts[0].vision_used).toBe(true)
+    expect(result.visionScreensReviewed).toBeGreaterThan(0)
+  })
+
+  it('sets honest non-vision reason when provider wrapper lacks image input', async () => {
+    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context))
+    await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did', 'Latest run generated 5/7/2026 with status passed for project Ad hoc.']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(provider.contexts[0].vision_used).toBe(false)
+    expect(provider.contexts[0].vision_not_used_reason).toBe('provider wrapper does not support image input')
+  })
+
+  it('suppresses vague aesthetic-only LLM findings', async () => {
+    const provider = new SpyProductExperienceProvider((context) => ({
+      ...alignedDecision(context),
+      overall: { classification: 'minor_gap', confidence: 'high', summary: 'Aesthetic concern only.' },
+      findings: [{ ...aestheticFinding(), severity: 'medium' }]
+    }))
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['RUN TIMELINE What Sniffer did', 'Latest run generated 5/7/2026 with status passed for project Ad hoc.']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues).toHaveLength(0)
+    expect(result.decisions[0].findings[0].should_report).toBe(false)
+  })
+
+  it('does not treat loaded report issue titles as current dashboard context gaps', async () => {
+    const provider = new SpyProductExperienceProvider((context) => {
+      if (!['Summary', 'Issues'].includes(context.current_screen_name)) return alignedDecision(context)
+      return {
+        ...alignedDecision(context),
+        overall: { classification: 'minor_gap', confidence: 'high', summary: 'Loaded report issue title mentions a context gap.' },
+        findings: [{
+          title: 'Issues screen lacks explicit run/report identity',
+          type: 'context_gap',
+          severity: 'medium',
+          rubric_ids: ['context_clarity'],
+          expected: 'Visible latest/selected run identity, project context, timestamp, and status.',
+          observed: 'The loaded report data contains an older issue title about context.',
+          evidence: ['DOM evidence: medium Issues screen lacks explicit run/report identity product experience gap', 'workflow evidence: Summary issue list'],
+          why_it_matters: 'Users need report provenance.',
+          suggested_fix: 'Add report context.',
+          should_report: true
+        }],
+        non_issues: []
+      }
+    })
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph([
+        'SUMMARY Latest Sniffer run',
+        'REPORT CONTEXT Ad hoc report Selected run: Latest report Review issues Generated 5/7/2026 RUN IDENTITY Latest report App URL http://127.0.0.1:4877 Repo /Users/demo/project…/sniffer/ui Scenarios 11/11 passed Issues 5 Screenshots 56',
+        'Top repair groups for selected report These findings belong to the run identified in the report context strip above.',
+        'medium Issues screen lacks explicit run/report identity product experience gap'
+      ]),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues.map((issue) => issue.title)).not.toContain('Issues screen lacks explicit run/report identity')
+    expect(result.decisions.find((decision) => decision.screen_name === 'Summary')?.findings[0]?.should_report).toBe(false)
+  })
+
+  it('does not treat embedded Raw JSON payload findings as current Raw JSON screen gaps', async () => {
+    const provider = new SpyProductExperienceProvider((context) => {
+      if (context.current_screen_name !== 'Raw JSON') return alignedDecision(context)
+      return {
+        ...alignedDecision(context),
+        overall: { classification: 'minor_gap', confidence: 'high', summary: 'The loaded payload contains old missing-control findings.' },
+        findings: [{
+          title: 'Missing runtime control for Inspect raw JSON workflow',
+          type: 'product_intent_mismatch',
+          severity: 'medium',
+          rubric_ids: ['intent_fit', 'workflow_continuity'],
+          expected: 'Raw JSON payload panel should be visible.',
+          observed: 'Loaded report payload contains deferredFindings mentioning a missing raw JSON panel.',
+          evidence: ['runtimeSurfaceMatches says raw_json_panel seenInRuntime no', 'rawFindings contains Missing runtime control for Inspect raw JSON'],
+          why_it_matters: 'Users need debug payload access.',
+          suggested_fix: 'Expose Raw JSON.',
+          should_report: true
+        }],
+        non_issues: []
+      }
+    })
+    const graph = crawlGraph([
+      'RAW JSON Latest report payload Use this only when you need the underlying report object.',
+      'Copy JSON { "deferredFindings": [{ "title": "Missing runtime control for Inspect raw JSON" }], "runtimeSurfaceMatches": [] }'
+    ])
+    graph.finalUrl = 'http://localhost:4877/#raw-json'
+    graph.states[0].url = 'http://localhost:4877/#raw-json'
+    graph.states[0].hashRoute = '#raw-json'
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: graph,
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues.map((issue) => issue.title)).not.toContain('Missing runtime control for Inspect raw JSON workflow')
+    expect(result.decisions.find((decision) => decision.screen_name === 'Raw JSON')?.findings[0]?.should_report).toBe(false)
+  })
+
+  it('does not report missing Raw JSON copy action when Copy JSON is visible', async () => {
+    const provider = new SpyProductExperienceProvider((context) => {
+      if (context.current_screen_name !== 'Raw JSON') return alignedDecision(context)
+      return {
+        ...alignedDecision(context),
+        overall: { classification: 'minor_gap', confidence: 'high', summary: 'Copy action appears missing.' },
+        findings: [{
+          title: 'Missing copy action control for Raw JSON screen',
+          type: 'actionability_gap',
+          severity: 'medium',
+          rubric_ids: ['actionability'],
+          expected: 'Raw JSON should have a visible Copy JSON button.',
+          observed: 'No button labeled Copy JSON was found near the raw JSON view.',
+          evidence: ['No button labeled Copy JSON or functionally similar control was found near or within the raw JSON view.'],
+          why_it_matters: 'Users need to copy the report payload.',
+          suggested_fix: 'Add Copy JSON.',
+          should_report: true
+        }],
+        non_issues: []
+      }
+    })
+    const graph = crawlGraph(['RAW JSON Latest report payload', 'Copy JSON { "ok": true }'])
+    graph.finalUrl = 'http://localhost:4877/#raw-json'
+    graph.states[0].url = 'http://localhost:4877/#raw-json'
+    graph.states[0].hashRoute = '#raw-json'
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: graph,
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues.map((issue) => issue.title)).not.toContain('Missing copy action control for Raw JSON screen')
+    expect(result.decisions.find((decision) => decision.screen_name === 'Raw JSON')?.findings[0]?.should_report).toBe(false)
+  })
+
+  it('reports Screenshots when LLM confirms missing screenshot context', async () => {
+    const provider = new SpyProductExperienceProvider((context) => {
+      if (context.current_screen_name !== 'Screenshots') return alignedDecision(context)
+      return {
+        ...alignedDecision(context),
+        overall: { classification: 'minor_gap', confidence: 'high', summary: 'Screenshot evidence lacks workflow context.' },
+        findings: [{
+          title: 'Screenshot modal lacks scenario/state/action context',
+          type: 'evidence_gap',
+          severity: 'medium',
+          rubric_ids: ['evidence_proximity'],
+          expected: 'Screenshot preview should show scenario, state, action, and related issue context.',
+          observed: 'The visible screenshot evidence is image/file oriented without scenario, state, or action context.',
+          evidence: ['DOM evidence: pet-friends.png', 'screenshot evidence: state-1.png', 'workflow evidence: Screenshots page intent'],
+          why_it_matters: 'Screenshots are weak QA evidence unless users know what state or action produced them.',
+          suggested_fix: 'Add scenario/state/action metadata to screenshot modal and thumbnail cards.',
+          should_report: true
+        }],
+        non_issues: []
+      }
+    })
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: screenshotsCrawlGraph(['SCREENSHOTS', 'pet-friends.png']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues.some((issue) => issue.title === 'Screenshot modal lacks scenario/state/action context')).toBe(true)
+  })
+
   it('mock LLM rejects vague aesthetic-only comments', async () => {
     const provider = new MockLlmProvider()
     const decision = await provider.critiqueProductExperience!({
@@ -93,6 +476,77 @@ describe('Product Experience Critic', () => {
   })
 })
 
+class SpyProductExperienceProvider implements Pick<LlmProvider, 'name' | 'critiqueProductExperience' | 'isConfigured' | 'supportsVision' | 'metadata'> {
+  name = 'spy-openai-compatible'
+  contexts: ProductExperienceContext[] = []
+
+  constructor(
+    private readonly respond: (context: ProductExperienceContext) => ProductExperienceDecision,
+    private readonly options: { visionSupported?: boolean } = {}
+  ) {}
+
+  isConfigured(): boolean {
+    return true
+  }
+
+  supportsVision(): boolean {
+    return Boolean(this.options.visionSupported)
+  }
+
+  metadata() {
+    return { name: this.name, model: 'test-model', apiStyle: 'responses', realProvider: true, visionSupported: this.supportsVision() }
+  }
+
+  async critiqueProductExperience(context: ProductExperienceContext): Promise<ProductExperienceDecision> {
+    this.contexts.push(context)
+    return this.respond(context)
+  }
+}
+
+function alignedDecision(context: ProductExperienceContext): ProductExperienceDecision {
+  return {
+    screen_name: context.current_screen_name,
+    nav_label: context.nav_label_clicked,
+    workflow_intent: context.workflow_intent,
+    llm_used: true,
+    real_llm_used: context.real_llm_expected,
+    llm_provider: context.llm_provider,
+    llm_model: context.llm_model,
+    llm_api_style: context.llm_api_style,
+    llm_request_status: 'success',
+    vision_used: context.vision_used,
+    vision_not_used_reason: context.vision_not_used_reason,
+    scenario_screenshot_used: context.scenario_screenshot_used,
+    context_sufficiency: context.context_sufficiency,
+    context_sufficiency_score: context.context_sufficiency_score,
+    context_warnings: context.context_warnings,
+    overall: { classification: 'aligned', confidence: 'high', summary: 'Screen supports the intended user job.' },
+    findings: [],
+    non_issues: []
+  }
+}
+
+function llmFindingDecision(title: string): ProductExperienceDecision {
+  const context = timelineContext(['RUN TIMELINE What Sniffer did', '1 Source discovery passed'])
+  return {
+    ...alignedDecision(context),
+    overall: { classification: 'minor_gap', confidence: 'high', summary: 'The screen is missing run context.' },
+    findings: [{
+      title,
+      type: 'context_gap',
+      severity: 'medium',
+      rubric_ids: ['context_clarity'],
+      expected: 'Visible latest/selected run identity, project context, timestamp, and status.',
+      observed: 'The screen shows phase names but no run identity.',
+      evidence: ['DOM evidence: Source discovery passed', 'screenshot evidence: state-1.png', 'workflow evidence: Run Timeline'],
+      why_it_matters: 'Users cannot know which audit run they are reviewing.',
+      suggested_fix: 'Add a compact run context strip.',
+      should_report: true
+    }],
+    non_issues: []
+  }
+}
+
 function timelineContext(dom_summary: string[]): ProductExperienceContext {
   return {
     app_name: 'Sniffer Dashboard',
@@ -110,6 +564,7 @@ function timelineContext(dom_summary: string[]): ProductExperienceContext {
     required_context: ['latest/selected run identity', 'project/ad hoc context', 'timestamp or generated time', 'status', 'phase list'],
     screenshot_path: '/tmp/sniffer/reports/sniffer/ad_hoc/latest/screenshots/state-1.png',
     screenshot_artifact_url: '/api/reports/latest/artifacts/screenshots%2Fstate-1.png?project=ad_hoc',
+    scenario_screenshot_used: false,
     dom_summary,
     headings: ['Run Timeline'],
     visible_controls: ['Scenarios', 'Crawl Path'],
@@ -121,7 +576,16 @@ function timelineContext(dom_summary: string[]): ProductExperienceContext {
     source_evidence: ['surface:Run Timeline'],
     runtime_evidence: ['state:1 http://localhost/#timeline'],
     related_issues: [],
-    related_fix_packets: []
+    related_fix_packets: [],
+    rubric: [],
+    context_sufficiency: 'high',
+    context_sufficiency_score: 0.9,
+    context_sufficiency_signals: [],
+    context_warnings: [],
+    vision_capable: false,
+    vision_used: false,
+    vision_not_used_reason: 'provider wrapper does not support image input',
+    real_llm_expected: true
   }
 }
 
@@ -161,6 +625,48 @@ function crawlGraph(timelineText: string[]): CrawlGraph {
     networkFailures: [],
     screenshots: ['/tmp/sniffer/reports/sniffer/ad_hoc/latest/screenshots/state-1.png'],
     generatedAt: ''
+  }
+}
+
+function screenshotsCrawlGraph(text: string[]): CrawlGraph {
+  return {
+    ...crawlGraph(text),
+    finalUrl: 'http://localhost:4877/#screenshots',
+    states: [{
+      ...crawlGraph(text).states[0],
+      url: 'http://localhost:4877/#screenshots',
+      hashRoute: '#screenshots',
+      inferredScreenName: 'Screenshots',
+      primaryVisibleText: text,
+      visible: [{ kind: 'button', text: 'Open screenshot' }]
+    }]
+  }
+}
+
+function scenarioRunWithTrace(screenName: string, hash: string) {
+  return {
+    slug: 'sniffer-dashboard-navigation',
+    name: 'Dashboard navigation smoke test',
+    status: 'passed' as const,
+    prerequisites: [],
+    stepsAttempted: ['Open dashboard sidebar sections'],
+    screenshots: [`/tmp/sniffer/reports/sniffer/ad_hoc/latest/screenshots/generated-scenarios/${screenName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`],
+    stepTraces: [{
+      scenarioName: 'Dashboard navigation smoke test',
+      scenarioSlug: 'sniffer-dashboard-navigation',
+      stepName: `click ${screenName}`,
+      actionLabel: `click ${screenName}`,
+      url: `http://localhost:4877/${hash}`,
+      screenName,
+      navLabel: screenName,
+      screenshotPath: `/tmp/sniffer/reports/sniffer/ad_hoc/latest/screenshots/generated-scenarios/${screenName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`,
+      domSummary: [`${screenName.toUpperCase()} page`, 'Legend Filters Node detail'],
+      headings: [screenName],
+      visibleControls: ['Legend', 'Filters', 'Node detail'],
+      activeNavState: screenName
+    }],
+    assertions: [],
+    issues: []
   }
 }
 

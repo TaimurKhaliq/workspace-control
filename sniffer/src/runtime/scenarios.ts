@@ -95,8 +95,8 @@ async function runScenario(page: Page, definition: ScenarioDefinition, screensho
     if (currentStep.safe) await executeStep(page, currentStep)
     await page.waitForTimeout(250)
     const screenshotPath = path.join(screenshotsDir, `${definition.slug}-${screenshots.length + 1}.png`)
-    await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined)
-    screenshots.push(screenshotPath)
+    const captured = await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
+    if (captured) screenshots.push(screenshotPath)
   }
 
   const checked = []

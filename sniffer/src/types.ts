@@ -740,7 +740,9 @@ export interface ProductIntentContext {
 }
 
 export type ProductExperienceCriticMode = 'off' | 'deterministic' | 'llm' | 'auto'
+export type ProductExperienceRunStatus = 'completed' | 'partial' | 'not_run' | 'provider_error' | 'not_real_llm'
 export type ProductExperienceClassification = 'aligned' | 'minor_gap' | 'major_gap' | 'inconclusive'
+export type ProductExperienceContextSufficiency = 'low' | 'medium' | 'high'
 export type ProductExperienceFindingType =
   | 'product_intent_mismatch'
   | 'workflow_mismatch'
@@ -794,6 +796,7 @@ export interface ProductExperienceContext {
   required_context: string[]
   screenshot_path?: string
   screenshot_artifact_url?: string
+  scenario_screenshot_used: boolean
   dom_summary: string[]
   headings: string[]
   visible_controls: string[]
@@ -806,6 +809,22 @@ export interface ProductExperienceContext {
   runtime_evidence: string[]
   related_issues: string[]
   related_fix_packets: string[]
+  rubric: ProductExperienceRubricItem[]
+  context_sufficiency: ProductExperienceContextSufficiency
+  context_sufficiency_score: number
+  context_sufficiency_signals: Array<{
+    name: string
+    present: boolean
+    weight: number
+  }>
+  context_warnings: string[]
+  vision_capable: boolean
+  vision_used: boolean
+  vision_not_used_reason?: string
+  llm_provider?: string
+  llm_model?: string
+  llm_api_style?: string
+  real_llm_expected: boolean
   candidate_findings?: ProductExperienceFinding[]
 }
 
@@ -827,6 +846,19 @@ export interface ProductExperienceDecision {
   screen_name: string
   nav_label: string
   workflow_intent: string
+  llm_used: boolean
+  real_llm_used: boolean
+  llm_provider?: string
+  llm_model?: string
+  llm_api_style?: string
+  llm_request_status: 'success' | 'not_requested' | 'not_run' | 'provider_error'
+  vision_used: boolean
+  vision_not_used_reason?: string
+  scenario_screenshot_used: boolean
+  context_sufficiency: ProductExperienceContextSufficiency
+  context_sufficiency_score: number
+  context_warnings: string[]
+  critic_not_run_reason?: string
   overall: {
     classification: ProductExperienceClassification
     confidence: ProductIntentConfidence
@@ -841,7 +873,15 @@ export interface ProductExperienceDecision {
 
 export interface ProductExperienceResult {
   mode: ProductExperienceCriticMode
+  status: ProductExperienceRunStatus
+  notRunReason?: string
+  providerName?: string
+  providerModel?: string
+  providerApiStyle?: string
   screensReviewed: number
+  llmScreensReviewed: number
+  realLlmScreensReviewed: number
+  visionScreensReviewed: number
   aligned: number
   minorGaps: number
   majorGaps: number
@@ -850,6 +890,21 @@ export interface ProductExperienceResult {
   contexts: ProductExperienceContext[]
   decisions: ProductExperienceDecision[]
   issues: Issue[]
+}
+
+export interface ScenarioStepTrace {
+  scenarioName: string
+  scenarioSlug: string
+  stepName: string
+  actionLabel?: string
+  url: string
+  screenName?: string
+  navLabel?: string
+  screenshotPath?: string
+  domSummary: string[]
+  headings: string[]
+  visibleControls: string[]
+  activeNavState?: string
 }
 
 export interface IssueTriageContext {
@@ -1162,6 +1217,7 @@ export interface ScenarioRun {
   prerequisites: string[]
   stepsAttempted: string[]
   screenshots: string[]
+  stepTraces?: ScenarioStepTrace[]
   assertions: ScenarioAssertionResult[]
   issues: Issue[]
 }

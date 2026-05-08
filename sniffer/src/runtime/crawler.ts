@@ -133,9 +133,11 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
       states.push(state)
       stateByHash.set(state.hash, state)
       const screenshotPath = path.join(screenshotsDir, `state-${states.length}.png`)
-      await page.screenshot({ path: screenshotPath, fullPage: true })
-      screenshots.push(screenshotPath)
-      state.screenshotPath = screenshotPath
+      const capturedScreenshot = await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
+      if (capturedScreenshot) {
+        screenshots.push(screenshotPath)
+        state.screenshotPath = screenshotPath
+      }
       routeVisitCounts.set(stateRouteKey(state), (routeVisitCounts.get(stateRouteKey(state)) ?? 0) + 1)
     }
     if (stale >= staleIterations) break
@@ -170,8 +172,7 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
         applyRouteHint(after, routeHintsByStateHash)
       }
       const screenshotAfterPath = path.join(screenshotsDir, `action-${sequenceNumber}-after.png`)
-      await page.screenshot({ path: screenshotAfterPath, fullPage: true }).catch(() => undefined)
-      screenshotAfter = screenshotAfterPath
+      screenshotAfter = await page.screenshot({ path: screenshotAfterPath, fullPage: true, timeout: 5_000 }).then(() => screenshotAfterPath).catch(() => undefined)
       const changedState = after.hash !== captured.hash || page.url() !== urlBefore
       if (!changedState) {
         ineffectiveActionKeys.set(candidate.ineffectiveKey, (ineffectiveActionKeys.get(candidate.ineffectiveKey) ?? 0) + 1)
@@ -372,6 +373,10 @@ function candidateFromElement(state: CrawlState, element: VisibleElement, contex
   const wantsTyping = element.kind === 'input' && /feature request|prompt|describe/i.test(label)
   const clickable = element.kind === 'link' || element.kind === 'tab' || element.kind === 'button'
   if (!wantsTyping && !clickable) return undefined
+  if (isLongRunningToolAction(label)) {
+    skipped.push({ label, reason: 'long-running tool action skipped during passive crawl', stateId: state.id, route: state.hashRoute })
+    return undefined
+  }
   const decision = classifyActionSafety(label, wantsTyping ? 'input' : role)
   if (!decision.safe && !wantsTyping) {
     skipped.push({ label, reason: decision.reason, stateId: state.id, route: state.hashRoute })
@@ -416,6 +421,10 @@ function candidateFromElement(state: CrawlState, element: VisibleElement, contex
     ineffectiveKey,
     priority: actionPriority(label, role, currentRoute, targetRoute, wantsTyping, element, state.visible.some((control) => control.kind === 'dialog')) - visitedTargetCount * 120
   }
+}
+
+function isLongRunningToolAction(label: string): boolean {
+  return /run audit|run consistency check|generate fix packets|open latest report|apply fix|repair loop|verify issue/i.test(label)
 }
 
 function actionPriority(label: string, role: string, currentRoute: string, targetRoute: string | undefined, wantsTyping: boolean, element: VisibleElement, dialogOpen: boolean): number {

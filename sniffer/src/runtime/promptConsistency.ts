@@ -68,8 +68,8 @@ export async function runPromptConsistencyCheck(input: {
     for (const prompt of prompts) {
       if (!await generatePrompt(page, prompt.input_prompt)) break
       const screenshotPath = path.join(screenshotsDir, `${prompt.id}.png`)
-      await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined)
-      screenshots.push(screenshotPath)
+      const captured = await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
+      if (captured) screenshots.push(screenshotPath)
       const extracted = await extractPromptOutput(page, prompt, screenshotPath)
       const deterministic = deterministicConsistencyDecision(extracted, prompt)
       const decision = input.useLlm && input.provider?.critiquePromptConsistency

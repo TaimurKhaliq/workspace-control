@@ -1,7 +1,8 @@
-import type { ScreenshotItem } from '../api'
+import type { ScreenshotItem, SnifferReport } from '../api'
+import { ReportContextStrip } from './ReportContextStrip'
 import { ScreenshotImage } from './ScreenshotModal'
 
-export function ScreenshotGallery({ screenshots }: { screenshots: ScreenshotItem[] }) {
+export function ScreenshotGallery({ report, screenshots, projectId, projectName }: { report?: SnifferReport | null; screenshots: ScreenshotItem[]; projectId?: string; projectName?: string }) {
   const groups = screenshots.reduce<Record<string, ScreenshotItem[]>>((acc, item) => {
     acc[item.group] ??= []
     acc[item.group].push(item)
@@ -9,6 +10,7 @@ export function ScreenshotGallery({ screenshots }: { screenshots: ScreenshotItem
   }, {})
   return (
     <section className="page-stack">
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
       <section className="card-panel">
         <p className="eyebrow">Evidence gallery</p>
         <h2>Screenshots</h2>

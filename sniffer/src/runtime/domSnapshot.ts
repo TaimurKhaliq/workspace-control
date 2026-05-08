@@ -49,8 +49,8 @@ export async function inspectUrl(input: {
     await page.goto(input.url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
     await page.waitForLoadState('networkidle', { timeout: input.waitMs ?? 3_000 }).catch(() => undefined)
     const screenshotPath = path.join(screenshotsDir, 'initial.png')
-    await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined)
-    return await captureRuntimeDomSnapshot(page, screenshotPath)
+    const captured = await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
+    return await captureRuntimeDomSnapshot(page, captured ? screenshotPath : undefined)
   } finally {
     await browser.close()
   }

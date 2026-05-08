@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
 import { chromium, type Page } from 'playwright'
-import type { GeneratedScenario, ScenarioAssertionResult, ScenarioRun } from '../types.js'
+import type { GeneratedScenario, RuntimeDomSnapshot, ScenarioAssertionResult, ScenarioRun, ScenarioStepTrace } from '../types.js'
 import { captureRuntimeDomSnapshot } from './domSnapshot.js'
 
 export async function executeGeneratedScenarios(input: {
@@ -14,6 +14,7 @@ export async function executeGeneratedScenarios(input: {
   await mkdir(screenshotsDir, { recursive: true })
   const browser = await chromium.launch()
   const page = await browser.newPage()
+  page.setDefaultTimeout(3_000)
   try {
     await page.goto(input.url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
     await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined)
@@ -32,12 +33,20 @@ export async function executeGeneratedScenarios(input: {
 async function executeScenario(page: Page, scenario: GeneratedScenario, screenshotsDir: string): Promise<ScenarioRun> {
   const stepsAttempted = scenario.steps.map((step) => step.name)
   const screenshots: string[] = []
+  const stepTraces: ScenarioStepTrace[] = []
   const assertions: ScenarioAssertionResult[] = []
-  const shot = async (name: string): Promise<string | undefined> => {
+  const shot = async (name: string, actionLabel = name): Promise<string | undefined> => {
     const file = path.join(screenshotsDir, `${scenario.id}-${name}.png`)
-    await page.screenshot({ path: file, fullPage: true }).catch(() => undefined)
-    screenshots.push(file)
-    return file
+    const captured = await page.screenshot({ path: file, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
+    if (captured) {
+      screenshots.push(file)
+      const snapshot = await captureRuntimeDomSnapshot(page, file).catch(() => undefined)
+      if (snapshot) stepTraces.push(stepTraceFromSnapshot(scenario, name, actionLabel, snapshot, file))
+      return file
+    }
+    const snapshot = await captureRuntimeDomSnapshot(page).catch(() => undefined)
+    if (snapshot) stepTraces.push(stepTraceFromSnapshot(scenario, name, actionLabel, snapshot))
+    return undefined
   }
   const initialShot = await shot('initial')
   const snapshot = await captureRuntimeDomSnapshot(page, initialShot)
@@ -74,12 +83,13 @@ async function executeScenario(page: Page, scenario: GeneratedScenario, screensh
     prerequisites: scenario.prerequisites,
     stepsAttempted,
     screenshots,
+    stepTraces,
     assertions,
     issues: []
   }
 }
 
-async function navigationAssertions(page: Page, snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>, shot: (name: string) => Promise<string | undefined>): Promise<ScenarioAssertionResult[]> {
+async function navigationAssertions(page: Page, snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>, shot: (name: string, actionLabel?: string) => Promise<string | undefined>): Promise<ScenarioAssertionResult[]> {
   const sameOrigin = new URL(snapshot.url).origin
   const navControls = navigationControls(snapshot)
   const links = navControls
@@ -116,7 +126,7 @@ async function navigationAssertions(page: Page, snapshot: Awaited<ReturnType<typ
       const afterSignature = await pageSignature(page)
       const changed = before !== page.url() || beforeSignature !== afterSignature
       evidence.push(`${labelOf(control)}: ${before} -> ${page.url()}${changed ? ' changed' : ' unchanged'}`)
-      await shot(`nav-${evidence.length}`)
+      await shot(`nav-${evidence.length}`, `click ${labelOf(control)}`)
       if (control.href) await page.goBack({ waitUntil: 'domcontentloaded', timeout: 2_000 }).catch(() => undefined)
     } catch (error) {
       evidence.push(`${labelOf(control)} failed: ${error instanceof Error ? error.message : String(error)}`)
@@ -134,7 +144,7 @@ async function snifferDashboardAssertions(
   page: Page,
   scenario: GeneratedScenario,
   snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>,
-  shot: (name: string) => Promise<string | undefined>
+  shot: (name: string, actionLabel?: string) => Promise<string | undefined>
 ): Promise<ScenarioAssertionResult[]> {
   if (scenario.id === 'sniffer-dashboard-navigation') {
     return [await clickRequiredButtons(page, 'Dashboard sidebar sections are reachable', ['Summary', 'Projects', 'Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues', 'Fix Packets', 'Screenshots', 'Graph Explorer', 'Raw JSON', 'Settings'], shot, 8)]
@@ -148,7 +158,7 @@ async function snifferDashboardAssertions(
       await page.getByRole('button', { name: /add project/i }).first().click({ timeout: 2_000 }).catch(() => undefined)
       await page.waitForTimeout(150)
       evidence.push(`dialog/control after click:${await page.getByText(/project name|repo path|app url|add project/i).first().isVisible({ timeout: 500 }).catch(() => false)}`)
-      await shot('add-project')
+      await shot('add-project', 'click Add project')
       await page.keyboard.press('Escape').catch(() => undefined)
     }
     return [{ label: 'Project selector and Add project controls are discoverable', status: hasSelector && hasAddProject ? 'passed' : 'failed', evidence, screenshotPath: snapshot.screenshotPath }]
@@ -171,7 +181,7 @@ async function snifferDashboardAssertions(
   return [{ label: 'Sniffer dashboard scenario planned', status: 'blocked', evidence: [`No deterministic executor for ${scenario.id}.`], screenshotPath: snapshot.screenshotPath }]
 }
 
-async function clickRequiredButtons(page: Page, label: string, names: string[], shot: (name: string) => Promise<string | undefined>, minimum: number): Promise<ScenarioAssertionResult> {
+async function clickRequiredButtons(page: Page, label: string, names: string[], shot: (name: string, actionLabel?: string) => Promise<string | undefined>, minimum: number): Promise<ScenarioAssertionResult> {
   const evidence: string[] = []
   let passed = 0
   for (const name of names) {
@@ -187,7 +197,7 @@ async function clickRequiredButtons(page: Page, label: string, names: string[], 
     const after = await pageSignature(page)
     if (before !== after || name === 'Summary') passed += 1
     evidence.push(`${name}:${before !== after ? 'changed' : 'visible'}`)
-    await shot(`sniffer-${passed}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`)
+    await shot(`sniffer-${passed}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, `click ${name}`)
   }
   return { label, status: passed >= minimum ? 'passed' : 'failed', evidence, screenshotPath: undefined }
 }
@@ -307,4 +317,54 @@ function labelOf(control: { accessibleName?: string; visibleText?: string; label
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function stepTraceFromSnapshot(
+  scenario: GeneratedScenario,
+  stepName: string,
+  actionLabel: string,
+  snapshot: RuntimeDomSnapshot,
+  screenshotPath?: string
+): ScenarioStepTrace {
+  return {
+    scenarioName: scenario.name,
+    scenarioSlug: scenario.id,
+    stepName,
+    actionLabel,
+    url: snapshot.url,
+    screenName: screenNameFromUrl(snapshot.url),
+    navLabel: navLabelFromUrl(snapshot.url),
+    screenshotPath,
+    domSummary: snapshot.visibleTextBlocks.slice(0, 16),
+    headings: snapshot.headings.map(labelOf).filter(Boolean).slice(0, 8),
+    visibleControls: snapshot.controls.map(labelOf).filter(Boolean).slice(0, 40),
+    activeNavState: navLabelFromUrl(snapshot.url)
+  }
+}
+
+function screenNameFromUrl(url: string): string {
+  const label = navLabelFromUrl(url)
+  return label || 'Runtime screen'
+}
+
+function navLabelFromUrl(url: string): string | undefined {
+  try {
+    const hash = new URL(url).hash
+    return ({
+      '#summary': 'Summary',
+      '#projects': 'Projects',
+      '#timeline': 'Run Timeline',
+      '#scenarios': 'Scenarios',
+      '#crawl': 'Crawl Path',
+      '#workflows': 'Workflow Evidence',
+      '#issues': 'Issues',
+      '#fix-packets': 'Fix Packets',
+      '#screenshots': 'Screenshots',
+      '#graph': 'Graph Explorer',
+      '#raw-json': 'Raw JSON',
+      '#settings': 'Settings'
+    } as Record<string, string>)[hash]
+  } catch {
+    return undefined
+  }
 }

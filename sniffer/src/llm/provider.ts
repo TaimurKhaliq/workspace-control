@@ -1,7 +1,55 @@
 import type { AppIntent, Issue, IssueTriageContext, LlmCriticProvider, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SourceGraph, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 
+export interface LlmProviderMetadata {
+  name: string
+  model?: string
+  apiStyle?: string
+  baseUrlHost?: string
+  realProvider: boolean
+  visionSupported: boolean
+}
+
+export interface LlmProviderEnvDiagnostics {
+  SNIFFER_LLM_BASE_URL: boolean
+  SNIFFER_LLM_API_KEY: boolean
+  SNIFFER_LLM_MODEL: boolean
+  SNIFFER_LLM_API_STYLE: boolean
+  STACKPILOT_SEMANTIC_BASE_URL: boolean
+  STACKPILOT_SEMANTIC_API_KEY: boolean
+  STACKPILOT_SEMANTIC_MODEL: boolean
+  STACKPILOT_SEMANTIC_API_STYLE: boolean
+  OPENAI_API_KEY: boolean
+}
+
+export interface LlmProviderCheckResult {
+  provider: string
+  baseUrlHost?: string
+  model?: string
+  apiStyle?: string
+  authConfigured: boolean
+  configSource: {
+    baseUrl?: string
+    apiKey?: string
+    model?: string
+    apiStyle?: string
+  }
+  env: LlmProviderEnvDiagnostics
+  request: {
+    attempted: boolean
+    success: boolean
+    statusCode?: number
+    errorSummary?: string
+    responseTextExtracted?: boolean
+  }
+  realProvider: boolean
+}
+
 export interface LlmProvider extends Partial<LlmCriticProvider> {
   name: string
+  isConfigured?(): boolean
+  supportsVision?(): boolean
+  metadata?(): LlmProviderMetadata
+  checkConnection?(): Promise<LlmProviderCheckResult>
   inferIntent(input: { sourceGraph: SourceGraph; deterministicIntent: AppIntent }): Promise<AppIntent>
   repairTest?(input: { testFile: string; failure: string }): Promise<string | undefined>
   critiqueWorkflow?(context: SnifferCriticContext): Promise<WorkflowCriticDecision>

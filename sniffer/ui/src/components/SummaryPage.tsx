@@ -3,6 +3,7 @@ import { buildReportSummary } from '../report/journey'
 import { AuditLauncher } from './AuditLauncher'
 import type { AuditForm } from '../api'
 import type { MascotState } from './SnifferMascot'
+import { ReportContextStrip } from './ReportContextStrip'
 
 export function SummaryPage({
   report,
@@ -13,6 +14,8 @@ export function SummaryPage({
   mascotState,
   error,
   isRunning,
+  projectId,
+  projectName,
   onFormChange,
   onRunAudit,
   onRunConsistency,
@@ -28,6 +31,8 @@ export function SummaryPage({
   mascotState: MascotState
   error?: string
   isRunning?: boolean
+  projectId?: string
+  projectName?: string
   onFormChange: (patch: Partial<AuditForm>) => void
   onRunAudit: () => void
   onRunConsistency: () => void
@@ -48,6 +53,7 @@ export function SummaryPage({
           {summary.overallStatus}
         </span>
       </section>
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
       <div className="summary-cards">
         <Metric label="Source workflows" value={summary.sourceWorkflows} />
         <Metric label="Runtime workflows" value={summary.runtimeWorkflows} tone={summary.runtimeWorkflows ? 'good' : 'muted'} />
@@ -59,7 +65,10 @@ export function SummaryPage({
       {summary.topIssues.length > 0 && (
         <section className="card-panel">
           <div className="section-heading compact">
-            <h2>Top repair groups</h2>
+            <div>
+              <h2>Top repair groups for selected report</h2>
+              <p className="section-note">These findings belong to the run identified in the report context strip above.</p>
+            </div>
             <span className="status-chip muted">{summary.topIssues.length}</span>
           </div>
           <div className="compact-issue-list">

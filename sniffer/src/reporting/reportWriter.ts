@@ -623,6 +623,17 @@ function renderProductIntentGaps(report: SnifferReport): string {
 function renderProductExperienceCritic(report: SnifferReport): string {
   const result = report.productExperience
   if (!result || result.mode === 'off') return 'Product Experience Critic was not run.'
+  if (result.status === 'not_run') {
+    return [
+      `- Mode: ${result.mode}`,
+      `- Status: not_run`,
+      `- Reason: ${result.notRunReason ?? 'not specified'}`,
+      `- Provider: ${result.providerName ?? 'none'}`,
+      result.providerModel ? `- Model: ${result.providerModel}` : undefined,
+      result.providerApiStyle ? `- API style: ${result.providerApiStyle}` : undefined,
+      `- Screens with prepared context: ${result.screensReviewed}`
+    ].filter(Boolean).join('\n')
+  }
   const screenBlocks = result.decisions.map((decision) => {
     const findings = decision.findings.filter((finding) => finding.should_report)
     return [
@@ -630,6 +641,18 @@ function renderProductExperienceCritic(report: SnifferReport): string {
       '',
       `- Nav label: ${decision.nav_label}`,
       `- Intended job: ${decision.workflow_intent}`,
+      `- LLM used: ${decision.llm_used ? 'yes' : 'no'}`,
+      `- Real LLM used: ${decision.real_llm_used ? 'yes' : 'no'}`,
+      `- Provider: ${decision.llm_provider ?? 'none'}`,
+      decision.llm_model ? `- Model: ${decision.llm_model}` : undefined,
+      decision.llm_api_style ? `- API style: ${decision.llm_api_style}` : undefined,
+      `- LLM request status: ${decision.llm_request_status}`,
+      `- Vision used: ${decision.vision_used ? 'yes' : 'no'}`,
+      decision.vision_not_used_reason ? `- Vision not used reason: ${decision.vision_not_used_reason}` : undefined,
+      `- Scenario screenshot used: ${decision.scenario_screenshot_used ? 'yes' : 'no'}`,
+      `- Context sufficiency: ${decision.context_sufficiency} (${decision.context_sufficiency_score})`,
+      decision.context_warnings.length ? `- Context warnings: ${decision.context_warnings.join('; ')}` : '- Context warnings: none',
+      decision.critic_not_run_reason ? `- Critic not-run reason: ${decision.critic_not_run_reason}` : undefined,
       `- Classification: ${decision.overall.classification}`,
       `- Confidence: ${decision.overall.confidence}`,
       `- Summary: ${decision.overall.summary}`,
@@ -646,18 +669,25 @@ function renderProductExperienceCritic(report: SnifferReport): string {
           ].filter(Boolean).join('\n'))
         ].join('\n')
         : '- Findings: none'
-    ].join('\n')
+    ].filter(Boolean).join('\n')
   }).join('\n\n')
   return [
     `- Mode: ${result.mode}`,
+    `- Status: ${result.status}`,
+    `- Provider: ${result.providerName ?? 'none'}`,
+    result.providerModel ? `- Model: ${result.providerModel}` : undefined,
+    result.providerApiStyle ? `- API style: ${result.providerApiStyle}` : undefined,
     `- Screens reviewed: ${result.screensReviewed}`,
+    `- LLM-reviewed screens: ${result.llmScreensReviewed}`,
+    `- Real-LLM-reviewed screens: ${result.realLlmScreensReviewed}`,
+    `- Vision-reviewed screens: ${result.visionScreensReviewed}`,
     `- Aligned: ${result.aligned}`,
     `- Minor gaps: ${result.minorGaps}`,
     `- Major gaps: ${result.majorGaps}`,
     `- Inconclusive: ${result.inconclusive}`,
     '',
     screenBlocks || 'No screen decisions recorded.'
-  ].join('\n')
+  ].filter(Boolean).join('\n')
 }
 
 function renderUxCriticSummary(report: SnifferReport): string {

@@ -86,6 +86,17 @@ export interface SnifferReport {
     core_entities?: Array<{ name: string; confidence?: string }>
     primary_user_jobs?: Array<{ name: string; confidence?: string }>
   }
+  productExperience?: {
+    mode?: string
+    status?: string
+    providerName?: string
+    providerModel?: string
+    providerApiStyle?: string
+    screensReviewed?: number
+    realLlmScreensReviewed?: number
+    llmScreensReviewed?: number
+    visionScreensReviewed?: number
+  }
   promptConsistency?: {
     enabled: boolean
     runs: Array<{

@@ -35,7 +35,7 @@ export async function runUxHeuristicAudit(input: {
     await page.goto(input.url, { waitUntil: 'domcontentloaded', timeout: 15_000 })
     await page.waitForLoadState('networkidle', { timeout: 2_000 }).catch(() => undefined)
     const screenshotPath = path.join(screenshotsDir, 'overview.png')
-    await page.screenshot({ path: screenshotPath, fullPage: true }).catch(() => undefined)
+    await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).catch(() => undefined)
     const snapshot = await page.evaluate(`(() => {
       const text = (el) => {
         if (el instanceof HTMLSelectElement) {
@@ -197,9 +197,15 @@ function overflowIssues(elements: DomUxElement[], screenshotPath: string): Issue
 }
 
 function longPathIssues(elements: DomUxElement[], screenshotPath: string): Issue[] {
-  const pathTexts = elements.map((el) => el.text).filter((text) => /\/Users\/|[A-Za-z]:\\|https?:\/\//.test(text) && text.length > 80).slice(0, 5)
-  if (pathTexts.length === 0) return []
-  return [issue('low', 'layout_issue', 'Long paths are hard to scan', 'Long local paths or URLs appear as dense text and may not wrap or truncate gracefully.', pathTexts, screenshotPath, 'Render long paths with middle truncation, copy affordances, and tooltips/full text where useful.')]
+  const pathTokens = elements.flatMap((el) => longPathTokens(el.text)).slice(0, 5)
+  if (pathTokens.length === 0) return []
+  return [issue('low', 'layout_issue', 'Long paths are hard to scan', 'Long local paths or URLs appear as dense text and may not wrap or truncate gracefully.', pathTokens, screenshotPath, 'Render long paths with middle truncation, copy affordances, and tooltips/full text where useful.')]
+}
+
+function longPathTokens(text: string): string[] {
+  return (text.match(/(?:\/Users\/|[A-Za-z]:\\|https?:\/\/)\S+/g) ?? [])
+    .map((token) => token.replace(/[),.;\]}]+$/g, ''))
+    .filter((token) => token.length > 80 && !token.includes('…') && !token.includes('...'))
 }
 
 function verticalClutterIssues(elements: DomUxElement[], screenshotPath: string): Issue[] {

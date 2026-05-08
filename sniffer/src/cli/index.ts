@@ -8,6 +8,9 @@ import { writeJson } from '../reporting/json.js'
 import { crawlApp } from '../runtime/crawler.js'
 import { buildDeterministicIntent } from '../heuristics/intent.js'
 import { createLlmProvider } from '../llm/factory.js'
+import { OpenAICompatibleProvider } from '../llm/openAICompatibleProvider.js'
+import { MockLlmProvider } from '../llm/mockProvider.js'
+import type { LlmProvider, LlmProviderCheckResult } from '../llm/provider.js'
 import { classifyRuntimeIssues, classifyTestFailures } from '../heuristics/issueClassifier.js'
 import { writeAuditReports } from '../reporting/reportWriter.js'
 import { generatePlaywrightSpecs, writeGeneratedSpecs } from '../testgen/specWriter.js'
@@ -47,6 +50,16 @@ async function main(): Promise<void> {
 
   if (command === 'projects') {
     await handleProjectsCommand(rest)
+    return
+  }
+
+  if (command === 'providers') {
+    await handleProvidersCommand(rest)
+    return
+  }
+
+  if (command === 'llm-check') {
+    await handleProviderCheck(typeof args.provider === 'string' ? args.provider : 'openai-compatible')
     return
   }
 
@@ -243,9 +256,13 @@ async function main(): Promise<void> {
       const existingSlugs = new Set(scenarioRuns.map((run) => run.slug))
       scenarioRuns = [...scenarioRuns, ...executedGenericRuns.filter((run) => !existingSlugs.has(run.slug))]
     }
+    const productExperiencePreflight = productExperienceMode === 'llm'
+      ? await productExperienceProviderPreflight(provider)
+      : undefined
     const productExperience = await runProductExperienceCritic({
       mode: productExperienceMode,
       provider,
+      providerPreflightError: productExperiencePreflight?.error,
       sourceGraph,
       crawlGraph: activeCrawlGraph,
       appProfile,
@@ -268,7 +285,7 @@ async function main(): Promise<void> {
         runtimeWorkflowVerifications,
         rawFindings,
         question_for_triage: 'Group raw findings into repair-sized themes and preserve severe API issues.'
-      })
+      }).catch(() => triageIssues({ rawFindings, sourceGraph, workflowVerifications: runtimeWorkflowVerifications }))
       : triageIssues({ rawFindings, sourceGraph, workflowVerifications: runtimeWorkflowVerifications })
     if (shouldUseLlmTriage) {
       const supported = filterLlmTriagedIssues(triagedIssues, rawFindings)
@@ -465,6 +482,86 @@ async function handleProjectsCommand(rest: string[]): Promise<void> {
   throw new Error('Usage: sniffer projects list|add|remove|inspect')
 }
 
+async function handleProvidersCommand(rest: string[]): Promise<void> {
+  const [subcommand, ...subRest] = rest
+  const args = parseArgs(subRest)
+  if (subcommand === 'check') {
+    await handleProviderCheck(typeof args.provider === 'string' ? args.provider : 'openai-compatible')
+    return
+  }
+  throw new Error('Usage: sniffer providers check --provider openai-compatible')
+}
+
+async function handleProviderCheck(providerName: string): Promise<void> {
+  const provider = providerForCheck(providerName)
+  const result = provider.checkConnection
+    ? await provider.checkConnection()
+    : unsupportedProviderCheck(provider.name)
+  printProviderCheck(result)
+  if (result.realProvider && !result.request.success) process.exitCode = 1
+}
+
+function providerForCheck(providerName: string): LlmProvider {
+  if (providerName === 'mock') return new MockLlmProvider()
+  if (providerName === 'openai-compatible' || providerName === 'auto') return new OpenAICompatibleProvider()
+  throw new Error(`Unsupported provider for check: ${providerName}`)
+}
+
+function unsupportedProviderCheck(provider: string): LlmProviderCheckResult {
+  return {
+    provider,
+    authConfigured: false,
+    configSource: {},
+    env: {
+      SNIFFER_LLM_BASE_URL: false,
+      SNIFFER_LLM_API_KEY: false,
+      SNIFFER_LLM_MODEL: false,
+      SNIFFER_LLM_API_STYLE: false,
+      STACKPILOT_SEMANTIC_BASE_URL: false,
+      STACKPILOT_SEMANTIC_API_KEY: false,
+      STACKPILOT_SEMANTIC_MODEL: false,
+      STACKPILOT_SEMANTIC_API_STYLE: false,
+      OPENAI_API_KEY: false
+    },
+    request: {
+      attempted: false,
+      success: false,
+      errorSummary: 'Provider does not implement a connection check.'
+    },
+    realProvider: false
+  }
+}
+
+function printProviderCheck(result: LlmProviderCheckResult): void {
+  const lines = [
+    `Provider: ${result.provider}`,
+    result.baseUrlHost ? `Base URL host: ${result.baseUrlHost}` : undefined,
+    `Model: ${result.model ?? 'missing'}`,
+    `API style: ${result.apiStyle ?? 'missing'}`,
+    `Auth configured: ${result.authConfigured ? 'yes' : 'no'}`,
+    `Config source: baseUrl=${result.configSource.baseUrl ?? 'missing'} apiKey=${result.configSource.apiKey ?? 'missing'} model=${result.configSource.model ?? 'missing'} apiStyle=${result.configSource.apiStyle ?? 'missing'}`,
+    `Env present: ${Object.entries(result.env).map(([key, present]) => `${key}=${present ? 'yes' : 'no'}`).join(' ')}`,
+    `Request attempted: ${result.request.attempted ? 'yes' : 'no'}`,
+    `Request success: ${result.request.success ? 'yes' : 'no'}`,
+    result.request.statusCode ? `Status code: ${result.request.statusCode}` : undefined,
+    result.request.responseTextExtracted !== undefined ? `Response text extracted: ${result.request.responseTextExtracted ? 'yes' : 'no'}` : undefined,
+    result.request.errorSummary ? `Error: ${result.request.errorSummary}` : undefined
+  ].filter(Boolean)
+  console.log(lines.join('\n'))
+}
+
+async function productExperienceProviderPreflight(provider: LlmProvider | undefined): Promise<{ error?: string }> {
+  if (!provider?.checkConnection) {
+    return { error: 'LLM provider does not implement a preflight check. Set SNIFFER_LLM_API_KEY or run sniffer providers check --provider openai-compatible.' }
+  }
+  const result = await provider.checkConnection()
+  if (result.request.success) return {}
+  const status = result.request.statusCode ? ` status ${result.request.statusCode}` : ''
+  return {
+    error: `LLM provider preflight failed${status}: ${result.request.errorSummary ?? 'unknown provider error'}. Set SNIFFER_LLM_API_KEY, SNIFFER_LLM_MODEL, and SNIFFER_LLM_BASE_URL, or run sniffer providers check --provider openai-compatible.`
+  }
+}
+
 async function resolveTarget(args: Record<string, string | boolean>, options: { needRepo: boolean; needUrl: boolean }): Promise<TargetContext> {
   const runId = new Date().toISOString().replace(/[:.]/g, '-')
   if (typeof args.project === 'string') {
@@ -572,7 +669,7 @@ function discoveryModeArg(args: Record<string, string | boolean>): DiscoveryMode
 
 function productExperienceCriticModeArg(args: Record<string, string | boolean>): ProductExperienceCriticMode {
   const value = typeof args['product-experience-critic'] === 'string' ? args['product-experience-critic'] : undefined
-  return value === 'deterministic' || value === 'llm' || value === 'auto' || value === 'off' ? value : 'off'
+  return value === 'deterministic' || value === 'llm' || value === 'auto' || value === 'off' ? value : 'auto'
 }
 
 function sourceDiscoveryOptions(args: Record<string, string | boolean>) {
@@ -721,10 +818,12 @@ Commands:
   sniffer projects add --id <id> --name <name> --repo <path> --url <url>
   sniffer projects inspect --id <id>
   sniffer projects remove --id <id>
+  sniffer providers check --provider openai-compatible
+  sniffer llm-check [--provider openai-compatible]
   sniffer inspect-url --url <url> | --project <id>
   sniffer discover --repo <path> | --project <id> [--include-test-sources]
   sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
-  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--product-experience-critic off|deterministic|llm|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
+  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--product-experience-critic off|llm|deterministic|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
   sniffer repair-proof --issue <issue_id> --report <path> --agent manual
   sniffer apply-fix [--issue <issue_id>] [--report <path>] [--agent manual|mock|codex]

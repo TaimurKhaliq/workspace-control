@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import type { FixPacketItem, RunRecord, SnifferReport } from '../api'
 import { buildRunPhases } from '../report/journey'
+import { ReportContextStrip } from './ReportContextStrip'
 
-export function ReportTimeline({ report, fixPackets, run }: { report?: SnifferReport | null; fixPackets: FixPacketItem[]; run?: RunRecord | null }) {
+export function ReportTimeline({ report, fixPackets, run, projectId, projectName }: { report?: SnifferReport | null; fixPackets: FixPacketItem[]; run?: RunRecord | null; projectId?: string; projectName?: string }) {
   const phases = buildRunPhases(report, fixPackets)
   const [open, setOpen] = useState<string>(phases[0]?.id ?? '')
   return (
     <section className="page-stack" data-testid="run-timeline-view">
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
       {run && (
         <section className="card-panel live-run-card" data-testid="live-run-view">
           <div className="section-heading compact">

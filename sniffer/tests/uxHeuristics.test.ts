@@ -64,6 +64,35 @@ describe('UX heuristics', () => {
     ]))
   })
 
+  it('does not flag a compact report context strip with shortened path text', () => {
+    const result = analyzeUxSnapshot({
+      elements: [
+        element({
+          text: 'REPORT CONTEXT Ad hoc report Selected run: Latest report Generated 5/7/2026 App URL http://127.0.0.1:4877/ Repo /Users/demo/ai_proj…workspace-control/sniffer/ui Scenarios 11/11 passed Issues 5 Screenshots 56'
+        })
+      ],
+      ids: [],
+      bodyText: 'REPORT CONTEXT Ad hoc report Selected run: Latest report',
+      sourceGraph,
+      screenshotPath: '/tmp/shot.png'
+    })
+
+    expect(result.uxIssues.map((issue) => issue.title)).not.toContain('Long paths are hard to scan')
+  })
+
+  it('flags an actual long untruncated local path token', () => {
+    const longPath = '/Users/demo/ai_projects/stackpilot-workspace/workspace-control/sniffer/reports/sniffer/ad_hoc/latest/screenshots/generated-scenarios/navigation-smoke-nav-1.png'
+    const result = analyzeUxSnapshot({
+      elements: [element({ text: `Screenshot path ${longPath}` })],
+      ids: [],
+      bodyText: longPath,
+      sourceGraph,
+      screenshotPath: '/tmp/shot.png'
+    })
+
+    expect(result.uxIssues.map((issue) => issue.title)).toContain('Long paths are hard to scan')
+  })
+
   it('detects duplicate workspace display text without disambiguation', () => {
     const result = analyzeUxSnapshot({
       elements: [],

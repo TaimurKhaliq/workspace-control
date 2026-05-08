@@ -1,17 +1,20 @@
 import { useMemo, useState } from 'react'
 import type { SnifferReport } from '../api'
 import { buildScenarioViews, type ScenarioView } from '../report/journey'
+import { ReportContextStrip } from './ReportContextStrip'
 import { ScreenshotImage, ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
 
-export function ScenariosView({ report, projectId }: { report?: SnifferReport | null; projectId?: string }) {
+export function ScenariosView({ report, projectId, projectName }: { report?: SnifferReport | null; projectId?: string; projectName?: string }) {
   const scenarios = useMemo(() => buildScenarioViews(report), [report])
   const generated = report?.generatedScenarios ?? []
   const [selectedSlug, setSelectedSlug] = useState('')
   const [screenshot, setScreenshot] = useState<ScreenshotContext | null>(null)
   const selected = scenarios.find((scenario) => (scenario.scenario.slug ?? scenario.scenario.name) === selectedSlug) ?? scenarios[0]
   return (
-    <section className="report-grid" data-testid="scenarios-view">
-      <div className="summary-column">
+    <section className="page-stack" data-testid="scenarios-view">
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
+      <div className="report-grid">
+        <div className="summary-column">
         <section className="card-panel">
           <p className="eyebrow">Scenarios</p>
           <h2>Workflow execution</h2>
@@ -53,10 +56,11 @@ export function ScenariosView({ report, projectId }: { report?: SnifferReport | 
             </button>
           ))}
         </div>
+        </div>
+        <aside className="detail-column">
+          {selected ? <ScenarioDetail view={selected} projectId={projectId} onScreenshot={setScreenshot} /> : <EmptyScenario />}
+        </aside>
       </div>
-      <aside className="detail-column">
-        {selected ? <ScenarioDetail view={selected} projectId={projectId} onScreenshot={setScreenshot} /> : <EmptyScenario />}
-      </aside>
       <ScreenshotModal screenshot={screenshot} projectId={projectId} onClose={() => setScreenshot(null)} />
     </section>
   )

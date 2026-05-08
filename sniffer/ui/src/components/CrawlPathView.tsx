@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react'
 import type { SnifferReport } from '../api'
 import { buildCrawlCoverage, buildCrawlPath } from '../report/journey'
+import { ReportContextStrip } from './ReportContextStrip'
 import { ScreenshotImage, ScreenshotModal, type ScreenshotContext, artifactUrl } from './ScreenshotModal'
 
-export function CrawlPathView({ report, projectId }: { report?: SnifferReport | null; projectId?: string }) {
+export function CrawlPathView({ report, projectId, projectName }: { report?: SnifferReport | null; projectId?: string; projectName?: string }) {
   const states = useMemo(() => buildCrawlPath(report), [report])
   const coverage = useMemo(() => buildCrawlCoverage(report), [report])
   const [screenshot, setScreenshot] = useState<ScreenshotContext | null>(null)
   const errors = [...(report?.crawlGraph?.consoleErrors ?? []), ...(report?.crawlGraph?.networkFailures ?? [])]
   return (
     <section className="page-stack" data-testid="crawl-path-view">
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
       <section className="card-panel">
         <p className="eyebrow">Crawl Path</p>
         <h2>Runtime states and safe actions</h2>

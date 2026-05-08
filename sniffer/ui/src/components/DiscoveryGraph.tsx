@@ -13,6 +13,7 @@ import type { FixPacketItem, ScreenshotItem, SnifferReport } from '../api'
 import { getFixPacket } from '../api'
 import { buildSnifferGraph } from '../graph/graphBuilder'
 import type { GraphStatus, SnifferGraph, SnifferGraphEdge, SnifferGraphNode } from '../graph/graphModel'
+import { ReportContextStrip } from './ReportContextStrip'
 import { ScreenshotImage, artifactUrl } from './ScreenshotModal'
 
 type LayoutMode = 'layered' | 'workflow'
@@ -42,12 +43,14 @@ export function DiscoveryGraph({
   report,
   fixPackets,
   screenshots,
-  projectId
+  projectId,
+  projectName
 }: {
   report?: SnifferReport | null
   fixPackets: FixPacketItem[]
   screenshots: ScreenshotItem[]
   projectId?: string
+  projectName?: string
 }) {
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('layered')
   const [scope, setScope] = useState<{ mode: GraphScopeMode; workflow: string; issue: string }>({ mode: 'crawl', workflow: '', issue: '' })
@@ -65,6 +68,7 @@ export function DiscoveryGraph({
 
   return (
     <section className="graph-page" data-testid="discovery-graph-view">
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
       <div className="graph-summary-strip">
         <Metric label="Nodes" value={filteredGraph.nodes.length} />
         <Metric label="Edges" value={filteredGraph.edges.length} />

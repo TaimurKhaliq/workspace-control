@@ -1,8 +1,35 @@
 import type { AppIntent } from '../types.js'
 import type { Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
-import type { LlmProvider } from './provider.js'
+import type { LlmProvider, LlmProviderCheckResult, LlmProviderEnvDiagnostics } from './provider.js'
 
 type ApiStyle = 'responses' | 'chat_completions' | 'auto'
+type FetchLike = typeof fetch
+
+interface OpenAICompatibleConfig {
+  baseUrl: string
+  apiKey: string
+  model: string
+  apiStyle: ApiStyle
+  sources: {
+    baseUrl?: string
+    apiKey?: string
+    model?: string
+    apiStyle?: string
+  }
+  env: LlmProviderEnvDiagnostics
+}
+
+export class LlmProviderError extends Error {
+  statusCode?: number
+  responseBody?: string
+
+  constructor(message: string, options: { statusCode?: number; responseBody?: string } = {}) {
+    super(message)
+    this.name = 'LlmProviderError'
+    this.statusCode = options.statusCode
+    this.responseBody = options.responseBody
+  }
+}
 
 export class OpenAICompatibleProvider implements LlmProvider {
   name = 'openai-compatible'
@@ -10,16 +37,73 @@ export class OpenAICompatibleProvider implements LlmProvider {
   private apiKey: string
   private model: string
   private apiStyle: ApiStyle
+  private config: OpenAICompatibleConfig
+  private fetchImpl: FetchLike
 
-  constructor(env = process.env) {
-    this.baseUrl = env.SNIFFER_LLM_BASE_URL ?? 'https://api.openai.com/v1'
-    this.apiKey = env.SNIFFER_LLM_API_KEY ?? ''
-    this.model = env.SNIFFER_LLM_MODEL ?? ''
-    this.apiStyle = (env.SNIFFER_LLM_API_STYLE as ApiStyle | undefined) ?? 'auto'
+  constructor(env = process.env, fetchImpl: FetchLike = fetch) {
+    this.config = resolveOpenAICompatibleConfig(env)
+    this.baseUrl = this.config.baseUrl
+    this.apiKey = this.config.apiKey
+    this.model = this.config.model
+    this.apiStyle = this.config.apiStyle
+    this.fetchImpl = fetchImpl
   }
 
   isConfigured(): boolean {
     return Boolean(this.apiKey && this.model)
+  }
+
+  supportsVision(): boolean {
+    return false
+  }
+
+  metadata() {
+    return {
+      name: this.name,
+      model: this.model || undefined,
+      apiStyle: this.apiStyle,
+      baseUrlHost: baseUrlHost(this.baseUrl),
+      realProvider: true,
+      visionSupported: this.supportsVision()
+    }
+  }
+
+  async checkConnection(): Promise<LlmProviderCheckResult> {
+    const base = this.providerCheckBase()
+    if (!this.apiKey || !this.model || !this.baseUrl) {
+      return {
+        ...base,
+        request: {
+          attempted: false,
+          success: false,
+          errorSummary: missingConfigMessage(this.config)
+        }
+      }
+    }
+
+    try {
+      const text = await this.complete('Return JSON only: {"ok": true}')
+      parseJsonFromText<{ ok: boolean }>(text)
+      return {
+        ...base,
+        request: {
+          attempted: true,
+          success: true,
+          responseTextExtracted: Boolean(text.trim())
+        }
+      }
+    } catch (error) {
+      return {
+        ...base,
+        request: {
+          attempted: true,
+          success: false,
+          statusCode: error instanceof LlmProviderError ? error.statusCode : undefined,
+          errorSummary: safeProviderErrorSummary(error),
+          responseTextExtracted: false
+        }
+      }
+    }
   }
 
   async inferIntent(input: Parameters<LlmProvider['inferIntent']>[0]): Promise<AppIntent> {
@@ -115,12 +199,17 @@ export class OpenAICompatibleProvider implements LlmProvider {
     const prompt = [
       'You are an intent-aware Product Experience Critic for Sniffer.',
       'Question: Given what this app is trying to do, does this screen make sense for the user job being tested?',
-      'Use product intent, app profile, workflow/page intent, scenario/runtime evidence, DOM summary, screenshot path/metadata, and the rubric implied by the candidate findings.',
+      'Use product intent, app profile, workflow/page intent, scenario/runtime evidence, DOM summary, screenshot path/metadata, and the included product UX rubric as the judging lens.',
       'Do not freestyle redesign. Do not report vague visual opinions. Report only evidence-backed product/UX mismatches.',
+      'For Sniffer Dashboard report pages, issue titles, fix-packet titles, and raw report findings are loaded report data. Do not treat a loaded issue title as proof the current dashboard chrome has that defect.',
+      'If a report context strip is visible with project/ad hoc context, selected/latest run or report identity, generated timestamp/status, and counts, do not report a context_gap solely because the loaded report data mentions an older context issue.',
+      'On the Raw JSON screen, the JSON payload is intentionally report data. Do not report missing UI surfaces or workflow gaps based on embedded rawFindings, deferredFindings, runtimeSurfaceMatches, or sourceGraph values inside the payload; judge whether the Raw JSON page itself exposes the payload and copy action.',
+      'If vision_used=false, do not claim screenshot evidence proves visual hierarchy, blending, spacing, prominence, or layout. Use DOM context only, or mark the visual judgment inconclusive/non_issue.',
       'Distinguish aesthetic preference, generic UX improvement, product intent mismatch, workflow mismatch, missing context, misleading information architecture, and blocked/unclear next step.',
+      'If context_sufficiency is low, still judge the available evidence, but choose inconclusive if the evidence cannot support a product judgment.',
       'If unsure, choose inconclusive or non_issues. Prefer minor_gap over major_gap unless the user cannot understand or complete the job.',
       'Return JSON only matching this exact shape:',
-      '{"screen_name":"...","nav_label":"...","workflow_intent":"...","overall":{"classification":"aligned|minor_gap|major_gap|inconclusive","confidence":"low|medium|high","summary":"..."},"findings":[{"title":"...","type":"product_intent_mismatch|workflow_mismatch|context_gap|navigation_promise_gap|evidence_gap|information_hierarchy_gap|actionability_gap|empty_state_gap|safety_clarity_gap","severity":"low|medium|high|critical","rubric_ids":["..."],"expected":"...","observed":"...","evidence":["screenshot evidence","DOM evidence","workflow evidence"],"why_it_matters":"...","suggested_fix":"...","should_report":true}],"non_issues":[{"observation":"...","reason_not_reported":"..."}]}',
+      '{"screen_name":"...","nav_label":"...","workflow_intent":"...","llm_used":true,"vision_used":false,"context_sufficiency":"low|medium|high","context_sufficiency_score":0.0,"context_warnings":["..."],"overall":{"classification":"aligned|minor_gap|major_gap|inconclusive","confidence":"low|medium|high","summary":"..."},"findings":[{"title":"...","type":"product_intent_mismatch|workflow_mismatch|context_gap|navigation_promise_gap|evidence_gap|information_hierarchy_gap|actionability_gap|empty_state_gap|safety_clarity_gap","severity":"low|medium|high|critical","rubric_ids":["..."],"expected":"...","observed":"...","evidence":["screenshot evidence","DOM evidence","workflow evidence"],"why_it_matters":"...","suggested_fix":"...","should_report":true}],"non_issues":[{"observation":"...","reason_not_reported":"..."}]}',
       JSON.stringify(compact)
     ].join('\n\n')
     const text = await this.complete(prompt)
@@ -197,7 +286,7 @@ export class OpenAICompatibleProvider implements LlmProvider {
       ? { model: this.model, input: prompt }
       : { model: this.model, messages: [{ role: 'user', content: prompt }] }
 
-    const response = await fetch(url, {
+    const response = await this.fetchImpl(url, {
       method: 'POST',
       headers: {
         authorization: `Bearer ${this.apiKey}`,
@@ -205,12 +294,135 @@ export class OpenAICompatibleProvider implements LlmProvider {
       },
       body: JSON.stringify(body)
     })
-    if (!response.ok) throw new Error(`LLM request failed: ${response.status}`)
+    if (!response.ok) {
+      const responseBody = await response.text().catch(() => '')
+      throw new LlmProviderError(`LLM request failed: ${response.status}`, {
+        statusCode: response.status,
+        responseBody
+      })
+    }
     const json = await response.json()
     const text = extractProviderText(json)
     if (!text.trim()) throw new Error('LLM response did not contain text output')
     return text
   }
+
+  private providerCheckBase(): Omit<LlmProviderCheckResult, 'request'> {
+    return {
+      provider: this.name,
+      baseUrlHost: baseUrlHost(this.baseUrl),
+      model: this.model || undefined,
+      apiStyle: this.apiStyle,
+      authConfigured: Boolean(this.apiKey),
+      configSource: this.config.sources,
+      env: this.config.env,
+      realProvider: true
+    }
+  }
+}
+
+export function resolveOpenAICompatibleConfig(env: NodeJS.ProcessEnv = process.env): OpenAICompatibleConfig {
+  const baseUrl = firstConfigured(env, [
+    'SNIFFER_LLM_BASE_URL',
+    'STACKPILOT_SEMANTIC_BASE_URL'
+  ]) ?? { value: 'https://api.openai.com/v1', key: 'default' }
+  const apiKey = firstConfigured(env, [
+    'SNIFFER_LLM_API_KEY',
+    'STACKPILOT_SEMANTIC_API_KEY',
+    'OPENAI_API_KEY'
+  ])
+  const model = firstConfigured(env, [
+    'SNIFFER_LLM_MODEL',
+    'STACKPILOT_SEMANTIC_MODEL'
+  ])
+  const apiStyle = firstConfigured(env, [
+    'SNIFFER_LLM_API_STYLE',
+    'STACKPILOT_SEMANTIC_API_STYLE'
+  ]) ?? { value: 'auto', key: 'default' }
+
+  return {
+    baseUrl: baseUrl.value,
+    apiKey: apiKey?.value ?? '',
+    model: model?.value ?? '',
+    apiStyle: normalizeApiStyle(apiStyle.value),
+    sources: {
+      baseUrl: baseUrl.key,
+      apiKey: apiKey?.key,
+      model: model?.key,
+      apiStyle: apiStyle.key
+    },
+    env: {
+      SNIFFER_LLM_BASE_URL: hasEnv(env, 'SNIFFER_LLM_BASE_URL'),
+      SNIFFER_LLM_API_KEY: hasEnv(env, 'SNIFFER_LLM_API_KEY'),
+      SNIFFER_LLM_MODEL: hasEnv(env, 'SNIFFER_LLM_MODEL'),
+      SNIFFER_LLM_API_STYLE: hasEnv(env, 'SNIFFER_LLM_API_STYLE'),
+      STACKPILOT_SEMANTIC_BASE_URL: hasEnv(env, 'STACKPILOT_SEMANTIC_BASE_URL'),
+      STACKPILOT_SEMANTIC_API_KEY: hasEnv(env, 'STACKPILOT_SEMANTIC_API_KEY'),
+      STACKPILOT_SEMANTIC_MODEL: hasEnv(env, 'STACKPILOT_SEMANTIC_MODEL'),
+      STACKPILOT_SEMANTIC_API_STYLE: hasEnv(env, 'STACKPILOT_SEMANTIC_API_STYLE'),
+      OPENAI_API_KEY: hasEnv(env, 'OPENAI_API_KEY')
+    }
+  }
+}
+
+function firstConfigured(env: NodeJS.ProcessEnv, keys: string[]): { key: string; value: string } | undefined {
+  for (const key of keys) {
+    const value = env[key]
+    if (typeof value === 'string' && value.trim()) return { key, value: value.trim() }
+  }
+  return undefined
+}
+
+function hasEnv(env: NodeJS.ProcessEnv, key: string): boolean {
+  return typeof env[key] === 'string' && Boolean(env[key]?.trim())
+}
+
+function normalizeApiStyle(value: string): ApiStyle {
+  return value === 'responses' || value === 'chat_completions' || value === 'auto' ? value : 'auto'
+}
+
+function baseUrlHost(baseUrl: string): string | undefined {
+  try {
+    return new URL(baseUrl).host
+  } catch {
+    return undefined
+  }
+}
+
+function missingConfigMessage(config: OpenAICompatibleConfig): string {
+  const missing = [
+    config.apiKey ? undefined : 'API key',
+    config.model ? undefined : 'model',
+    config.baseUrl ? undefined : 'base URL'
+  ].filter(Boolean)
+  return `Missing ${missing.join(', ')}. Set SNIFFER_LLM_API_KEY, SNIFFER_LLM_MODEL, and SNIFFER_LLM_BASE_URL or run sniffer providers check --provider openai-compatible.`
+}
+
+export function safeProviderErrorSummary(error: unknown): string {
+  if (error instanceof LlmProviderError) {
+    const body = summarizeResponseBody(error.responseBody)
+    return body ? `${error.message}: ${body}` : error.message
+  }
+  return error instanceof Error ? error.message : 'Unknown LLM provider error'
+}
+
+function summarizeResponseBody(body?: string): string | undefined {
+  if (!body?.trim()) return undefined
+  try {
+    const parsed = JSON.parse(body) as Record<string, unknown>
+    const error = parsed.error as Record<string, unknown> | undefined
+    if (typeof error?.message === 'string') return redactSecrets(error.message).slice(0, 240)
+    if (typeof parsed.message === 'string') return redactSecrets(parsed.message).slice(0, 240)
+  } catch {
+    // fall through to safe text excerpt
+  }
+  return redactSecrets(body.replace(/\s+/g, ' ')).slice(0, 240)
+}
+
+function redactSecrets(text: string): string {
+  return text
+    .replace(/sk-[A-Za-z0-9_*.-]{8,}/g, 'sk-***')
+    .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer ***')
 }
 
 export function extractProviderText(json: unknown): string {

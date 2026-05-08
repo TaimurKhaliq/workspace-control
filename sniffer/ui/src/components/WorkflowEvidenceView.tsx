@@ -1,14 +1,17 @@
 import { useMemo, useState } from 'react'
 import type { SnifferReport } from '../api'
 import { buildWorkflowEvidence, type WorkflowEvidence } from '../report/journey'
+import { ReportContextStrip } from './ReportContextStrip'
 
-export function WorkflowEvidenceView({ report }: { report?: SnifferReport | null }) {
+export function WorkflowEvidenceView({ report, projectId, projectName }: { report?: SnifferReport | null; projectId?: string; projectName?: string }) {
   const workflows = useMemo(() => buildWorkflowEvidence(report), [report])
   const [selectedName, setSelectedName] = useState('')
   const selected = workflows.find((workflow) => workflow.workflow.name === selectedName) ?? workflows[0]
   return (
-    <section className="report-grid" data-testid="workflow-evidence-view">
-      <div className="summary-column">
+    <section className="page-stack" data-testid="workflow-evidence-view">
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
+      <div className="report-grid">
+        <div className="summary-column">
         <section className="card-panel">
           <p className="eyebrow">Workflow Evidence</p>
           <h2>Source intent vs runtime behavior</h2>
@@ -29,10 +32,11 @@ export function WorkflowEvidenceView({ report }: { report?: SnifferReport | null
             </button>
           ))}
         </div>
+        </div>
+        <aside className="detail-column">
+          {selected ? <WorkflowDetail view={selected} /> : <section className="card-panel sticky-detail"><h2>No workflows found</h2><p className="muted">No source, runtime, or generated workflow evidence was available for this report.</p></section>}
+        </aside>
       </div>
-      <aside className="detail-column">
-        {selected ? <WorkflowDetail view={selected} /> : <section className="card-panel sticky-detail"><h2>No workflows found</h2><p className="muted">No source, runtime, or generated workflow evidence was available for this report.</p></section>}
-      </aside>
     </section>
   )
 }

@@ -1,14 +1,19 @@
 import type { Issue, SnifferReport } from '../api'
 import { IssueGroupCard, severityTone } from './IssueGroupCard'
+import { ReportContextStrip } from './ReportContextStrip'
 
 export function IssueSummary({
   report,
   selectedIssue,
   onSelectIssue,
   onCopyFixPrompt,
-  onVerifyIssue
+  onVerifyIssue,
+  projectId,
+  projectName
 }: {
   report?: SnifferReport | null
+  projectId?: string
+  projectName?: string
   selectedIssue?: Issue | null
   onSelectIssue: (issue: Issue) => void
   onCopyFixPrompt: (issue: Issue) => void
@@ -20,28 +25,44 @@ export function IssueSummary({
   const issues = report.issues ?? []
   const sections = groupIssues(issues)
   return (
-    <section className="report-grid">
-      <div className="summary-column">
-        <SummaryCards report={report} />
-        {issues.length === 0 ? (
-          <Empty title="No triaged issues" text="The latest report has no raw findings or repair groups." />
-        ) : (
-          Object.entries(sections).map(([section, rows]) => (
-            <section key={section} className="card-panel issue-section">
-              <div className="section-heading compact">
-                <h2>{section}</h2>
-                <span className="status-chip muted">{rows.length}</span>
-              </div>
-              <div className="issue-list">
-                {rows.map((issue) => <IssueGroupCard key={issue.issue_id ?? issue.title} issue={issue} onSelect={onSelectIssue} />)}
-              </div>
-            </section>
-          ))
-        )}
+    <section className="page-stack">
+      <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
+      <section className="card-panel compact-context-card" aria-label="Selected report issue context">
+        <div className="section-heading compact">
+          <div>
+            <p className="eyebrow">Issues</p>
+            <h2>Findings for the selected report</h2>
+          </div>
+          <span className="status-chip muted">{issues.length} triaged</span>
+        </div>
+        <p className="section-note">
+          The items below are stored findings from the report identified above. Use this context before copying prompts,
+          verifying issues, or applying fixes.
+        </p>
+      </section>
+      <div className="report-grid">
+        <div className="summary-column">
+          <SummaryCards report={report} />
+          {issues.length === 0 ? (
+            <Empty title="No triaged issues" text="The latest report has no raw findings or repair groups." />
+          ) : (
+            Object.entries(sections).map(([section, rows]) => (
+              <section key={section} className="card-panel issue-section">
+                <div className="section-heading compact">
+                  <h2>{section}</h2>
+                  <span className="status-chip muted">{rows.length}</span>
+                </div>
+                <div className="issue-list">
+                  {rows.map((issue) => <IssueGroupCard key={issue.issue_id ?? issue.title} issue={issue} onSelect={onSelectIssue} />)}
+                </div>
+              </section>
+            ))
+          )}
+        </div>
+        <aside className="detail-column">
+          <IssueDetail issue={selectedIssue ?? issues[0]} onCopyFixPrompt={onCopyFixPrompt} onVerifyIssue={onVerifyIssue} />
+        </aside>
       </div>
-      <aside className="detail-column">
-        <IssueDetail issue={selectedIssue ?? issues[0]} onCopyFixPrompt={onCopyFixPrompt} onVerifyIssue={onVerifyIssue} />
-      </aside>
     </section>
   )
 }

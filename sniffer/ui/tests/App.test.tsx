@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { IssueGroupCard } from '../src/components/IssueGroupCard'
 import { FixPacketViewer } from '../src/components/FixPacketViewer'
+import { ReportContextStrip } from '../src/components/ReportContextStrip'
 import { SnifferMascot } from '../src/components/SnifferMascot'
 import { ScenariosView } from '../src/components/ScenariosView'
 import { ScreenshotImage } from '../src/components/ScreenshotModal'
@@ -25,6 +26,7 @@ const report: SnifferReport = {
   blockedChecks: [],
   needsMoreCrawling: [],
   scenarioRuns: [{ name: 'Generate plan bundle', status: 'passed' }],
+  productExperience: { status: 'completed', providerName: 'openai-compatible', realLlmScreensReviewed: 11 },
   crawlGraph: {
     startUrl: 'http://127.0.0.1:5173',
     finalUrl: 'http://127.0.0.1:5173',
@@ -129,6 +131,15 @@ describe('Sniffer UI dashboard', () => {
 })
 
 describe('issue and fix packet components', () => {
+  it('renders compact report context for evidence pages', () => {
+    render(<ReportContextStrip report={report} projectId="demo" projectName="Demo UI" />)
+    expect(screen.getByLabelText('Current report context')).toBeInTheDocument()
+    expect(screen.getByText('Demo UI')).toBeInTheDocument()
+    expect(screen.getByText('Latest report')).toBeInTheDocument()
+    expect(screen.getByText('1/1 passed')).toBeInTheDocument()
+    expect(screen.getByText(/Product critic: completed/)).toBeInTheDocument()
+  })
+
   it('renders issue severity and type chips', () => {
     const issue = report.issues[0]
     render(<IssueGroupCard issue={issue} onSelect={() => undefined} />)
@@ -138,12 +149,14 @@ describe('issue and fix packet components', () => {
 
   it('shows a copy prompt button for selected fix packets', async () => {
     vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL) => {
-      if (String(input).includes('/fix-packets/issue-1')) return new Response('# Fix Packet\\nPrompt text', { status: 200 })
+      if (String(input).includes('/fix-packets/issue-1')) return new Response('# Fix Packet\n\n## Prompt\nPrompt text\n\n## Suspected Files\n- src/App.tsx\n\n## Verification\nRun tests', { status: 200 })
       return response({})
     })
     render(<FixPacketViewer report={report} packets={[{ issueId: 'issue-1', name: 'issue-1.md', relativePath: 'fix_packets/issue-1.md', kind: 'md' }]} onGenerateFixes={() => undefined} />)
     expect(await screen.findByRole('button', { name: 'Copy prompt' })).toBeInTheDocument()
-    expect(await screen.findByText((content) => content.includes('# Fix Packet'))).toBeInTheDocument()
+    expect(await screen.findByText('Prompt')).toBeInTheDocument()
+    expect((await screen.findAllByText((content) => content.includes('Prompt text'))).length).toBeGreaterThan(0)
+    expect(await screen.findByText('Verification')).toBeInTheDocument()
   })
 })
 

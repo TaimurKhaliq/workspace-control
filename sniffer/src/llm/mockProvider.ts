@@ -7,6 +7,47 @@ import { triageIssues } from '../heuristics/issueTriage.js'
 export class MockLlmProvider implements LlmProvider {
   name = 'mock'
 
+  isConfigured(): boolean {
+    return true
+  }
+
+  supportsVision(): boolean {
+    return false
+  }
+
+  metadata() {
+    return {
+      name: this.name,
+      realProvider: false,
+      visionSupported: false
+    }
+  }
+
+  async checkConnection() {
+    return {
+      provider: this.name,
+      authConfigured: true,
+      configSource: {},
+      env: {
+        SNIFFER_LLM_BASE_URL: false,
+        SNIFFER_LLM_API_KEY: false,
+        SNIFFER_LLM_MODEL: false,
+        SNIFFER_LLM_API_STYLE: false,
+        STACKPILOT_SEMANTIC_BASE_URL: false,
+        STACKPILOT_SEMANTIC_API_KEY: false,
+        STACKPILOT_SEMANTIC_MODEL: false,
+        STACKPILOT_SEMANTIC_API_STYLE: false,
+        OPENAI_API_KEY: false
+      },
+      request: {
+        attempted: true,
+        success: true,
+        responseTextExtracted: true
+      },
+      realProvider: false
+    }
+  }
+
   async inferIntent(input: Parameters<LlmProvider['inferIntent']>[0]): Promise<AppIntent> {
     return {
       ...input.deterministicIntent,
@@ -60,6 +101,16 @@ export class MockLlmProvider implements LlmProvider {
       screen_name: context.current_screen_name,
       nav_label: context.nav_label_clicked,
       workflow_intent: context.workflow_intent,
+      llm_used: true,
+      real_llm_used: false,
+      llm_provider: this.name,
+      llm_request_status: 'success',
+      vision_used: Boolean(context.vision_used),
+      vision_not_used_reason: context.vision_not_used_reason,
+      scenario_screenshot_used: context.scenario_screenshot_used,
+      context_sufficiency: context.context_sufficiency,
+      context_sufficiency_score: context.context_sufficiency_score,
+      context_warnings: context.context_warnings,
       overall: {
         classification: reportable.length === 0 ? 'aligned' : reportable.some((finding) => finding.severity === 'high' || finding.severity === 'critical') ? 'major_gap' : 'minor_gap',
         confidence: 'high',

@@ -273,6 +273,85 @@ code {
   margin-bottom: 0.75rem;
 }
 
+.section-note {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.compact-context-card {
+  padding-block: 0.85rem;
+}
+
+.compact-context-card .section-heading {
+  margin-bottom: 0.35rem;
+}
+
+.report-context-strip {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  padding: 0.85rem 1rem;
+}
+
+.report-context-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.report-context-main h2 {
+  margin-bottom: 0;
+}
+
+.report-context-sentence {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.report-context-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr minmax(0, 1.8fr) minmax(0, 1.8fr) repeat(3, minmax(92px, 0.75fr));
+  gap: 0.55rem;
+  margin: 0;
+}
+
+.report-context-item {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 0.5rem 0.6rem;
+}
+
+.report-context-item dt {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.report-context-item dd {
+  overflow: hidden;
+  margin: 0.16rem 0 0;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-context-item.long-value dd {
+  direction: ltr;
+}
+
 .eyebrow {
   margin-bottom: 0.25rem;
   color: var(--muted);
@@ -940,15 +1019,20 @@ code {
 .file-list {
   display: flex;
   flex-wrap: wrap;
+  min-width: 0;
   gap: 0.35rem;
 }
 
 .file-list code {
+  max-width: 100%;
+  overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface-subtle);
   padding: 0.25rem 0.45rem;
   font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sticky-detail {
@@ -1085,6 +1169,7 @@ code {
 .packet-item {
   display: grid;
   gap: 0.25rem;
+  min-width: 0;
   width: 100%;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -1099,7 +1184,71 @@ code {
 }
 
 .packet-item span {
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.packet-item strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fix-packet-detail {
+  display: grid;
+  align-content: start;
+  gap: 0.85rem;
+}
+
+.packet-issue {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 0.75rem;
+}
+
+.packet-issue p {
+  margin-bottom: 0;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
+.fix-packet-sections {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.packet-section-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.7rem;
+}
+
+.packet-section-card summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 800;
+}
+
+.packet-section-card pre {
+  max-height: 280px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 8px;
+  margin: 0.65rem 0 0;
+  background: #f8fafc;
+  color: #334155;
+  padding: 0.7rem;
   font-size: 0.78rem;
 }
 
@@ -1441,6 +1590,10 @@ code {
     grid-template-columns: 1fr;
   }
 
+  .report-context-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .sticky-detail {
     position: static;
     max-height: none;
@@ -1466,6 +1619,7 @@ code {
   .form-grid,
   .controls-grid,
   .summary-cards,
+  .report-context-grid,
   .graph-summary-strip,
   .coverage-panel,
   .coverage-grid,

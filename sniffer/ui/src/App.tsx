@@ -123,6 +123,11 @@ export default function App() {
     return 'idle'
   }, [run])
   const reportArtifactProjectId = useMemo(() => projectIdFromReportArtifacts(reportArtifactPaths(report), selectedProjectId || undefined), [report, selectedProjectId])
+  const reportProjectId = reportArtifactProjectId || selectedProjectId || undefined
+  const reportProjectName = useMemo(() => {
+    if (reportProjectId === 'ad_hoc') return 'Ad hoc report'
+    return projects.find((project) => project.id === reportProjectId)?.name
+  }, [projects, reportProjectId])
 
   useEffect(() => {
     if (!reportArtifactProjectId || reportArtifactProjectId === selectedProjectId) return
@@ -261,6 +266,8 @@ export default function App() {
           mascotState={mascotState}
           error={error}
           isRunning={run?.status === 'running' || status?.status === 'running'}
+          projectId={reportProjectId}
+          projectName={reportProjectName}
           onFormChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
           onRunAudit={() => void runAudit()}
           onRunConsistency={() => void runAudit({ scenario: 'off', consistencyCheck: true })}
@@ -272,14 +279,14 @@ export default function App() {
           }}
         />
       )}
-      {screen === 'timeline' && <ReportTimeline report={report} fixPackets={fixPackets} run={run} />}
-      {screen === 'scenarios' && <ScenariosView report={report} projectId={reportArtifactProjectId} />}
-      {screen === 'crawl' && <CrawlPathView report={report} projectId={reportArtifactProjectId} />}
-      {screen === 'workflows' && <WorkflowEvidenceView report={report} />}
-      {screen === 'graph' && <DiscoveryGraph report={report} fixPackets={fixPackets} screenshots={screenshots} projectId={reportArtifactProjectId} />}
-      {screen === 'issues' && <IssueSummary report={report} selectedIssue={selectedIssue} onSelectIssue={setSelectedIssue} onCopyFixPrompt={copyFixPrompt} onVerifyIssue={(issue) => void runVerification(issue)} />}
-      {screen === 'fixes' && <FixPacketViewer report={report} packets={fixPackets} projectId={reportArtifactProjectId} onGenerateFixes={() => void generateFixes()} />}
-      {screen === 'screenshots' && <ScreenshotGallery screenshots={screenshots} />}
+      {screen === 'timeline' && <ReportTimeline report={report} fixPackets={fixPackets} run={run} projectId={reportProjectId} projectName={reportProjectName} />}
+      {screen === 'scenarios' && <ScenariosView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
+      {screen === 'crawl' && <CrawlPathView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
+      {screen === 'workflows' && <WorkflowEvidenceView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
+      {screen === 'graph' && <DiscoveryGraph report={report} fixPackets={fixPackets} screenshots={screenshots} projectId={reportProjectId} projectName={reportProjectName} />}
+      {screen === 'issues' && <IssueSummary report={report} projectId={reportProjectId} projectName={reportProjectName} selectedIssue={selectedIssue} onSelectIssue={setSelectedIssue} onCopyFixPrompt={copyFixPrompt} onVerifyIssue={(issue) => void runVerification(issue)} />}
+      {screen === 'fixes' && <FixPacketViewer report={report} packets={fixPackets} projectId={reportProjectId} projectName={reportProjectName} onGenerateFixes={() => void generateFixes()} />}
+      {screen === 'screenshots' && <ScreenshotGallery report={report} screenshots={screenshots} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'raw' && <RawJsonView report={report} />}
       {screen === 'settings' && <SettingsPanel status={status} />}
     </AppShell>

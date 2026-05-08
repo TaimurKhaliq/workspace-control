@@ -403,6 +403,48 @@ npm run sniffer -- audit --repo /path/to/ui-repo --url http://localhost:3000 --u
 
 Keys are used only by the Node CLI process. Sniffer never sends secrets to browser or client code.
 
+### Configuring Product Experience Critic LLM
+
+The Product Experience Critic is LLM-first when you run it in `llm` mode. It does not silently fall back to mock or deterministic judgment if the real provider fails.
+
+Preferred environment variables:
+
+```bash
+export SNIFFER_LLM_BASE_URL="https://api.openai.com/v1"
+export SNIFFER_LLM_API_KEY="..."
+export SNIFFER_LLM_MODEL="gpt-4.1-mini"
+export SNIFFER_LLM_API_STYLE="responses"
+```
+
+Fallback order:
+
+- base URL: `SNIFFER_LLM_BASE_URL`, `STACKPILOT_SEMANTIC_BASE_URL`, then `https://api.openai.com/v1`
+- API key: `SNIFFER_LLM_API_KEY`, `STACKPILOT_SEMANTIC_API_KEY`, then `OPENAI_API_KEY`
+- model: `SNIFFER_LLM_MODEL`, then `STACKPILOT_SEMANTIC_MODEL`
+- API style: `SNIFFER_LLM_API_STYLE`, `STACKPILOT_SEMANTIC_API_STYLE`, then `auto`
+
+Check the provider before running a long audit:
+
+```bash
+npm run sniffer -- providers check --provider openai-compatible
+```
+
+The check prints the provider, base URL host, model, API style, which env vars are present, whether auth is configured, request success/failure, and the HTTP status/error summary. It never prints the API key.
+
+Then run the critic:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --scenario all \
+  --execute-generated-scenarios \
+  --provider openai-compatible \
+  --product-experience-critic llm
+```
+
+If the provider check fails, fix the env vars first. In `llm` mode Sniffer marks the Product Experience Critic as `provider_error` instead of pretending a mock or deterministic review succeeded.
+
 ## What Sniffer Collects
 
 Source discovery reads `package.json`, detects likely framework and build tool, runs applicable framework adapters, and scans source/template files for routes, pages, components, forms, UI surfaces, source workflows, state/actions, and API calls.
