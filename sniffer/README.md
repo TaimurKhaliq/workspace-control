@@ -50,6 +50,7 @@ The dashboard provides:
 
 - Run launcher for repo path, app URL, scenario mode, critic mode, UX critic, intent mode, provider, product goal, max iterations, and consistency checks.
 - Story-first report navigation: Summary, Run Timeline, Scenarios, Crawl Path, Workflow Evidence, Issues, Fix Packets, Screenshots, Graph Explorer, and Raw JSON.
+- A shared report context strip on report/evidence pages so users can always see the current project/ad hoc label, selected/latest report identity, generated timestamp, status, app URL, repo path, scenario count, issue count, screenshot count, and Product Experience Critic status.
 - Live run status through polling, with the current phase and recent logs shown in the Run Timeline view.
 - Run Timeline phase cards for source discovery, runtime crawl, scenario execution, critics, product intent analysis, issue grouping, and fix packet generation.
 - Scenario detail replay with prerequisites, step/assertion evidence, status chips, and inline screenshot previews.
@@ -57,7 +58,7 @@ The dashboard provides:
 - Workflow Evidence view connecting source intent, source files, expected actions, runtime verification, related API calls, scenarios, critic decisions, and issues.
 - Scoped Discovery Graph explorer with pan/zoom, minimap, controls, search, filters, legend, and node detail panels. It defaults to a crawl graph and supports Workflow graph, Issue graph, Crawl graph, Source intent graph, and Full graph (advanced) modes.
 - Report summary cards, issue groups, issue detail, fix prompt copy actions, and issue verification launch.
-- Fix packet list/detail view.
+- Fix packet list/detail view with compact report context, repair status, suspected files, prompt, verification, constraints, and raw packet sections.
 - Screenshot/evidence gallery.
 - Settings view for LLM/agent configured status.
 - A lightweight inline SVG golden retriever mascot that animates while Sniffer is running.
@@ -445,6 +446,96 @@ npm run sniffer -- audit \
 
 If the provider check fails, fix the env vars first. In `llm` mode Sniffer marks the Product Experience Critic as `provider_error` instead of pretending a mock or deterministic review succeeded.
 
+## Product Experience Critic
+
+The Product Experience Critic is an intent-aware product QA layer. It asks:
+
+```text
+Given what this app is trying to do, does this screen make sense for the user job being tested?
+```
+
+It is separate from the workflow critic, UX heuristics, and prompt/output consistency checks. In `llm` mode it uses the configured LLM as the primary evaluator; deterministic checks are used as context builders, safety guardrails, candidate generators, and fallback only when LLM mode is not requested.
+
+Run it with executed scenarios so the critic sees actual reached screens instead of only the initial DOM:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --scenario all \
+  --execute-generated-scenarios \
+  --provider openai-compatible \
+  --product-experience-critic llm
+```
+
+The critic builds one `ProductExperienceContext` per important screen. For Sniffer Dashboard this includes Summary, Run Timeline, Scenarios, Crawl Path, Workflow Evidence, Issues, Fix Packets, Screenshots, Graph Explorer, Raw JSON, and Settings.
+
+Each context includes:
+
+- app profile/subtype and product intent
+- page intent and workflow intent
+- expected user questions, expected primary content, required context, and expected next actions
+- scenario name/step when available
+- screenshot path and artifact URL
+- DOM summary, headings, visible controls, visible status text, errors, and empty states
+- active nav/page label
+- report/run/project context visibility
+- source/runtime evidence and candidate findings
+- context sufficiency score and warnings
+
+Reports include a `Product Experience Critic` section for every reviewed screen:
+
+- LLM used and real LLM used
+- provider/model/API style
+- vision used or the reason it was not used
+- context sufficiency
+- scenario screenshot used
+- classification: `aligned`, `minor_gap`, `major_gap`, or `inconclusive`
+- evidence-backed findings and non-issues
+
+Current OpenAI-compatible provider behavior sends DOM/context plus screenshot paths/artifact URLs. The wrapper reports `vision_used=false` until a vision-capable provider implementation is wired in; it does not pretend screenshot pixels were reviewed.
+
+Guardrails prevent common dogfood false positives:
+
+- Loaded report issue titles, fix-packet titles, raw findings, deferred findings, and `runtimeSurfaceMatches` inside a report are treated as report data, not proof that the dashboard chrome has the same defect.
+- Raw JSON is judged by whether the Raw JSON page exposes the payload and copy action, not by embedded issues inside the payload.
+- If vision is not used, visual hierarchy/prominence claims must be backed by DOM evidence or are suppressed.
+- If visible DOM contradicts a finding, such as `Copy JSON` being visible while a model says no copy action exists, the finding is suppressed.
+
+Dogfood Sniffer on the dashboard:
+
+```bash
+npm run sniffer -- providers check --provider openai-compatible
+npm run sniffer -- audit \
+  --repo /Users/taimurkhaliq/ai_projects/stackpilot-workspace/workspace-control/sniffer/ui \
+  --url http://127.0.0.1:4877 \
+  --scenario all \
+  --execute-generated-scenarios \
+  --product-experience-critic llm \
+  --provider openai-compatible \
+  --ux-critic deterministic \
+  --intent-mode deterministic \
+  --critic-mode deterministic \
+  --max-actions 36 \
+  --max-states 24
+```
+
+Expected healthy dogfood shape:
+
+```json
+{
+  "generatedScenarios": 11,
+  "scenarioRuns": 11,
+  "passedScenarioRuns": 11,
+  "productExperience": {
+    "status": "completed",
+    "providerName": "openai-compatible",
+    "realLlmScreensReviewed": 11,
+    "visionScreensReviewed": 0
+  }
+}
+```
+
 ## What Sniffer Collects
 
 Source discovery reads `package.json`, detects likely framework and build tool, runs applicable framework adapters, and scans source/template files for routes, pages, components, forms, UI surfaces, source workflows, state/actions, and API calls.
@@ -738,6 +829,8 @@ Repair attempts record git status before, git diff after, commands run, agent ou
 - Framework adapters are heuristic and do not compile Angular/React/Vue/Svelte source.
 - Runtime app profile inference can see secondary ecommerce/admin/dashboard words in report data; high-confidence source/product evidence takes precedence for the final app profile.
 - Built-in workspace-control scenarios are only appropriate for planning/control-panel apps. Arbitrary apps should use hybrid discovery with generated generic scenarios.
+- The OpenAI-compatible Product Experience Critic currently sends DOM/context and screenshot paths, not image pixels. Reports are explicit with `vision_used=false` until a vision-capable provider wrapper is implemented.
+- LLM product judgments are evidence-gated. This suppresses self-referential report-data echoes, but it can also defer a legitimate subtle visual issue when only screenshot pixels could prove it.
 - Matrix external targets are skipped, not failed, when their app URLs are not running.
 - Manual repair proof proves packet handoff safety; it does not verify that a human or agent applied a fix.
 
