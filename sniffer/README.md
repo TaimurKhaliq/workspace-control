@@ -1,13 +1,16 @@
 # Sniffer
 
-Sniffer is a context-aware UI QA agent. It is designed to inspect the source first, infer what the UI is supposed to expose, crawl the running app with Playwright, generate E2E tests, and report likely real UI bugs with evidence.
+Sniffer is a context-aware UI QA agent. It is designed to understand what a UI is trying to help a user do, execute the app with Playwright, and report likely real product/UI bugs with evidence.
 
-It is not a dumb crawler. The intended flow is:
+It is not a dumb crawler. The current architecture is evidence-first and LLM-centered when an LLM is configured:
 
-1. Deterministic source discovery.
-2. Optional LLM semantic interpretation.
-3. Playwright runtime execution.
-4. Evidence-backed issue classification and reports.
+1. Collect evidence from source discovery, runtime DOM snapshots, Playwright crawl states, scenarios, screenshots, console/network events, and report metadata.
+2. Build intent context: app profile, product intent, page intent, workflow intent, expected user questions, visible controls, and scenario traces.
+3. Use the LLM as the primary Product Experience Critic when `--product-experience-critic llm` is enabled.
+4. Evidence-gate LLM findings so contradictory runtime/source evidence suppresses false positives.
+5. Generate grouped issues, fix packets, and verification paths only for findings that remain evidence-backed.
+
+Sniffer still supports fully deterministic/no-key audits for discovery, crawl, generic scenario execution, accessibility checks, and rule-based issue classification. That mode is useful for CI and local smoke testing. The product-level judgment layer, however, is intentionally LLM-centered when configured.
 
 Sniffer does not perform destructive actions by default.
 
@@ -84,7 +87,7 @@ npm run sniffer -- audit --repo ../web --url http://localhost:3000 --discovery-m
 npm run sniffer -- audit --repo ../web --url http://localhost:3000 --scenario all --ux-critic deterministic
 npm run sniffer -- audit --repo ../web --url http://localhost:3000 --scenario generate-plan-bundle
 npm run sniffer -- audit --repo ../web --url http://localhost:3000 --critic-mode deterministic
-npm run sniffer -- audit --repo ../web --url http://localhost:3000 --use-llm --provider mock --critic-mode llm --ux-critic llm
+npm run sniffer -- audit --repo ../web --url http://localhost:3000 --scenario all --execute-generated-scenarios --provider openai-compatible --product-experience-critic llm
 npm run sniffer -- generate-fixes --report reports/sniffer/latest/latest_report.json
 npm run sniffer -- apply-fix --issue <issue_id> --report reports/sniffer/latest/latest_report.json --agent manual
 npm run sniffer -- verify --issue <issue_id> --url http://localhost:3000 --report reports/sniffer/latest/latest_report.json
@@ -356,13 +359,15 @@ To add a new matrix target, add a `MatrixTarget` entry in `src/verification/matr
 
 The matrix also dogfoods the Sniffer UI. It starts the local dashboard server when `ui/dist/index.html` exists and verifies that the dashboard loads, project selector is visible, run launcher is visible, report navigation is visible, and Timeline/Crawl/Graph/Screenshots/Fix Packet pages open without crashing.
 
-## Deterministic Audit
+## No-Key Deterministic Audit
 
 Start the target app separately, then run:
 
 ```bash
 npm run sniffer -- audit --repo /path/to/ui-repo --url http://localhost:3000
 ```
+
+This mode does not require an LLM key. It still performs source/runtime discovery, safe crawling, generic scenario generation, deterministic UX/accessibility checks, issue grouping, screenshots, and reports. It should be treated as a reliable baseline, not the deepest product judgment Sniffer can make.
 
 This writes reports to:
 
@@ -385,7 +390,7 @@ reports/sniffer/ad_hoc/latest/
 
 ## LLM Mode
 
-LLM mode is optional. Deterministic mode requires no API keys.
+LLM mode is where Sniffer's product-level review becomes most useful. Deterministic mode remains available and requires no API keys, but the Product Experience Critic is designed to use a real LLM as the primary evaluator when configured.
 
 Create a local `.env` or export these variables:
 
@@ -396,10 +401,16 @@ export SNIFFER_LLM_MODEL=...
 export SNIFFER_LLM_API_STYLE=responses
 ```
 
-Then run:
+Then run a product-experience audit:
 
 ```bash
-npm run sniffer -- audit --repo /path/to/ui-repo --url http://localhost:3000 --use-llm
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --scenario all \
+  --execute-generated-scenarios \
+  --provider openai-compatible \
+  --product-experience-critic llm
 ```
 
 Keys are used only by the Node CLI process. Sniffer never sends secrets to browser or client code.
@@ -524,9 +535,12 @@ Expected healthy dogfood shape:
 
 ```json
 {
-  "generatedScenarios": 11,
-  "scenarioRuns": 11,
-  "passedScenarioRuns": 11,
+  "issues": 0,
+  "rawFindings": 0,
+  "generatedScenarios": 14,
+  "scenarioRuns": 14,
+  "passedScenarioRuns": 12,
+  "blockedScenarioRuns": 2,
   "productExperience": {
     "status": "completed",
     "providerName": "openai-compatible",
@@ -697,7 +711,7 @@ The report summary includes:
 - accessibility issues
 - raw findings appendix
 
-Examples of deterministic repair groups:
+Examples of repair groups:
 
 - API endpoint failures
 - Add repo workflow discoverability
@@ -710,7 +724,7 @@ If workflow verification found a control but a scenario later failed to locate i
 
 API evidence includes normalized endpoint patterns, method, status code, affected URLs, target ids when available, and response body text when Playwright can safely read it.
 
-When `--critic-mode llm` or `--ux-critic llm` is enabled and the provider supports it, Sniffer can ask the LLM to group raw findings into repair themes. Deterministic grouping remains the fallback.
+When `--critic-mode llm`, `--ux-critic llm`, or `--product-experience-critic llm` is enabled and the provider supports it, Sniffer can ask the LLM to interpret findings in context and group them into repair themes. Deterministic grouping remains available as a fallback for no-key runs.
 
 ## Repair Loop
 
@@ -877,4 +891,4 @@ Repair safety:
 
 ## Limitations
 
-Sniffer is an early deterministic-first implementation. It can miss authenticated flows, role-specific UI, data-dependent states, canvas-heavy interfaces, and workflows that require complex setup. LLM support is intentionally optional and should be treated as semantic assistance, not proof. Evidence-backed reports should still be reviewed by an engineer.
+Sniffer is still early. It can miss authenticated flows, role-specific UI, data-dependent states, canvas-heavy interfaces, workflows that require complex setup, and subtle visual problems that require actual image understanding. The Product Experience Critic is LLM-centered when configured, but its findings are not treated as proof by themselves: they are screened against DOM, source, scenario, screenshot-path, and runtime evidence before becoming issues or fix packets. Evidence-backed reports should still be reviewed by an engineer.
