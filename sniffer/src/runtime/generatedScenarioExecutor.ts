@@ -178,6 +178,42 @@ async function snifferDashboardAssertions(
   if (scenario.id === 'sniffer-graph-raw-settings') {
     return [await clickRequiredButtons(page, 'Graph, Raw JSON, and Settings are reachable', ['Graph Explorer', 'Raw JSON', 'Settings'], shot, 2)]
   }
+  if (scenario.id === 'sniffer-raw-json-copy') {
+    await clickNavButton(page, 'Raw JSON')
+    const screenshotPath = await shot('raw-json-copy', 'click Raw JSON')
+    const hasRawJson = await page.getByText(/latest report payload|raw json/i).first().isVisible({ timeout: 600 }).catch(() => false)
+    const hasCopyJson = await visibleButton(page, /^copy json$/i)
+    return [{
+      label: 'Raw JSON copy action is visible',
+      status: hasRawJson && hasCopyJson ? 'passed' : 'failed',
+      evidence: [`raw_json_visible:${hasRawJson}`, `copy_json_visible:${hasCopyJson}`],
+      screenshotPath
+    }]
+  }
+  if (scenario.id === 'sniffer-fix-packet-copy') {
+    await clickNavButton(page, 'Fix Packets')
+    const screenshotPath = await shot('fix-packet-copy', 'click Fix Packets')
+    const empty = await page.getByText(/no fix packets|generate fix packets/i).first().isVisible({ timeout: 600 }).catch(() => false)
+    const hasCopy = await visibleButton(page, /copy prompt|copy fix prompt|copy repair prompt/i)
+    return [{
+      label: 'Fix packet copy action is visible when a packet exists',
+      status: hasCopy ? 'passed' : empty ? 'blocked' : 'failed',
+      evidence: [`copy_prompt_visible:${hasCopy}`, `empty_or_generate_state:${empty}`],
+      screenshotPath
+    }]
+  }
+  if (scenario.id === 'sniffer-issues-copy-fix-prompt') {
+    await clickNavButton(page, 'Issues')
+    const screenshotPath = await shot('issues-copy-fix-prompt', 'click Issues')
+    const empty = await page.getByText(/no triaged issues|no raw findings|no report loaded/i).first().isVisible({ timeout: 600 }).catch(() => false)
+    const hasCopy = await visibleButton(page, /copy fix prompt|copy prompt/i)
+    return [{
+      label: 'Issue detail copy fix prompt action is visible when an issue exists',
+      status: hasCopy ? 'passed' : empty ? 'blocked' : 'failed',
+      evidence: [`copy_fix_prompt_visible:${hasCopy}`, `empty_issue_state:${empty}`],
+      screenshotPath
+    }]
+  }
   return [{ label: 'Sniffer dashboard scenario planned', status: 'blocked', evidence: [`No deterministic executor for ${scenario.id}.`], screenshotPath: snapshot.screenshotPath }]
 }
 
@@ -200,6 +236,11 @@ async function clickRequiredButtons(page: Page, label: string, names: string[], 
     await shot(`sniffer-${passed}-${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`, `click ${name}`)
   }
   return { label, status: passed >= minimum ? 'passed' : 'failed', evidence, screenshotPath: undefined }
+}
+
+async function clickNavButton(page: Page, name: string): Promise<void> {
+  await page.getByRole('button', { name: new RegExp(`^${escapeRegex(name)}$`, 'i') }).first().click({ timeout: 2_000 }).catch(() => undefined)
+  await page.waitForTimeout(150)
 }
 
 async function controlsVisible(page: Page, label: string, patterns: RegExp[], screenshotPath?: string): Promise<ScenarioAssertionResult> {

@@ -71,7 +71,7 @@ export function classifyRuntimeIssues(sourceGraph: SourceGraph, crawlGraph: Craw
   const missingSurfaces = matchRuntimeSurfaces(sourceGraph, crawlGraph)
     .filter((match) => match.seenInRuntime === 'no' || match.seenInRuntime === 'partial')
     .filter((match) => match.seenInRuntime === 'no' || (match.missingControls?.length ?? 0) > 0)
-    .filter((match) => !['raw_json_panel', 'handoff_prompt_panel', 'plan_bundle_view', 'change_set_table', 'recipe_panel', 'graph_evidence_panel', 'validation_panel'].includes(match.surface_type))
+    .filter((match) => !['copy_action', 'raw_json_panel', 'handoff_prompt_panel', 'plan_bundle_view', 'change_set_table', 'recipe_panel', 'graph_evidence_panel', 'validation_panel'].includes(match.surface_type))
   if (missingSurfaces.length > 0) {
     issues.push({
       severity: 'low',

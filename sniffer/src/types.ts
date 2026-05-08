@@ -840,6 +840,14 @@ export interface ProductExperienceFinding {
   suggested_fix: string
   should_report: boolean
   screenshotPath?: string
+  reviewed_screen?: string
+  screenshot_used?: string
+  scenario_step?: string
+  dom_excerpt?: string
+  positive_evidence_checked?: string[]
+  negative_evidence_checked?: string[]
+  evidence_scope?: 'same_screen' | 'cross_screen' | 'mixed' | 'unknown'
+  suppression_reason?: string
 }
 
 export interface ProductExperienceDecision {

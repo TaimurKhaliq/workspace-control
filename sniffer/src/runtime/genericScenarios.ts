@@ -126,7 +126,19 @@ function snifferDashboardScenarios(selection?: ScenarioPackSelection): Generated
     ], ['Screenshots'], ['screenshot evidence page is reachable'], 'medium', evidence),
     dashboardScenario('sniffer-graph-raw-settings', 'Graph, Raw JSON, and Settings availability', [
       step('Open graph/raw/settings views', 'open_graph_raw_settings', ['Graph Explorer', 'Raw JSON', 'Settings'])
-    ], ['Graph Explorer', 'Raw JSON', 'Settings'], ['advanced evidence and configuration views are reachable'], 'medium', evidence)
+    ], ['Graph Explorer', 'Raw JSON', 'Settings'], ['advanced evidence and configuration views are reachable'], 'medium', evidence),
+    dashboardScenario('sniffer-raw-json-copy', 'Raw JSON copy action', [
+      step('Open Raw JSON', 'open_raw_json', ['Raw JSON']),
+      step('Verify Copy JSON', 'inspect_copy_json', ['Copy JSON'])
+    ], ['Raw JSON', 'Copy JSON'], ['raw report payload can be copied'], 'high', evidence),
+    dashboardScenario('sniffer-fix-packet-copy', 'Fix packet copy action', [
+      step('Open Fix Packets', 'open_fix_packets', ['Fix Packets']),
+      step('Verify copy prompt action', 'inspect_copy_prompt', ['Copy prompt'])
+    ], ['Fix Packets', 'Copy prompt'], ['fix packet prompt can be copied when a packet exists'], 'medium', evidence),
+    dashboardScenario('sniffer-issues-copy-fix-prompt', 'Issues copy fix prompt action', [
+      step('Open Issues', 'open_issues', ['Issues']),
+      step('Verify copy fix prompt action', 'inspect_copy_fix_prompt', ['Copy fix prompt'])
+    ], ['Issues', 'Copy fix prompt'], ['issue fix prompts can be copied when an issue is selected'], 'medium', evidence)
   ]
 }
 

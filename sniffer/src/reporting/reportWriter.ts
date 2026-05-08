@@ -664,6 +664,13 @@ function renderProductExperienceCritic(report: SnifferReport): string {
             `    - Rubric: ${finding.rubric_ids.join(', ') || 'none'}`,
             `    - Expected: ${finding.expected}`,
             `    - Observed: ${finding.observed}`,
+            finding.reviewed_screen ? `    - Reviewed screen: ${finding.reviewed_screen}` : undefined,
+            finding.scenario_step ? `    - Scenario step: ${finding.scenario_step}` : undefined,
+            finding.evidence_scope ? `    - Evidence scope: ${finding.evidence_scope}` : undefined,
+            finding.dom_excerpt ? `    - DOM excerpt: ${finding.dom_excerpt}` : undefined,
+            finding.positive_evidence_checked?.length ? `    - Positive evidence checked: ${finding.positive_evidence_checked.join('; ')}` : undefined,
+            finding.negative_evidence_checked?.length ? `    - Negative evidence checked: ${finding.negative_evidence_checked.join('; ')}` : undefined,
+            finding.suppression_reason ? `    - Suppression reason: ${finding.suppression_reason}` : undefined,
             `    - Evidence: ${finding.evidence.join('; ') || 'none'}`,
             finding.screenshotPath ? `    - Screenshot: ${finding.screenshotPath}` : undefined
           ].filter(Boolean).join('\n'))

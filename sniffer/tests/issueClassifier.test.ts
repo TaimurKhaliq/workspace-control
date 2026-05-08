@@ -65,6 +65,32 @@ describe('classifyRuntimeIssues', () => {
       'response_body: {"detail":"database locked"}'
     ]))
   })
+
+  it('does not report source-discovered copy actions that were not reached by shallow crawl', () => {
+    const graph = sourceGraph()
+    graph.uiSurfaces = [{
+      file: 'src/components/IssueSummary.tsx',
+      surface_type: 'copy_action',
+      display_name: 'Copy action',
+      evidence: ['Copy fix prompt'],
+      relatedButtons: ['Copy fix prompt'],
+      relatedInputs: [],
+      confidence: 0.8
+    }]
+    const issues = classifyRuntimeIssues(graph, {
+      startUrl: 'http://localhost:3000',
+      title: 'Demo',
+      finalUrl: 'http://localhost:3000',
+      states: [{ url: 'http://localhost:3000', title: 'Demo', hash: 'x', visible: [] }],
+      actions: [],
+      consoleErrors: [],
+      networkFailures: [],
+      screenshots: ['/tmp/screen.png'],
+      generatedAt: new Date().toISOString()
+    })
+
+    expect(issues.map((issue) => issue.title)).not.toContain('Source-discovered UI surfaces were not observed at runtime')
+  })
 })
 
 function sourceGraph(): SourceGraph {

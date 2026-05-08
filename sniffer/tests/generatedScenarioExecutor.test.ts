@@ -25,6 +25,7 @@ beforeEach(async () => {
           <button onclick="document.querySelector('main').textContent='Projects view'">Projects</button>
           <button onclick="document.querySelector('main').textContent='Run Timeline view'">Run Timeline</button>
           <button onclick="document.querySelector('main').textContent='Issues view'">Issues</button>
+          <button onclick="document.querySelector('main').innerHTML='<h2>Raw JSON</h2><p>Latest report payload</p><button>Copy JSON</button><pre>{&quot;ok&quot;:true}</pre>'">Raw JSON</button>
         </nav>
         <main>Initial view</main>
       `)
@@ -73,6 +74,20 @@ describe('generated scenario executor', () => {
 
     expect(runs[0].status).toBe('passed')
     expect(runs[0].assertions[0].evidence.join('\n')).toContain('Projects')
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('passes targeted Raw JSON copy scenario when Copy JSON exists', async () => {
+    const dir = path.join(os.tmpdir(), `sniffer-raw-json-copy-${randomUUID()}`)
+    await mkdir(dir, { recursive: true })
+    const runs = await executeGeneratedScenarios({
+      url: `${url}/buttons`,
+      reportDir: dir,
+      scenarios: [scenario('sniffer-raw-json-copy', 'Raw JSON copy action')]
+    })
+
+    expect(runs[0].status).toBe('passed')
+    expect(runs[0].assertions[0].evidence).toEqual(expect.arrayContaining(['copy_json_visible:true']))
     await rm(dir, { recursive: true, force: true })
   })
 })

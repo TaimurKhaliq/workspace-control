@@ -412,6 +412,133 @@ describe('Product Experience Critic', () => {
     expect(result.decisions.find((decision) => decision.screen_name === 'Raw JSON')?.findings[0]?.should_report).toBe(false)
   })
 
+  it('does not let Issues screen create a Raw JSON missing-copy finding without embedded Raw JSON', async () => {
+    const provider = new SpyProductExperienceProvider((context) => {
+      if (context.current_screen_name !== 'Issues') return alignedDecision(context)
+      return {
+        ...alignedDecision(context),
+        overall: { classification: 'minor_gap', confidence: 'high', summary: 'Cross-screen missing copy claim.' },
+        findings: [{
+          title: 'Missing copy action control for Raw JSON screen',
+          type: 'actionability_gap',
+          severity: 'medium',
+          rubric_ids: ['actionability'],
+          expected: 'Raw JSON should have a visible Copy JSON button.',
+          observed: 'No Copy JSON control was found.',
+          evidence: ['Issues screen issue text mentions Raw JSON copy action'],
+          why_it_matters: 'Users need to copy raw JSON.',
+          suggested_fix: 'Add Copy JSON.',
+          should_report: true
+        }],
+        non_issues: []
+      }
+    })
+    const graph = crawlGraph(['ISSUES Findings for selected report', 'Copy fix prompt Run verification'])
+    graph.finalUrl = 'http://localhost:4877/#issues'
+    graph.states[0].url = 'http://localhost:4877/#issues'
+    graph.states[0].hashRoute = '#issues'
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: graph,
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const finding = result.decisions.find((decision) => decision.screen_name === 'Issues')?.findings[0]
+    expect(result.issues.map((issue) => issue.title)).not.toContain('Missing copy action control for Raw JSON screen')
+    expect(finding?.should_report).toBe(false)
+    expect(finding?.suppression_reason).toContain('reviewed Issues')
+  })
+
+  it('does not let suppressed cross-screen copy findings leak into the screen summary', async () => {
+    const provider = new SpyProductExperienceProvider((context) => {
+      if (context.current_screen_name !== 'Issues') return alignedDecision(context)
+      return {
+        ...alignedDecision(context),
+        overall: { classification: 'minor_gap', confidence: 'high', summary: 'The Issues screen is missing a Raw JSON Copy JSON control.' },
+        findings: [{
+          title: 'Missing copy action control for Raw JSON report data',
+          type: 'actionability_gap',
+          severity: 'medium',
+          rubric_ids: ['actionability'],
+          expected: 'Copy JSON should be visible.',
+          observed: 'No Copy JSON control was found.',
+          evidence: ['The loaded Issues report mentions Raw JSON.'],
+          why_it_matters: 'Users need to copy raw JSON.',
+          suggested_fix: 'Add Copy JSON.',
+          should_report: true
+        }],
+        non_issues: []
+      }
+    })
+    const graph = crawlGraph(['ISSUES Findings for selected report', 'Raw JSON Copy JSON'])
+    graph.finalUrl = 'http://localhost:4877/#issues'
+    graph.states[0].url = 'http://localhost:4877/#issues'
+    graph.states[0].hashRoute = '#issues'
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: graph,
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const decision = result.decisions.find((item) => item.screen_name === 'Issues')
+    expect(decision?.overall.classification).toBe('aligned')
+    expect(decision?.overall.summary).not.toContain('missing a Raw JSON Copy JSON control')
+    expect(decision?.non_issues.some((item) => item.reason_not_reported.includes('candidate suppressed due to contradictory runtime evidence'))).toBe(true)
+  })
+
+  it('adds reviewed screen and screenshot metadata to reported product experience issues', async () => {
+    const provider = new SpyProductExperienceProvider((context) => {
+      if (context.current_screen_name !== 'Screenshots') return alignedDecision(context)
+      return {
+        ...alignedDecision(context),
+        overall: { classification: 'minor_gap', confidence: 'high', summary: 'Screenshot context missing.' },
+        findings: [{
+          title: 'Screenshot modal lacks scenario/state/action context',
+          type: 'evidence_gap',
+          severity: 'medium',
+          rubric_ids: ['evidence_proximity'],
+          expected: 'Screenshot preview should show scenario, state, action, and related issue context.',
+          observed: 'Screenshot evidence is image/file oriented without scenario context.',
+          evidence: ['DOM evidence: pet-friends.png'],
+          why_it_matters: 'Screenshots need provenance.',
+          suggested_fix: 'Add screenshot context.',
+          should_report: true
+        }],
+        non_issues: []
+      }
+    })
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: screenshotsCrawlGraph(['SCREENSHOTS', 'pet-friends.png']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues[0].evidence).toEqual(expect.arrayContaining([
+      'reviewed_screen: Screenshots',
+      'evidence_scope: same_screen'
+    ]))
+    expect(result.issues[0].evidence.some((item) => item.startsWith('screenshot_used: '))).toBe(true)
+    expect(result.decisions.find((decision) => decision.screen_name === 'Screenshots')?.findings[0]?.dom_excerpt).toContain('pet-friends.png')
+  })
+
   it('reports Screenshots when LLM confirms missing screenshot context', async () => {
     const provider = new SpyProductExperienceProvider((context) => {
       if (context.current_screen_name !== 'Screenshots') return alignedDecision(context)

@@ -481,10 +481,17 @@ function productExperienceIssue(finding: ProductExperienceFinding, decision: Pro
       `Why it matters: ${finding.why_it_matters}`
     ].join('\n'),
     evidence: [
+      `reviewed_screen: ${finding.reviewed_screen ?? decision.screen_name}`,
+      `screenshot_used: ${finding.screenshot_used ?? finding.screenshotPath ?? 'none'}`,
+      finding.scenario_step ? `scenario_step: ${finding.scenario_step}` : undefined,
+      `evidence_scope: ${finding.evidence_scope ?? 'unknown'}`,
+      finding.dom_excerpt ? `dom_excerpt: ${finding.dom_excerpt}` : undefined,
+      ...(finding.positive_evidence_checked ?? []).map((item) => `positive_evidence_checked: ${item}`),
+      ...(finding.negative_evidence_checked ?? []).map((item) => `negative_evidence_checked: ${item}`),
       `finding_type: ${finding.type}`,
       `rubric_id: ${finding.rubric_ids.join(',')}`,
       ...finding.evidence
-    ],
+    ].filter(Boolean) as string[],
     screenshotPath: finding.screenshotPath,
     suggestedFixPrompt: [
       `Improve product experience for ${decision.screen_name}.`,
@@ -505,6 +512,11 @@ function productExperienceIssue(finding: ProductExperienceFinding, decision: Pro
 
 function normalizeLlmDecision(decision: ProductExperienceDecision, context: ProductExperienceContext, deterministic: ProductExperienceDecision): ProductExperienceDecision {
   const findings = (decision.findings ?? []).map((finding) => normalizeFinding(finding, context))
+  const overall = normalizeOverall(decision, deterministic, context, findings)
+  const nonIssues = [
+    ...(decision.non_issues ?? []),
+    ...suppressedFindingNotes(findings)
+  ]
   return {
     screen_name: decision.screen_name || context.current_screen_name,
     nav_label: decision.nav_label || context.nav_label_clicked,
@@ -521,27 +533,112 @@ function normalizeLlmDecision(decision: ProductExperienceDecision, context: Prod
     context_sufficiency: decision.context_sufficiency ?? context.context_sufficiency,
     context_sufficiency_score: decision.context_sufficiency_score ?? context.context_sufficiency_score,
     context_warnings: decision.context_warnings ?? context.context_warnings,
-    overall: decision.overall ?? deterministic.overall,
+    overall,
     findings,
-    non_issues: decision.non_issues ?? []
+    non_issues: nonIssues
   }
 }
 
+function normalizeOverall(
+  decision: ProductExperienceDecision,
+  deterministic: ProductExperienceDecision,
+  context: ProductExperienceContext,
+  findings: ProductExperienceFinding[]
+): ProductExperienceDecision['overall'] {
+  const overall = decision.overall ?? deterministic.overall
+  const reportable = findings.filter((finding) => finding.should_report)
+  if (reportable.length > 0 || overall.classification === 'aligned' || overall.classification === 'inconclusive') return overall
+
+  const suppressed = findings.filter((finding) => finding.suppression_reason)
+  const suffix = suppressed.length > 0
+    ? ` Suppressed ${suppressed.length} candidate finding(s) because screen-scoped evidence contradicted the claim or placed it outside ${context.current_screen_name}.`
+    : ' No evidence-backed product experience gaps remained after evidence gating.'
+  return {
+    classification: 'aligned',
+    confidence: overall.confidence,
+    summary: `${context.current_screen_name} is aligned after screen-scoped evidence checks.${suffix}`
+  }
+}
+
+function suppressedFindingNotes(findings: ProductExperienceFinding[]): ProductExperienceDecision['non_issues'] {
+  return findings
+    .filter((finding) => finding.suppression_reason)
+    .map((finding) => ({
+      observation: `${finding.title} was not reported.`,
+      reason_not_reported: `candidate suppressed due to contradictory runtime evidence: ${finding.suppression_reason}`
+    }))
+}
+
 function normalizeFinding(finding: ProductExperienceFinding, context: ProductExperienceContext): ProductExperienceFinding {
+  const positive = positiveEvidenceForFinding(finding, context)
+  const negative = negativeEvidenceForFinding(finding, context)
+  const suppressionReason = suppressionReasonForFinding(finding, context, positive)
   const shouldReport = Boolean(finding.should_report) &&
     hasEvidenceSupport(finding, context) &&
     !isAestheticOnly(finding) &&
-    !isLoadedReportContextEcho(finding, context) &&
-    !isUnsupportedReportContextProminenceClaim(finding, context) &&
-    !isRawJsonPayloadEcho(finding, context) &&
-    !isRawJsonCopyActionContradicted(finding, context)
+    !suppressionReason
   return {
     ...finding,
-    evidence: finding.evidence ?? [],
+    evidence: [
+      ...(finding.evidence ?? []),
+      suppressionReason ? `candidate suppressed due to contradictory runtime evidence: ${suppressionReason}` : undefined
+    ].filter(Boolean) as string[],
     rubric_ids: finding.rubric_ids ?? [],
     screenshotPath: finding.screenshotPath ?? context.screenshot_path,
+    reviewed_screen: context.current_screen_name,
+    screenshot_used: finding.screenshotPath ?? context.screenshot_path,
+    scenario_step: context.scenario_step,
+    dom_excerpt: context.dom_summary.join(' ').slice(0, 360),
+    positive_evidence_checked: positive,
+    negative_evidence_checked: negative,
+    evidence_scope: evidenceScopeForFinding(finding, context),
+    suppression_reason: suppressionReason,
     should_report: shouldReport
   }
+}
+
+function suppressionReasonForFinding(finding: ProductExperienceFinding, context: ProductExperienceContext, positiveEvidence: string[]): string | undefined {
+  if (isCrossScreenRawJsonCopyClaim(finding, context)) return `finding reviewed ${context.current_screen_name} but claims Raw JSON copy control is missing`
+  if (isLoadedReportContextEcho(finding, context)) return 'loaded report issue titles are report data, not current dashboard chrome evidence'
+  if (isUnsupportedReportContextProminenceClaim(finding, context)) return 'visual report-context prominence claim requires vision or concrete DOM evidence'
+  if (isRawJsonPayloadEcho(finding, context)) return 'embedded Raw JSON payload findings are report data, not current Raw JSON page behavior'
+  if (isRawJsonCopyActionContradicted(finding, context)) return 'Copy JSON is visible in same-screen runtime evidence'
+  if (positiveEvidence.length > 0 && missingControlClaim(finding)) return positiveEvidence.join('; ')
+  return undefined
+}
+
+function positiveEvidenceForFinding(finding: ProductExperienceFinding, context: ProductExperienceContext): string[] {
+  const text = visibleText(context)
+  const evidence = [
+    /copy json|copy raw json/.test(text) ? 'same_screen_control: Copy JSON present' : undefined,
+    /raw json/.test(text) && /latest report payload|report payload/.test(text) ? 'same_screen_surface: Raw JSON payload visible' : undefined,
+    /copy prompt|copy fix prompt|copy repair prompt/.test(text) ? 'same_screen_control: fix prompt copy present' : undefined,
+    /copy/.test(text) && /fix packet|prompt|repair/.test(text) ? 'same_screen_control: fix-packet copy affordance present' : undefined
+  ].filter(Boolean) as string[]
+  if (!missingControlClaim(finding)) return evidence.slice(0, 4)
+  const findingText = findingTextFor(finding)
+  if (/raw json/.test(findingText)) return evidence.filter((item) => /Raw JSON|Copy JSON/.test(item))
+  if (/copy/.test(findingText)) return evidence.filter((item) => /copy/i.test(item))
+  return evidence.slice(0, 4)
+}
+
+function negativeEvidenceForFinding(finding: ProductExperienceFinding, context: ProductExperienceContext): string[] {
+  const text = findingTextFor(finding)
+  if (!missingControlClaim(finding)) return []
+  return [
+    /raw json/.test(text) ? 'checked_same_screen_for: Raw JSON payload/copy controls' : undefined,
+    /copy/.test(text) ? 'checked_same_screen_for: copy controls' : undefined,
+    `reviewed_screen: ${context.current_screen_name}`
+  ].filter(Boolean) as string[]
+}
+
+function evidenceScopeForFinding(finding: ProductExperienceFinding, context: ProductExperienceContext): ProductExperienceFinding['evidence_scope'] {
+  const text = findingTextFor(finding)
+  if (/raw json/.test(text) && context.current_screen_name !== 'Raw JSON') return 'cross_screen'
+  if (/fix packets?/.test(text) && context.current_screen_name !== 'Fix Packets') return 'cross_screen'
+  if (/issues/.test(text) && context.current_screen_name !== 'Issues') return 'cross_screen'
+  if (context.current_screen_name) return 'same_screen'
+  return 'unknown'
 }
 
 function isLoadedReportContextEcho(finding: ProductExperienceFinding, context: ProductExperienceContext): boolean {
@@ -574,8 +671,28 @@ function isRawJsonPayloadEcho(finding: ProductExperienceFinding, context: Produc
 function isRawJsonCopyActionContradicted(finding: ProductExperienceFinding, context: ProductExperienceContext): boolean {
   if (context.current_screen_name !== 'Raw JSON') return false
   if (!/copy json|copy raw json/.test(visibleText(context))) return false
-  const findingText = `${finding.title} ${finding.expected} ${finding.observed} ${finding.evidence.join(' ')}`.toLowerCase()
+  const findingText = findingTextFor(finding)
   return /copy/.test(findingText) && /missing|no .*found|lacks|not visible|not clearly visible/.test(findingText)
+}
+
+function isCrossScreenRawJsonCopyClaim(finding: ProductExperienceFinding, context: ProductExperienceContext): boolean {
+  if (context.current_screen_name === 'Raw JSON') return false
+  const text = findingTextFor(finding)
+  if (!/raw json/.test(text) || !/copy/.test(text) || !missingControlClaim(finding)) return false
+  return !hasEmbeddedRawJsonPanel(context)
+}
+
+function hasEmbeddedRawJsonPanel(context: ProductExperienceContext): boolean {
+  const text = visibleText(context)
+  return /raw json/.test(text) && /copy json|latest report payload|report payload|\{\s*"/.test(text)
+}
+
+function missingControlClaim(finding: ProductExperienceFinding): boolean {
+  return /missing|no .*found|lacks|not visible|not accessible|not discoverable|absence/.test(findingTextFor(finding))
+}
+
+function findingTextFor(finding: ProductExperienceFinding): string {
+  return `${finding.title} ${finding.type} ${finding.expected} ${finding.observed} ${finding.evidence.join(' ')}`.toLowerCase()
 }
 
 function hasVisibleRunReportContext(context: ProductExperienceContext): boolean {
