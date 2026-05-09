@@ -294,7 +294,9 @@ export function locatorCandidates(raw: Pick<RawControl, 'kind'> & Partial<RawCon
 
 function enrichControl(raw: RawControl): RuntimeDomControl {
   const label = raw.accessibleName || raw.visibleText || raw.labelText || raw.placeholder || raw.dataTestId || raw.selectorHint || raw.kind
-  const safeAction = classifyActionSafety(label, actionRole(raw.kind, raw.role))
+  const safeAction = interactiveActionKind(raw.kind, raw.role)
+    ? classifyActionSafety(label, actionRole(raw.kind, raw.role))
+    : { safe: false, reason: 'element is a non-interactive context container, not an action target' }
   const candidates = locatorCandidates(raw)
   return {
     ...raw,
@@ -302,6 +304,11 @@ function enrichControl(raw: RawControl): RuntimeDomControl {
     confidence: candidates[0]?.confidence ?? 0.2,
     safeAction
   }
+}
+
+function interactiveActionKind(kind: RuntimeControlKind, role?: string): boolean {
+  return ['button', 'link', 'tab', 'input', 'textarea', 'select'].includes(kind) ||
+    ['button', 'link', 'tab', 'textbox', 'combobox', 'checkbox', 'radio', 'switch'].includes(role ?? '')
 }
 
 function roleFor(raw: Pick<RawControl, 'kind' | 'role'>): string | undefined {

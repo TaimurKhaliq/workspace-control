@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildCrawlCandidates, selectNextCrawlCandidate } from '../src/runtime/crawler.js'
+import { buildCrawlCandidates, inferScreen, selectNextCrawlCandidate } from '../src/runtime/crawler.js'
 import type { CrawlState } from '../src/types.js'
 
 describe('crawl frontier', () => {
@@ -44,6 +44,28 @@ describe('crawl frontier', () => {
     const { next, skipped } = buildCrawlCandidates(state, context())
     expect(next?.label).toBe('Sign in')
     expect(skipped.some((item) => item.label === 'GitHub' && /external origin skipped/.test(item.reason))).toBe(true)
+  })
+
+  it('infers Create workspace dialog from current dialog text', () => {
+    const inferred = inferScreen('http://127.0.0.1:5173/', [
+      { kind: 'dialog', text: 'Create workspace × Workspace name Cancel Create workspace' },
+      { kind: 'button', text: 'Add repository' }
+    ], [
+      'WORKSPACES Add repository Create workspace × Workspace name Cancel Create workspace'
+    ])
+
+    expect(inferred).toEqual({ name: 'Create workspace dialog', pageType: 'dialog' })
+  })
+
+  it('infers Add repository dialog from current dialog text', () => {
+    const inferred = inferScreen('http://127.0.0.1:5173/', [
+      { kind: 'dialog', text: 'Add repository × Target id Source type Path or URL Cancel Add repo' },
+      { kind: 'button', text: 'Create workspace' }
+    ], [
+      'WORKSPACES Create workspace Add repository × Target id Source type Path or URL Cancel Add repo'
+    ])
+
+    expect(inferred).toEqual({ name: 'Add repository dialog', pageType: 'dialog' })
   })
 })
 

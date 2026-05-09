@@ -61,6 +61,30 @@ describe('runtime DOM snapshot', () => {
     expect(model.actions.some((action) => action.target === 'Add Article' && action.safe)).toBe(true)
   })
 
+  it('does not mark non-interactive plan-run article containers as safe actions', async () => {
+    await page.setContent(planRunsHtml())
+    const snapshot = await captureRuntimeDomSnapshot(page)
+
+    const card = snapshot.controls.find((control) => control.dataTestId === 'plan-run-item')
+    const reopen = snapshot.buttons.find((control) => control.dataTestId === 'reopen-plan-run-button')
+
+    expect(card?.safeAction.safe).toBe(false)
+    expect(card?.safeAction.reason).toContain('non-interactive')
+    expect(reopen?.safeAction.safe).toBe(true)
+  })
+
+  it('infers a runtime workflow for browse/reopen previous plan runs', async () => {
+    await page.setContent(planRunsHtml())
+    const snapshot = await captureRuntimeDomSnapshot(page)
+
+    const model = buildRuntimeAppModel({ snapshot })
+
+    const workflow = model.workflows.find((item) => item.name === 'Browse/reopen previous plan runs')
+    expect(workflow?.confidence).toBe('high')
+    expect(workflow?.evidence).toEqual(expect.arrayContaining(['data-testid:plan-run-item', 'data-testid:reopen-plan-run-button']))
+    expect(workflow?.steps.some((step) => step.action === 'click' && step.target_name === 'Reopen')).toBe(true)
+  })
+
   it('keeps high-confidence planning profiles ahead of weaker runtime commerce words', async () => {
     await page.setContent(`
       <main>
@@ -146,6 +170,30 @@ function loginHtml(): string {
         <label>Password <input name="password" type="password" /></label>
         <button>Sign in</button>
       </form>
+    </main>
+  `
+}
+
+function planRunsHtml(): string {
+  return `
+    <main>
+      <h1>Plan Runs</h1>
+      <article data-testid="plan-run-item">
+        <h2 data-testid="plan-run-prompt">Add OwnersPage (no actions yet)</h2>
+        <span data-testid="plan-run-target">petclinic-react</span>
+        <time data-testid="plan-run-created-at">May 7, 1:45 PM</time>
+        <span data-testid="plan-run-status">completed</span>
+        <span data-testid="plan-run-semantic-chip">Semantic Off</span>
+        <button data-testid="reopen-plan-run-button">Reopen</button>
+      </article>
+      <article data-testid="plan-run-item">
+        <h2 data-testid="plan-run-prompt">Make owner search case insensitive</h2>
+        <span data-testid="plan-run-target">petclinic-react</span>
+        <time data-testid="plan-run-created-at">May 7, 1:50 PM</time>
+        <span data-testid="plan-run-status">completed</span>
+        <span data-testid="plan-run-semantic-chip">Semantic Off</span>
+        <button data-testid="reopen-plan-run-button">Reopen</button>
+      </article>
     </main>
   `
 }

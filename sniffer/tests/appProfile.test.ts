@@ -42,6 +42,38 @@ describe('app profile inference and generic scenarios', () => {
     expect(scenarios.every((scenario) => scenario.destructiveRisk === 'none')).toBe(true)
   })
 
+  it('generates a plan run history scenario from runtime workflow evidence', () => {
+    const sourceGraph = planningSourceGraph()
+    const profile = inferAppProfile({ sourceGraph })
+
+    const scenarios = generateGenericScenarios({
+      appProfile: profile,
+      sourceGraph,
+      runtimeAppModel: {
+        app_name: 'Workspace Control',
+        inferred_app_type: 'planning_control_panel',
+        screens: [],
+        nav_items: [],
+        forms: [],
+        workflows: [{
+          name: 'Browse/reopen previous plan runs',
+          confidence: 'high',
+          evidence: ['data-testid:plan-run-item', 'data-testid:reopen-plan-run-button'],
+          source: 'runtime',
+          steps: []
+        }],
+        entities: [],
+        actions: [],
+        route_candidates: [],
+        locator_inventory: [],
+        confidence: 'high',
+        evidence: []
+      }
+    })
+
+    expect(scenarios.map((scenario) => scenario.id)).toContain('plan-run-history')
+  })
+
   it('can augment a deterministic profile from LLM product intent evidence', () => {
     const profile = inferAppProfile({ sourceGraph: planningSourceGraph() })
 

@@ -31,6 +31,26 @@ beforeEach(async () => {
       `)
       return
     }
+    if (req.url === '/plan-runs') {
+      res.end(`
+        <main>
+          <h1>Plan Runs</h1>
+          <article data-testid="plan-run-item">
+            <h2 data-testid="plan-run-prompt">Add OwnersPage (no actions yet)</h2>
+            <span data-testid="plan-run-target">petclinic-react</span>
+            <time data-testid="plan-run-created-at">May 7, 1:45 PM</time>
+            <span data-testid="plan-run-status">completed</span>
+            <span data-testid="plan-run-semantic-chip">Semantic Off</span>
+            <button data-testid="reopen-plan-run-button" onclick="document.querySelector('main').setAttribute('data-reopened', 'true')">Reopen</button>
+          </article>
+        </main>
+      `)
+      return
+    }
+    if (req.url === '/empty-plan-runs') {
+      res.end('<main><h1>Plan Runs</h1><p>Plan Runs 0 runs</p><p>No plan runs yet</p></main>')
+      return
+    }
     res.end('<h1>Home</h1><nav><a href="/login">Sign in</a></nav><main><article>Article feed item</article></main>')
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
@@ -88,6 +108,40 @@ describe('generated scenario executor', () => {
 
     expect(runs[0].status).toBe('passed')
     expect(runs[0].assertions[0].evidence).toEqual(expect.arrayContaining(['copy_json_visible:true']))
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('verifies plan run history items and reopen buttons', async () => {
+    const dir = path.join(os.tmpdir(), `sniffer-plan-run-history-${randomUUID()}`)
+    await mkdir(dir, { recursive: true })
+    const runs = await executeGeneratedScenarios({
+      url: `${url}/plan-runs`,
+      reportDir: dir,
+      scenarios: [scenario('plan-run-history', 'Browse/reopen previous plan runs')]
+    })
+
+    expect(runs[0].status).toBe('passed')
+    expect(runs[0].assertions[0].evidence).toEqual(expect.arrayContaining([
+      'plan_run_items:1',
+      'reopen_buttons:1'
+    ]))
+    await rm(dir, { recursive: true, force: true })
+  })
+
+  it('blocks plan run history scenario when no plan runs are available', async () => {
+    const dir = path.join(os.tmpdir(), `sniffer-empty-plan-runs-${randomUUID()}`)
+    await mkdir(dir, { recursive: true })
+    const runs = await executeGeneratedScenarios({
+      url: `${url}/empty-plan-runs`,
+      reportDir: dir,
+      scenarios: [scenario('plan-run-history', 'Browse/reopen previous plan runs')]
+    })
+
+    expect(runs[0].status).toBe('blocked')
+    expect(runs[0].assertions[0].evidence).toEqual(expect.arrayContaining([
+      'no plan runs available',
+      'suggested_next_safe_action: generate_plan_bundle_with_sample_prompt'
+    ]))
     await rm(dir, { recursive: true, force: true })
   })
 })

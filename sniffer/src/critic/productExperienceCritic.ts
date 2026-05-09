@@ -339,9 +339,34 @@ function genericPageIntents(input: Parameters<typeof buildProductExperienceConte
     const label = screenNameFromState(state)
     if (label) labels.add(label)
   }
-  return [...labels].slice(0, 8).map((label) =>
+  const intents: ProductExperiencePageIntent[] = []
+  if (input.runtimeAppModel?.workflows.some((workflow) => /browse\/reopen previous plan runs/i.test(workflow.name))) {
+    intents.push(intent(
+      'Plan Runs',
+      'Plan Runs',
+      'Help users browse previous plan runs by prompt, time, target, semantic status, and result status.',
+      'Browse previous plan runs and reopen a prior plan bundle.',
+      ['Which prompt produced this run?', 'Which target did it run against?', 'When was it generated?', 'What status is it in?', 'How do I reopen it?'],
+      ['plan run list', 'prompt/title', 'target', 'created timestamp', 'status', 'semantic chip', 'reopen action'],
+      ['Reopen a prior plan run', 'Inspect the reopened plan bundle'],
+      ['selected workspace/project context', 'run metadata', 'unambiguous reopen actions'],
+      ['plan run', 'plan-run-item', 'reopen', 'created', 'status', 'semantic']
+    ))
+  }
+  intents.push(...[...labels].slice(0, 8).map((label) =>
     intent(label, label, `Support the user job implied by ${label}.`, `Inspect ${label}.`, [`What is ${label}?`, 'What should I inspect next?'], ['clear heading', 'relevant primary content'], ['inspect evidence'], ['current context'], [label.toLowerCase()])
-  )
+  ))
+  return dedupePageIntents(intents)
+}
+
+function dedupePageIntents(intents: ProductExperiencePageIntent[]): ProductExperiencePageIntent[] {
+  const seen = new Set<string>()
+  return intents.filter((item) => {
+    const key = item.screen_name.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
 }
 
 function findStateForPage(pageIntent: ProductExperiencePageIntent, states: CrawlState[]): CrawlState | undefined {

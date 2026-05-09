@@ -29,6 +29,7 @@ import { critiqueUx, type UxCriticMode } from '../critic/uxCritic.js'
 import type { ProductIntentMode, ScenarioSlug } from '../types.js'
 import { triageIssues } from '../heuristics/issueTriage.js'
 import { synthesizeProductIntent } from '../heuristics/productIntent.js'
+import { analyzeRuntimeDomQuality } from '../heuristics/runtimeDomQuality.js'
 import { runPromptConsistencyCheck } from '../runtime/promptConsistency.js'
 import { initProject, getProject, listProjects, removeProject, upsertProject, createProjectFromSource, normalizeAppUrl } from '../projects/registry.js'
 import { augmentAppProfileWithProductIntent, inferAppProfile } from '../profile/appProfile.js'
@@ -250,6 +251,7 @@ async function main(): Promise<void> {
     const runtimeAppModel = runtimeDomSnapshot
       ? buildRuntimeAppModel({ snapshot: runtimeDomSnapshot, sourceGraph, appProfile, llmIntent: llmRuntimeIntent })
       : undefined
+    const runtimeDomQualityIssues = runtimeDomSnapshot ? analyzeRuntimeDomQuality(runtimeDomSnapshot) : []
     const generatedScenarios = generateGenericScenarios({ appProfile, sourceGraph, runtimeAppModel, scenarioSelection })
     if (shouldExecuteGeneratedScenarios(args, scenarioSlug, generatedScenarios.length)) {
       const executedGenericRuns = await executeGeneratedScenarios({ url, reportDir, scenarios: generatedScenarios })
@@ -276,7 +278,7 @@ async function main(): Promise<void> {
       projectId: ctx.projectId
     })
     const scenarioRuntimeIssues = scenarioIssues(scenarioRuns)
-    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues, ...productExperience.issues]
+    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...runtimeDomQualityIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues, ...productExperience.issues]
     const shouldUseLlmTriage = (criticMode === 'llm' || uxMode === 'llm' || productExperienceMode === 'llm') && provider?.triageIssues
     let triagedIssues = shouldUseLlmTriage
       ? await provider.triageIssues!({

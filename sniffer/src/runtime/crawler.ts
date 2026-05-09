@@ -559,12 +559,24 @@ function annotateActionStateLinks(states: CrawlState[], actions: CrawlAction[]):
   }
 }
 
-function inferScreen(url: string, visible: VisibleElement[], primaryVisibleText: string[]): { name: string; pageType: string } {
+export function inferScreen(url: string, visible: VisibleElement[], primaryVisibleText: string[]): { name: string; pageType: string } {
   const route = routeKey(url)
   const text = `${primaryVisibleText.join(' ')} ${visible.map((item) => `${item.text ?? ''} ${item.name ?? ''}`).join(' ')}`.toLowerCase()
-  const hasDialog = visible.some((item) => item.kind === 'dialog')
-  if (hasDialog && /add repository|target id|path or url|source type/.test(text)) return { name: 'Add repository dialog', pageType: 'dialog' }
-  if (hasDialog && /new workspace|create workspace|workspace name/.test(text)) return { name: 'New workspace dialog', pageType: 'dialog' }
+  const dialogText = visible
+    .filter((item) => item.kind === 'dialog')
+    .map((item) => `${item.text ?? ''} ${item.name ?? ''}`)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+  const hasDialog = Boolean(dialogText)
+  if (hasDialog) {
+    if (/create workspace/.test(dialogText) && /workspace name/.test(dialogText)) return { name: 'Create workspace dialog', pageType: 'dialog' }
+    if (/new workspace/.test(dialogText) && /workspace name/.test(dialogText)) return { name: 'Create workspace dialog', pageType: 'dialog' }
+    if (/add repository/.test(dialogText) && /target id|path or url|source type|locator/.test(dialogText)) return { name: 'Add repository dialog', pageType: 'dialog' }
+    if (/workspace name/.test(dialogText) && !/target id|path or url|source type|locator/.test(dialogText)) return { name: 'Create workspace dialog', pageType: 'dialog' }
+    if (/target id|path or url|source type|locator/.test(dialogText) && !/workspace name/.test(dialogText)) return { name: 'Add repository dialog', pageType: 'dialog' }
+  }
   if (/handoff prompt|copy prompt/.test(text)) return { name: 'Handoff tab', pageType: 'plan_output' }
   if (/raw json|schema_version|recommended_change_set/.test(text)) return { name: 'Raw JSON tab', pageType: 'plan_output' }
   if (/overview|change set|graph evidence|validation/.test(text) && /plan|bundle|handoff/.test(text)) return { name: 'Plan Bundle result', pageType: 'plan_output' }

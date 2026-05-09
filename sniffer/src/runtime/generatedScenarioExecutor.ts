@@ -55,6 +55,8 @@ async function executeScenario(page: Page, scenario: GeneratedScenario, screensh
     assertions.push(...await navigationAssertions(page, snapshot, shot))
   } else if (scenario.id.startsWith('sniffer-')) {
     assertions.push(...await snifferDashboardAssertions(page, scenario, snapshot, shot))
+  } else if (scenario.id === 'plan-run-history' || scenario.id === 'planning-history-reopen') {
+    assertions.push(await planRunHistoryAssertion(page, snapshot, shot))
   } else if (scenario.id === 'forms-discoverability') {
     assertions.push(formAssertion(snapshot, initialShot))
   } else if (scenario.id === 'accessibility-labels') {
@@ -318,6 +320,55 @@ function tableListAssertion(snapshot: Awaited<ReturnType<typeof captureRuntimeDo
     status: snapshot.tables.length > 0 || hasListText ? 'passed' : 'blocked',
     evidence: [`tables:${snapshot.tables.length}`, `listText:${hasListText}`, ...snapshot.visibleTextBlocks.slice(0, 6)],
     screenshotPath
+  }
+}
+
+async function planRunHistoryAssertion(
+  page: Page,
+  snapshot: Awaited<ReturnType<typeof captureRuntimeDomSnapshot>>,
+  shot: (name: string, actionLabel?: string) => Promise<string | undefined>
+): Promise<ScenarioAssertionResult> {
+  const evidence: string[] = []
+  const itemCount = snapshot.controls.filter((control) => control.dataTestId === 'plan-run-item').length
+  const promptCount = snapshot.controls.filter((control) => control.dataTestId === 'plan-run-prompt').length
+  const targetCount = snapshot.controls.filter((control) => control.dataTestId === 'plan-run-target').length
+  const createdCount = snapshot.controls.filter((control) => control.dataTestId === 'plan-run-created-at').length
+  const statusCount = snapshot.controls.filter((control) => control.dataTestId === 'plan-run-status').length
+  const reopenButtons = snapshot.buttons.filter((control) => control.dataTestId === 'reopen-plan-run-button' || /^reopen$/i.test(labelOf(control)))
+  evidence.push(
+    `plan_run_items:${itemCount}`,
+    `prompts:${promptCount}`,
+    `targets:${targetCount}`,
+    `created_timestamps:${createdCount}`,
+    `statuses:${statusCount}`,
+    `reopen_buttons:${reopenButtons.length}`
+  )
+  if (itemCount === 0) {
+    return {
+      label: 'Plan run history list is visible',
+      status: 'blocked',
+      evidence: [
+        'no plan runs available',
+        'No plan-run-item controls found.',
+        'suggested_next_safe_action: generate_plan_bundle_with_sample_prompt'
+      ],
+      screenshotPath: snapshot.screenshotPath
+    }
+  }
+  const hasMetadata = promptCount > 0 && targetCount > 0 && createdCount > 0 && statusCount > 0
+  if (reopenButtons.length > 0) {
+    const before = await pageSignature(page)
+    await page.getByTestId('reopen-plan-run-button').first().click({ timeout: 2_000 }).catch((error) => evidence.push(`reopen_click_failed:${error instanceof Error ? error.message : String(error)}`))
+    await page.waitForTimeout(150)
+    const after = await pageSignature(page)
+    evidence.push(`reopen_click_safe:${before !== after ? 'changed_state' : 'no_visible_change'}`)
+    await shot('plan-run-reopen', 'click first Reopen plan run')
+  }
+  return {
+    label: 'Plan runs expose metadata and safe reopen actions',
+    status: hasMetadata && reopenButtons.length > 0 ? 'passed' : 'failed',
+    evidence,
+    screenshotPath: snapshot.screenshotPath
   }
 }
 

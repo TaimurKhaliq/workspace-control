@@ -133,6 +133,9 @@ export function buildRuntimeIntentContext(input: {
 
 function inferRuntimeWorkflows(snapshot: RuntimeDomSnapshot, appType: AppProfileType): RuntimeInferredWorkflow[] {
   const workflows: RuntimeInferredWorkflow[] = []
+  if (hasPlanRunHistory(snapshot)) {
+    workflows.push(planRunHistoryWorkflow(snapshot))
+  }
   if (navItems(snapshot).length > 0) {
     workflows.push(workflow('Navigation smoke test', 'runtime', ['primary navigation/link controls visible'], navItems(snapshot).slice(0, 6).map((item) => clickStep(item, 'Navigate without errors.'))))
   }
@@ -150,6 +153,27 @@ function inferRuntimeWorkflows(snapshot: RuntimeDomSnapshot, appType: AppProfile
   const dialogs = snapshot.buttons.filter((button) => /add|new|create|open/i.test(labelOf(button)) && button.safeAction.safe)
   if (dialogs.length > 0) workflows.push(workflow('Modal/open action smoke test', 'runtime', dialogs.map(labelOf), dialogs.slice(0, 4).map((button) => clickStep(button, 'Dialog or related UI appears without destructive submit.')), 'medium'))
   return workflows
+}
+
+function hasPlanRunHistory(snapshot: RuntimeDomSnapshot): boolean {
+  const testIds = new Set(snapshot.controls.map((control) => control.dataTestId).filter(Boolean))
+  const required = ['plan-run-item', 'plan-run-prompt', 'plan-run-target', 'plan-run-created-at', 'plan-run-status', 'reopen-plan-run-button']
+  return required.filter((testId) => testIds.has(testId)).length >= 4
+}
+
+function planRunHistoryWorkflow(snapshot: RuntimeDomSnapshot): RuntimeInferredWorkflow {
+  const find = (testId: string) => snapshot.controls.find((control) => control.dataTestId === testId)
+  const reopen = find('reopen-plan-run-button')
+  const evidence = ['plan-run-item', 'plan-run-prompt', 'plan-run-target', 'plan-run-created-at', 'plan-run-status', 'plan-run-semantic-chip', 'reopen-plan-run-button']
+    .filter((testId) => snapshot.controls.some((control) => control.dataTestId === testId))
+    .map((testId) => `data-testid:${testId}`)
+  const steps: RuntimeInferredWorkflow['steps'] = []
+  for (const testId of ['plan-run-item', 'plan-run-prompt', 'plan-run-target', 'plan-run-created-at', 'plan-run-status']) {
+    const control = find(testId)
+    if (control) steps.push(assertStep(control))
+  }
+  if (reopen) steps.push(clickStep(reopen, 'Previous plan run reopens without destructive mutation.'))
+  return workflow('Browse/reopen previous plan runs', 'runtime', evidence, steps, 'high')
 }
 
 function workflow(name: string, source: RuntimeInferredWorkflow['source'], evidence: string[], steps: RuntimeInferredWorkflow['steps'], confidence: RuntimeInferredWorkflow['confidence'] = 'medium'): RuntimeInferredWorkflow {
@@ -239,7 +263,7 @@ function routeCandidates(snapshot: RuntimeDomSnapshot): string[] {
 
 function inferEntities(snapshot: RuntimeDomSnapshot, sourceGraph?: SourceGraph): string[] {
   const text = `${snapshot.title} ${snapshot.domText} ${sourceGraph?.packageName ?? ''}`.toLowerCase()
-  const entities = ['user', 'article', 'profile', 'tag', 'comment', 'product', 'order', 'report', 'dashboard', 'setting', 'document']
+  const entities = ['user', 'article', 'profile', 'tag', 'comment', 'product', 'order', 'report', 'dashboard', 'setting', 'document', 'plan run']
   return entities.filter((entity) => text.includes(entity)).slice(0, 12)
 }
 

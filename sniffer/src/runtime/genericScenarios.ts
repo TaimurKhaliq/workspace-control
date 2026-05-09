@@ -78,6 +78,12 @@ export function generateGenericScenarios(input: {
   }
 
   for (const workflow of input.runtimeAppModel?.workflows ?? []) {
+    if (/browse\/reopen previous plan runs/i.test(workflow.name) && !scenarios.some((scenario) => scenario.id === 'plan-run-history')) {
+      scenarios.push(generatedScenario('plan-run-history', 'Browse/reopen previous plan runs', ['planning_control_panel', profile], ['plan runs may exist'], [
+        step('Inspect plan run history list', 'inspect_plan_run_history', ['plan-run-item', 'plan-run-prompt', 'plan-run-target', 'plan-run-created-at', 'plan-run-status']),
+        step('Verify reopen actions', 'inspect_reopen_plan_run_actions', ['reopen-plan-run-button'])
+      ], ['plan run cards', 'prompt', 'target', 'created timestamp', 'status', 'reopen button'], ['previous plan runs are distinguishable and reopen actions are unambiguous'], 'high', workflow.evidence))
+    }
     if (/table|list/i.test(workflow.name) && !scenarios.some((scenario) => scenario.id === 'table-list-scan')) {
       scenarios.push(generatedScenario('table-list-scan', 'Table/list scan', [profile], [], [
         step('Find list/table/card content', 'inspect_list_table', ['table, list, feed, cards, or rows']),
