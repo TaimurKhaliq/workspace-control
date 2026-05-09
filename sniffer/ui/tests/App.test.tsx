@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { IssueGroupCard } from '../src/components/IssueGroupCard'
 import { FixPacketViewer } from '../src/components/FixPacketViewer'
+import { RepairWorkbench } from '../src/components/RepairWorkbench'
 import { ReportContextStrip } from '../src/components/ReportContextStrip'
 import { SnifferMascot } from '../src/components/SnifferMascot'
 import { ScenariosView } from '../src/components/ScenariosView'
@@ -70,7 +71,18 @@ beforeEach(() => {
     if (url.startsWith('/api/reports/latest?') || url === '/api/reports/latest') return response(report)
     if (url.startsWith('/api/reports/latest/markdown')) return new Response('# Latest Report', { status: 200 })
     if (url.startsWith('/api/reports/latest/screenshots')) return response([])
+    if (url.startsWith('/api/reports/latest/issues')) return response([{
+      issueId: 'issue-1',
+      severity: 'high',
+      type: 'usability_issue',
+      title: 'Plan output review is hard to scan',
+      status: 'open',
+      evidenceSummary: ['Missing raw JSON copy affordance'],
+      suspectedFiles: ['src/App.tsx'],
+      hasFixPacket: true
+    }])
     if (url.startsWith('/api/reports/latest/fix-packets')) return response([])
+    if (url.startsWith('/api/repairs/history')) return response([])
     if (url === '/api/audits' && init?.method === 'POST') return response({ runId: 'run-1' }, 202)
     return response({})
   }))
@@ -105,7 +117,9 @@ describe('Sniffer UI dashboard', () => {
       if (url.startsWith('/api/reports/latest?') || url === '/api/reports/latest') return response({ ...report, issues: [] })
       if (url.startsWith('/api/reports/latest/markdown')) return new Response('', { status: 200 })
       if (url.startsWith('/api/reports/latest/screenshots')) return response([])
+      if (url.startsWith('/api/reports/latest/issues')) return response([])
       if (url.startsWith('/api/reports/latest/fix-packets')) return response([])
+      if (url.startsWith('/api/repairs/history')) return response([])
       return response({})
     })
     render(<App />)
@@ -127,6 +141,13 @@ describe('Sniffer UI dashboard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Projects' }))
     expect(await screen.findByTestId('projects-view')).toBeInTheDocument()
     expect(screen.getAllByText('Demo UI').length).toBeGreaterThan(0)
+  })
+
+  it('opens the Repair Workbench from navigation', async () => {
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Repair Workbench' }))
+    expect(await screen.findByTestId('repair-workbench-view')).toBeInTheDocument()
+    expect(screen.getAllByText('Repair Workbench').length).toBeGreaterThan(0)
   })
 })
 
@@ -157,6 +178,72 @@ describe('issue and fix packet components', () => {
     expect(await screen.findByText('Prompt')).toBeInTheDocument()
     expect((await screen.findAllByText((content) => content.includes('Prompt text'))).length).toBeGreaterThan(0)
     expect(await screen.findByText('Verification')).toBeInTheDocument()
+  })
+
+  it('runs manual repair proof and shows no changes expected', async () => {
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url.startsWith('/api/reports/latest/issues')) return response([{
+        issueId: 'issue-1',
+        severity: 'high',
+        type: 'usability_issue',
+        title: 'Plan output review is hard to scan',
+        status: 'open',
+        evidenceSummary: ['Missing raw JSON copy affordance'],
+        suspectedFiles: ['src/App.tsx'],
+        hasFixPacket: true
+      }])
+      if (url.includes('/fix-packets/issue-1?format=json')) return response({
+        issueId: 'issue-1',
+        markdown: '# Fix Packet\n\n## Prompt\nPrompt text',
+        suspectedFiles: ['src/App.tsx'],
+        prompt: 'Prompt text',
+        constraints: ['No destructive actions'],
+        verificationCommand: 'npm run sniffer -- verify --issue issue-1 --url http://app --report report.json',
+        passConditions: [],
+        path: { markdown: '/tmp/issue-1.md', json: '/tmp/issue-1.json' },
+        json: {
+          issue_id: 'issue-1',
+          title: 'Plan output review is hard to scan',
+          repo_path: '/tmp/web',
+          repair_root: '/tmp',
+          allowed_paths: ['src/'],
+          working_directory: '/tmp',
+          evidence_paths: [],
+          suspected_files: ['src/App.tsx'],
+          prompt: 'Prompt text',
+          constraints: ['No destructive actions'],
+          verification_command: 'npm run sniffer -- verify --issue issue-1 --url http://app --report report.json',
+          pass_conditions: []
+        }
+      })
+      if (url.startsWith('/api/repairs/history')) return response([])
+      if (url === '/api/repairs/start' && init?.method === 'POST') return response({ repairRunId: 'repair-1', status: 'running' }, 202)
+      if (url === '/api/repairs/repair-1') return response({
+        repairRunId: 'repair-1',
+        status: 'succeeded',
+        issueId: 'issue-1',
+        agent: 'manual',
+        mode: 'repair-proof',
+        command: ['tsx', 'src/cli/index.ts', 'repair-proof'],
+        commandSummary: 'repair-proof issue-1',
+        stdout: 'agent_invoked=false\nchanged_files=[]',
+        stderr: '',
+        stdoutTail: 'agent_invoked=false\nchanged_files=[]',
+        stderrTail: '',
+        logs: ['agent_invoked=false'],
+        startedAt: '2026-04-28T12:00:00.000Z',
+        reportPath: '/tmp/report.json',
+        changedFiles: [],
+        diffSummary: '',
+        verification: { status: 'not_run' }
+      })
+      return response({})
+    })
+    render(<RepairWorkbench report={report} projectId="demo" form={{ repoPath: '/tmp/web', url: 'http://app', productGoal: '', discoveryMode: 'hybrid', scenario: 'all', criticMode: 'deterministic', uxCritic: 'deterministic', intentMode: 'deterministic', provider: 'auto', maxIterations: 3, consistencyCheck: false }} onAuditQueued={() => undefined} onRefreshReport={() => undefined} status={{ version: '0.1.0', status: 'idle', provider: { configured: false, baseUrlConfigured: false, model: null, apiStyle: 'auto' }, agent: { configured: false, name: 'manual' }, latestReport: null, reportDir: '/tmp' }} />)
+    expect((await screen.findAllByText('Plan output review is hard to scan')).length).toBeGreaterThan(0)
+    fireEvent.click(screen.getByRole('button', { name: /Run repair proof/i }))
+    expect(await screen.findByText(/No files changed/)).toBeInTheDocument()
   })
 })
 

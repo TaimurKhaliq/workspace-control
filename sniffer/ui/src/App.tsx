@@ -33,6 +33,7 @@ import { CrawlPathView } from './components/CrawlPathView'
 import { WorkflowEvidenceView } from './components/WorkflowEvidenceView'
 import { RawJsonView } from './components/RawJsonView'
 import { ProjectsView } from './components/ProjectsView'
+import { RepairWorkbench } from './components/RepairWorkbench'
 import type { MascotState } from './components/SnifferMascot'
 import { projectIdFromReportArtifacts } from './artifacts'
 
@@ -193,6 +194,11 @@ export default function App() {
     }
   }
 
+  function setAuditRunFromId(runId: string) {
+    setRun({ runId, status: 'running', phase: 'Starting audit', logs: ['Audit queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
+    setScreen('timeline')
+  }
+
   async function runVerification(issue: Issue) {
     if (!issue.issue_id) {
       setError('This issue has no issue_id to verify.')
@@ -286,6 +292,17 @@ export default function App() {
       {screen === 'graph' && <DiscoveryGraph report={report} fixPackets={fixPackets} screenshots={screenshots} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'issues' && <IssueSummary report={report} projectId={reportProjectId} projectName={reportProjectName} selectedIssue={selectedIssue} onSelectIssue={setSelectedIssue} onCopyFixPrompt={copyFixPrompt} onVerifyIssue={(issue) => void runVerification(issue)} />}
       {screen === 'fixes' && <FixPacketViewer report={report} packets={fixPackets} projectId={reportProjectId} projectName={reportProjectName} onGenerateFixes={() => void generateFixes()} />}
+      {screen === 'repair' && (
+        <RepairWorkbench
+          report={report}
+          projectId={reportProjectId}
+          projectName={reportProjectName}
+          form={form}
+          status={status}
+          onAuditQueued={setAuditRunFromId}
+          onRefreshReport={() => void refreshReportArtifacts()}
+        />
+      )}
       {screen === 'screenshots' && <ScreenshotGallery report={report} screenshots={screenshots} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'raw' && <RawJsonView report={report} />}
       {screen === 'settings' && <SettingsPanel status={status} />}

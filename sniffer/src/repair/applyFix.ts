@@ -23,13 +23,15 @@ export async function applyFix(input: {
   await mkdir(attemptDir, { recursive: true })
 
   const gitStatusBefore = git(['status', '--short'], packet.repair_root)
+  const gitDiffBefore = allowedDiff(packet.repair_root, packet.allowed_paths)
   const adapter = createAgentAdapter(input.agentName)
   const agentResult = await adapter.applyFix(packet, { allowDestructive: input.allowDestructive, attemptDir })
   const gitStatusAfter = git(['status', '--short'], packet.repair_root)
-  const gitDiffAfter = git(['diff', '--', ...packet.allowed_paths], packet.repair_root)
+  const gitDiffAfterFull = allowedDiff(packet.repair_root, packet.allowed_paths)
+  const gitDiffAfter = gitDiffAfterFull === gitDiffBefore ? '' : gitDiffAfterFull
   const changedFiles = changedFilesChangedBetween(gitStatusBefore, gitStatusAfter)
   assertChangedFilesAllowed(changedFiles, packet)
-  const gitDiffSummary = git(['diff', '--stat', '--', ...packet.allowed_paths], packet.repair_root)
+  const gitDiffSummary = gitDiffAfter ? allowedDiffStat(packet.repair_root, packet.allowed_paths) : ''
   agentResult.changedFiles = changedFiles
   agentResult.modifiedFiles = changedFiles
   agentResult.diffSummary = gitDiffSummary
@@ -98,6 +100,16 @@ async function writeRepairResult(
 function git(args: string[], cwd: string): string {
   const result = spawnSync('git', args, { cwd, encoding: 'utf8' })
   return `${result.stdout ?? ''}${result.stderr ?? ''}`
+}
+
+function allowedDiff(cwd: string, allowedPaths: string[]): string {
+  if (allowedPaths.length === 0) return ''
+  return git(['diff', '--', ...allowedPaths], cwd)
+}
+
+function allowedDiffStat(cwd: string, allowedPaths: string[]): string {
+  if (allowedPaths.length === 0) return ''
+  return git(['diff', '--stat', '--', ...allowedPaths], cwd)
 }
 
 function changedFilesFromStatus(status: string): string[] {

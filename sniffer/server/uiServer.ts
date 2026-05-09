@@ -7,7 +7,21 @@ import { fileURLToPath } from 'node:url'
 import { loadSnifferEnv } from '../src/config/env.js'
 import { initProject, listProjects, getProject, removeProject } from '../src/projects/registry.js'
 import { latestReportDir, projectLatestReportDir } from '../src/reporting/paths.js'
+import { generateFixPackets } from '../src/repair/fixPackets.js'
+import type { SnifferReport } from '../src/types.js'
 import { resolveReportArtifact } from './artifacts.js'
+import {
+  attachRepairStatuses,
+  buildRepairCommand,
+  listRepairHistory,
+  packetLooksDestructive,
+  readAttemptArtifacts,
+  readFixPacketDetail,
+  summarizeIssues,
+  type RepairAgent,
+  type RepairMode,
+  type RepairStatus
+} from './repairWorkbench.js'
 
 loadSnifferEnv()
 
@@ -43,6 +57,43 @@ interface RunRecord {
   projectId?: string
 }
 
+interface RepairStartRequest {
+  project?: string
+  issueId?: string
+  agent?: RepairAgent
+  mode?: RepairMode
+  allowDestructiveConfirmed?: boolean
+}
+
+interface RepairRunRecord {
+  repairRunId: string
+  status: RepairStatus
+  issueId: string
+  project?: string
+  agent: RepairAgent
+  mode: RepairMode
+  command: string[]
+  commandSummary: string
+  stdout: string
+  stderr: string
+  logs: string[]
+  stdoutTail: string
+  stderrTail: string
+  startedAt: string
+  endedAt?: string
+  exitCode?: number | null
+  reportPath: string
+  repairAttemptDir?: string
+  changedFiles: string[]
+  diffSummary: string
+  rawDiff?: string
+  verification: {
+    status: 'not_run' | 'passed' | 'failed' | 'inconclusive' | 'running'
+    command?: string
+    summary?: string
+  }
+}
+
 const serverFile = fileURLToPath(import.meta.url)
 const snifferRoot = path.resolve(path.dirname(serverFile), '..')
 const reportsRoot = path.join(snifferRoot, 'reports', 'sniffer')
@@ -50,6 +101,7 @@ const latestDir = latestReportDir(snifferRoot)
 const latestReportPath = path.join(latestDir, 'latest_report.json')
 const latestMarkdownPath = path.join(latestDir, 'latest_report.md')
 const runs = new Map<string, RunRecord>()
+const repairRuns = new Map<string, RepairRunRecord>()
 
 const port = Number(process.env.SNIFFER_UI_PORT ?? 4877)
 const host = process.env.SNIFFER_UI_HOST ?? '127.0.0.1'
@@ -123,6 +175,13 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'GET' && parsed.pathname === '/api/reports/latest/screenshots') {
     return json(res, 200, await screenshotList(latestDirFor(parsed), projectQuery(parsed)))
   }
+  if (req.method === 'GET' && parsed.pathname === '/api/reports/latest/issues') {
+    const reportPath = latestReportPathFor(parsed)
+    const report = await readJsonFile<SnifferReport>(reportPath).catch(() => undefined)
+    if (!report) return json(res, 404, { error: 'Latest report not found' })
+    const issues = await attachRepairStatuses(summarizeIssues(report, latestDirFor(parsed), projectQuery(parsed)), latestDirFor(parsed))
+    return json(res, 200, issues)
+  }
   if (req.method === 'GET' && parsed.pathname.startsWith('/api/reports/latest/artifacts/')) {
     return sendReportArtifact(res, latestDirFor(parsed), parsed.pathname.replace('/api/reports/latest/artifacts/', ''))
   }
@@ -131,15 +190,46 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   }
   const fixPacketMatch = parsed.pathname.match(/^\/api\/reports\/latest\/fix-packets\/([^/]+)$/)
   if (req.method === 'GET' && fixPacketMatch) {
-    return sendFixPacket(res, latestDirFor(parsed), decodeURIComponent(fixPacketMatch[1]))
+    return sendFixPacket(res, latestDirFor(parsed), decodeURIComponent(fixPacketMatch[1]), parsed)
   }
   if (req.method === 'POST' && parsed.pathname === '/api/reports/latest/fix-packets/generate') {
     return startGenerateFixes(res, latestReportPathFor(parsed), projectQuery(parsed))
+  }
+  if (req.method === 'POST' && parsed.pathname === '/api/reports/latest/generate-fixes') {
+    const body = await readJsonBody<{ project?: string; issueIds?: string[] }>(req)
+    const projectId = body.project?.trim() || projectQuery(parsed)
+    return generateFixesNow(res, reportPathForProject(projectId), latestDirForProject(projectId), body.issueIds)
   }
   const verifyMatch = parsed.pathname.match(/^\/api\/reports\/latest\/issues\/([^/]+)\/verify$/)
   if (req.method === 'POST' && verifyMatch) {
     const body = await readJsonBody<{ url?: string }>(req)
     return startVerify(res, latestReportPathFor(parsed), decodeURIComponent(verifyMatch[1]), body.url, projectQuery(parsed))
+  }
+  if (req.method === 'POST' && parsed.pathname === '/api/repairs/start') {
+    return startRepair(req, res)
+  }
+  if (req.method === 'GET' && parsed.pathname === '/api/repairs/history') {
+    const projectId = projectQuery(parsed)
+    const issueId = parsed.searchParams.get('issueId')?.trim() || undefined
+    return json(res, 200, await listRepairHistory(latestDirForProject(projectId), issueId))
+  }
+  const repairMatch = parsed.pathname.match(/^\/api\/repairs\/([^/]+)$/)
+  if (req.method === 'GET' && repairMatch) {
+    const run = repairRuns.get(decodeURIComponent(repairMatch[1]))
+    return run ? json(res, 200, publicRepairRun(run)) : json(res, 404, { error: 'Repair run not found' })
+  }
+  const repairLogsMatch = parsed.pathname.match(/^\/api\/repairs\/([^/]+)\/logs$/)
+  if (req.method === 'GET' && repairLogsMatch) {
+    const run = repairRuns.get(decodeURIComponent(repairLogsMatch[1]))
+    return run ? json(res, 200, { stdout: run.stdout, stderr: run.stderr, logs: run.logs }) : json(res, 404, { error: 'Repair run not found' })
+  }
+  const repairVerifyMatch = parsed.pathname.match(/^\/api\/repairs\/([^/]+)\/verify$/)
+  if (req.method === 'POST' && repairVerifyMatch) {
+    return startRepairVerification(req, res, decodeURIComponent(repairVerifyMatch[1]))
+  }
+  const repairAuditMatch = parsed.pathname.match(/^\/api\/repairs\/([^/]+)\/rerun-audit$/)
+  if (req.method === 'POST' && repairAuditMatch) {
+    return startRepairAuditRerun(req, res, decodeURIComponent(repairAuditMatch[1]))
   }
 
   return serveStaticUi(req, res, parsed.pathname)
@@ -176,9 +266,18 @@ async function startAudit(req: IncomingMessage, res: ServerResponse): Promise<vo
   return json(res, 202, { runId: run.runId })
 }
 
-function startGenerateFixes(res: ServerResponse, reportPath: string, projectId?: string): void {
+function startGenerateFixes(res: ServerResponse, reportPath: string, projectId?: string, issueIds?: string[]): void {
   const run = spawnCliRun('generate-fixes', ['generate-fixes', '--report', reportPath], reportPath, projectId)
-  json(res, 202, { runId: run.runId })
+  json(res, 202, { runId: run.runId, issueIds })
+}
+
+async function generateFixesNow(res: ServerResponse, reportPath: string, reportDir: string, issueIds?: string[]): Promise<void> {
+  const packets = await generateFixPackets(reportPath)
+  const selected = issueIds?.length ? packets.filter((packet) => issueIds.includes(packet.issue_id)) : packets
+  return json(res, 200, {
+    packets: await fixPacketList(reportDir),
+    generated: selected.map((packet) => ({ issueId: packet.issue_id, title: packet.title }))
+  })
 }
 
 function startVerify(res: ServerResponse, reportPath: string, issueId: string, url?: string, projectId?: string): void {
@@ -188,6 +287,104 @@ function startVerify(res: ServerResponse, reportPath: string, issueId: string, u
   }
   const run = spawnCliRun('verify', ['verify', '--issue', issueId, '--url', url, '--report', reportPath], reportPath, projectId)
   json(res, 202, { runId: run.runId })
+}
+
+async function startRepair(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  if ([...repairRuns.values()].some((run) => run.status === 'running' || run.status === 'queued')) {
+    return json(res, 409, { error: 'A repair attempt is already active.' })
+  }
+  const body = await readJsonBody<RepairStartRequest>(req)
+  const issueId = body.issueId?.trim()
+  if (!issueId) return json(res, 400, { error: 'issueId is required' })
+  const agent = body.agent ?? 'manual'
+  const mode = body.mode ?? 'repair-proof'
+  if (!['manual', 'codex'].includes(agent)) return json(res, 400, { error: 'agent must be manual or codex' })
+  if (!['repair-proof', 'apply-fix'].includes(mode)) return json(res, 400, { error: 'mode must be repair-proof or apply-fix' })
+  if (mode === 'repair-proof' && agent !== 'manual') return json(res, 400, { error: 'repair-proof only supports manual mode' })
+  if (agent === 'codex' && !process.env.SNIFFER_CODEX_COMMAND) {
+    return json(res, 400, { error: 'Codex is not configured. Set SNIFFER_CODEX_COMMAND before running codex repairs.' })
+  }
+  const projectId = body.project?.trim() || undefined
+  const reportPath = reportPathForProject(projectId)
+  const reportDir = latestDirForProject(projectId)
+  const report = await readJsonFile<SnifferReport>(reportPath).catch(() => undefined)
+  if (!report) return json(res, 404, { error: 'Latest report not found' })
+  let packet = await readFixPacketDetail(reportDir, issueId)
+  if (!packet || packet.json?.allowed_paths.length === 0) {
+    await generateFixPackets(reportPath)
+    packet = await readFixPacketDetail(reportDir, issueId)
+  }
+  if (!packet) return json(res, 404, { error: 'Fix packet not found for issue. Generate fix packets and try again.' })
+  if (packetLooksDestructive(packet) && !body.allowDestructiveConfirmed) {
+    return json(res, 409, { error: 'Fix packet may contain destructive actions. Explicit confirmation is required.' })
+  }
+
+  const spec = buildRepairCommand({ issueId, reportPath, agent, mode })
+  const run = spawnRepairRun({
+    issueId,
+    projectId,
+    agent,
+    mode,
+    reportPath,
+    cliArgs: spec.cliArgs,
+    phase: spec.phase,
+    commandSummary: spec.commandSummary
+  })
+  return json(res, 202, { repairRunId: run.repairRunId, status: run.status })
+}
+
+async function startRepairVerification(req: IncomingMessage, res: ServerResponse, repairRunId: string): Promise<void> {
+  const run = repairRuns.get(repairRunId)
+  if (!run) return json(res, 404, { error: 'Repair run not found' })
+  if (run.verification.status === 'running') return json(res, 409, { error: 'Verification is already running for this repair.' })
+  const body = await readJsonBody<{ url?: string }>(req)
+  const report = await readJsonFile<SnifferReport>(run.reportPath).catch(() => undefined)
+  const project = run.project ? await getProject(run.project, snifferRoot).catch(() => undefined) : undefined
+  const url = body.url?.trim() || project?.appUrl || report?.crawlGraph.startUrl
+  if (!url) return json(res, 400, { error: 'A URL is required to verify this issue.' })
+  run.verification = {
+    status: 'running',
+    command: `${tsxBin()} src/cli/index.ts verify --issue ${run.issueId} --url ${url} --report ${run.reportPath}`
+  }
+  const command = [tsxBin(), 'src/cli/index.ts', 'verify', '--issue', run.issueId, '--url', url, '--report', run.reportPath]
+  const child = spawn(command[0], command.slice(1), {
+    cwd: snifferRoot,
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'pipe']
+  })
+  child.stdout.on('data', (chunk) => appendRepairOutput(run, 'stdout', chunk.toString()))
+  child.stderr.on('data', (chunk) => appendRepairOutput(run, 'stderr', chunk.toString()))
+  child.on('error', (error) => {
+    run.verification = { status: 'failed', command: run.verification.command, summary: error.message }
+    void writeRepairRunLog(run)
+  })
+  child.on('close', (code) => {
+    run.verification = {
+      status: code === 0 ? 'passed' : 'failed',
+      command: run.verification.command,
+      summary: `Verification exited with code ${code}`
+    }
+    void refreshRepairArtifacts(run).then(() => writeRepairRunLog(run))
+  })
+  return json(res, 202, { repairRunId: run.repairRunId, status: run.verification.status })
+}
+
+async function startRepairAuditRerun(req: IncomingMessage, res: ServerResponse, repairRunId: string): Promise<void> {
+  const repair = repairRuns.get(repairRunId)
+  if (!repair) return json(res, 404, { error: 'Repair run not found' })
+  const body = await readJsonBody<Partial<AuditRequest>>(req)
+  const report = await readJsonFile<SnifferReport>(repair.reportPath).catch(() => undefined)
+  const project = repair.project ? await getProject(repair.project, snifferRoot).catch(() => undefined) : undefined
+  const auditBody: AuditRequest = project
+    ? { ...body, projectId: project.id, repoPath: project.repoPath, url: project.appUrl, scenario: body.scenario ?? 'all' }
+    : {
+      ...body,
+      repoPath: body.repoPath ?? report?.sourceGraph.repoPath,
+      url: body.url ?? report?.crawlGraph.startUrl,
+      scenario: body.scenario ?? 'all'
+    }
+  const fakeReq = { [Symbol.asyncIterator]: async function* () { yield Buffer.from(JSON.stringify(auditBody)) } } as unknown as IncomingMessage
+  return startAudit(fakeReq, res)
 }
 
 function spawnCliRun(phase: string, cliArgs: string[], reportPath = latestReportPath, projectId?: string): RunRecord {
@@ -233,6 +430,105 @@ function spawnCliRun(phase: string, cliArgs: string[], reportPath = latestReport
     void writeRunLog(run)
   })
   return run
+}
+
+function spawnRepairRun(input: {
+  issueId: string
+  projectId?: string
+  agent: RepairAgent
+  mode: RepairMode
+  reportPath: string
+  cliArgs: string[]
+  phase: string
+  commandSummary: string
+}): RepairRunRecord {
+  const repairRunId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  const command = [tsxBin(), 'src/cli/index.ts', ...input.cliArgs]
+  const run: RepairRunRecord = {
+    repairRunId,
+    status: 'running',
+    issueId: input.issueId,
+    project: input.projectId,
+    agent: input.agent,
+    mode: input.mode,
+    command,
+    commandSummary: input.commandSummary,
+    stdout: '',
+    stderr: '',
+    stdoutTail: '',
+    stderrTail: '',
+    logs: [`$ ${command.map(shellQuote).join(' ')}`],
+    startedAt: new Date().toISOString(),
+    reportPath: input.reportPath,
+    changedFiles: [],
+    diffSummary: '',
+    verification: { status: 'not_run' }
+  }
+  repairRuns.set(repairRunId, run)
+  void writeRepairRunLog(run)
+  const child = spawn(command[0], command.slice(1), {
+    cwd: snifferRoot,
+    env: process.env,
+    stdio: ['ignore', 'pipe', 'pipe']
+  })
+  child.stdout.on('data', (chunk) => appendRepairOutput(run, 'stdout', chunk.toString()))
+  child.stderr.on('data', (chunk) => appendRepairOutput(run, 'stderr', chunk.toString()))
+  child.on('error', (error) => {
+    run.status = 'failed'
+    run.stderr += `${error.message}\n`
+    run.stderrTail = tail(run.stderr)
+    run.logs.push(error.message)
+    run.endedAt = new Date().toISOString()
+    void writeRepairRunLog(run)
+  })
+  child.on('close', (code) => {
+    run.exitCode = code
+    run.status = code === 0 ? 'succeeded' : 'failed'
+    run.endedAt = new Date().toISOString()
+    run.logs.push(`Process exited with code ${code}`)
+    void refreshRepairArtifacts(run).then(() => writeRepairRunLog(run))
+  })
+  return run
+}
+
+function appendRepairOutput(run: RepairRunRecord, stream: 'stdout' | 'stderr', text: string): void {
+  run[stream] += text
+  if (stream === 'stdout') run.stdoutTail = tail(run.stdout)
+  else run.stderrTail = tail(run.stderr)
+  for (const line of text.split(/\r?\n/).filter(Boolean)) run.logs.push(line)
+  run.logs = run.logs.slice(-300)
+  void writeRepairRunLog(run)
+}
+
+async function refreshRepairArtifacts(run: RepairRunRecord): Promise<void> {
+  const history = await listRepairHistory(path.dirname(path.resolve(run.reportPath)), run.issueId)
+  const latest = history[0]
+  if (latest) {
+    run.repairAttemptDir = latest.attemptDir
+    run.changedFiles = latest.changedFiles
+    run.diffSummary = latest.diffSummary
+    if (run.verification.status !== 'running') run.verification = latest.verification
+  }
+  const artifacts = await readAttemptArtifacts(run.repairAttemptDir)
+  run.changedFiles = artifacts.changedFiles.length ? artifacts.changedFiles : run.changedFiles
+  run.diffSummary = artifacts.diffSummary || run.diffSummary
+  run.rawDiff = artifacts.rawDiff
+}
+
+async function writeRepairRunLog(run: RepairRunRecord): Promise<void> {
+  const dir = path.join(reportsRoot, 'ui-repairs', run.repairRunId)
+  await mkdir(dir, { recursive: true })
+  await writeFile(path.join(dir, 'repair_run.json'), JSON.stringify(publicRepairRun(run), null, 2))
+  await writeFile(path.join(dir, 'repair_run.log'), run.logs.join('\n'))
+}
+
+function publicRepairRun(run: RepairRunRecord): RepairRunRecord {
+  return {
+    ...run,
+    stdoutTail: tail(run.stdout),
+    stderrTail: tail(run.stderr),
+    logs: run.logs.slice(-300)
+  }
 }
 
 function appendRunOutput(run: RunRecord, stream: 'stdout' | 'stderr', text: string): void {
@@ -293,11 +589,19 @@ function projectQuery(parsed: URL): string | undefined {
 
 function latestDirFor(parsed: URL): string {
   const project = projectQuery(parsed)
-  return project ? projectLatestReportDir(project, snifferRoot) : latestDir
+  return latestDirForProject(project)
 }
 
 function latestReportPathFor(parsed: URL): string {
-  return path.join(latestDirFor(parsed), 'latest_report.json')
+  return reportPathForProject(projectQuery(parsed))
+}
+
+function latestDirForProject(project?: string): string {
+  return project ? projectLatestReportDir(project, snifferRoot) : latestDir
+}
+
+function reportPathForProject(project?: string): string {
+  return path.join(latestDirForProject(project), 'latest_report.json')
 }
 
 async function screenshotList(baseDir = latestDir, projectId?: string): Promise<Array<Record<string, string>>> {
@@ -328,7 +632,11 @@ async function fixPacketList(baseDir = latestDir): Promise<Array<Record<string, 
     })
 }
 
-async function sendFixPacket(res: ServerResponse, baseDir: string, issueId: string): Promise<void> {
+async function sendFixPacket(res: ServerResponse, baseDir: string, issueId: string, parsed?: URL): Promise<void> {
+  if (parsed?.searchParams.get('format') === 'json') {
+    const detail = await readFixPacketDetail(baseDir, issueId)
+    return detail ? json(res, 200, detail) : json(res, 404, { error: 'Fix packet not found' })
+  }
   const base = safeJoin(path.join(baseDir, 'fix_packets'), `${issueId}.md`)
   if (!base) return json(res, 400, { error: 'Invalid issue id' })
   return sendTextFile(res, base, 'text/markdown; charset=utf-8')
@@ -436,6 +744,10 @@ function phaseFromLog(line: string): string | undefined {
   if (/fix packet/i.test(line)) return 'Generating fix packets'
   if (/Wrote .*latest_report/i.test(line)) return 'Writing report'
   return undefined
+}
+
+function tail(text: string, max = 6000): string {
+  return text.length > max ? text.slice(text.length - max) : text
 }
 
 function contentType(file: string): string {

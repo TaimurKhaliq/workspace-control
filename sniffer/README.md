@@ -792,7 +792,8 @@ Use Codex mode only when configured. Sniffer writes the prompt to the repair att
 
 ```bash
 export SNIFFER_AGENT=codex
-export SNIFFER_CODEX_COMMAND="codex"
+export SNIFFER_CODEX_COMMAND="codex --ask-for-approval never"
+export SNIFFER_CODEX_ARGS="exec --sandbox workspace-write"
 export SNIFFER_CODEX_TIMEOUT_SECONDS=900
 npm run sniffer -- apply-fix \
   --issue <issue_id> \
@@ -803,10 +804,11 @@ npm run sniffer -- apply-fix \
 You can also provide a command template:
 
 ```bash
-export SNIFFER_CODEX_COMMAND="codex exec --prompt-file {prompt_file}"
+export SNIFFER_CODEX_COMMAND="codex --ask-for-approval never"
+export SNIFFER_CODEX_ARGS="exec --sandbox workspace-write"
 ```
 
-If the command contains `{prompt_file}`, Sniffer replaces it with the generated prompt file path. Otherwise it pipes the prompt to stdin. If Codex is not installed or the command cannot be found, Sniffer prints clear instructions and does not run Codex.
+Sniffer writes `codex_prompt.md` into the repair attempt directory and pipes the prompt to stdin by default. If your command contains `{prompt_file}`, Sniffer replaces it with the generated prompt file path. For current Codex desktop CLI builds, `--ask-for-approval` is a global Codex flag and should appear before `exec`. If Codex is not installed or the command cannot be found, Sniffer prints clear instructions and does not run Codex.
 
 Convenience scripts are also available:
 

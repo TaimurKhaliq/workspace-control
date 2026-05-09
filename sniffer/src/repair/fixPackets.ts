@@ -15,9 +15,12 @@ export function createFixPacket(issue: Issue, report: SnifferReport, reportPath:
   if (!issue.issue_id) throw new Error(`Issue is missing issue_id: ${issue.title}`)
   const reportDir = path.dirname(path.resolve(reportPath))
   const evidencePaths = [issue.screenshotPath, issue.tracePath].filter(Boolean) as string[]
+  const suspectedFiles = issue.suspected_files?.length
+    ? issue.suspected_files
+    : inferDefaultSuspectedFiles(issue, report)
   const policy = resolveRepairPathPolicy({
     repoPath: report.sourceGraph.repoPath,
-    suspectedFiles: issue.suspected_files ?? [],
+    suspectedFiles,
     reportDir
   })
   const verificationCommand = `npm run sniffer -- verify --issue ${issue.issue_id} --url ${report.crawlGraph.startUrl} --report ${path.resolve(reportPath)}`
@@ -42,6 +45,51 @@ export function createFixPacket(issue: Issue, report: SnifferReport, reportPath:
     verification_command: verificationCommand,
     pass_conditions: issue.pass_conditions ?? []
   }
+}
+
+function inferDefaultSuspectedFiles(issue: Issue, report: SnifferReport): string[] {
+  if (['api_error', 'network_error', 'console_error'].includes(issue.type)) {
+    const apiFiles = report.sourceGraph.apiCalls.map((call) => call.sourceFile).filter(Boolean)
+    if (apiFiles.length > 0) return unique(apiFiles).slice(0, 5)
+  }
+  if ([
+    'accessibility_issue',
+    'locator_quality_issue',
+    'scanability_issue',
+    'layout_issue',
+    'visibility_issue',
+    'runtime_dom_quality_warning',
+    'usability_issue',
+    'product_experience_gap',
+    'missing_ui_surface'
+  ].includes(issue.type)) {
+    const sourceFiles = [
+      ...report.sourceGraph.uiSurfaces.map((surface) => surface.file),
+      ...report.sourceGraph.components.map((component) => component.file),
+      ...report.sourceGraph.pages.map((page) => page.file),
+      ...report.sourceGraph.forms.map((form) => form.file)
+    ].filter(Boolean)
+    if (sourceFiles.length > 0) return unique(preferAppFiles(sourceFiles)).slice(0, 6)
+    return ['src/']
+  }
+  return []
+}
+
+function preferAppFiles(files: string[]): string[] {
+  return [...files].sort((left, right) => scoreFile(right) - scoreFile(left))
+}
+
+function scoreFile(file: string): number {
+  const lower = file.toLowerCase()
+  let score = 0
+  if (lower.includes('/app.') || lower.startsWith('src/app.')) score += 4
+  if (lower.includes('/components/')) score += 2
+  if (lower.startsWith('src/')) score += 1
+  return score
+}
+
+function unique(values: string[]): string[] {
+  return [...new Set(values)]
 }
 
 export async function generateFixPackets(reportPath: string, allowDestructive = false): Promise<FixPacket[]> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CodexCliAgentAdapter, ManualAgentAdapter, MockAgentAdapter } from '../src/repair/agentAdapters.js'
+import { CodexCliAgentAdapter, ManualAgentAdapter, MockAgentAdapter, normalizeCodexCommandTemplate } from '../src/repair/agentAdapters.js'
 import { mkdir } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
@@ -42,6 +42,11 @@ describe('agent adapters', () => {
       if (oldArgs === undefined) delete process.env.SNIFFER_CODEX_ARGS
       else process.env.SNIFFER_CODEX_ARGS = oldArgs
     }
+  })
+
+  it('normalizes Codex approval flag before exec for the desktop CLI', () => {
+    expect(normalizeCodexCommandTemplate('/Applications/Codex.app/Contents/Resources/codex exec --sandbox workspace-write --ask-for-approval never'))
+      .toBe('/Applications/Codex.app/Contents/Resources/codex --ask-for-approval never exec --sandbox workspace-write')
   })
 })
 

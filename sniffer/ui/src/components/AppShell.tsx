@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { RunRecord, ServerStatus, SnifferProject } from '../api'
 
-export type Screen = 'summary' | 'projects' | 'timeline' | 'scenarios' | 'crawl' | 'workflows' | 'issues' | 'fixes' | 'screenshots' | 'graph' | 'raw' | 'settings'
+export type Screen = 'summary' | 'projects' | 'timeline' | 'scenarios' | 'crawl' | 'workflows' | 'issues' | 'fixes' | 'repair' | 'screenshots' | 'graph' | 'raw' | 'settings'
 
 export function AppShell({
   screen,
@@ -99,6 +99,7 @@ const navItems: Array<{ screen: Screen; label: string }> = [
   { screen: 'workflows', label: 'Workflow Evidence' },
   { screen: 'issues', label: 'Issues' },
   { screen: 'fixes', label: 'Fix Packets' },
+  { screen: 'repair', label: 'Repair Workbench' },
   { screen: 'screenshots', label: 'Screenshots' },
   { screen: 'graph', label: 'Graph Explorer' },
   { screen: 'raw', label: 'Raw JSON' },

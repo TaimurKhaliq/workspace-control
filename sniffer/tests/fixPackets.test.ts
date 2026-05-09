@@ -87,6 +87,30 @@ describe('generateFixPackets', () => {
     expect(packets[0].title).toBe('Run/report screens need clearer product context')
     await expect(readFile(path.join(dir, 'fix_packets', `${packets[0].issue_id}.md`), 'utf8')).resolves.toContain('latest/selected run')
   })
+
+  it('falls back to frontend source files for UI issues without suspected files', async () => {
+    const dir = await tempDir()
+    const reportPath = path.join(dir, 'latest_report.json')
+    const uiReport = report()
+    uiReport.sourceGraph.components = [{ file: 'src/App.tsx', name: 'App' }]
+    uiReport.issues = [{
+      issue_id: 'locator-1',
+      severity: 'medium',
+      type: 'locator_quality_issue',
+      title: 'Repeated Reopen buttons have ambiguous accessible names',
+      description: 'Reopen buttons are ambiguous.',
+      evidence: ['Repeated button name "Reopen" appears 10 times.'],
+      suggestedFixPrompt: 'Give each Reopen button a unique accessible name.'
+    }]
+    await writeFile(reportPath, JSON.stringify(uiReport, null, 2))
+
+    const packets = await generateFixPackets(reportPath)
+
+    expect(packets).toHaveLength(1)
+    expect(packets[0].suspected_files).toContain('src/App.tsx')
+    expect(packets[0].allowed_paths).toContain('src/')
+    expect(packets[0].prompt).toContain('src/App.tsx')
+  })
 })
 
 function report(): SnifferReport {

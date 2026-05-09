@@ -100,7 +100,7 @@ export class CodexCliAgentAdapter implements AgentAdapter {
     const promptPath = path.join(attemptDir, 'codex_prompt.md')
     await writeFile(promptPath, fixPacket.prompt, 'utf8')
 
-    const commandTemplate = `${command}${codexArgs ? ` ${codexArgs}` : ''}`
+    const commandTemplate = normalizeCodexCommandTemplate(`${command}${codexArgs ? ` ${codexArgs}` : ''}`)
     const commandLine = commandTemplate.includes('{prompt_file}')
       ? commandTemplate.replaceAll('{prompt_file}', shellQuote(promptPath))
       : commandTemplate
@@ -145,6 +145,14 @@ export async function commandExists(command: string): Promise<boolean> {
   }
   const result = spawnSync('command', ['-v', binary], { shell: true, encoding: 'utf8' })
   return result.status === 0
+}
+
+export function normalizeCodexCommandTemplate(commandTemplate: string): string {
+  const approval = commandTemplate.match(/\s--ask-for-approval\s+(\S+)/)
+  if (!approval || !commandTemplate.includes(' exec')) return commandTemplate
+  const withoutApproval = commandTemplate.replace(/\s--ask-for-approval\s+\S+/, '')
+  const execIndex = withoutApproval.indexOf(' exec')
+  return `${withoutApproval.slice(0, execIndex)} --ask-for-approval ${approval[1]}${withoutApproval.slice(execIndex)}`
 }
 
 function sanitizedEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {

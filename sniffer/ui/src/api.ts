@@ -446,6 +446,97 @@ export interface FixPacketItem {
   kind: 'md' | 'json'
 }
 
+export interface LatestIssueSummary {
+  issueId: string
+  title: string
+  severity: Severity
+  type: string
+  status: string
+  evidenceSummary: string[]
+  suspectedFiles: string[]
+  screenshotPath?: string
+  screenshotArtifactUrl?: string
+  hasFixPacket: boolean
+  repairStatus?: string
+}
+
+export interface FixPacketDetail {
+  issueId: string
+  markdown: string
+  json?: {
+    issue_id: string
+    title: string
+    repo_path: string
+    repair_root: string
+    allowed_paths: string[]
+    working_directory: string
+    evidence_paths: string[]
+    suspected_files: string[]
+    prompt: string
+    constraints: string[]
+    verification_command: string
+    pass_conditions: string[]
+  }
+  suspectedFiles: string[]
+  prompt: string
+  constraints: string[]
+  verificationCommand: string
+  passConditions: string[]
+  path: {
+    markdown: string
+    json: string
+  }
+}
+
+export interface RepairAttemptSummary {
+  repairRunId?: string
+  issueId: string
+  agent: string
+  mode?: 'repair-proof' | 'apply-fix'
+  status: string
+  agentInvoked: boolean
+  changedFiles: string[]
+  diffSummary: string
+  verification: {
+    status: 'not_run' | 'passed' | 'failed' | 'inconclusive'
+    command?: string
+    summary?: string
+  }
+  createdAt: string
+  updatedAt: string
+  attemptDir: string
+  fixPacketPath?: string
+}
+
+export interface RepairRunRecord {
+  repairRunId: string
+  status: 'queued' | 'running' | 'succeeded' | 'failed' | 'cancelled'
+  issueId: string
+  project?: string
+  agent: 'manual' | 'codex'
+  mode: 'repair-proof' | 'apply-fix'
+  command: string[]
+  commandSummary: string
+  stdout: string
+  stderr: string
+  logs: string[]
+  stdoutTail: string
+  stderrTail: string
+  startedAt: string
+  endedAt?: string
+  exitCode?: number | null
+  reportPath: string
+  repairAttemptDir?: string
+  changedFiles: string[]
+  diffSummary: string
+  rawDiff?: string
+  verification: {
+    status: 'not_run' | 'passed' | 'failed' | 'inconclusive' | 'running'
+    command?: string
+    summary?: string
+  }
+}
+
 export async function getStatus(): Promise<ServerStatus> {
   return request('/api/status')
 }
@@ -501,8 +592,19 @@ export async function getFixPacket(issueId: string, projectId?: string): Promise
   return response.text()
 }
 
+export async function getFixPacketDetail(issueId: string, projectId?: string): Promise<FixPacketDetail> {
+  return request(projectPath(`/api/reports/latest/fix-packets/${encodeURIComponent(issueId)}?format=json`, projectId))
+}
+
 export async function generateFixPackets(projectId?: string): Promise<{ runId: string }> {
   return request(projectPath('/api/reports/latest/fix-packets/generate', projectId), { method: 'POST' })
+}
+
+export async function generateFixPacketsForIssues(projectId?: string, issueIds?: string[]): Promise<{ packets: FixPacketItem[]; generated: Array<{ issueId: string; title: string }> }> {
+  return request('/api/reports/latest/generate-fixes', {
+    method: 'POST',
+    body: JSON.stringify({ project: projectId, issueIds })
+  })
 }
 
 export async function verifyIssue(issueId: string, url: string, projectId?: string): Promise<{ runId: string }> {
@@ -510,6 +612,50 @@ export async function verifyIssue(issueId: string, url: string, projectId?: stri
     method: 'POST',
     body: JSON.stringify({ url })
   })
+}
+
+export async function getLatestIssues(projectId?: string): Promise<LatestIssueSummary[]> {
+  return request(projectPath('/api/reports/latest/issues', projectId))
+}
+
+export async function startRepair(input: {
+  project?: string
+  issueId: string
+  agent: 'manual' | 'codex'
+  mode: 'repair-proof' | 'apply-fix'
+  allowDestructiveConfirmed?: boolean
+}): Promise<{ repairRunId: string; status: RepairRunRecord['status'] }> {
+  return request('/api/repairs/start', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export async function getRepairRun(repairRunId: string): Promise<RepairRunRecord> {
+  return request(`/api/repairs/${encodeURIComponent(repairRunId)}`)
+}
+
+export async function getRepairLogs(repairRunId: string): Promise<{ stdout: string; stderr: string; logs: string[] }> {
+  return request(`/api/repairs/${encodeURIComponent(repairRunId)}/logs`)
+}
+
+export async function verifyRepair(repairRunId: string, url?: string): Promise<{ repairRunId: string; status: RepairRunRecord['verification']['status'] }> {
+  return request(`/api/repairs/${encodeURIComponent(repairRunId)}/verify`, {
+    method: 'POST',
+    body: JSON.stringify({ url })
+  })
+}
+
+export async function rerunRepairAudit(repairRunId: string, options?: Partial<AuditForm>): Promise<{ runId: string }> {
+  return request(`/api/repairs/${encodeURIComponent(repairRunId)}/rerun-audit`, {
+    method: 'POST',
+    body: JSON.stringify(options ?? {})
+  })
+}
+
+export async function getRepairHistory(projectId?: string, issueId?: string): Promise<RepairAttemptSummary[]> {
+  const params = new URLSearchParams()
+  if (projectId) params.set('project', projectId)
+  if (issueId) params.set('issueId', issueId)
+  const query = params.toString()
+  return request(`/api/repairs/history${query ? `?${query}` : ''}`)
 }
 
 function projectPath(path: string, projectId?: string): string {

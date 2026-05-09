@@ -663,6 +663,7 @@ function PlanRunsPanel({
                 type="button"
                 data-testid="reopen-plan-run-button"
                 className="secondary-button"
+                aria-label={`Reopen plan run for "${run.feature_request}" from ${formatDateTimeWithSeconds(run.created_at)} targeting ${run.target_ids.join(', ') || 'no target'}; run ${run.id}`}
                 onClick={() => onReopen(run)}
               >
                 Reopen
@@ -2091,6 +2092,16 @@ function formatDateTime(value: string): string {
     day: 'numeric',
     hour: 'numeric',
     minute: '2-digit'
+  });
+}
+
+function formatDateTimeWithSeconds(value: string): string {
+  return new Date(value).toLocaleString([], {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    second: '2-digit'
   });
 }
 

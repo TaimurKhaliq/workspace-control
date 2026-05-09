@@ -42,6 +42,27 @@ describe('applyFix', () => {
     expect(repairResult.changed_files).toEqual([])
     expect(repairResult.manual_mode).toBe(true)
   })
+
+  it('does not report pre-existing dirty workspace diff as agent diff', async () => {
+    const root = path.join(os.tmpdir(), `sniffer-apply-dirty-${randomUUID()}`)
+    await mkdir(path.join(root, 'reports', 'sniffer', 'latest', 'fix_packets'), { recursive: true })
+    await mkdir(path.join(root, 'src'), { recursive: true })
+    spawnSync('git', ['init'], { cwd: root })
+    await writeFile(path.join(root, 'src', 'App.tsx'), 'before\n')
+    spawnSync('git', ['add', '.'], { cwd: root })
+    spawnSync('git', ['-c', 'user.email=sniffer@example.test', '-c', 'user.name=Sniffer Test', 'commit', '-m', 'init'], { cwd: root })
+    await writeFile(path.join(root, 'src', 'App.tsx'), 'already dirty\n')
+    const reportPath = path.join(root, 'reports', 'sniffer', 'latest', 'latest_report.json')
+    await writeFile(reportPath, '{}')
+    await writeFile(path.join(root, 'reports', 'sniffer', 'latest', 'fix_packets', 'issue-1.json'), JSON.stringify(packet(root), null, 2))
+
+    const result = await applyFix({ issueId: 'issue-1', reportPath, agentName: 'manual' })
+
+    expect(result.gitStatusBefore).toContain('src/App.tsx')
+    expect(result.gitDiffAfter).toBe('')
+    expect(result.gitDiffSummary).toBe('')
+    await expect(readFile(path.join(result.attemptDir, 'git_diff_after.patch'), 'utf8')).resolves.toBe('')
+  })
 })
 
 function packet(root: string): FixPacket {
