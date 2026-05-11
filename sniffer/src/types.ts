@@ -1238,6 +1238,9 @@ export interface ProductExperienceContext {
   required_context: string[]
   screenshot_path?: string
   screenshot_artifact_url?: string
+  screenshot_attached?: boolean
+  screenshot_mime_type?: string
+  screenshot_bytes?: number
   outerAuditRunId?: string
   outerReportGeneratedAt?: string
   displayedReportId?: string
@@ -1268,8 +1271,10 @@ export interface ProductExperienceContext {
   }>
   context_warnings: string[]
   vision_capable: boolean
+  vision_requested?: boolean
   vision_used: boolean
   vision_not_used_reason?: string
+  vision_detail?: string
   llm_provider?: string
   llm_model?: string
   llm_api_style?: string
@@ -1316,6 +1321,11 @@ export interface ProductExperienceDecision {
   llm_request_status: 'success' | 'not_requested' | 'not_run' | 'provider_error'
   vision_used: boolean
   vision_not_used_reason?: string
+  screenshot_attached?: boolean
+  screenshot_mime_type?: string
+  screenshot_bytes?: number
+  vision_requested?: boolean
+  vision_detail?: string
   outerAuditRunId?: string
   outerReportGeneratedAt?: string
   displayedReportId?: string
@@ -1352,6 +1362,8 @@ export interface ProductExperienceResult {
   llmScreensReviewed: number
   realLlmScreensReviewed: number
   visionScreensReviewed: number
+  visionSkippedScreens?: number
+  visionSkipReasons?: Record<string, number>
   aligned: number
   minorGaps: number
   majorGaps: number

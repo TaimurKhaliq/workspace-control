@@ -19,6 +19,10 @@ export class MockLlmProvider implements LlmProvider {
     return {
       name: this.name,
       realProvider: false,
+      supportsText: true,
+      supportsJson: true,
+      visionEnabled: false,
+      imageInputStyle: 'none' as const,
       visionSupported: false
     }
   }
@@ -27,12 +31,18 @@ export class MockLlmProvider implements LlmProvider {
     return {
       provider: this.name,
       authConfigured: true,
+      visionSupported: false,
+      visionEnabled: false,
+      imageInputStyle: 'none' as const,
       configSource: {},
       env: {
         SNIFFER_LLM_BASE_URL: false,
         SNIFFER_LLM_API_KEY: false,
         SNIFFER_LLM_MODEL: false,
         SNIFFER_LLM_API_STYLE: false,
+        SNIFFER_LLM_VISION_ENABLED: false,
+        SNIFFER_LLM_MAX_IMAGE_BYTES: false,
+        SNIFFER_LLM_IMAGE_DETAIL: false,
         STACKPILOT_SEMANTIC_BASE_URL: false,
         STACKPILOT_SEMANTIC_API_KEY: false,
         STACKPILOT_SEMANTIC_MODEL: false,

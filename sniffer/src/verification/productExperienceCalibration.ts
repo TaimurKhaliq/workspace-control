@@ -49,6 +49,7 @@ export interface ProductExperienceCalibrationTargetResult {
   status: 'passed' | 'failed'
   criticMode: ProductExperienceCriticMode
   llmUsed: boolean
+  visionUsed: boolean
   providerName?: string
   providerModel?: string
   rubricVersion?: string
@@ -69,6 +70,7 @@ export interface ProductExperienceCalibrationResult {
   status: 'passed' | 'failed'
   criticMode: ProductExperienceCriticMode
   llmUsed: boolean
+  visionUsed: boolean
   providerName?: string
   providerModel?: string
   rubricVersion?: string
@@ -176,6 +178,7 @@ export async function runProductExperienceCalibration(input: {
     status: targets.every((target) => target.status === 'passed') ? 'passed' : 'failed',
     criticMode,
     llmUsed: targets.some((target) => target.llmUsed),
+    visionUsed: targets.some((target) => target.visionUsed),
     providerName: targets.find((target) => target.providerName)?.providerName,
     providerModel: targets.find((target) => target.providerModel)?.providerModel,
     rubricVersion: targets.find((target) => target.rubricVersion)?.rubricVersion,
@@ -315,6 +318,7 @@ async function runFixture(input: {
       status: missingFindings.length === 0 && unexpectedFindings.length === 0 ? 'passed' : 'failed',
       criticMode: input.criticMode,
       llmUsed: productExperience.llmScreensReviewed > 0,
+      visionUsed: productExperience.visionScreensReviewed > 0,
       providerName: productExperience.providerName,
       providerModel: productExperience.providerModel,
       rubricVersion: productExperience.rubricVersion,
@@ -504,6 +508,7 @@ function renderCalibrationMarkdown(result: ProductExperienceCalibrationResult): 
     `Status: ${result.status.toUpperCase()}`,
     `Critic mode: ${result.criticMode}`,
     `LLM used: ${result.llmUsed ? 'yes' : 'no'}`,
+    `Vision used: ${result.visionUsed ? 'yes' : 'no'}`,
     `Provider: ${result.providerName ?? 'none'}`,
     `Model: ${result.providerModel ?? 'none'}`,
     `Rubric version: ${result.rubricVersion ?? 'unknown'}`,
@@ -517,6 +522,7 @@ function renderCalibrationMarkdown(result: ProductExperienceCalibrationResult): 
       `- URL: ${target.url}`,
       `- Product Experience Critic status: ${target.productExperienceStatus}`,
       `- LLM used: ${target.llmUsed ? 'yes' : 'no'}`,
+      `- Vision used: ${target.visionUsed ? 'yes' : 'no'}`,
       `- Provider: ${target.providerName ?? 'none'}`,
       `- Model: ${target.providerModel ?? 'none'}`,
       `- Rubric version: ${target.rubricVersion ?? 'unknown'}`,

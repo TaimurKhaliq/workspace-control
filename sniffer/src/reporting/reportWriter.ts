@@ -976,6 +976,10 @@ function renderProductExperienceCritic(report: SnifferReport): string {
       decision.llm_api_style ? `- API style: ${decision.llm_api_style}` : undefined,
       `- LLM request status: ${decision.llm_request_status}`,
       `- Vision used: ${decision.vision_used ? 'yes' : 'no'}`,
+      `- Screenshot attached: ${decision.screenshot_attached ? 'yes' : 'no'}`,
+      decision.vision_detail ? `- Vision detail: ${decision.vision_detail}` : undefined,
+      decision.screenshot_mime_type ? `- Screenshot MIME type: ${decision.screenshot_mime_type}` : undefined,
+      decision.screenshot_bytes !== undefined ? `- Screenshot bytes: ${decision.screenshot_bytes}` : undefined,
       decision.vision_not_used_reason ? `- Vision not used reason: ${decision.vision_not_used_reason}` : undefined,
       `- Context scope: ${decision.contextScope ?? 'unknown'}`,
       `- Screenshot source: ${decision.screenshotSource ?? 'unknown'}`,
@@ -1029,6 +1033,8 @@ function renderProductExperienceCritic(report: SnifferReport): string {
     `- LLM-reviewed screens: ${result.llmScreensReviewed}`,
     `- Real-LLM-reviewed screens: ${result.realLlmScreensReviewed}`,
     `- Vision-reviewed screens: ${result.visionScreensReviewed}`,
+    `- Vision-skipped screens: ${result.visionSkippedScreens ?? result.decisions.filter((decision) => !decision.vision_used).length}`,
+    `- Vision skip reasons: ${renderVisionSkipReasons(result.visionSkipReasons)}`,
     `- Aligned: ${result.aligned}`,
     `- Minor gaps: ${result.minorGaps}`,
     `- Major gaps: ${result.majorGaps}`,
@@ -1036,6 +1042,11 @@ function renderProductExperienceCritic(report: SnifferReport): string {
     '',
     screenBlocks || 'No screen decisions recorded.'
   ].filter(Boolean).join('\n')
+}
+
+function renderVisionSkipReasons(reasons?: Record<string, number>): string {
+  if (!reasons || Object.keys(reasons).length === 0) return 'none'
+  return Object.entries(reasons).map(([reason, count]) => `${reason}=${count}`).join(', ')
 }
 
 function renderEvidenceProvenance(report: SnifferReport): string {

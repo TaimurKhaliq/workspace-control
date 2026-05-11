@@ -585,6 +585,7 @@ export SNIFFER_LLM_BASE_URL=https://api.openai.com/v1
 export SNIFFER_LLM_API_KEY=...
 export SNIFFER_LLM_MODEL=...
 export SNIFFER_LLM_API_STYLE=responses
+export SNIFFER_LLM_IMAGE_DETAIL=auto
 ```
 
 Then run a product-experience audit:
@@ -612,6 +613,9 @@ export SNIFFER_LLM_BASE_URL="https://api.openai.com/v1"
 export SNIFFER_LLM_API_KEY="..."
 export SNIFFER_LLM_MODEL="gpt-4.1-mini"
 export SNIFFER_LLM_API_STYLE="responses"
+export SNIFFER_LLM_VISION_ENABLED="true" # optional override; known vision-capable models are enabled automatically
+export SNIFFER_LLM_MAX_IMAGE_BYTES="5242880"
+export SNIFFER_LLM_IMAGE_DETAIL="auto"
 ```
 
 Fallback order:
@@ -620,6 +624,8 @@ Fallback order:
 - API key: `SNIFFER_LLM_API_KEY`, `STACKPILOT_SEMANTIC_API_KEY`, then `OPENAI_API_KEY`
 - model: `SNIFFER_LLM_MODEL`, then `STACKPILOT_SEMANTIC_MODEL`
 - API style: `SNIFFER_LLM_API_STYLE`, `STACKPILOT_SEMANTIC_API_STYLE`, then `auto`
+- vision: enabled automatically for known vision-capable models such as `gpt-4.1-mini`, or overridden with `SNIFFER_LLM_VISION_ENABLED`
+- image budget/detail: `SNIFFER_LLM_MAX_IMAGE_BYTES` and `SNIFFER_LLM_IMAGE_DETAIL`
 
 Check the provider before running a long audit:
 
@@ -627,7 +633,7 @@ Check the provider before running a long audit:
 npm run sniffer -- providers check --provider openai-compatible
 ```
 
-The check prints the provider, base URL host, model, API style, which env vars are present, whether auth is configured, request success/failure, and the HTTP status/error summary. It never prints the API key.
+The check prints the provider, base URL host, model, API style, vision support, image input style, which env vars are present, whether auth is configured, request success/failure, and the HTTP status/error summary. It never prints the API key.
 
 Then run the critic:
 
@@ -691,7 +697,7 @@ Reports include a `Product Experience Critic` section for every reviewed screen:
 - classification: `aligned`, `minor_gap`, `major_gap`, or `inconclusive`
 - evidence-backed findings and non-issues
 
-Current OpenAI-compatible provider behavior sends DOM/context plus screenshot paths/artifact URLs. The wrapper reports `vision_used=false` until a vision-capable provider implementation is wired in; it does not pretend screenshot pixels were reviewed.
+For OpenAI-compatible Responses API providers, known vision-capable models such as `gpt-4.1-mini` send the screen-specific screenshot as a base64 `input_image` data URL when the screenshot exists and is under `SNIFFER_LLM_MAX_IMAGE_BYTES`. Chat Completions style uses `image_url` content. If a screenshot is missing, too large, unreadable, or the provider/model is not vision-capable, Sniffer falls back to DOM/context plus screenshot path and reports the explicit skip reason.
 
 Guardrails prevent common dogfood false positives:
 
@@ -1038,8 +1044,8 @@ Repair attempts record git status before, git diff after, commands run, agent ou
 - Framework adapters are heuristic and do not compile Angular/React/Vue/Svelte source.
 - Runtime app profile inference can see secondary ecommerce/admin/dashboard words in report data; high-confidence source/product evidence takes precedence for the final app profile.
 - Built-in workspace-control scenarios are only appropriate for planning/control-panel apps. Arbitrary apps should use hybrid discovery with generated generic scenarios.
-- The OpenAI-compatible Product Experience Critic currently sends DOM/context and screenshot paths, not image pixels. Reports are explicit with `vision_used=false` until a vision-capable provider wrapper is implemented.
-- LLM product judgments are evidence-gated. This suppresses self-referential report-data echoes, but it can also defer a legitimate subtle visual issue when only screenshot pixels could prove it.
+- Vision is currently limited to one primary screen-specific screenshot per Product Experience Critic context, with no automatic downscaling/compression beyond the max-byte skip guard.
+- LLM product judgments are evidence-gated. This suppresses self-referential report-data echoes, and visual-only findings are suppressed unless screenshot vision was used or DOM evidence supports the claim.
 - Matrix external targets are skipped, not failed, when their app URLs are not running.
 - Manual repair proof proves packet handoff safety; it does not verify that a human or agent applied a fix.
 

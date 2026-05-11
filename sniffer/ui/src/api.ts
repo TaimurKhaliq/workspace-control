@@ -113,6 +113,8 @@ export interface SnifferReport {
     realLlmScreensReviewed?: number
     llmScreensReviewed?: number
     visionScreensReviewed?: number
+    visionSkippedScreens?: number
+    visionSkipReasons?: Record<string, number>
     contexts?: ProductExperienceContext[]
     decisions?: ProductExperienceDecision[]
     evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]

@@ -195,6 +195,8 @@ export async function runProductExperienceCritic(input: {
     llmScreensReviewed: decisions.filter((decision) => decision.llm_used).length,
     realLlmScreensReviewed: decisions.filter((decision) => decision.real_llm_used).length,
     visionScreensReviewed: decisions.filter((decision) => decision.vision_used).length,
+    visionSkippedScreens: decisions.filter((decision) => !decision.vision_used).length,
+    visionSkipReasons: visionSkipReasons(decisions),
     aligned: decisions.filter((decision) => decision.overall.classification === 'aligned').length,
     minorGaps: decisions.filter((decision) => decision.overall.classification === 'minor_gap').length,
     majorGaps: decisions.filter((decision) => decision.overall.classification === 'major_gap').length,
@@ -209,6 +211,16 @@ export async function runProductExperienceCritic(input: {
     evidenceRetrievalSummaries: contexts.flatMap((context) => context.evidence_retrieval_summary ? [context.evidence_retrieval_summary] : []),
     issues
   }
+}
+
+function visionSkipReasons(decisions: ProductExperienceDecision[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const decision of decisions) {
+    if (decision.vision_used) continue
+    const reason = decision.vision_not_used_reason ?? (decision.vision_requested ? 'vision_requested_but_not_used' : 'vision_not_requested')
+    counts[reason] = (counts[reason] ?? 0) + 1
+  }
+  return counts
 }
 
 export function buildProductExperienceContexts(input: {
@@ -254,6 +266,11 @@ export function deterministicProductExperienceDecision(context: ProductExperienc
     llm_request_status: 'not_requested',
     vision_used: false,
     vision_not_used_reason: context.vision_not_used_reason,
+    screenshot_attached: context.screenshot_attached,
+    screenshot_mime_type: context.screenshot_mime_type,
+    screenshot_bytes: context.screenshot_bytes,
+    vision_requested: context.vision_requested,
+    vision_detail: context.vision_detail,
     ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: context.context_sufficiency,
@@ -383,12 +400,15 @@ function enrichProductExperienceContext(
   provider?: LlmProviderMetadata
 ): ProductExperienceContext {
   const visionCapable = Boolean(provider?.visionSupported)
-  const visionUsed = visionCapable && Boolean(context.screenshot_path)
+  const visionRequested = visionCapable && Boolean(context.screenshot_path)
+  const visionUsed = false
   const visionNotUsedReason = visionUsed
     ? undefined
-    : context.screenshot_path
-      ? 'provider wrapper does not support image input'
-      : 'screenshot unavailable'
+    : !context.screenshot_path
+      ? 'screenshot unavailable'
+      : !visionCapable
+        ? 'provider wrapper does not support image input'
+        : undefined
   const signals = contextSufficiencySignals(context)
   const total = signals.reduce((sum, signal) => sum + signal.weight, 0)
   const present = signals.reduce((sum, signal) => sum + (signal.present ? signal.weight : 0), 0)
@@ -414,8 +434,10 @@ function enrichProductExperienceContext(
     context_sufficiency_signals: signals,
     context_warnings: warnings,
     vision_capable: visionCapable,
+    vision_requested: visionRequested,
     vision_used: visionUsed,
     vision_not_used_reason: visionNotUsedReason,
+    vision_detail: provider?.imageDetail,
     llm_provider: provider?.name,
     llm_model: provider?.model,
     llm_api_style: provider?.apiStyle,
@@ -718,12 +740,21 @@ function productExperienceIssue(finding: ProductExperienceFinding, decision: Pro
 }
 
 function normalizeLlmDecision(decision: ProductExperienceDecision, context: ProductExperienceContext, deterministic: ProductExperienceDecision): ProductExperienceDecision {
+  const evidenceContext = {
+    ...context,
+    vision_used: Boolean(decision.vision_used),
+    vision_not_used_reason: decision.vision_not_used_reason ?? context.vision_not_used_reason,
+    screenshot_attached: decision.screenshot_attached ?? context.screenshot_attached,
+    screenshot_mime_type: decision.screenshot_mime_type ?? context.screenshot_mime_type,
+    screenshot_bytes: decision.screenshot_bytes ?? context.screenshot_bytes,
+    vision_detail: decision.vision_detail ?? context.vision_detail
+  }
   const findings = mergeMandatoryDeterministicFindings(
-    (decision.findings ?? []).map((finding) => normalizeFinding(finding, context)),
+    (decision.findings ?? []).map((finding) => normalizeFinding(finding, evidenceContext)),
     deterministic,
-    context
+    evidenceContext
   )
-  const overall = scopeOverallSummary(normalizeOverall(decision, deterministic, context, findings), context)
+  const overall = scopeOverallSummary(normalizeOverall(decision, deterministic, evidenceContext, findings), evidenceContext)
   const nonIssues = [
     ...(decision.non_issues ?? []),
     ...suppressedFindingNotes(findings)
@@ -738,8 +769,13 @@ function normalizeLlmDecision(decision: ProductExperienceDecision, context: Prod
     llm_model: decision.llm_model ?? context.llm_model,
     llm_api_style: decision.llm_api_style ?? context.llm_api_style,
     llm_request_status: 'success',
-    vision_used: context.vision_used,
-    vision_not_used_reason: context.vision_not_used_reason,
+    vision_used: Boolean(decision.vision_used),
+    vision_not_used_reason: decision.vision_not_used_reason ?? context.vision_not_used_reason,
+    screenshot_attached: decision.screenshot_attached ?? context.screenshot_attached,
+    screenshot_mime_type: decision.screenshot_mime_type ?? context.screenshot_mime_type,
+    screenshot_bytes: decision.screenshot_bytes ?? context.screenshot_bytes,
+    vision_requested: decision.vision_requested ?? context.vision_requested,
+    vision_detail: decision.vision_detail ?? context.vision_detail,
     ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: decision.context_sufficiency ?? context.context_sufficiency,
@@ -903,6 +939,7 @@ function suppressionReasonForFinding(finding: ProductExperienceFinding, context:
   if (isCrossScreenRawJsonCopyClaim(finding, context)) return `finding reviewed ${context.current_screen_name} but claims Raw JSON copy control is missing`
   if (isLoadedReportContextEcho(finding, context)) return 'loaded report issue titles are report data, not current dashboard chrome evidence'
   if (isUnsupportedReportContextProminenceClaim(finding, context)) return 'visual report-context prominence claim requires vision or concrete DOM evidence'
+  if (isUnsupportedPureVisualClaim(finding, context)) return 'purely visual claim requires attached screenshot vision or concrete DOM evidence'
   if (isRawJsonPayloadEcho(finding, context)) return 'embedded Raw JSON payload findings are report data, not current Raw JSON page behavior'
   if (isRawJsonCopyActionContradicted(finding, context)) return 'Copy JSON is visible in same-screen runtime evidence'
   const contradictingControlEvidence = positiveEvidence.filter((item) => /same_screen_control|retrieved_.*copy|download json|export json/i.test(item))
@@ -965,6 +1002,15 @@ function isUnsupportedReportContextProminenceClaim(finding: ProductExperienceFin
   return concernsReportContext && reliesOnVisualJudgment
 }
 
+function isUnsupportedPureVisualClaim(finding: ProductExperienceFinding, context: ProductExperienceContext): boolean {
+  if (context.vision_used) return false
+  const text = `${finding.title} ${finding.expected} ${finding.observed} ${finding.evidence.join(' ')} ${finding.why_it_matters} ${finding.suggested_fix}`.toLowerCase()
+  const reliesOnVisualJudgment = /visual|screenshot evidence|layout|spacing|overlap|crowded|clutter|dense|prominen|hierarchy|color|contrast|thumbnail size|unreadable graph/.test(text)
+  if (!reliesOnVisualJudgment) return false
+  const hasConcreteDomEvidence = finding.evidence.some((item) => /dom evidence|visible control|visible text|heading|button|link|input|aria|role=|same-screen|same_screen|copy json|legend|filter|node detail|context unavailable/i.test(item))
+  return !hasConcreteDomEvidence
+}
+
 function isRawJsonPayloadEcho(finding: ProductExperienceFinding, context: ProductExperienceContext): boolean {
   if (context.current_screen_name !== 'Raw JSON') return false
   const screenText = visibleText(context)
@@ -1024,6 +1070,11 @@ function llmFailedDecision(context: ProductExperienceContext, error: unknown): P
     llm_request_status: 'provider_error',
     vision_used: false,
     vision_not_used_reason: context.vision_not_used_reason,
+    screenshot_attached: false,
+    screenshot_mime_type: context.screenshot_mime_type,
+    screenshot_bytes: context.screenshot_bytes,
+    vision_requested: context.vision_requested,
+    vision_detail: context.vision_detail,
     ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: context.context_sufficiency,
@@ -1053,6 +1104,11 @@ function llmPreflightFailedDecision(context: ProductExperienceContext, reason: s
     llm_request_status: 'provider_error',
     vision_used: false,
     vision_not_used_reason: context.vision_not_used_reason,
+    screenshot_attached: false,
+    screenshot_mime_type: context.screenshot_mime_type,
+    screenshot_bytes: context.screenshot_bytes,
+    vision_requested: context.vision_requested,
+    vision_detail: context.vision_detail,
     ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: context.context_sufficiency,
@@ -1118,6 +1174,8 @@ function emptyResult(mode: ProductExperienceCriticMode, rubric: ProductExperienc
     llmScreensReviewed: 0,
     realLlmScreensReviewed: 0,
     visionScreensReviewed: 0,
+    visionSkippedScreens: 0,
+    visionSkipReasons: {},
     aligned: 0,
     minorGaps: 0,
     majorGaps: 0,
@@ -1147,6 +1205,8 @@ function providerMetadataOf(provider?: Pick<LlmProvider, 'metadata' | 'name' | '
   return {
     name: provider.name ?? 'unknown',
     realProvider: provider.name !== 'mock',
+    supportsText: true,
+    supportsJson: true,
     visionSupported: Boolean(provider.supportsVision?.())
   }
 }

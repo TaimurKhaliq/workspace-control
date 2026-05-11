@@ -1,20 +1,28 @@
 import type { AppIntent } from '../types.js'
 import type { GraphRefinementResult, GraphStructureCriticContext, Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider, LlmProviderCheckResult, LlmProviderEnvDiagnostics } from './provider.js'
+import { encodeImageAsDataUrl, type EncodedImageDataUrl } from './imageInput.js'
 
 type ApiStyle = 'responses' | 'chat_completions' | 'auto'
 type FetchLike = typeof fetch
+type ImageInputStyle = 'responses_input_image' | 'chat_image_url' | 'none'
 
 interface OpenAICompatibleConfig {
   baseUrl: string
   apiKey: string
   model: string
   apiStyle: ApiStyle
+  visionEnabled?: boolean
+  maxImageBytes: number
+  imageDetail: string
   sources: {
     baseUrl?: string
     apiKey?: string
     model?: string
     apiStyle?: string
+    visionEnabled?: string
+    maxImageBytes?: string
+    imageDetail?: string
   }
   env: LlmProviderEnvDiagnostics
 }
@@ -37,6 +45,8 @@ export class OpenAICompatibleProvider implements LlmProvider {
   private apiKey: string
   private model: string
   private apiStyle: ApiStyle
+  private maxImageBytes: number
+  private imageDetail: string
   private config: OpenAICompatibleConfig
   private fetchImpl: FetchLike
 
@@ -46,6 +56,8 @@ export class OpenAICompatibleProvider implements LlmProvider {
     this.apiKey = this.config.apiKey
     this.model = this.config.model
     this.apiStyle = this.config.apiStyle
+    this.maxImageBytes = this.config.maxImageBytes
+    this.imageDetail = this.config.imageDetail
     this.fetchImpl = fetchImpl
   }
 
@@ -54,7 +66,14 @@ export class OpenAICompatibleProvider implements LlmProvider {
   }
 
   supportsVision(): boolean {
-    return false
+    if (this.config.visionEnabled === false) return false
+    if (this.config.visionEnabled === true) return true
+    return isVisionCapableModel(this.model)
+  }
+
+  private imageInputStyle(): ImageInputStyle {
+    if (!this.supportsVision()) return 'none'
+    return this.apiStyle === 'chat_completions' ? 'chat_image_url' : 'responses_input_image'
   }
 
   metadata() {
@@ -64,7 +83,13 @@ export class OpenAICompatibleProvider implements LlmProvider {
       apiStyle: this.apiStyle,
       baseUrlHost: baseUrlHost(this.baseUrl),
       realProvider: true,
-      visionSupported: this.supportsVision()
+      supportsText: true,
+      supportsJson: true,
+      visionSupported: this.supportsVision(),
+      visionEnabled: this.supportsVision(),
+      imageInputStyle: this.imageInputStyle(),
+      maxImageBytes: this.maxImageBytes,
+      imageDetail: this.imageDetail
     }
   }
 
@@ -215,6 +240,11 @@ export class OpenAICompatibleProvider implements LlmProvider {
       contextScope: context.contextScope,
       scenario_screenshot_used: context.scenario_screenshot_used,
       screenshot_binary_included: false,
+      screenshot_attached: false,
+      screenshot_mime_type: context.screenshot_mime_type,
+      screenshot_bytes: context.screenshot_bytes,
+      vision_requested: context.vision_requested,
+      vision_detail: this.imageDetail,
       dom_summary: truncateList(context.dom_summary, 18, 500),
       headings: truncateList(context.headings, 12, 180),
       visible_controls: truncateList(context.visible_controls, 30, 220),
@@ -265,6 +295,13 @@ export class OpenAICompatibleProvider implements LlmProvider {
         }))
       } : undefined
     }
+    const imageAttachment = await this.productExperienceImageAttachment(context)
+    compact.screenshot_binary_included = imageAttachment.ok
+    compact.screenshot_attached = imageAttachment.ok
+    compact.screenshot_mime_type = imageAttachment.ok ? imageAttachment.image.mimeType : context.screenshot_mime_type
+    compact.screenshot_bytes = imageAttachment.ok ? imageAttachment.image.bytes : context.screenshot_bytes
+    compact.vision_used = imageAttachment.ok
+    compact.vision_not_used_reason = imageAttachment.ok ? undefined : imageAttachment.reason
     const prompt = [
       'You are an intent-aware Product Experience Critic for Sniffer.',
       'Question: Given what this app is trying to do, does this screen make sense for the user job being tested?',
@@ -278,6 +315,7 @@ export class OpenAICompatibleProvider implements LlmProvider {
       'For the Sniffer Dashboard, distinguish the outer audit currently being generated from the report displayed inside the dashboard UI. If contextScope=displayed_report or screenshotSource=dashboard_displayed_report, visible generated/executed counts belong to the dashboard-visible report, not necessarily the outer audit. Do not compare those counts to outer audit totals unless report id/timestamp clearly matches.',
       'If displayed report context differs from the outer audit context, treat it as a provenance warning. It is only a product issue if the dashboard fails to label which report/run is being shown.',
       'On the Raw JSON screen, the JSON payload is intentionally report data. Do not report missing UI surfaces or workflow gaps based on embedded rawFindings, deferredFindings, runtimeSurfaceMatches, or sourceGraph values inside the payload; judge whether the Raw JSON page itself exposes the payload and copy action.',
+      'If vision_used=true, screenshot pixels are attached to this request and visual observations may cite screenshot evidence alongside DOM/workflow evidence.',
       'If vision_used=false, do not claim screenshot evidence proves visual hierarchy, blending, spacing, prominence, or layout. Use DOM context only, or mark the visual judgment inconclusive/non_issue.',
       'Distinguish aesthetic preference, generic UX improvement, product intent mismatch, workflow mismatch, missing context, misleading information architecture, and blocked/unclear next step.',
       'If context_sufficiency is low, still judge the available evidence, but choose inconclusive if the evidence cannot support a product judgment.',
@@ -286,8 +324,21 @@ export class OpenAICompatibleProvider implements LlmProvider {
       '{"screen_name":"...","nav_label":"...","workflow_intent":"...","llm_used":true,"vision_used":false,"context_sufficiency":"low|medium|high","context_sufficiency_score":0.0,"context_warnings":["..."],"overall":{"classification":"aligned|minor_gap|major_gap|inconclusive","confidence":"low|medium|high","summary":"..."},"findings":[{"title":"...","type":"product_intent_mismatch|workflow_mismatch|context_gap|navigation_promise_gap|evidence_gap|information_hierarchy_gap|actionability_gap|empty_state_gap|safety_clarity_gap","severity":"low|medium|high|critical","rubric_ids":["..."],"expected":"...","observed":"...","evidence":["screen-scoped DOM evidence","screenshot evidence","workflow evidence"],"why_it_matters":"...","suggested_fix":"...","should_report":true}],"non_issues":[{"observation":"...","reason_not_reported":"..."}]}',
       JSON.stringify(compact)
     ].join('\n\n')
-    const text = await this.complete(prompt)
-    return parseJsonFromText<ProductExperienceDecision>(text)
+    const text = await this.complete(prompt, imageAttachment.ok ? {
+      imageDataUrl: imageAttachment.image.dataUrl,
+      imageDetail: this.imageDetail
+    } : undefined)
+    const decision = parseJsonFromText<ProductExperienceDecision>(text)
+    return {
+      ...decision,
+      vision_used: imageAttachment.ok,
+      vision_not_used_reason: imageAttachment.ok ? undefined : imageAttachment.reason,
+      screenshot_attached: imageAttachment.ok,
+      screenshot_mime_type: imageAttachment.ok ? imageAttachment.image.mimeType : context.screenshot_mime_type,
+      screenshot_bytes: imageAttachment.ok ? imageAttachment.image.bytes : context.screenshot_bytes,
+      vision_requested: context.vision_requested,
+      vision_detail: this.imageDetail
+    }
   }
 
   async inferRuntimeIntent(context: RuntimeIntentContext): Promise<RuntimeLlmIntent> {
@@ -379,12 +430,43 @@ export class OpenAICompatibleProvider implements LlmProvider {
     }
   }
 
-  private async complete(prompt: string): Promise<string> {
+  private async productExperienceImageAttachment(context: ProductExperienceContext): Promise<
+    | { ok: true; image: EncodedImageDataUrl }
+    | { ok: false; reason: string }
+  > {
+    if (!this.supportsVision()) return { ok: false, reason: 'provider_does_not_support_vision' }
+    if (!context.screenshot_path) return { ok: false, reason: 'screenshot_path_missing' }
+    return encodeImageAsDataUrl(context.screenshot_path, { maxBytes: this.maxImageBytes })
+  }
+
+  private async complete(prompt: string, options: { imageDataUrl?: string; imageDetail?: string } = {}): Promise<string> {
     const useResponses = this.apiStyle === 'responses' || this.apiStyle === 'auto'
     const url = useResponses ? `${this.baseUrl.replace(/\/$/, '')}/responses` : `${this.baseUrl.replace(/\/$/, '')}/chat/completions`
     const body = useResponses
-      ? { model: this.model, input: prompt }
-      : { model: this.model, messages: [{ role: 'user', content: prompt }] }
+      ? {
+        model: this.model,
+        input: options.imageDataUrl
+          ? [{
+            role: 'user',
+            content: [
+              { type: 'input_text', text: prompt },
+              { type: 'input_image', image_url: options.imageDataUrl, detail: options.imageDetail ?? 'auto' }
+            ]
+          }]
+          : prompt
+      }
+      : {
+        model: this.model,
+        messages: [{
+          role: 'user',
+          content: options.imageDataUrl
+            ? [
+              { type: 'text', text: prompt },
+              { type: 'image_url', image_url: { url: options.imageDataUrl } }
+            ]
+            : prompt
+        }]
+      }
 
     const response = await this.fetchImpl(url, {
       method: 'POST',
@@ -413,6 +495,11 @@ export class OpenAICompatibleProvider implements LlmProvider {
       baseUrlHost: baseUrlHost(this.baseUrl),
       model: this.model || undefined,
       apiStyle: this.apiStyle,
+      visionSupported: this.supportsVision(),
+      visionEnabled: this.supportsVision(),
+      imageInputStyle: this.imageInputStyle(),
+      maxImageBytes: this.maxImageBytes,
+      imageDetail: this.imageDetail,
       authConfigured: Boolean(this.apiKey),
       configSource: this.config.sources,
       env: this.config.env,
@@ -439,23 +526,35 @@ export function resolveOpenAICompatibleConfig(env: NodeJS.ProcessEnv = process.e
     'SNIFFER_LLM_API_STYLE',
     'STACKPILOT_SEMANTIC_API_STYLE'
   ]) ?? { value: 'auto', key: 'default' }
+  const visionEnabled = firstConfigured(env, ['SNIFFER_LLM_VISION_ENABLED'])
+  const maxImageBytes = firstConfigured(env, ['SNIFFER_LLM_MAX_IMAGE_BYTES'])
+  const imageDetail = firstConfigured(env, ['SNIFFER_LLM_IMAGE_DETAIL']) ?? { value: 'auto', key: 'default' }
 
   return {
     baseUrl: baseUrl.value,
     apiKey: apiKey?.value ?? '',
     model: model?.value ?? '',
     apiStyle: normalizeApiStyle(apiStyle.value),
+    visionEnabled: visionEnabled ? parseBoolean(visionEnabled.value) : undefined,
+    maxImageBytes: normalizeMaxImageBytes(maxImageBytes?.value),
+    imageDetail: normalizeImageDetail(imageDetail.value),
     sources: {
       baseUrl: baseUrl.key,
       apiKey: apiKey?.key,
       model: model?.key,
-      apiStyle: apiStyle.key
+      apiStyle: apiStyle.key,
+      visionEnabled: visionEnabled?.key,
+      maxImageBytes: maxImageBytes?.key,
+      imageDetail: imageDetail.key
     },
     env: {
       SNIFFER_LLM_BASE_URL: hasEnv(env, 'SNIFFER_LLM_BASE_URL'),
       SNIFFER_LLM_API_KEY: hasEnv(env, 'SNIFFER_LLM_API_KEY'),
       SNIFFER_LLM_MODEL: hasEnv(env, 'SNIFFER_LLM_MODEL'),
       SNIFFER_LLM_API_STYLE: hasEnv(env, 'SNIFFER_LLM_API_STYLE'),
+      SNIFFER_LLM_VISION_ENABLED: hasEnv(env, 'SNIFFER_LLM_VISION_ENABLED'),
+      SNIFFER_LLM_MAX_IMAGE_BYTES: hasEnv(env, 'SNIFFER_LLM_MAX_IMAGE_BYTES'),
+      SNIFFER_LLM_IMAGE_DETAIL: hasEnv(env, 'SNIFFER_LLM_IMAGE_DETAIL'),
       STACKPILOT_SEMANTIC_BASE_URL: hasEnv(env, 'STACKPILOT_SEMANTIC_BASE_URL'),
       STACKPILOT_SEMANTIC_API_KEY: hasEnv(env, 'STACKPILOT_SEMANTIC_API_KEY'),
       STACKPILOT_SEMANTIC_MODEL: hasEnv(env, 'STACKPILOT_SEMANTIC_MODEL'),
@@ -479,6 +578,25 @@ function hasEnv(env: NodeJS.ProcessEnv, key: string): boolean {
 
 function normalizeApiStyle(value: string): ApiStyle {
   return value === 'responses' || value === 'chat_completions' || value === 'auto' ? value : 'auto'
+}
+
+function parseBoolean(value: string): boolean | undefined {
+  if (/^(1|true|yes|on)$/i.test(value)) return true
+  if (/^(0|false|no|off)$/i.test(value)) return false
+  return undefined
+}
+
+function normalizeMaxImageBytes(value?: string): number {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 5 * 1024 * 1024
+}
+
+function normalizeImageDetail(value: string): string {
+  return /^(low|high|auto|original)$/i.test(value) ? value.toLowerCase() : 'auto'
+}
+
+function isVisionCapableModel(model: string): boolean {
+  return /^(gpt-4\.1(?:-(?:mini|nano))?|gpt-5(?:[.-]|$)|gpt-5\.\d|gpt-5\.5)/i.test(model)
 }
 
 function baseUrlHost(baseUrl: string): string | undefined {

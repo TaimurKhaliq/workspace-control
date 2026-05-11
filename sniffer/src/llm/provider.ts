@@ -6,7 +6,13 @@ export interface LlmProviderMetadata {
   apiStyle?: string
   baseUrlHost?: string
   realProvider: boolean
+  supportsText?: boolean
+  supportsJson?: boolean
   visionSupported: boolean
+  visionEnabled?: boolean
+  imageInputStyle?: 'responses_input_image' | 'chat_image_url' | 'none'
+  maxImageBytes?: number
+  imageDetail?: string
 }
 
 export interface LlmProviderEnvDiagnostics {
@@ -14,6 +20,9 @@ export interface LlmProviderEnvDiagnostics {
   SNIFFER_LLM_API_KEY: boolean
   SNIFFER_LLM_MODEL: boolean
   SNIFFER_LLM_API_STYLE: boolean
+  SNIFFER_LLM_VISION_ENABLED: boolean
+  SNIFFER_LLM_MAX_IMAGE_BYTES: boolean
+  SNIFFER_LLM_IMAGE_DETAIL: boolean
   STACKPILOT_SEMANTIC_BASE_URL: boolean
   STACKPILOT_SEMANTIC_API_KEY: boolean
   STACKPILOT_SEMANTIC_MODEL: boolean
@@ -26,12 +35,20 @@ export interface LlmProviderCheckResult {
   baseUrlHost?: string
   model?: string
   apiStyle?: string
+  visionSupported?: boolean
+  visionEnabled?: boolean
+  imageInputStyle?: 'responses_input_image' | 'chat_image_url' | 'none'
+  maxImageBytes?: number
+  imageDetail?: string
   authConfigured: boolean
   configSource: {
     baseUrl?: string
     apiKey?: string
     model?: string
     apiStyle?: string
+    visionEnabled?: string
+    maxImageBytes?: string
+    imageDetail?: string
   }
   env: LlmProviderEnvDiagnostics
   request: {

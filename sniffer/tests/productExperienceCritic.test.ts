@@ -316,8 +316,15 @@ describe('Product Experience Critic', () => {
     expect(result.llmScreensReviewed).toBeGreaterThan(0)
   })
 
-  it('sets vision_used when provider metadata supports vision and screenshots exist', async () => {
-    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context), { visionSupported: true })
+  it('requests vision when provider metadata supports vision and screenshots exist', async () => {
+    const provider = new SpyProductExperienceProvider((context) => ({
+      ...alignedDecision(context),
+      vision_used: true,
+      screenshot_attached: true,
+      screenshot_mime_type: 'image/png',
+      screenshot_bytes: 512,
+      vision_detail: 'auto'
+    }), { visionSupported: true })
     const result = await runProductExperienceCritic({
       mode: 'llm',
       provider,
@@ -329,8 +336,10 @@ describe('Product Experience Critic', () => {
       reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
     })
 
-    expect(provider.contexts[0].vision_used).toBe(true)
+    expect(provider.contexts[0].vision_requested).toBe(true)
+    expect(provider.contexts[0].vision_used).toBe(false)
     expect(result.visionScreensReviewed).toBeGreaterThan(0)
+    expect(result.decisions[0].screenshot_attached).toBe(true)
   })
 
   it('sets honest non-vision reason when provider wrapper lacks image input', async () => {
@@ -370,6 +379,55 @@ describe('Product Experience Critic', () => {
 
     expect(result.issues).toHaveLength(0)
     expect(result.decisions[0].findings[0].should_report).toBe(false)
+  })
+
+  it('suppresses purely visual LLM findings when screenshot vision was not used', async () => {
+    const provider = new SpyProductExperienceProvider((context) => ({
+      ...alignedDecision(context),
+      overall: { classification: 'minor_gap', confidence: 'high', summary: 'Visual layout concern only.' },
+      findings: [pureVisualFinding()]
+    }))
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['GRAPH EXPLORER', 'nodes and edges']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues).toHaveLength(0)
+    expect(result.decisions[0].findings[0].should_report).toBe(false)
+    expect(result.decisions[0].findings[0].suppression_reason).toContain('purely visual claim requires')
+  })
+
+  it('allows visual LLM findings when screenshot vision was used and evidence is present', async () => {
+    const provider = new SpyProductExperienceProvider((context) => ({
+      ...alignedDecision(context),
+      vision_used: true,
+      screenshot_attached: true,
+      screenshot_mime_type: 'image/png',
+      screenshot_bytes: 1024,
+      overall: { classification: 'minor_gap', confidence: 'high', summary: 'Vision-backed layout concern.' },
+      findings: [pureVisualFinding()]
+    }), { visionSupported: true })
+
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['GRAPH EXPLORER', 'nodes and edges']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues.some((issue) => issue.title === 'Graph Explorer layout is visually unreadable')).toBe(true)
+    expect(result.visionScreensReviewed).toBeGreaterThan(0)
   })
 
   it('does not treat loaded report issue titles as current dashboard context gaps', async () => {
@@ -794,6 +852,11 @@ function alignedDecision(context: ProductExperienceContext): ProductExperienceDe
     llm_request_status: 'success',
     vision_used: context.vision_used,
     vision_not_used_reason: context.vision_not_used_reason,
+    screenshot_attached: context.screenshot_attached,
+    screenshot_mime_type: context.screenshot_mime_type,
+    screenshot_bytes: context.screenshot_bytes,
+    vision_requested: context.vision_requested,
+    vision_detail: context.vision_detail,
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: context.context_sufficiency,
     context_sufficiency_score: context.context_sufficiency_score,
@@ -878,6 +941,21 @@ function aestheticFinding(): ProductExperienceFinding {
     evidence: ['vague aesthetic opinion'],
     why_it_matters: 'It might look nicer.',
     suggested_fix: 'Make it prettier.',
+    should_report: true
+  }
+}
+
+function pureVisualFinding(): ProductExperienceFinding {
+  return {
+    title: 'Graph Explorer layout is visually unreadable',
+    type: 'information_hierarchy_gap',
+    severity: 'medium',
+    rubric_ids: ['visual_comprehension'],
+    expected: 'Graph Explorer should be visually interpretable from the screenshot.',
+    observed: 'Screenshot evidence shows dense overlapping graph nodes with unclear visual hierarchy.',
+    evidence: ['screenshot evidence: dense overlapping graph nodes'],
+    why_it_matters: 'A QA evidence graph only helps if users can visually understand relationships.',
+    suggested_fix: 'Improve graph layout spacing and visual grouping.',
     should_report: true
   }
 }
