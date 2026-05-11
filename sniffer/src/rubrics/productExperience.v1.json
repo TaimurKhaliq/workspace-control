@@ -1,0 +1,115 @@
+{
+  "version": "product-experience.v1",
+  "rules": [
+    {
+      "id": "run_report_context_clarity",
+      "description": "Report and evidence screens must identify the current project/ad hoc context, selected/latest run or report, generated timestamp or status, and relevant counts when users are inspecting audit output.",
+      "appliesTo": ["Run Timeline", "Scenarios", "Crawl Path", "Workflow Evidence", "Issues", "Fix Packets", "Screenshots", "Graph Explorer", "Raw JSON"],
+      "expectedEvidence": ["screen DOM text", "page intent", "run/report context signals"],
+      "severity": "medium",
+      "examples": {
+        "good": "Run Timeline shows Project: Workspace Control, Selected run: Latest report, generated timestamp, status, and phase list.",
+        "bad": "Run Timeline shows phases but does not say which run/report, project, timestamp, or status is being reviewed."
+      }
+    },
+    {
+      "id": "raw_json_copy_export_action",
+      "description": "Raw JSON, debug payload, exact report data, and JSON inspection screens must expose a visible copy/export/download action.",
+      "appliesTo": ["Raw JSON", "debug payload view", "raw report payload", "JSON inspection"],
+      "expectedEvidence": ["JSON/raw payload visible", "visible Copy JSON, Copy raw payload, Copy report JSON, Download JSON, or Export JSON control", "same-screen DOM context"],
+      "severity": "medium",
+      "examples": {
+        "good": "Raw JSON shows a formatted report payload and a Copy JSON button.",
+        "bad": "Raw JSON shows a formatted payload with no Copy JSON, Download JSON, or Export JSON action."
+      }
+    },
+    {
+      "id": "screenshot_gallery_context",
+      "description": "Screenshot galleries and modals must show state/scenario/action/URL context near screenshots so images are usable as QA evidence.",
+      "appliesTo": ["Screenshots", "screenshot modal", "evidence gallery"],
+      "expectedEvidence": ["screenshot path", "scenario/step/state/action metadata", "DOM label near screenshot"],
+      "severity": "medium",
+      "examples": {
+        "good": "Each screenshot thumbnail lists Scenario: navigation smoke test, Step: click Issues, URL: /#issues.",
+        "bad": "Screenshots page only lists state-1.png and graph-explorer.png with no scenario, step, URL, or action context."
+      }
+    },
+    {
+      "id": "graph_legend_filter_detail",
+      "description": "Graph views must be interpretable through a visible mode/scope, legend, filter/search affordance, and selected-node detail or equivalent explanation.",
+      "appliesTo": ["Graph Explorer", "Discovery Graph", "Evidence Graph"],
+      "expectedEvidence": ["graph mode/scope", "legend or node detail", "filters/search"],
+      "severity": "medium",
+      "examples": {
+        "good": "Graph Explorer shows mode Crawl Graph, a legend, issue filters, and selected node details.",
+        "bad": "Graph Explorer shows many nodes and edges with no legend, filters, or selected-node detail."
+      }
+    },
+    {
+      "id": "issue_empty_state_honesty",
+      "description": "Issues empty states must explain what was checked and what to do next, rather than merely saying there are no issues.",
+      "appliesTo": ["Issues", "issue list", "empty state"],
+      "expectedEvidence": ["empty-state DOM text", "checked scope", "next action"],
+      "severity": "medium",
+      "examples": {
+        "good": "No issues found after checking 11 scenarios, console/network events, and screenshots. Run another audit or inspect Scenarios.",
+        "bad": "Issues page only says No issues."
+      }
+    },
+    {
+      "id": "fix_packet_actionability",
+      "description": "Fix packet screens must show the issue, suspected files, prompt, verification command, pass conditions, copy action, and repair status.",
+      "appliesTo": ["Fix Packets", "Repair Workbench"],
+      "expectedEvidence": ["fix prompt", "suspected files", "verification command", "copy prompt action", "repair status"],
+      "severity": "medium",
+      "examples": {
+        "good": "Fix packet detail has Copy prompt, suspected files, verification command, and manual/Codex status.",
+        "bad": "A fix packet title is shown without prompt, files, verification command, or copy action."
+      }
+    },
+    {
+      "id": "repeated_row_action_accessibility",
+      "description": "Repeated row actions in history/list UIs need unique accessible names or scoped locator guidance so users and tests can distinguish them.",
+      "appliesTo": ["Plan Runs", "history list", "table/list row actions"],
+      "expectedEvidence": ["repeated row item controls", "accessible button names", "nearest row/container context"],
+      "severity": "medium",
+      "examples": {
+        "good": "Each row action says Reopen plan run: Add OwnersPage, May 7 1:45 PM.",
+        "bad": "Ten plan-run cards all contain a button named Reopen."
+      }
+    },
+    {
+      "id": "duplicate_status_chip_text",
+      "description": "Status and chip text should not be duplicated or read twice in cards/lists because it reduces scanability and can confuse assistive technology.",
+      "appliesTo": ["Plan Runs", "cards", "status chips", "history list"],
+      "expectedEvidence": ["card accessible text", "adjacent repeated tokens or phrases", "status/chip DOM nodes"],
+      "severity": "medium",
+      "examples": {
+        "good": "A plan-run card says completed and Semantic Off once each.",
+        "bad": "A plan-run card reads completed completed Semantic Off Semantic Off."
+      }
+    },
+    {
+      "id": "raw_json_not_primary_summary",
+      "description": "Summary pages should lead with human-readable status, counts, top issues, screenshots, and next actions; raw JSON belongs in an explicit advanced/debug view.",
+      "appliesTo": ["Summary", "Dashboard"],
+      "expectedEvidence": ["Summary DOM text", "JSON-like payload signals", "human-readable status/counts/actions"],
+      "severity": "medium",
+      "examples": {
+        "good": "Summary shows overall status, scenarios passed, issue count, fix packets, screenshots, and next actions.",
+        "bad": "Summary primarily displays a raw JSON blob with no human-readable report overview."
+      }
+    },
+    {
+      "id": "navigation_label_content_alignment",
+      "description": "A navigation label must lead to content that visibly matches the promised screen or workflow.",
+      "appliesTo": ["navigation", "all screens"],
+      "expectedEvidence": ["nav label", "screen heading", "visible content", "page intent"],
+      "severity": "medium",
+      "examples": {
+        "good": "Clicking Screenshots opens a page headed Screenshots with screenshot evidence.",
+        "bad": "Clicking Run Timeline opens a generic raw report page that does not mention timeline phases."
+      }
+    }
+  ]
+}

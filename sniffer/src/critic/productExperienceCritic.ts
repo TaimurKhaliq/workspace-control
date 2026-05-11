@@ -14,6 +14,7 @@ import type {
   ProductExperienceFinding,
   ProductExperiencePageIntent,
   ProductExperienceResult,
+  ProductExperienceRubricDocument,
   ProductExperienceRubricItem,
   ProductIntentModel,
   RuntimeAppModel,
@@ -27,23 +28,62 @@ import { evidencePacketSummary, retrieveEvidence } from '../evidence/retrieval.j
 
 const thisFile = fileURLToPath(import.meta.url)
 const snifferRoot = path.resolve(path.dirname(thisFile), '..', '..')
-const rubricPath = path.join(snifferRoot, 'rubrics', 'product_experience_heuristics.json')
+const PRODUCT_EXPERIENCE_RUBRIC_VERSION = 'product-experience.v1'
+const rubricPath = path.join(snifferRoot, 'src', 'rubrics', 'productExperience.v1.json')
 
 export async function loadProductExperienceRubric(file = rubricPath): Promise<ProductExperienceRubricItem[]> {
+  return (await loadProductExperienceRubricDocument(file)).rules
+}
+
+export async function loadProductExperienceRubricDocument(file = rubricPath): Promise<ProductExperienceRubricDocument> {
   const candidates = [
     file,
+    path.join(process.cwd(), 'src', 'rubrics', 'productExperience.v1.json'),
+    path.resolve(path.dirname(thisFile), '..', '..', '..', 'src', 'rubrics', 'productExperience.v1.json'),
     path.join(process.cwd(), 'rubrics', 'product_experience_heuristics.json'),
     path.resolve(path.dirname(thisFile), '..', '..', '..', 'rubrics', 'product_experience_heuristics.json')
   ]
   let lastError: unknown
   for (const candidate of [...new Set(candidates)]) {
     try {
-      return JSON.parse(await readFile(candidate, 'utf8')) as ProductExperienceRubricItem[]
+      return normalizeRubricDocument(JSON.parse(await readFile(candidate, 'utf8')))
     } catch (error) {
       lastError = error
     }
   }
   throw lastError instanceof Error ? lastError : new Error('Product experience rubric not found')
+}
+
+function normalizeRubricDocument(value: unknown): ProductExperienceRubricDocument {
+  if (Array.isArray(value)) {
+    return { version: 'legacy-product-experience-heuristics', rules: value as ProductExperienceRubricItem[] }
+  }
+  const doc = value as { version?: string; rules?: Array<Record<string, unknown>> }
+  return {
+    version: doc.version ?? PRODUCT_EXPERIENCE_RUBRIC_VERSION,
+    rules: (doc.rules ?? []).map((rule) => ({
+      id: String(rule.id ?? ''),
+      name: String(rule.name ?? humanizeRuleId(String(rule.id ?? ''))),
+      description: String(rule.description ?? ''),
+      applies_to: Array.isArray(rule.applies_to) ? rule.applies_to.map(String) : Array.isArray(rule.appliesTo) ? rule.appliesTo.map(String) : [],
+      evidence_required: Array.isArray(rule.evidence_required) ? rule.evidence_required.map(String) : Array.isArray(rule.expectedEvidence) ? rule.expectedEvidence.map(String) : [],
+      example_good: typeof rule.example_good === 'string'
+        ? rule.example_good
+        : typeof (rule.examples as { good?: unknown } | undefined)?.good === 'string' ? String((rule.examples as { good: string }).good) : '',
+      example_bad: typeof rule.example_bad === 'string'
+        ? rule.example_bad
+        : typeof (rule.examples as { bad?: unknown } | undefined)?.bad === 'string' ? String((rule.examples as { bad: string }).bad) : '',
+      default_severity: severityOf(rule.severity ?? rule.default_severity)
+    }))
+  }
+}
+
+function humanizeRuleId(id: string): string {
+  return id.replace(/[_-]+/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function severityOf(value: unknown): ProductExperienceRubricItem['default_severity'] {
+  return value === 'critical' || value === 'high' || value === 'medium' || value === 'low' ? value : 'medium'
 }
 
 export function snifferDashboardPageIntents(): ProductExperiencePageIntent[] {
@@ -92,9 +132,10 @@ export async function runProductExperienceCritic(input: {
   reportDir: string
   projectId?: string
 }): Promise<ProductExperienceResult> {
-  const rubric = await loadProductExperienceRubric()
+  const rubricDocument = await loadProductExperienceRubricDocument()
+  const rubric = rubricDocument.rules
   if (input.mode === 'off') {
-    return emptyResult('off', rubric, 'disabled')
+    return emptyResult('off', rubric, 'disabled', 'not_run', rubricDocument.version)
   }
 
   const providerMetadata = providerMetadataOf(input.provider)
@@ -102,7 +143,7 @@ export async function runProductExperienceCritic(input: {
   const contexts = rawContexts.map((context) => enrichProductExperienceContext(context, rubric, providerMetadata))
   if (input.mode === 'llm' && input.providerPreflightError) {
     return {
-      ...emptyResult('llm', rubric, input.providerPreflightError, 'provider_error'),
+      ...emptyResult('llm', rubric, input.providerPreflightError, 'provider_error', rubricDocument.version),
       providerName: providerMetadata?.name,
       providerModel: providerMetadata?.model,
       providerApiStyle: providerMetadata?.apiStyle,
@@ -115,7 +156,7 @@ export async function runProductExperienceCritic(input: {
   const providerAvailable = Boolean(input.provider?.critiqueProductExperience && (input.provider.isConfigured?.() ?? true))
   if (input.mode === 'llm' && !providerAvailable) {
     return {
-      ...emptyResult('llm', rubric, 'LLM provider unavailable or does not implement product experience critique. Set SNIFFER_LLM_API_KEY or run sniffer providers check --provider openai-compatible.'),
+      ...emptyResult('llm', rubric, 'LLM provider unavailable or does not implement product experience critique. Set SNIFFER_LLM_API_KEY or run sniffer providers check --provider openai-compatible.', 'not_run', rubricDocument.version),
       providerName: providerMetadata?.name,
       providerModel: providerMetadata?.model,
       providerApiStyle: providerMetadata?.apiStyle,
@@ -157,6 +198,10 @@ export async function runProductExperienceCritic(input: {
     minorGaps: decisions.filter((decision) => decision.overall.classification === 'minor_gap').length,
     majorGaps: decisions.filter((decision) => decision.overall.classification === 'major_gap').length,
     inconclusive: decisions.filter((decision) => decision.overall.classification === 'inconclusive').length,
+    rubricVersion: rubricDocument.version,
+    ruleIdsEvaluated: rubric.map((rule) => rule.id),
+    ruleIdsTriggered: unique(decisions.flatMap((decision) => decision.findings.filter((finding) => finding.should_report).flatMap((finding) => finding.rubric_ids))),
+    ruleIdsPassed: passedRuleIds(rubric, decisions),
     rubric,
     contexts,
     decisions,
@@ -215,7 +260,7 @@ export function deterministicProductExperienceDecision(context: ProductExperienc
     evidence_retrieval_summary: context.evidence_retrieval_summary,
     overall: {
       classification: reportable.length === 0 ? 'aligned' : major ? 'major_gap' : 'minor_gap',
-      confidence: reportable.length === 0 ? 'medium' : 'high',
+      confidence: evidenceGatedConfidence(context, reportable, reportable.length === 0 ? 'medium' : 'high'),
       summary: reportable.length === 0
         ? `${context.current_screen_name} appears aligned with the expected user job.`
         : `${context.current_screen_name} has ${reportable.length} evidence-backed product experience gap(s).`
@@ -412,7 +457,7 @@ function navigationPromiseFindings(context: ProductExperienceContext): ProductEx
     title: `${context.nav_label_clicked} does not clearly match the visible page content`,
     type: 'navigation_promise_gap',
     severity: 'medium',
-    rubric_ids: ['navigation_promise', 'intent_fit'],
+    rubric_ids: ['navigation_label_content_alignment'],
     expected: `The page should visibly deliver: ${context.page_intent}`,
     observed: `The visible DOM did not clearly mention "${context.nav_label_clicked}" or equivalent content.`,
     evidence: evidence(context, [`nav_label: ${context.nav_label_clicked}`, `visible_headings: ${context.headings.join(', ') || 'none'}`]),
@@ -437,7 +482,7 @@ function runContextFindings(context: ProductExperienceContext): ProductExperienc
     title: `${context.current_screen_name} lacks clear run/report context`,
     type: 'context_gap',
     severity: context.current_screen_name === 'Run Timeline' ? 'medium' : 'low',
-    rubric_ids: ['context_clarity', 'workflow_continuity'],
+    rubric_ids: ['run_report_context_clarity'],
     expected: `Visible context should include ${context.required_context.join(', ')}.`,
     observed: `Missing visible context: ${missing.join(', ')}.`,
     evidence: evidence(context, [
@@ -463,7 +508,7 @@ function screenshotContextFindings(context: ProductExperienceContext): ProductEx
     title: 'Screenshots view does not explain screenshot context',
     type: 'evidence_gap',
     severity: 'medium',
-    rubric_ids: ['evidence_proximity'],
+    rubric_ids: ['screenshot_gallery_context'],
     expected: 'Screenshots should show scenario/state/action context near each image.',
     observed: 'Visible screenshot content appears image/file oriented without scenario or state context.',
     evidence: evidence(context, [`dom_excerpt: ${context.dom_summary.join(' ').slice(0, 240)}`]),
@@ -479,7 +524,7 @@ function rawJsonActionabilityFindings(context: ProductExperienceContext): Produc
     title: 'Raw JSON lacks copy action',
     type: 'actionability_gap',
     severity: 'medium',
-    rubric_ids: ['actionability', 'information_hierarchy'],
+    rubric_ids: ['raw_json_copy_export_action'],
     expected: 'Raw JSON/debug payload screens should expose a visible copy/export action.',
     observed: 'Raw JSON payload is visible but no Copy JSON/export/download control was found.',
     evidence: evidence(context, [
@@ -534,7 +579,7 @@ function summaryInformationHierarchyFindings(context: ProductExperienceContext):
     title: 'Summary relies on raw JSON instead of human-readable report summary',
     type: 'information_hierarchy_gap',
     severity: 'medium',
-    rubric_ids: ['information_hierarchy', 'intent_fit'],
+    rubric_ids: ['raw_json_not_primary_summary'],
     expected: 'Summary should lead with human-readable run status, issue counts, scenario status, screenshots, and next actions, with raw JSON kept as an advanced view.',
     observed: 'The Summary screen is dominated by raw JSON-shaped content without an obvious human-readable summary.',
     evidence: evidence(context, [`raw_json_signal_count: ${rawJsonSignals}`, `dom_excerpt: ${context.dom_summary.join(' ').slice(0, 240)}`]),
@@ -553,7 +598,7 @@ function graphContextFindings(context: ProductExperienceContext): ProductExperie
     title: 'Graph Explorer does not provide enough graph-reading context',
     type: 'information_hierarchy_gap',
     severity: 'medium',
-    rubric_ids: ['information_hierarchy', 'navigation_promise'],
+    rubric_ids: ['graph_legend_filter_detail'],
     expected: 'Graph Explorer should show focused mode, legend, filters, and selected-node detail.',
     observed: 'The visible graph screen lacks either mode context or legend/detail context.',
     evidence: evidence(context, [`has_mode_context: ${hasMode}`, `has_legend_or_detail: ${hasLegendOrDetail}`]),
@@ -573,7 +618,7 @@ function emptyStateFindings(context: ProductExperienceContext): ProductExperienc
     title: `${context.current_screen_name} empty state lacks explanation or next action`,
     type: 'empty_state_gap',
     severity: context.current_screen_name === 'Issues' ? 'medium' : 'low',
-    rubric_ids: ['state_empty_honesty', 'actionability'],
+    rubric_ids: ['issue_empty_state_honesty'],
     expected: 'Empty states should explain why content is missing and what creates or loads it.',
     observed: empty.slice(0, 220),
     evidence: evidence(context, [`empty_state: ${empty.slice(0, 220)}`]),
@@ -611,7 +656,10 @@ function productExperienceIssue(finding: ProductExperienceFinding, decision: Pro
       `reviewed_screen: ${finding.reviewed_screen ?? decision.screen_name}`,
       `screenshot_used: ${finding.screenshot_used ?? finding.screenshotPath ?? 'none'}`,
       finding.scenario_step ? `scenario_step: ${finding.scenario_step}` : undefined,
+      `page_intent: ${finding.page_intent ?? decision.nav_label}`,
+      `workflow_intent: ${finding.workflow_intent ?? decision.workflow_intent}`,
       `evidence_scope: ${finding.evidence_scope ?? 'unknown'}`,
+      `contradiction_check_result: ${finding.contradiction_check_result ?? 'unknown'}`,
       finding.dom_excerpt ? `dom_excerpt: ${finding.dom_excerpt}` : undefined,
       ...(finding.positive_evidence_checked ?? []).map((item) => `positive_evidence_checked: ${item}`),
       ...(finding.negative_evidence_checked ?? []).map((item) => `negative_evidence_checked: ${item}`),
@@ -716,7 +764,7 @@ function normalizeOverall(
     const major = reportable.some((finding) => finding.severity === 'high' || finding.severity === 'critical')
     return {
       classification: major ? 'major_gap' : 'minor_gap',
-      confidence: 'high',
+      confidence: evidenceGatedConfidence(context, reportable, 'high'),
       summary: `${context.current_screen_name} has ${reportable.length} evidence-backed product experience gap(s) after deterministic candidate preservation and evidence gating.`
     }
   }
@@ -728,9 +776,25 @@ function normalizeOverall(
     : ' No evidence-backed product experience gaps remained after evidence gating.'
   return {
     classification: 'aligned',
-    confidence: overall.confidence,
+    confidence: evidenceGatedConfidence(context, [], overall.confidence),
     summary: `${context.current_screen_name} is aligned after screen-scoped evidence checks.${suffix}`
   }
+}
+
+function evidenceGatedConfidence(
+  context: ProductExperienceContext,
+  findings: ProductExperienceFinding[],
+  proposed: ProductExperienceDecision['overall']['confidence']
+): ProductExperienceDecision['overall']['confidence'] {
+  if (proposed !== 'high') return proposed
+  const hasPageIntent = Boolean(context.page_intent)
+  const hasWorkflowIntent = Boolean(context.workflow_intent)
+  const hasScreenEvidence = Boolean(context.screenshot_path || context.dom_summary.length || context.visible_controls.length)
+  const matchedRubric = findings.length === 0
+    ? Boolean(context.rubric.length)
+    : findings.some((finding) => finding.rubric_ids.length > 0)
+  const hasContradiction = findings.some((finding) => finding.suppression_reason || finding.contradiction_check_result?.startsWith('contradicted'))
+  return hasPageIntent && hasWorkflowIntent && hasScreenEvidence && matchedRubric && !hasContradiction ? 'high' : 'medium'
 }
 
 function suppressedFindingNotes(findings: ProductExperienceFinding[]): ProductExperienceDecision['non_issues'] {
@@ -761,11 +825,14 @@ function normalizeFinding(finding: ProductExperienceFinding, context: ProductExp
     reviewed_screen: context.current_screen_name,
     screenshot_used: finding.screenshotPath ?? context.screenshot_path,
     scenario_step: context.scenario_step,
+    page_intent: context.page_intent,
+    workflow_intent: context.workflow_intent,
     dom_excerpt: context.dom_summary.join(' ').slice(0, 360),
     positive_evidence_checked: positive,
     negative_evidence_checked: negative,
     evidence_scope: evidenceScopeForFinding(finding, context),
     suppression_reason: suppressionReason,
+    contradiction_check_result: suppressionReason ? `contradicted: ${suppressionReason}` : 'no_contradiction',
     should_report: shouldReport
   }
 }
@@ -978,7 +1045,7 @@ function lowSeverityKey(finding: ProductExperienceFinding): string {
   return `${finding.type}:${finding.rubric_ids[0] ?? 'none'}`
 }
 
-function emptyResult(mode: ProductExperienceCriticMode, rubric: ProductExperienceRubricItem[], reason?: string, status: ProductExperienceResult['status'] = 'not_run'): ProductExperienceResult {
+function emptyResult(mode: ProductExperienceCriticMode, rubric: ProductExperienceRubricItem[], reason?: string, status: ProductExperienceResult['status'] = 'not_run', rubricVersion?: string): ProductExperienceResult {
   return {
     mode,
     status,
@@ -991,11 +1058,22 @@ function emptyResult(mode: ProductExperienceCriticMode, rubric: ProductExperienc
     minorGaps: 0,
     majorGaps: 0,
     inconclusive: 0,
+    rubricVersion,
+    ruleIdsEvaluated: rubric.map((rule) => rule.id),
+    ruleIdsTriggered: [],
+    ruleIdsPassed: [],
     rubric,
     contexts: [],
     decisions: [],
     issues: []
   }
+}
+
+function passedRuleIds(rubric: ProductExperienceRubricItem[], decisions: ProductExperienceDecision[]): string[] {
+  const triggered = new Set(decisions.flatMap((decision) =>
+    decision.findings.filter((finding) => finding.should_report).flatMap((finding) => finding.rubric_ids)
+  ))
+  return rubric.map((rule) => rule.id).filter((ruleId) => !triggered.has(ruleId))
 }
 
 function providerMetadataOf(provider?: Pick<LlmProvider, 'metadata' | 'name' | 'supportsVision'>): LlmProviderMetadata | undefined {

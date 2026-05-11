@@ -1082,6 +1082,11 @@ export interface ProductExperienceRubricItem {
   default_severity: Severity
 }
 
+export interface ProductExperienceRubricDocument {
+  version: string
+  rules: ProductExperienceRubricItem[]
+}
+
 export interface ProductExperiencePageIntent {
   screen_name: string
   nav_label: string
@@ -1162,11 +1167,14 @@ export interface ProductExperienceFinding {
   reviewed_screen?: string
   screenshot_used?: string
   scenario_step?: string
+  page_intent?: string
+  workflow_intent?: string
   dom_excerpt?: string
   positive_evidence_checked?: string[]
   negative_evidence_checked?: string[]
   evidence_scope?: 'same_screen' | 'cross_screen' | 'mixed' | 'unknown'
   suppression_reason?: string
+  contradiction_check_result?: string
 }
 
 export interface ProductExperienceDecision {
@@ -1214,6 +1222,10 @@ export interface ProductExperienceResult {
   minorGaps: number
   majorGaps: number
   inconclusive: number
+  rubricVersion?: string
+  ruleIdsEvaluated?: string[]
+  ruleIdsTriggered?: string[]
+  ruleIdsPassed?: string[]
   rubric: ProductExperienceRubricItem[]
   contexts: ProductExperienceContext[]
   decisions: ProductExperienceDecision[]

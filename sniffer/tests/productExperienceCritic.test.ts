@@ -1,15 +1,21 @@
 import { describe, expect, it } from 'vitest'
 import { MockLlmProvider } from '../src/llm/mockProvider.js'
 import { OpenAICompatibleProvider } from '../src/llm/openAICompatibleProvider.js'
-import { buildProductExperienceContexts, deterministicProductExperienceDecision, loadProductExperienceRubric, runProductExperienceCritic, snifferDashboardPageIntents } from '../src/critic/productExperienceCritic.js'
+import { buildProductExperienceContexts, deterministicProductExperienceDecision, loadProductExperienceRubric, loadProductExperienceRubricDocument, runProductExperienceCritic, snifferDashboardPageIntents } from '../src/critic/productExperienceCritic.js'
 import type { AppProfile, CrawlGraph, ProductExperienceContext, ProductExperienceDecision, ProductExperienceFinding, SourceGraph } from '../src/types.js'
 import type { LlmProvider } from '../src/llm/provider.js'
 
 describe('Product Experience Critic', () => {
   it('loads the product experience rubric', async () => {
     const rubric = await loadProductExperienceRubric()
+    const document = await loadProductExperienceRubricDocument()
 
-    expect(rubric.map((item) => item.id)).toEqual(expect.arrayContaining(['context_clarity', 'navigation_promise', 'evidence_proximity']))
+    expect(document.version).toBe('product-experience.v1')
+    expect(rubric.map((item) => item.id)).toEqual(expect.arrayContaining([
+      'run_report_context_clarity',
+      'navigation_label_content_alignment',
+      'screenshot_gallery_context'
+    ]))
   })
 
   it('provides a Sniffer Dashboard page intent for Run Timeline', () => {
@@ -34,6 +40,25 @@ describe('Product Experience Critic', () => {
       type: 'context_gap',
       title: 'Run Timeline lacks clear run/report context'
     })
+  })
+
+  it('downgrades high confidence when required evidence is weak', () => {
+    const context = {
+      ...timelineContext(['RUN TIMELINE What Sniffer did']),
+      screenshot_path: undefined,
+      screenshot_artifact_url: undefined,
+      dom_summary: [],
+      headings: [],
+      visible_controls: [],
+      visible_status_text: [],
+      runtime_evidence: [],
+      source_evidence: []
+    }
+
+    const decision = deterministicProductExperienceDecision(context)
+
+    expect(decision.findings.some((finding) => finding.should_report)).toBe(true)
+    expect(decision.overall.confidence).toBe('medium')
   })
 
   it('passes Run Timeline when latest run, timestamp, project, and status are visible', () => {
@@ -295,7 +320,7 @@ describe('Product Experience Critic', () => {
           title: 'Issues screen lacks explicit run/report identity',
           type: 'context_gap',
           severity: 'medium',
-          rubric_ids: ['context_clarity'],
+          rubric_ids: ['run_report_context_clarity'],
           expected: 'Visible latest/selected run identity, project context, timestamp, and status.',
           observed: 'The loaded report data contains an older issue title about context.',
           evidence: ['DOM evidence: medium Issues screen lacks explicit run/report identity product experience gap', 'workflow evidence: Summary issue list'],
@@ -572,7 +597,7 @@ describe('Product Experience Critic', () => {
           title: 'Screenshot modal lacks scenario/state/action context',
           type: 'evidence_gap',
           severity: 'medium',
-          rubric_ids: ['evidence_proximity'],
+          rubric_ids: ['screenshot_gallery_context'],
           expected: 'Screenshot preview should show scenario, state, action, and related issue context.',
           observed: 'Screenshot evidence is image/file oriented without scenario context.',
           evidence: ['DOM evidence: pet-friends.png'],
@@ -613,7 +638,7 @@ describe('Product Experience Critic', () => {
           title: 'Screenshot modal lacks scenario/state/action context',
           type: 'evidence_gap',
           severity: 'medium',
-          rubric_ids: ['evidence_proximity'],
+          rubric_ids: ['screenshot_gallery_context'],
           expected: 'Screenshot preview should show scenario, state, action, and related issue context.',
           observed: 'The visible screenshot evidence is image/file oriented without scenario, state, or action context.',
           evidence: ['DOM evidence: pet-friends.png', 'screenshot evidence: state-1.png', 'workflow evidence: Screenshots page intent'],
@@ -726,7 +751,7 @@ function llmFindingDecision(title: string): ProductExperienceDecision {
       title,
       type: 'context_gap',
       severity: 'medium',
-      rubric_ids: ['context_clarity'],
+      rubric_ids: ['run_report_context_clarity'],
       expected: 'Visible latest/selected run identity, project context, timestamp, and status.',
       observed: 'The screen shows phase names but no run identity.',
       evidence: ['DOM evidence: Source discovery passed', 'screenshot evidence: state-1.png', 'workflow evidence: Run Timeline'],

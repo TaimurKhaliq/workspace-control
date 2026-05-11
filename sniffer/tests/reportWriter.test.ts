@@ -9,6 +9,7 @@ describe('renderMarkdown', () => {
     expect(markdown).toContain('Console error')
     expect(markdown).toContain('Fix it')
     expect(markdown).toContain('Product Experience Critic')
+    expect(markdown).toContain('Rubric version: product-experience.v1')
   })
 })
 
@@ -58,6 +59,10 @@ function report(): SnifferReport {
       minorGaps: 1,
       majorGaps: 0,
       inconclusive: 0,
+      rubricVersion: 'product-experience.v1',
+      ruleIdsEvaluated: ['run_report_context_clarity'],
+      ruleIdsTriggered: ['run_report_context_clarity'],
+      ruleIdsPassed: [],
       rubric: [],
       contexts: [],
       decisions: [{
@@ -77,7 +82,7 @@ function report(): SnifferReport {
           title: 'Run Timeline lacks clear run/report context',
           type: 'context_gap',
           severity: 'medium',
-          rubric_ids: ['context_clarity'],
+          rubric_ids: ['run_report_context_clarity'],
           expected: 'Run identity',
           observed: 'No timestamp',
           evidence: ['screen: Run Timeline'],

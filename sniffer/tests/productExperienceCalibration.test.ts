@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { runProductExperienceCalibration } from '../src/verification/productExperienceCalibration.js'
+import { MockLlmProvider } from '../src/llm/mockProvider.js'
+import { runProductExperienceCalibration, runProductExperienceModelComparison } from '../src/verification/productExperienceCalibration.js'
 
 describe('product experience calibration', () => {
   it('detects missing Run Timeline report context', async () => {
@@ -10,9 +11,11 @@ describe('product experience calibration', () => {
     expect(target.detectedFindings).toEqual(expect.arrayContaining([
       expect.objectContaining({
         type: 'context_gap',
-        title: 'Run Timeline lacks clear run/report context'
+        title: 'Run Timeline lacks clear run/report context',
+        ruleIds: expect.arrayContaining(['run_report_context_clarity'])
       })
     ]))
+    expect(result.rubricVersion).toBe('product-experience.v1')
   })
 
   it('detects Raw JSON screens without a copy action', async () => {
@@ -23,7 +26,8 @@ describe('product experience calibration', () => {
     expect(target.detectedFindings).toEqual(expect.arrayContaining([
       expect.objectContaining({
         type: 'actionability_gap',
-        title: 'Raw JSON lacks copy action'
+        title: 'Raw JSON lacks copy action',
+        ruleIds: expect.arrayContaining(['raw_json_copy_export_action'])
       })
     ]))
   })
@@ -37,7 +41,8 @@ describe('product experience calibration', () => {
       expect.objectContaining({
         source: 'runtime_dom_quality',
         type: 'locator_quality_issue',
-        title: 'Repeated Reopen buttons have ambiguous accessible names'
+        title: 'Repeated Reopen buttons have ambiguous accessible names',
+        ruleIds: expect.arrayContaining(['repeated_row_action_accessibility'])
       })
     ]))
   })
@@ -53,6 +58,27 @@ describe('product experience calibration', () => {
 
     expect(result.status).toBe('passed')
     expect(target.detectedFindings).toHaveLength(0)
+  })
+
+  it('writes model comparison results from mocked providers', async () => {
+    const result = await runProductExperienceModelComparison({
+      snifferRoot: process.cwd(),
+      models: ['mock-a', 'mock-b'],
+      providerName: 'mock',
+      mode: 'llm',
+      includeGood: true,
+      fixtureIds: ['missing-copy-action', 'good-sniffer-dashboard'],
+      providerFactory: () => new MockLlmProvider()
+    })
+
+    expect(result.status).toBe('passed')
+    expect(result.rubricVersion).toBe('product-experience.v1')
+    expect(result.models).toHaveLength(2)
+    expect(result.models[0]).toEqual(expect.objectContaining({
+      model: 'mock-a',
+      passRate: 1
+    }))
+    expect(result.reportMarkdownPath).toContain('model_comparison.md')
   })
 })
 

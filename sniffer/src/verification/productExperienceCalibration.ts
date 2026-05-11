@@ -10,6 +10,8 @@ import { buildRuntimeAppModel } from '../runtime/runtimeAppModel.js'
 import { analyzeRuntimeDomQuality } from '../heuristics/runtimeDomQuality.js'
 import { runProductExperienceCritic } from '../critic/productExperienceCritic.js'
 import { writeJson } from '../reporting/json.js'
+import { OpenAICompatibleProvider } from '../llm/openAICompatibleProvider.js'
+import { MockLlmProvider } from '../llm/mockProvider.js'
 import type { LlmProvider } from '../llm/provider.js'
 import type { AppSubtype, CrawlGraph, CrawlState, Issue, ProductExperienceCriticMode, ProductExperienceResult, RuntimeDomSnapshot, VisibleElement } from '../types.js'
 
@@ -18,6 +20,7 @@ type ProductExperienceCalibrationProvider = Pick<LlmProvider, 'name'> & Partial<
 export interface ProductExperienceCalibrationExpectedFinding {
   type: string
   titleIncludes: string
+  ruleId?: string
 }
 
 export interface ProductExperienceCalibrationFixture {
@@ -35,6 +38,7 @@ export interface ProductExperienceCalibrationDetectedFinding {
   title: string
   screen?: string
   severity?: string
+  ruleIds: string[]
   evidence: string[]
 }
 
@@ -45,6 +49,13 @@ export interface ProductExperienceCalibrationTargetResult {
   status: 'passed' | 'failed'
   criticMode: ProductExperienceCriticMode
   llmUsed: boolean
+  providerName?: string
+  providerModel?: string
+  rubricVersion?: string
+  ruleIdsEvaluated: string[]
+  ruleIdsTriggered: string[]
+  ruleIdsPassed: string[]
+  latencyMs: number
   expectedFindings: ProductExperienceCalibrationExpectedFinding[]
   detectedFindings: ProductExperienceCalibrationDetectedFinding[]
   missingFindings: ProductExperienceCalibrationExpectedFinding[]
@@ -58,35 +69,65 @@ export interface ProductExperienceCalibrationResult {
   status: 'passed' | 'failed'
   criticMode: ProductExperienceCriticMode
   llmUsed: boolean
+  providerName?: string
+  providerModel?: string
+  rubricVersion?: string
   targets: ProductExperienceCalibrationTargetResult[]
+  reportJsonPath: string
+  reportMarkdownPath: string
+}
+
+export interface ProductExperienceModelComparisonEntry {
+  model: string
+  status: 'passed' | 'failed'
+  providerName?: string
+  providerModel?: string
+  rubricVersion?: string
+  passRate: number
+  passedTargets: number
+  totalTargets: number
+  missedFindings: Array<{ fixture: string; type: string; titleIncludes: string; ruleId?: string }>
+  falsePositives: Array<{ fixture: string; type: string; title: string; ruleIds: string[] }>
+  averageLatencyMs?: number
+  tokenCostEstimate?: string
+  reportJsonPath: string
+  reportMarkdownPath: string
+}
+
+export interface ProductExperienceModelComparisonResult {
+  generatedAt: string
+  status: 'passed' | 'failed'
+  provider: string
+  rubricVersion?: string
+  models: ProductExperienceModelComparisonEntry[]
   reportJsonPath: string
   reportMarkdownPath: string
 }
 
 export const BAD_PRODUCT_EXPERIENCE_FIXTURES: ProductExperienceCalibrationFixture[] = [
   fixture('missing-run-context', 'Missing run context', '#timeline', undefined, [
-    { type: 'context_gap', titleIncludes: 'Run Timeline lacks clear run/report context' }
+    { type: 'context_gap', titleIncludes: 'Run Timeline lacks clear run/report context', ruleId: 'run_report_context_clarity' }
   ]),
   fixture('missing-copy-action', 'Missing Raw JSON copy action', '#raw-json', undefined, [
-    { type: 'actionability_gap', titleIncludes: 'Raw JSON lacks copy action' }
+    { type: 'actionability_gap', titleIncludes: 'Raw JSON lacks copy action', ruleId: 'raw_json_copy_export_action' }
   ]),
   fixture('unclear-graph', 'Unclear graph explorer', '#graph', undefined, [
-    { type: 'information_hierarchy_gap', titleIncludes: 'Graph Explorer does not provide enough graph-reading context' }
+    { type: 'information_hierarchy_gap', titleIncludes: 'Graph Explorer does not provide enough graph-reading context', ruleId: 'graph_legend_filter_detail' }
   ]),
   fixture('ambiguous-reopen', 'Ambiguous repeated Reopen buttons', '#plan-runs', undefined, [
-    { type: 'locator_quality_issue', titleIncludes: 'Repeated Reopen buttons have ambiguous accessible names' }
+    { type: 'locator_quality_issue', titleIncludes: 'Repeated Reopen buttons have ambiguous accessible names', ruleId: 'repeated_row_action_accessibility' }
   ]),
   fixture('duplicate-status-text', 'Duplicate plan-run status/chip text', '#plan-runs', undefined, [
-    { type: 'scanability_issue', titleIncludes: 'Plan run card repeats status/chip text' }
+    { type: 'scanability_issue', titleIncludes: 'Plan run card repeats status/chip text', ruleId: 'duplicate_status_chip_text' }
   ]),
   fixture('screenshot-gallery-no-context', 'Screenshot gallery without context', '#screenshots', undefined, [
-    { type: 'evidence_gap', titleIncludes: 'Screenshots view does not explain screenshot context' }
+    { type: 'evidence_gap', titleIncludes: 'Screenshots view does not explain screenshot context', ruleId: 'screenshot_gallery_context' }
   ]),
   fixture('unhelpful-empty-state', 'Unhelpful Issues empty state', '#issues', undefined, [
-    { type: 'empty_state_gap', titleIncludes: 'Issues empty state lacks explanation or next action' }
+    { type: 'empty_state_gap', titleIncludes: 'Issues empty state lacks explanation or next action', ruleId: 'issue_empty_state_honesty' }
   ]),
   fixture('raw-json-primary-summary', 'Raw JSON as primary summary', '#summary', undefined, [
-    { type: 'information_hierarchy_gap', titleIncludes: 'Summary relies on raw JSON instead of human-readable report summary' }
+    { type: 'information_hierarchy_gap', titleIncludes: 'Summary relies on raw JSON instead of human-readable report summary', ruleId: 'raw_json_not_primary_summary' }
   ])
 ]
 
@@ -107,9 +148,10 @@ export async function runProductExperienceCalibration(input: {
   mode?: ProductExperienceCriticMode
   fixtureIds?: string[]
   includeGood?: boolean
+  reportRootName?: string
 }): Promise<ProductExperienceCalibrationResult> {
   const generatedAt = new Date().toISOString()
-  const reportRoot = path.join(input.snifferRoot, 'reports', 'sniffer', 'product-calibration')
+  const reportRoot = path.join(input.snifferRoot, 'reports', 'sniffer', input.reportRootName ?? 'product-calibration')
   const runDir = path.join(reportRoot, 'runs', generatedAt.replace(/[:.]/g, '-'))
   const latestDir = path.join(reportRoot, 'latest')
   await mkdir(runDir, { recursive: true })
@@ -134,6 +176,9 @@ export async function runProductExperienceCalibration(input: {
     status: targets.every((target) => target.status === 'passed') ? 'passed' : 'failed',
     criticMode,
     llmUsed: targets.some((target) => target.llmUsed),
+    providerName: targets.find((target) => target.providerName)?.providerName,
+    providerModel: targets.find((target) => target.providerModel)?.providerModel,
+    rubricVersion: targets.find((target) => target.rubricVersion)?.rubricVersion,
     targets,
     reportJsonPath: path.join(latestDir, 'latest_calibration.json'),
     reportMarkdownPath: path.join(latestDir, 'latest_calibration.md')
@@ -143,6 +188,75 @@ export async function runProductExperienceCalibration(input: {
   await writeJson(path.join(runDir, 'latest_calibration.json'), result)
   await writeFile(path.join(runDir, 'latest_calibration.md'), renderCalibrationMarkdown(result), 'utf8')
   return result
+}
+
+export async function runProductExperienceModelComparison(input: {
+  snifferRoot: string
+  models: string[]
+  providerName?: string
+  mode?: ProductExperienceCriticMode
+  includeGood?: boolean
+  fixtureIds?: string[]
+  providerFactory?: (model: string) => ProductExperienceCalibrationProvider | undefined
+}): Promise<ProductExperienceModelComparisonResult> {
+  const generatedAt = new Date().toISOString()
+  const reportDir = path.join(input.snifferRoot, 'reports', 'sniffer', 'calibration')
+  await mkdir(reportDir, { recursive: true })
+  const models: ProductExperienceModelComparisonEntry[] = []
+  for (const model of input.models) {
+    const provider = input.providerFactory?.(model) ?? providerForModel(input.providerName ?? 'openai-compatible', model)
+    const result = await runProductExperienceCalibration({
+      snifferRoot: input.snifferRoot,
+      provider,
+      mode: input.mode ?? 'llm',
+      fixtureIds: input.fixtureIds,
+      includeGood: input.includeGood,
+      reportRootName: path.join('calibration', 'runs', safeModelName(model))
+    })
+    const totalTargets = result.targets.length
+    const passedTargets = result.targets.filter((target) => target.status === 'passed').length
+    const missedFindings = result.targets.flatMap((target) => target.missingFindings.map((finding) => ({
+      fixture: target.fixture,
+      type: finding.type,
+      titleIncludes: finding.titleIncludes,
+      ruleId: finding.ruleId
+    })))
+    const falsePositives = result.targets.flatMap((target) => target.unexpectedFindings.map((finding) => ({
+      fixture: target.fixture,
+      type: finding.type,
+      title: finding.title,
+      ruleIds: finding.ruleIds
+    })))
+    const latencies = result.targets.map((target) => target.latencyMs).filter((latency) => Number.isFinite(latency))
+    models.push({
+      model,
+      status: result.status,
+      providerName: result.providerName,
+      providerModel: result.providerModel ?? model,
+      rubricVersion: result.rubricVersion,
+      passRate: totalTargets > 0 ? Number((passedTargets / totalTargets).toFixed(3)) : 0,
+      passedTargets,
+      totalTargets,
+      missedFindings,
+      falsePositives,
+      averageLatencyMs: latencies.length ? Math.round(latencies.reduce((sum, latency) => sum + latency, 0) / latencies.length) : undefined,
+      tokenCostEstimate: 'not available',
+      reportJsonPath: result.reportJsonPath,
+      reportMarkdownPath: result.reportMarkdownPath
+    })
+  }
+  const comparison: ProductExperienceModelComparisonResult = {
+    generatedAt,
+    status: models.every((model) => model.status === 'passed') ? 'passed' : 'failed',
+    provider: input.providerName ?? 'openai-compatible',
+    rubricVersion: models.find((model) => model.rubricVersion)?.rubricVersion,
+    models,
+    reportJsonPath: path.join(reportDir, 'model_comparison.json'),
+    reportMarkdownPath: path.join(reportDir, 'model_comparison.md')
+  }
+  await writeJson(comparison.reportJsonPath, comparison)
+  await writeFile(comparison.reportMarkdownPath, renderModelComparisonMarkdown(comparison), 'utf8')
+  return comparison
 }
 
 async function runFixture(input: {
@@ -156,6 +270,7 @@ async function runFixture(input: {
   const reportDir = path.join(input.runDir, input.fixture.id)
   await mkdir(reportDir, { recursive: true })
   const server = await startStaticServer(fixtureRoot)
+  const startedAt = Date.now()
   try {
     const url = `${server.url}/${input.fixture.hash}`
     const sourceGraph = await discoverSource(fixtureRoot)
@@ -200,6 +315,16 @@ async function runFixture(input: {
       status: missingFindings.length === 0 && unexpectedFindings.length === 0 ? 'passed' : 'failed',
       criticMode: input.criticMode,
       llmUsed: productExperience.llmScreensReviewed > 0,
+      providerName: productExperience.providerName,
+      providerModel: productExperience.providerModel,
+      rubricVersion: productExperience.rubricVersion,
+      ruleIdsEvaluated: productExperience.ruleIdsEvaluated ?? [],
+      ruleIdsTriggered: unique([
+        ...(productExperience.ruleIdsTriggered ?? []),
+        ...detectedFindings.flatMap((finding) => finding.ruleIds)
+      ]),
+      ruleIdsPassed: productExperience.ruleIdsPassed ?? [],
+      latencyMs: Date.now() - startedAt,
       expectedFindings: input.fixture.expectedFindings,
       detectedFindings,
       missingFindings,
@@ -210,6 +335,19 @@ async function runFixture(input: {
   } finally {
     await new Promise<void>((resolve) => server.server.close(() => resolve()))
   }
+}
+
+function unique<T>(items: T[]): T[] {
+  return [...new Set(items)]
+}
+
+function providerForModel(providerName: string, model: string): ProductExperienceCalibrationProvider | undefined {
+  if (providerName === 'mock') return new MockLlmProvider()
+  return new OpenAICompatibleProvider({ ...process.env, SNIFFER_LLM_MODEL: model })
+}
+
+function safeModelName(model: string): string {
+  return model.toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-+|-+$/g, '') || 'model'
 }
 
 function fixture(id: string, name: string, hash: string, appSubtype: AppSubtype | undefined, expectedFindings: ProductExperienceCalibrationExpectedFinding[]): ProductExperienceCalibrationFixture {
@@ -328,6 +466,7 @@ function productExperienceFindings(result: ProductExperienceResult): ProductExpe
         title: finding.title,
         screen: finding.reviewed_screen ?? decision.screen_name,
         severity: finding.severity,
+        ruleIds: finding.rubric_ids ?? [],
         evidence: finding.evidence
       }))
   )
@@ -339,12 +478,22 @@ function runtimeDomQualityFindings(issues: Issue[]): ProductExperienceCalibratio
     type: issue.type,
     title: issue.title,
     severity: issue.severity,
+    ruleIds: ruleIdsForRuntimeDomIssue(issue),
     evidence: issue.evidence
   }))
 }
 
 function matchesExpected(expected: ProductExperienceCalibrationExpectedFinding, detected: ProductExperienceCalibrationDetectedFinding): boolean {
-  return detected.type === expected.type && detected.title.toLowerCase().includes(expected.titleIncludes.toLowerCase())
+  const typeAndTitleMatch = detected.type === expected.type && detected.title.toLowerCase().includes(expected.titleIncludes.toLowerCase())
+  if (!typeAndTitleMatch) return false
+  return expected.ruleId ? detected.ruleIds.includes(expected.ruleId) : true
+}
+
+function ruleIdsForRuntimeDomIssue(issue: Issue): string[] {
+  const text = `${issue.type} ${issue.title}`.toLowerCase()
+  if (/repeated reopen|ambiguous accessible names|locator_quality/.test(text)) return ['repeated_row_action_accessibility']
+  if (/repeats status|duplicate status|semantic off|scanability/.test(text)) return ['duplicate_status_chip_text']
+  return []
 }
 
 function renderCalibrationMarkdown(result: ProductExperienceCalibrationResult): string {
@@ -355,6 +504,9 @@ function renderCalibrationMarkdown(result: ProductExperienceCalibrationResult): 
     `Status: ${result.status.toUpperCase()}`,
     `Critic mode: ${result.criticMode}`,
     `LLM used: ${result.llmUsed ? 'yes' : 'no'}`,
+    `Provider: ${result.providerName ?? 'none'}`,
+    `Model: ${result.providerModel ?? 'none'}`,
+    `Rubric version: ${result.rubricVersion ?? 'unknown'}`,
     ''
   ]
   for (const target of result.targets) {
@@ -365,19 +517,57 @@ function renderCalibrationMarkdown(result: ProductExperienceCalibrationResult): 
       `- URL: ${target.url}`,
       `- Product Experience Critic status: ${target.productExperienceStatus}`,
       `- LLM used: ${target.llmUsed ? 'yes' : 'no'}`,
+      `- Provider: ${target.providerName ?? 'none'}`,
+      `- Model: ${target.providerModel ?? 'none'}`,
+      `- Rubric version: ${target.rubricVersion ?? 'unknown'}`,
+      `- Latency: ${target.latencyMs}ms`,
+      `- Rule ids evaluated: ${target.ruleIdsEvaluated.join(', ') || 'none'}`,
+      `- Rule ids triggered: ${target.ruleIdsTriggered.join(', ') || 'none'}`,
       target.screenshotPath ? `- Screenshot: ${target.screenshotPath}` : '- Screenshot: none',
       '',
       'Expected findings:',
-      ...target.expectedFindings.map((finding) => `- ${finding.type}: ${finding.titleIncludes}`),
+      ...target.expectedFindings.map((finding) => `- ${finding.type}: ${finding.titleIncludes}${finding.ruleId ? ` (${finding.ruleId})` : ''}`),
       '',
       'Detected findings:',
-      ...(target.detectedFindings.length ? target.detectedFindings.map((finding) => `- ${finding.source} · ${finding.type}: ${finding.title}`) : ['- none']),
+      ...(target.detectedFindings.length ? target.detectedFindings.map((finding) => `- ${finding.source} · ${finding.type}: ${finding.title}${finding.ruleIds.length ? ` (${finding.ruleIds.join(', ')})` : ''}`) : ['- none']),
       '',
       'Missing findings:',
-      ...(target.missingFindings.length ? target.missingFindings.map((finding) => `- ${finding.type}: ${finding.titleIncludes}`) : ['- none']),
+      ...(target.missingFindings.length ? target.missingFindings.map((finding) => `- ${finding.type}: ${finding.titleIncludes}${finding.ruleId ? ` (${finding.ruleId})` : ''}`) : ['- none']),
       '',
-      'Unexpected findings:',
+      'False positives:',
       ...(target.unexpectedFindings.length ? target.unexpectedFindings.map((finding) => `- ${finding.source} · ${finding.type}: ${finding.title}`) : ['- none']),
+      ''
+    )
+  }
+  return `${lines.join('\n')}\n`
+}
+
+function renderModelComparisonMarkdown(result: ProductExperienceModelComparisonResult): string {
+  const lines = [
+    '# Product Experience Model Comparison',
+    '',
+    `Generated: ${result.generatedAt}`,
+    `Status: ${result.status.toUpperCase()}`,
+    `Provider: ${result.provider}`,
+    `Rubric version: ${result.rubricVersion ?? 'unknown'}`,
+    '',
+    '| Model | Status | Pass rate | Missed | False positives | Avg latency | Report |',
+    '| --- | --- | ---: | ---: | ---: | ---: | --- |',
+    ...result.models.map((model) => `| ${model.model} | ${model.status.toUpperCase()} | ${(model.passRate * 100).toFixed(1)}% | ${model.missedFindings.length} | ${model.falsePositives.length} | ${model.averageLatencyMs ?? 'n/a'}ms | ${model.reportMarkdownPath} |`),
+    ''
+  ]
+  for (const model of result.models) {
+    lines.push(
+      `## ${model.model}`,
+      '',
+      `- Status: ${model.status}`,
+      `- Provider model: ${model.providerModel ?? 'unknown'}`,
+      `- Passed targets: ${model.passedTargets}/${model.totalTargets}`,
+      `- Token/cost estimate: ${model.tokenCostEstimate ?? 'not available'}`,
+      '- Missed findings:',
+      ...(model.missedFindings.length ? model.missedFindings.map((finding) => `  - ${finding.fixture}: ${finding.type} ${finding.titleIncludes}${finding.ruleId ? ` (${finding.ruleId})` : ''}`) : ['  - none']),
+      '- False positives:',
+      ...(model.falsePositives.length ? model.falsePositives.map((finding) => `  - ${finding.fixture}: ${finding.type} ${finding.title}${finding.ruleIds.length ? ` (${finding.ruleIds.join(', ')})` : ''}`) : ['  - none']),
       ''
     )
   }

@@ -466,6 +466,8 @@ Use the calibration suite to prove the Product Experience Critic is not merely p
 npm run sniffer -- audit-product-calibration
 ```
 
+The calibration suite is tied to the versioned rubric at `src/rubrics/productExperience.v1.json`. Each expected finding names a rubric rule id, and each report records the rubric version, rule ids evaluated, rule ids triggered, and rule ids passed.
+
 For a no-key baseline:
 
 ```bash
@@ -480,6 +482,16 @@ When an LLM provider is configured, the runner defaults to LLM mode. You can for
 npm run sniffer -- audit-product-calibration \
   --product-experience-critic llm \
   --provider openai-compatible
+```
+
+You can also compare configured models against the same fixture oracle:
+
+```bash
+npm run sniffer -- audit-product-calibration \
+  --product-experience-critic llm \
+  --provider openai-compatible \
+  --models gpt-4.1-mini,gpt-5.5 \
+  --include-good
 ```
 
 The suite currently includes fixtures for:
@@ -500,9 +512,11 @@ Reports are written to:
 ```text
 reports/sniffer/product-calibration/latest/latest_calibration.json
 reports/sniffer/product-calibration/latest/latest_calibration.md
+reports/sniffer/calibration/model_comparison.json
+reports/sniffer/calibration/model_comparison.md
 ```
 
-If a fixture fails, the markdown report lists the expected finding, detected findings, missing oracle, screenshot path, critic mode, and whether the LLM was used. Add new calibration fixtures under `fixtures/product-experience-bad/` with an expected finding entry in `src/verification/productExperienceCalibration.ts`.
+If a fixture fails, the markdown report lists the expected finding, detected findings, missed oracle, false positives, screenshot path, critic mode, provider/model, rubric version, and whether the LLM was used. Add new calibration fixtures under `fixtures/product-experience-bad/` with an expected finding entry in `src/verification/productExperienceCalibration.ts`.
 
 ## No-Key Deterministic Audit
 
@@ -641,6 +655,7 @@ Each context includes:
 
 Reports include a `Product Experience Critic` section for every reviewed screen:
 
+- rubric version plus evaluated/triggered/passed rule ids
 - LLM used and real LLM used
 - provider/model/API style
 - vision used or the reason it was not used

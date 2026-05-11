@@ -40,7 +40,7 @@ import { inspectUrl, writeRuntimeDomArtifacts } from '../runtime/domSnapshot.js'
 import { buildRuntimeAppModel, buildRuntimeIntentContext } from '../runtime/runtimeAppModel.js'
 import type { DiscoveryMode, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent } from '../types.js'
 import { runVerificationMatrix } from '../verification/matrix.js'
-import { runProductExperienceCalibration } from '../verification/productExperienceCalibration.js'
+import { runProductExperienceCalibration, runProductExperienceModelComparison } from '../verification/productExperienceCalibration.js'
 import { runProductExperienceCritic } from '../critic/productExperienceCritic.js'
 import type { GraphRefinerMode, ProductExperienceCriticMode } from '../types.js'
 import { runGraphStructureRefiner } from '../evidence/graphRefiner.js'
@@ -82,13 +82,35 @@ async function main(): Promise<void> {
   }
 
   if (command === 'audit-product-calibration') {
-    const provider = createLlmProvider(typeof args.provider === 'string' ? args.provider : 'auto')
+    const providerName = typeof args.provider === 'string' ? args.provider : 'auto'
     const mode = typeof args['product-experience-critic'] === 'string'
       ? args['product-experience-critic'] as ProductExperienceCriticMode
+      : typeof args['critic-mode'] === 'string'
+        ? args['critic-mode'] as ProductExperienceCriticMode
       : undefined
     const fixtureIds = typeof args.fixture === 'string'
       ? args.fixture.split(',').map((item) => item.trim()).filter(Boolean)
       : undefined
+    if (typeof args.models === 'string') {
+      const models = args.models.split(',').map((item) => item.trim()).filter(Boolean)
+      if (!models.length) throw new Error('--models must include at least one model name')
+      const comparison = await runProductExperienceModelComparison({
+        snifferRoot: process.cwd(),
+        models,
+        providerName,
+        mode,
+        fixtureIds,
+        includeGood: boolArg(args, 'include-good')
+      })
+      console.log(`Product Experience Model Comparison ${comparison.status.toUpperCase()}`)
+      for (const model of comparison.models) {
+        console.log(`- ${model.status.toUpperCase()} ${model.model}: passRate=${(model.passRate * 100).toFixed(1)}% missed=${model.missedFindings.length} falsePositives=${model.falsePositives.length}`)
+      }
+      console.log(`Wrote ${comparison.reportMarkdownPath}`)
+      if (comparison.status === 'failed') process.exitCode = 1
+      return
+    }
+    const provider = createLlmProvider(providerName)
     const calibration = await runProductExperienceCalibration({
       snifferRoot: process.cwd(),
       provider,
@@ -886,7 +908,7 @@ Commands:
   sniffer generate-tests --repo <path> --url <url> | --project <id> [--use-llm] [--include-test-sources|--include-tests] [--include-fixtures]
   sniffer run-tests [--project <id>] [--use-llm]
   sniffer verify-matrix
-  sniffer audit-product-calibration [--product-experience-critic deterministic|llm|auto] [--provider mock|openai-compatible|auto] [--fixture id[,id]] [--include-good]
+  sniffer audit-product-calibration [--product-experience-critic deterministic|llm|auto] [--critic-mode deterministic|llm|auto] [--provider mock|openai-compatible|auto] [--fixture id[,id]] [--include-good] [--models gpt-4.1-mini,gpt-5.5]
 `)
 }
 
