@@ -23,6 +23,7 @@ import type {
   SourceGraph
 } from '../types.js'
 import type { LlmProvider, LlmProviderMetadata } from '../llm/provider.js'
+import { evidencePacketSummary, retrieveEvidence } from '../evidence/retrieval.js'
 
 const thisFile = fileURLToPath(import.meta.url)
 const snifferRoot = path.resolve(path.dirname(thisFile), '..', '..')
@@ -159,6 +160,7 @@ export async function runProductExperienceCritic(input: {
     rubric,
     contexts,
     decisions,
+    evidenceRetrievalSummaries: contexts.flatMap((context) => context.evidence_retrieval_summary ? [context.evidence_retrieval_summary] : []),
     issues
   }
 }
@@ -208,6 +210,7 @@ export function deterministicProductExperienceDecision(context: ProductExperienc
     context_sufficiency: context.context_sufficiency,
     context_sufficiency_score: context.context_sufficiency_score,
     context_warnings: context.context_warnings,
+    evidence_retrieval_summary: context.evidence_retrieval_summary,
     overall: {
       classification: reportable.length === 0 ? 'aligned' : major ? 'major_gap' : 'minor_gap',
       confidence: reportable.length === 0 ? 'medium' : 'high',
@@ -231,6 +234,20 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
       .filter(Boolean)
       .slice(0, 40)
   const screenshotPath = scenarioTrace?.screenshotPath ?? state?.screenshotPath ?? input.runtimeDomSnapshot?.screenshotPath
+  const evidencePacket = retrieveEvidence(`${pageIntent.screen_name} ${pageIntent.workflow_intent}`, {
+    sourceGraph: input.sourceGraph,
+    crawlGraph: input.crawlGraph,
+    runtimeDomSnapshot: input.runtimeDomSnapshot,
+    runtimeWorkflows: input.runtimeAppModel?.workflows,
+    scenarioRuns: input.scenarioRuns,
+    screenName: pageIntent.screen_name,
+    workflowName: pageIntent.workflow_intent,
+    entityHints: pageIntent.evidence_keywords,
+    includeRuntime: true,
+    includePriorRepairs: false,
+    maxResults: 10
+  })
+  const retrievalSummary = evidencePacketSummary(evidencePacket)
   return {
     app_name: input.runtimeAppModel?.app_name ?? input.runtimeDomSnapshot?.title ?? input.sourceGraph.packageName ?? 'Unknown app',
     app_profile: input.appProfile,
@@ -259,8 +276,14 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
     visible_errors: domText.filter((line) => /error|failed|warning|not found|unavailable/i.test(line)),
     active_nav_state: scenarioTrace?.activeNavState ?? pageIntent.nav_label,
     run_project_report_context_visible: visibleRunContext(domText),
-    source_evidence: sourceEvidenceForPage(pageIntent, input.sourceGraph),
-    runtime_evidence: runtimeEvidenceForPage(pageIntent, state, input.runtimeDomSnapshot, scenarioTrace),
+    source_evidence: unique([
+      ...sourceEvidenceForPage(pageIntent, input.sourceGraph),
+      ...evidencePacket.sourceFacts.slice(0, 8).map((fact) => `${fact.kind}: ${fact.value}`)
+    ]),
+    runtime_evidence: unique([
+      ...runtimeEvidenceForPage(pageIntent, state, input.runtimeDomSnapshot, scenarioTrace),
+      ...evidencePacket.runtimeFacts.slice(0, 6).map((fact) => `${fact.kind}: ${fact.value.slice(0, 160)}`)
+    ]),
     related_issues: [],
     related_fix_packets: [],
     rubric: [],
@@ -271,7 +294,9 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
     vision_capable: false,
     vision_used: false,
     vision_not_used_reason: undefined,
-    real_llm_expected: false
+    real_llm_expected: false,
+    evidence_packet: evidencePacket,
+    evidence_retrieval_summary: retrievalSummary
   }
 }
 
@@ -558,6 +583,7 @@ function normalizeLlmDecision(decision: ProductExperienceDecision, context: Prod
     context_sufficiency: decision.context_sufficiency ?? context.context_sufficiency,
     context_sufficiency_score: decision.context_sufficiency_score ?? context.context_sufficiency_score,
     context_warnings: decision.context_warnings ?? context.context_warnings,
+    evidence_retrieval_summary: context.evidence_retrieval_summary,
     overall,
     findings,
     non_issues: nonIssues
@@ -640,10 +666,13 @@ function positiveEvidenceForFinding(finding: ProductExperienceFinding, context: 
     /copy prompt|copy fix prompt|copy repair prompt/.test(text) ? 'same_screen_control: fix prompt copy present' : undefined,
     /copy/.test(text) && /fix packet|prompt|repair/.test(text) ? 'same_screen_control: fix-packet copy affordance present' : undefined
   ].filter(Boolean) as string[]
+  const retrievedEvidence = (context.evidence_packet?.retrievedDocuments ?? [])
+    .filter((doc) => /copy json|copy raw json|copy prompt|copy fix prompt/i.test(doc.text))
+    .map((doc) => `retrieved_${doc.kind}: ${doc.text.slice(0, 160)}`)
   if (!missingControlClaim(finding)) return evidence.slice(0, 4)
   const findingText = findingTextFor(finding)
-  if (/raw json/.test(findingText)) return evidence.filter((item) => /Raw JSON|Copy JSON/.test(item))
-  if (/copy/.test(findingText)) return evidence.filter((item) => /copy/i.test(item))
+  if (/raw json/.test(findingText)) return [...evidence, ...retrievedEvidence].filter((item) => /Raw JSON|Copy JSON/i.test(item))
+  if (/copy/.test(findingText)) return [...evidence, ...retrievedEvidence].filter((item) => /copy/i.test(item))
   return evidence.slice(0, 4)
 }
 
@@ -1031,4 +1060,8 @@ function normalize(value: string): string {
 
 function importantTokens(value: string): string[] {
   return value.split(/[^a-z0-9]+/i).filter((token) => token.length >= 5)
+}
+
+function unique<T>(values: T[]): T[] {
+  return [...new Set(values.filter(Boolean))]
 }

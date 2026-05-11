@@ -5,6 +5,7 @@ import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 import { enrichIssues } from '../repair/issueMetadata.js'
 import { triageIssues } from '../heuristics/issueTriage.js'
+import { buildUIIntentGraph } from '../evidence/contextModel.js'
 
 export async function writeAuditReports(reportDir: string, input: {
   sourceGraph: SourceGraph
@@ -36,6 +37,7 @@ export async function writeAuditReports(reportDir: string, input: {
   await mkdir(reportDir, { recursive: true })
   const sourceGraph: SourceGraph = {
     ...input.sourceGraph,
+    uiIntentGraph: input.sourceGraph.uiIntentGraph ?? buildUIIntentGraph(input.sourceGraph),
     workflowDiscoverySummary: {
       ...(input.sourceGraph.workflowDiscoverySummary ?? { source_workflows_count: input.sourceGraph.sourceWorkflows.length }),
       source_workflows_count: input.sourceGraph.sourceWorkflows.length,
@@ -57,6 +59,8 @@ export async function writeAuditReports(reportDir: string, input: {
   const report: SnifferReport = {
     ...input,
     sourceGraph,
+    sourceInventory: sourceGraph.sourceInventory,
+    uiIntentGraph: sourceGraph.uiIntentGraph,
     crawlGraph,
     rawFindings,
     issues: triagedIssues,
@@ -70,6 +74,7 @@ export async function writeAuditReports(reportDir: string, input: {
     locatorFailures: input.locatorFailures ?? [],
     generatedScenarios: input.generatedScenarios ?? [],
     productExperience: input.productExperience,
+    evidenceRetrievalSummaries: input.productExperience?.evidenceRetrievalSummaries ?? [],
     scenarioRuns: input.scenarioRuns ?? [],
     criticDecisions: input.criticDecisions ?? [],
     uxCriticFindings: input.uxCriticFindings ?? [],
@@ -80,6 +85,8 @@ export async function writeAuditReports(reportDir: string, input: {
     generatedAt: new Date().toISOString()
   }
   await writeJson(path.join(reportDir, 'source_graph.json'), sourceGraph)
+  if (sourceGraph.sourceInventory) await writeJson(path.join(reportDir, 'source_inventory.json'), sourceGraph.sourceInventory)
+  if (sourceGraph.uiIntentGraph) await writeJson(path.join(reportDir, 'ui_intent_graph.json'), sourceGraph.uiIntentGraph)
   await writeJson(path.join(reportDir, 'app_intent.json'), input.appIntent)
   if (input.appProfile) await writeJson(path.join(reportDir, 'app_profile.json'), input.appProfile)
   if (input.runtimeDomSnapshot) await writeJson(path.join(reportDir, 'runtime_dom_snapshot.json'), input.runtimeDomSnapshot)
@@ -139,6 +146,14 @@ export function renderMarkdown(report: SnifferReport): string {
     '## Discovery Adapters',
     '',
     renderDiscoveryAdapters(report),
+    '',
+    '## Source Inventory Summary',
+    '',
+    renderSourceInventorySummary(report),
+    '',
+    '## UI Intent Graph Summary',
+    '',
+    renderUIIntentGraphSummary(report),
     '',
     '## Workflow Discovery Sources',
     '',
@@ -227,6 +242,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '## Product Experience Critic',
     '',
     renderProductExperienceCritic(report),
+    '',
+    '## Evidence Retrieval Summaries',
+    '',
+    renderEvidenceRetrievalSummaries(report),
     '',
     '## UX/Layout Issues',
     '',
@@ -454,7 +473,7 @@ function renderAppProfile(report: SnifferReport): string {
     `- Expected navigation: ${profile.expected_navigation_patterns.join('; ') || 'unknown'}`,
     `- Expected workflows: ${profile.expected_workflows.join('; ') || 'unknown'}`,
     `- Expected output surfaces: ${profile.expected_output_surfaces.join('; ') || 'unknown'}`,
-    `- Evidence: ${profile.evidence.join('; ') || 'none'}`
+    `- Evidence: ${compactEvidenceList(profile.evidence).join('; ') || 'none'}`
   ].join('\n')
 }
 
@@ -490,7 +509,7 @@ function renderGeneratedScenarioSummary(report: SnifferReport): string {
     `- Confidence: ${scenario.confidence}`,
     `- Expected controls: ${scenario.expectedControls.join(', ') || 'none'}`,
     `- Expected outcomes: ${scenario.expectedOutcomes.join('; ') || 'none'}`,
-    `- Evidence: ${scenario.evidence.join('; ') || 'none'}`
+    `- Evidence: ${compactEvidenceList(scenario.evidence).join('; ') || 'none'}`
   ].filter(Boolean).join('\n')).join('\n\n')
 }
 
@@ -505,6 +524,77 @@ function renderDiscoveryAdapters(report: SnifferReport): string {
     `- Evidence: ${adapter.evidence.join('; ') || 'none'}`,
     adapter.warnings?.length ? `- Warnings: ${adapter.warnings.join('; ')}` : undefined
   ].filter(Boolean).join('\n')).join('\n\n')
+}
+
+function renderSourceInventorySummary(report: SnifferReport): string {
+  const inventory = report.sourceInventory ?? report.sourceGraph.sourceInventory
+  if (!inventory) return 'No Source Inventory was recorded.'
+  return [
+    `- Files: ${inventory.files.length}`,
+    `- Modules: ${inventory.modules.length}`,
+    `- Framework signals: ${inventory.frameworkSignals.length}`,
+    `- Package/build signals: ${inventory.packageBuildSignals.length}`,
+    `- Raw symbols: ${inventory.rawExtractedSymbols.length}`,
+    `- Raw routes: ${inventory.rawRoutes.length}`,
+    `- Raw templates/controls: ${inventory.rawTemplates.length}`,
+    `- Raw handlers: ${inventory.rawHandlers.length}`,
+    `- Raw API calls: ${inventory.rawApiCalls.length}`,
+    `- Total facts: ${inventory.facts.length}`,
+    '',
+    'Top facts:',
+    ...inventory.facts.filter((fact) => !rawJsxFragment(fact.value)).slice(0, 10).map((fact) => `- ${fact.kind}: ${fact.label ?? fact.value}${fact.filePath ? ` (${fact.filePath})` : ''} [${fact.extractionMethod}, ${fact.confidence}]`)
+  ].join('\n')
+}
+
+function renderUIIntentGraphSummary(report: SnifferReport): string {
+  const graph = report.uiIntentGraph ?? report.sourceGraph.uiIntentGraph
+  if (!graph) return 'No UI Intent Graph was recorded.'
+  return [
+    `- Surfaces: ${graph.surfaces.length}`,
+    `- Workflows: ${graph.workflows.length}`,
+    `- Actions: ${graph.actions.length}`,
+    `- Controls: ${graph.controls.length}`,
+    `- Forms: ${graph.forms.length}`,
+    `- State nodes: ${graph.state.length}`,
+    `- API/data dependencies: ${graph.apiDataDependencies.length}`,
+    `- Domain entities: ${graph.domainEntities.length}`,
+    `- Edges: ${graph.edges.length}`,
+    `- Inferences: ${graph.inferences.length}`,
+    `- Confidence: ${graph.confidence}`,
+    `- Evidence coverage: ${intentEvidenceCoverage(graph)}`,
+    '',
+    'Top workflows:',
+    ...(graph.workflows.slice(0, 8).map((node) => `- ${node.label}${node.filePath ? ` (${node.filePath})` : ''} [evidence: ${node.evidenceIds.length}]`) || ['- none'])
+  ].join('\n')
+}
+
+function rawJsxFragment(value: string): boolean {
+  return /event\.target|=>|autoFocus|aria-describedby=|rows=\{|on[A-Z]\w+\(/.test(value)
+}
+
+function compactEvidenceList(values: string[], limit = 10): string[] {
+  return values.map(compactEvidence).filter(Boolean).slice(0, limit)
+}
+
+function compactEvidence(value: string): string {
+  const text = value
+    .replace(/\s+/g, ' ')
+    .replace(/\s+in\s+"[^"]*(?:event\.target|=>|autoFocus|aria-describedby=|rows=\{|busy\s*===)[^"]*"/gi, '')
+    .replace(/\s+in\s+"[^"]{180,}"/g, '')
+    .trim()
+  return text.length > 180 ? `${text.slice(0, 177)}...` : text
+}
+
+function intentEvidenceCoverage(graph: NonNullable<SnifferReport['uiIntentGraph']>): string {
+  const nodes = [
+    ...graph.surfaces,
+    ...graph.workflows,
+    ...graph.actions,
+    ...graph.controls,
+    ...graph.apiDataDependencies
+  ]
+  const withEvidence = nodes.filter((node) => node.evidenceIds.length > 0).length
+  return `${withEvidence}/${nodes.length} nodes with source evidence ids`
 }
 
 function renderWorkflowDiscoverySources(report: SnifferReport): string {
@@ -652,6 +742,7 @@ function renderProductExperienceCritic(report: SnifferReport): string {
       `- Scenario screenshot used: ${decision.scenario_screenshot_used ? 'yes' : 'no'}`,
       `- Context sufficiency: ${decision.context_sufficiency} (${decision.context_sufficiency_score})`,
       decision.context_warnings.length ? `- Context warnings: ${decision.context_warnings.join('; ')}` : '- Context warnings: none',
+      decision.evidence_retrieval_summary ? `- Retrieved evidence: ${decision.evidence_retrieval_summary.retrievedDocumentCount} docs, ${decision.evidence_retrieval_summary.sourceFactCount} source facts, ${decision.evidence_retrieval_summary.runtimeFactCount} runtime facts, ${decision.evidence_retrieval_summary.contradictionCount} contradictions` : undefined,
       decision.critic_not_run_reason ? `- Critic not-run reason: ${decision.critic_not_run_reason}` : undefined,
       `- Classification: ${decision.overall.classification}`,
       `- Confidence: ${decision.overall.confidence}`,
@@ -695,6 +786,27 @@ function renderProductExperienceCritic(report: SnifferReport): string {
     '',
     screenBlocks || 'No screen decisions recorded.'
   ].filter(Boolean).join('\n')
+}
+
+function renderEvidenceRetrievalSummaries(report: SnifferReport): string {
+  const summaries = report.evidenceRetrievalSummaries ?? report.productExperience?.evidenceRetrievalSummaries ?? []
+  if (summaries.length === 0) return 'No evidence retrieval summaries recorded.'
+  return summaries.map((summary, index) => [
+    `### Packet ${index + 1}: ${summary.context.screenName ?? summary.context.workflowName ?? summary.context.issueId ?? summary.context.query}`,
+    '',
+    `- Query: ${summary.context.query}`,
+    summary.context.screenName ? `- Screen: ${summary.context.screenName}` : undefined,
+    summary.context.workflowName ? `- Workflow: ${summary.context.workflowName}` : undefined,
+    summary.context.issueId ? `- Issue: ${summary.context.issueId}` : undefined,
+    `- Retrieved documents: ${summary.retrievedDocumentCount}`,
+    `- Source facts: ${summary.sourceFactCount}`,
+    `- Runtime facts: ${summary.runtimeFactCount}`,
+    `- Contradictions: ${summary.contradictionCount}`,
+    '- Top evidence:',
+    ...(summary.topDocuments.length
+      ? summary.topDocuments.map((doc) => `  - ${doc.kind} ${doc.id}: ${doc.text}`)
+      : ['  - none'])
+  ].filter(Boolean).join('\n')).join('\n\n')
 }
 
 function renderUxCriticSummary(report: SnifferReport): string {

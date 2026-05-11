@@ -45,7 +45,8 @@ const surfacePatterns: SurfacePattern[] = [
   { type: 'validation_panel', displayName: 'Validation panel', terms: ['validation', 'commands', 'risks_and_caveats', 'Validation'], minConfidence: 0.65 },
   { type: 'handoff_prompt_panel', displayName: 'Handoff prompt copy area', terms: ['handoff_prompts', 'Handoff', 'prompt', 'copy'], buttonTerms: ['Copy'], minConfidence: 0.65 },
   { type: 'raw_json_panel', displayName: 'Raw JSON view', terms: ['Raw JSON', 'JSON', 'json', 'debug'], minConfidence: 0.6 },
-  { type: 'copy_action', displayName: 'Copy action', terms: ['navigator.clipboard', 'Copy', 'copy'], buttonTerms: ['Copy'], minConfidence: 0.65 }
+  { type: 'copy_action', displayName: 'Copy action', terms: ['navigator.clipboard', 'Copy', 'copy'], buttonTerms: ['Copy'], minConfidence: 0.65 },
+  { type: 'unknown_ui_section', displayName: 'Plan Runs history', terms: ['Plan Runs', 'plan-run-item', 'plan-runs-list', 'onReopenPlanRun', 'listPlanRuns'], buttonTerms: ['Reopen'], minConfidence: 0.65 }
 ]
 
 const workflowPatterns = [
@@ -93,6 +94,11 @@ const workflowPatterns = [
     name: 'Inspect raw JSON',
     terms: ['Raw JSON', 'JSON', 'json', 'debug'],
     actions: ['Open JSON tab', 'Inspect raw plan bundle payload']
+  },
+  {
+    name: 'Browse/reopen previous plan runs',
+    terms: ['Plan Runs', 'plan-run-item', 'plan-runs-list', 'onReopenPlanRun', 'listPlanRuns', 'reopen-plan-run-button'],
+    actions: ['Open plan runs history', 'Review prompt, target, timestamp, and status', 'Reopen a prior plan run']
   }
 ]
 

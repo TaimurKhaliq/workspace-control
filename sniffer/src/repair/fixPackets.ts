@@ -6,6 +6,7 @@ import { assertSafeFixPacket, isActionableIssue } from './safety.js'
 import { resolveRepairPathPolicy } from './pathPolicy.js'
 import { enrichIssues } from './issueMetadata.js'
 import { triageIssues } from '../heuristics/issueTriage.js'
+import { evidencePacketSummary, retrieveEvidence } from '../evidence/retrieval.js'
 
 export async function loadReport(reportPath: string): Promise<SnifferReport> {
   return JSON.parse(await readFile(reportPath, 'utf8')) as SnifferReport
@@ -24,6 +25,20 @@ export function createFixPacket(issue: Issue, report: SnifferReport, reportPath:
     reportDir
   })
   const verificationCommand = `npm run sniffer -- verify --issue ${issue.issue_id} --url ${report.crawlGraph.startUrl} --report ${path.resolve(reportPath)}`
+  const evidencePacket = retrieveEvidence(`${issue.title} ${issue.description} ${issue.evidence.join(' ')}`, {
+    sourceGraph: report.sourceGraph,
+    crawlGraph: report.crawlGraph,
+    runtimeDomSnapshot: report.runtimeDomSnapshot,
+    runtimeWorkflows: report.runtimeAppModel?.workflows,
+    scenarioRuns: report.scenarioRuns,
+    issues: report.issues,
+    issueId: issue.issue_id,
+    entityHints: suspectedFiles,
+    includeRuntime: true,
+    includePriorRepairs: true,
+    maxResults: 12
+  })
+  const retrievalSummary = evidencePacketSummary(evidencePacket)
   return {
     issue_id: issue.issue_id,
     title: issue.title,
@@ -33,7 +48,7 @@ export function createFixPacket(issue: Issue, report: SnifferReport, reportPath:
     working_directory: policy.repairRoot,
     evidence_paths: evidencePaths,
     suspected_files: policy.normalizedSuspectedFiles,
-    prompt: renderCodexPrompt(issue, report, policy.repairRoot, policy.allowedPaths, policy.normalizedSuspectedFiles, verificationCommand),
+    prompt: renderCodexPrompt(issue, report, policy.repairRoot, policy.allowedPaths, policy.normalizedSuspectedFiles, verificationCommand, evidencePacket),
     constraints: [
       'Do not run destructive app or repo actions.',
       'Never delete workspaces, repos, baselines, reports, or user data.',
@@ -43,7 +58,9 @@ export function createFixPacket(issue: Issue, report: SnifferReport, reportPath:
       `Use report context from ${reportDir}.`
     ],
     verification_command: verificationCommand,
-    pass_conditions: issue.pass_conditions ?? []
+    pass_conditions: issue.pass_conditions ?? [],
+    evidence_packet: evidencePacket,
+    evidence_retrieval_summary: retrievalSummary
   }
 }
 
@@ -176,7 +193,8 @@ function renderCodexPrompt(
   repairRoot: string,
   allowedPaths: string[],
   suspectedFiles: string[],
-  verificationCommand: string
+  verificationCommand: string,
+  evidencePacket?: ReturnType<typeof retrieveEvidence>
 ): string {
   return [
     `You are fixing a Sniffer-reported issue in:`,
@@ -197,6 +215,18 @@ function renderCodexPrompt(
     `- Runtime states captured: ${report.crawlGraph.states.length}`,
     `- Console errors: ${report.crawlGraph.consoleErrors.length}`,
     `- Network failures: ${report.crawlGraph.networkFailures.length}`,
+    '',
+    'Retrieved evidence packet:',
+    ...(evidencePacket
+      ? [
+        `- Query: ${evidencePacket.context.query}`,
+        `- Retrieved documents: ${evidencePacket.retrievedDocuments.length}`,
+        `- Source facts: ${evidencePacket.sourceFacts.length}`,
+        `- Runtime facts: ${evidencePacket.runtimeFacts.length}`,
+        `- Contradictions: ${evidencePacket.contradictions.length}`,
+        ...evidencePacket.retrievedDocuments.slice(0, 8).map((doc) => `- ${doc.kind}: ${doc.text.slice(0, 220)}`)
+      ]
+      : ['- none']),
     '',
     'Verification steps:',
     (issue.verification_steps ?? []).map((step) => `- ${step}`).join('\n'),

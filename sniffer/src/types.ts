@@ -32,6 +32,8 @@ export interface SourceGraph {
   packageName?: string
   framework: string
   buildTool: string
+  sourceInventory?: SourceInventory
+  uiIntentGraph?: UIIntentGraph
   routes: SourceRoute[]
   pages: SourceFileSummary[]
   components: SourceFileSummary[]
@@ -44,6 +46,180 @@ export interface SourceGraph {
   discoveryAdapters?: DiscoveryAdapterSummary[]
   workflowDiscoverySummary?: WorkflowDiscoverySummary
   generatedAt: string
+}
+
+export type EvidenceExtractionMethod = 'deterministic' | 'heuristic' | 'llm' | 'runtime'
+
+export interface EvidenceFact {
+  id: string
+  kind: string
+  value: string
+  source: string
+  label?: string
+  controlType?: 'input' | 'textarea' | 'select' | 'checkbox' | 'button' | 'unknown'
+  handler?: string
+  ariaDescribedBy?: string
+  placeholder?: string
+  testId?: string
+  options?: string[]
+  safeActionHint?: boolean
+  rawText?: string
+  filePath?: string
+  symbol?: string
+  snippet?: string
+  confidence: number
+  extractionMethod: EvidenceExtractionMethod
+}
+
+export interface EvidenceInference {
+  id: string
+  claim: string
+  basedOn: string[]
+  confidence: number
+  method: EvidenceExtractionMethod
+  contradictedBy?: string[]
+}
+
+export interface SourceInventoryFile {
+  path: string
+  extension: string
+  moduleName?: string
+  evidenceIds: string[]
+}
+
+export interface SourceInventory {
+  files: SourceInventoryFile[]
+  modules: string[]
+  frameworkSignals: EvidenceFact[]
+  packageBuildSignals: EvidenceFact[]
+  rawExtractedSymbols: EvidenceFact[]
+  rawRoutes: EvidenceFact[]
+  rawTemplates: EvidenceFact[]
+  rawHandlers: EvidenceFact[]
+  rawApiCalls: EvidenceFact[]
+  provenance: EvidenceFact[]
+  facts: EvidenceFact[]
+  generatedAt: string
+}
+
+export type UIIntentNodeKind =
+  | 'surface'
+  | 'workflow'
+  | 'action'
+  | 'control'
+  | 'form'
+  | 'state'
+  | 'validation'
+  | 'api_dependency'
+  | 'data_dependency'
+  | 'domain_entity'
+
+export interface UIIntentNode {
+  id: string
+  kind: UIIntentNodeKind
+  label: string
+  filePath?: string
+  symbol?: string
+  route?: string
+  confidence: number
+  evidenceIds: string[]
+  extractionMethod: EvidenceExtractionMethod
+  metadata?: Record<string, unknown>
+}
+
+export interface UIIntentEdge {
+  id: string
+  source: string
+  target: string
+  kind: string
+  confidence: number
+  evidenceIds: string[]
+}
+
+export interface UIIntentGraph {
+  surfaces: UIIntentNode[]
+  workflows: UIIntentNode[]
+  actions: UIIntentNode[]
+  controls: UIIntentNode[]
+  forms: UIIntentNode[]
+  state: UIIntentNode[]
+  validation: UIIntentNode[]
+  apiDataDependencies: UIIntentNode[]
+  domainEntities: UIIntentNode[]
+  edges: UIIntentEdge[]
+  confidence: number
+  evidenceReferences: string[]
+  inferences: EvidenceInference[]
+  generatedAt: string
+}
+
+export type EvidenceRetrievalDocumentKind =
+  | 'source_chunk'
+  | 'graph_node'
+  | 'workflow'
+  | 'surface'
+  | 'api_call'
+  | 'runtime_dom'
+  | 'screenshot_metadata'
+  | 'issue'
+  | 'fix_packet'
+  | 'repair_attempt'
+
+export interface EvidenceRetrievalDocument {
+  id: string
+  kind: EvidenceRetrievalDocumentKind
+  text: string
+  metadata: Record<string, unknown>
+  relatedEvidenceIds: string[]
+}
+
+export interface EvidenceRetrievalOptions {
+  featureRequest?: string
+  screenName?: string
+  workflowName?: string
+  issueId?: string
+  entityHints?: string[]
+  kinds?: EvidenceRetrievalDocumentKind[]
+  maxResults?: number
+  includeRuntime?: boolean
+  includePriorRepairs?: boolean
+}
+
+export interface EvidencePacket {
+  context: {
+    issueId?: string
+    screenName?: string
+    workflowName?: string
+    featureRequest?: string
+    query: string
+  }
+  retrievedDocuments: EvidenceRetrievalDocument[]
+  graphNodes: UIIntentNode[]
+  sourceFacts: EvidenceFact[]
+  runtimeFacts: EvidenceFact[]
+  screenshots: string[]
+  contradictions: EvidenceInference[]
+  confidenceSummary: {
+    sourceFactCount: number
+    runtimeFactCount: number
+    heuristicInferenceCount: number
+    llmInferenceCount: number
+    contradictionCount: number
+    averageConfidence: number
+  }
+}
+
+export interface EvidenceRetrievalSummary {
+  context: EvidencePacket['context']
+  retrievedDocumentCount: number
+  sourceFactCount: number
+  runtimeFactCount: number
+  contradictionCount: number
+  topDocuments: Array<{
+    id: string
+    kind: EvidenceRetrievalDocumentKind
+    text: string
+  }>
 }
 
 export interface DiscoveryAdapterSummary {
@@ -520,6 +696,8 @@ export interface Issue {
 
 export interface SnifferReport {
   sourceGraph: SourceGraph
+  sourceInventory?: SourceInventory
+  uiIntentGraph?: UIIntentGraph
   crawlGraph: CrawlGraph
   appIntent: AppIntent
   appProfile?: AppProfile
@@ -534,6 +712,7 @@ export interface SnifferReport {
   productIntent?: ProductIntentModel
   productIntentFindings?: ProductIntentFinding[]
   productExperience?: ProductExperienceResult
+  evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
   promptConsistency?: PromptConsistencyResult
   runtimeSurfaceMatches: RuntimeSurfaceMatch[]
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
@@ -830,6 +1009,8 @@ export interface ProductExperienceContext {
   llm_api_style?: string
   real_llm_expected: boolean
   candidate_findings?: ProductExperienceFinding[]
+  evidence_packet?: EvidencePacket
+  evidence_retrieval_summary?: EvidenceRetrievalSummary
 }
 
 export interface ProductExperienceFinding {
@@ -870,6 +1051,7 @@ export interface ProductExperienceDecision {
   context_sufficiency: ProductExperienceContextSufficiency
   context_sufficiency_score: number
   context_warnings: string[]
+  evidence_retrieval_summary?: EvidenceRetrievalSummary
   critic_not_run_reason?: string
   overall: {
     classification: ProductExperienceClassification
@@ -901,6 +1083,7 @@ export interface ProductExperienceResult {
   rubric: ProductExperienceRubricItem[]
   contexts: ProductExperienceContext[]
   decisions: ProductExperienceDecision[]
+  evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
   issues: Issue[]
 }
 
@@ -1040,6 +1223,8 @@ export interface FixPacket {
   constraints: string[]
   verification_command: string
   pass_conditions: string[]
+  evidence_packet?: EvidencePacket
+  evidence_retrieval_summary?: EvidenceRetrievalSummary
 }
 
 export interface AgentResult {

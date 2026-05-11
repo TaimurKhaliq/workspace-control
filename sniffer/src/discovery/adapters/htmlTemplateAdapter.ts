@@ -157,7 +157,7 @@ function workflow(name: string, sourceFiles: string | string[], evidence: string
 }
 
 function discoverApiCalls(file: SourceFileContent): ApiCall[] {
-  return endpointStrings(file.content).map((endpoint) => ({
+  return endpointStrings(file.content).filter(isBackendApiReference).map((endpoint) => ({
     endpoint,
     sourceFile: file.relative,
     method: undefined,
@@ -166,6 +166,12 @@ function discoverApiCalls(file: SourceFileContent): ApiCall[] {
     confidence: 0.35,
     evidence: [endpoint]
   }))
+}
+
+function isBackendApiReference(endpoint: string): boolean {
+  if (/^\/?(?:src|assets|static|public)\//i.test(endpoint)) return false
+  if (/\.(?:js|mjs|ts|tsx|css|png|jpe?g|gif|svg|webp|ico|woff2?)(?:[?#].*)?$/i.test(endpoint)) return false
+  return /^\/api(?:\/|$)/i.test(endpoint) || /^https?:\/\/[^/]+\/api(?:\/|$)/i.test(endpoint)
 }
 
 function dedupeRoutes(routes: SourceRoute[]): SourceRoute[] {

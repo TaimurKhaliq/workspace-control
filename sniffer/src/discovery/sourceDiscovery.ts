@@ -3,6 +3,7 @@ import path from 'node:path'
 import type { SourceFileSummary, SourceForm, SourceGraph, SourceRoute } from '../types.js'
 import { mergeAdapterResults, runDiscoveryAdapters } from './adapters/registry.js'
 import type { DiscoveryContext } from './adapters/types.js'
+import { buildSourceInventory, buildUIIntentGraph } from '../evidence/contextModel.js'
 
 const ignoredDirs = new Set([
   'node_modules',
@@ -62,7 +63,10 @@ export async function discoverSource(repoPath: string, options: SourceDiscoveryO
     stateActions: [],
     packageScripts: asRecord(packageJson.scripts)
   }
-  return mergeAdapterResults({ base, results: adapterResults, generatedAt: new Date().toISOString() })
+  const merged = mergeAdapterResults({ base, results: adapterResults, generatedAt: new Date().toISOString() })
+  const sourceInventory = buildSourceInventory({ repoPath: absoluteRepo, packageJson, files: inventory, sourceGraph: merged })
+  const uiIntentGraph = buildUIIntentGraph({ ...merged, sourceInventory }, sourceInventory)
+  return { ...merged, sourceInventory, uiIntentGraph }
 }
 
 async function readPackageJson(repoPath: string): Promise<Record<string, unknown>> {

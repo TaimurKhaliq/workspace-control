@@ -162,13 +162,57 @@ The profile drives generic scenario generation such as navigation smoke tests, f
 
 The dashboard top bar includes a project selector, and the Projects page lets you add/select/audit registered projects without exposing secrets to the browser.
 
+## Source Discovery As Agent Context
+
+Source discovery is not just static file scanning. Sniffer treats it as a multi-layer agent context system:
+
+1. Source Inventory
+   - deterministic facts extracted from files
+   - files, modules, components, templates, routes, API calls, state variables, handlers, forms, and imports
+   - no semantic overclaiming
+
+2. UI Intent Graph
+   - normalized user-facing model
+   - UI surfaces, workflows, user actions, forms, controls, state, validation, APIs, data dependencies, and entities
+   - source files are provenance
+   - routes are entrypoints
+   - surfaces and workflows are the canonical semantic units
+
+3. Evidence Retrieval Index
+   - RAG layer over source snippets, UI graph nodes, runtime DOM, screenshot metadata, scenario traces, reports, prior findings, fix packets, repair attempts, and verification results
+   - used by the Product Experience Critic, fix-packet generator, Repair Workbench, and future agent loops
+
+File-based-only modeling is weak because many apps keep most behavior in one large component, template, or render helper. Route-based-only modeling is weak because SPAs often hide important behavior behind tabs, dialogs, sidebars, button navigation, and stateful panels. Sniffer therefore treats a UI surface plus its workflow as the canonical unit of meaning.
+
+Deterministic facts, heuristic inferences, LLM annotations, and runtime confirmations must remain separate:
+
+- deterministic facts come directly from source files or rendered DOM
+- heuristic inferences are rule-based and carry evidence/confidence
+- LLM annotations are structured judgments, not proof
+- runtime confirmations are observed states, controls, screenshots, errors, and scenario outcomes
+
+This supports actual RAG without replacing the `SourceGraph`. The `SourceGraph` remains the source-grounded model; the Evidence Retrieval Index selects focused source/runtime/report/repair context into an evidence packet for a specific critic or repair task.
+
+```mermaid
+flowchart LR
+  A["Source Inventory<br/>files, routes, APIs, handlers"] --> B["UI Intent Graph<br/>surfaces, workflows, actions, entities"]
+  B --> C["Evidence Retrieval Index<br/>source + runtime + reports + repairs"]
+  C --> D["Evidence Packet<br/>focused context with provenance"]
+  D --> E["Product Experience Critic<br/>LLM evaluator/judge"]
+  E --> F["Fix Packet<br/>bounded repair handoff"]
+  F --> G["Repair Agent<br/>manual or Codex adapter"]
+  G --> H["Verification<br/>rerun checks and compare evidence"]
+  H -. "updated evidence" .-> C
+```
+
 ## Source Discovery Adapters
 
-Source discovery is framework-adapter based. Each adapter emits the same normalized `SourceGraph` model so the rest of Sniffer does not depend on React-specific code paths.
+Source discovery is framework-adapter based. Each adapter emits the same neutral `SourceGraph` model so the rest of Sniffer does not depend on React-specific code paths.
 
 - `ReactDiscoveryAdapter` for JSX/TSX component surfaces, state hooks, handlers, forms, and API calls.
 - `AngularDiscoveryAdapter` for Angular component classes, component templates, routes, form bindings, click/submit handlers, services, and `HttpClient` calls.
 - `HtmlTemplateDiscoveryAdapter` as a lower-confidence fallback for `.html`, `.vue`, `.svelte`, `.astro`, `.hbs`, and `.ejs` templates.
+- Future Vue, Svelte, jQuery, and vanilla adapters should emit the same neutral model: inventory facts, UI surfaces, source workflows, forms, controls, state/actions, API calls, evidence, confidence, and provenance.
 
 The adapter runner:
 
@@ -552,7 +596,13 @@ Expected healthy dogfood shape:
 
 ## What Sniffer Collects
 
-Source discovery reads `package.json`, detects likely framework and build tool, runs applicable framework adapters, and scans source/template files for routes, pages, components, forms, UI surfaces, source workflows, state/actions, and API calls.
+Source discovery builds multi-layer context:
+
+- Source Inventory facts from `package.json`, framework/build config, source files, templates, routes, components, forms, API calls, state variables, and handlers.
+- UI Intent Graph nodes for user-facing surfaces, workflows, forms, controls, state, validation, data dependencies, entities, and route entrypoints.
+- Evidence Retrieval Index entries that can later be selected into evidence packets for critics, fix packets, repair workbench views, and verification.
+
+Framework adapters are only extraction mechanisms. React, Angular, Vue, Svelte, jQuery, and vanilla adapters should all emit the same neutral `SourceGraph` concepts so downstream crawling, scenario selection, evidence retrieval, and LLM evaluation do not depend on framework-specific code paths.
 
 Runtime crawling opens the app with Playwright and collects:
 
