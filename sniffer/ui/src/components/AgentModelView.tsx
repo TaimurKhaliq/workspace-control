@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type {
   EvidenceFact,
+  EvidencePacket,
   EvidenceRetrievalSummary,
   GraphRefinementSuggestion,
   ProductExperienceContext,
@@ -9,6 +10,7 @@ import type {
   UIIntentGraph,
   UIIntentNode
 } from '../api'
+import { retrieveEvidence } from '../api'
 import { ReportContextStrip } from './ReportContextStrip'
 
 type AgentTab = 'inventory' | 'intent' | 'retrieval' | 'refinements' | 'packets' | 'suppressions'
@@ -77,7 +79,7 @@ export function AgentModelView({
 
       {tab === 'inventory' && <SourceInventoryPanel model={model} />}
       {tab === 'intent' && <UiIntentGraphPanel model={model} />}
-      {tab === 'retrieval' && <EvidenceRetrievalPanel report={report} summaries={model.retrievalSummaries} />}
+      {tab === 'retrieval' && <EvidenceRetrievalPanel report={report} summaries={model.retrievalSummaries} projectId={projectId} />}
       {tab === 'refinements' && <LlmRefinementsPanel model={model} />}
       {tab === 'packets' && <EvidencePacketsPanel report={report} model={model} />}
       {tab === 'suppressions' && <SuppressionsPanel report={report} model={model} />}
@@ -179,7 +181,24 @@ function UiIntentGraphPanel({ model }: { model: AgentModel }) {
   )
 }
 
-function EvidenceRetrievalPanel({ report, summaries }: { report?: SnifferReport | null; summaries: EvidenceRetrievalSummary[] }) {
+function EvidenceRetrievalPanel({ report, summaries, projectId }: { report?: SnifferReport | null; summaries: EvidenceRetrievalSummary[]; projectId?: string }) {
+  const [query, setQuery] = useState('reopen plan run')
+  const [packet, setPacket] = useState<EvidencePacket | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  async function runRetrieval() {
+    if (!query.trim()) return
+    setLoading(true)
+    setError('')
+    try {
+      setPacket(await retrieveEvidence(query.trim(), projectId))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setPacket(null)
+    } finally {
+      setLoading(false)
+    }
+  }
   if (!report) return <Unavailable title="Evidence Retrieval" flag="Load a report to inspect retrieval context." />
   return (
     <section className="report-grid">
@@ -192,15 +211,31 @@ function EvidenceRetrievalPanel({ report, summaries }: { report?: SnifferReport 
               ? 'These summaries show the RAG-style evidence selected for critics and repair prompts.'
               : 'This report does not include retrieval summaries yet. Showing available critic context packets instead.'}
           </p>
+          <div className="inline-form evidence-search">
+            <label>
+              Retrieve evidence
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="reopen plan run, raw json copy, issue id..."
+                aria-label="Evidence retrieval query"
+              />
+            </label>
+            <button type="button" className="primary-button" onClick={runRetrieval} disabled={loading || !query.trim()}>
+              {loading ? 'Retrieving...' : 'Retrieve'}
+            </button>
+          </div>
+          {error && <p className="inline-error" role="alert">{error}</p>}
         </section>
+        {packet && <EvidencePacketResult packet={packet} />}
         <div className="scenario-card-list">
           {summaries.map((summary, index) => (
             <section key={`${summary.context.query}-${index}`} className="scenario-card static-card">
               <span className="status-chip muted">{summary.context.screenName ?? summary.context.workflowName ?? summary.context.issueId ?? 'context'}</span>
               <strong>{summary.context.query}</strong>
-              <small>{summary.retrievedDocumentCount} docs · {summary.sourceFactCount} source facts · {summary.runtimeFactCount} runtime facts · {summary.contradictionCount} contradictions</small>
+              <small>{summary.retrievedDocumentCount} docs · {summary.sourceFactCount} source facts · {summary.runtimeFactCount} runtime facts · {summary.contradictionCount} contradictions{summary.averageScore ? ` · avg score ${summary.averageScore}` : ''}</small>
               <ul className="evidence-list compact">
-                {summary.topDocuments.slice(0, 4).map((doc) => <li key={doc.id}>{doc.kind}: {doc.text}</li>)}
+                {summary.topDocuments.slice(0, 4).map((doc) => <li key={doc.id}>{doc.kind}{doc.score ? ` (${doc.score})` : ''}: {doc.text}{doc.whyRetrieved?.length ? <small>Why: {doc.whyRetrieved.join('; ')}</small> : null}</li>)}
               </ul>
             </section>
           ))}
@@ -225,6 +260,48 @@ function EvidenceRetrievalPanel({ report, summaries }: { report?: SnifferReport 
           ]} />
         </section>
       </aside>
+    </section>
+  )
+}
+
+function EvidencePacketResult({ packet }: { packet: EvidencePacket }) {
+  const split = packet.confidenceSummary
+  return (
+    <section className="card-panel" data-testid="evidence-packet-result">
+      <div className="section-heading compact">
+        <div>
+          <p className="eyebrow">Retrieved Evidence Packet</p>
+          <h2>{packet.context.query}</h2>
+          <p className="muted">{packet.intent ?? 'ad hoc query'} · {packet.retrievedDocuments.length} documents · {packet.contradictions.length} contradictions</p>
+        </div>
+        <div className="chip-row">
+          <span className="status-chip muted">Source {split.sourceDocumentCount ?? packet.sourceFacts.length}</span>
+          <span className="status-chip muted">Runtime {split.runtimeDocumentCount ?? packet.runtimeFacts.length}</span>
+          <span className="status-chip muted">Scenario {split.scenarioDocumentCount ?? 0}</span>
+          <span className="status-chip muted">Prior fixes {split.priorFixPacketCount ?? 0}</span>
+        </div>
+      </div>
+      <div className="scenario-card-list tight">
+        {packet.retrievedDocuments.slice(0, 12).map((doc) => (
+          <section key={doc.id} className="mini-card">
+            <div className="section-heading compact">
+              <strong>{doc.kind}</strong>
+              <span className="status-chip muted">score {doc.score ?? 'n/a'}</span>
+            </div>
+            <code>{doc.id}</code>
+            <p>{doc.text}</p>
+            {doc.whyRetrieved?.length ? <small>Why: {doc.whyRetrieved.join('; ')}</small> : null}
+            {typeof doc.metadata.filePath === 'string' && <small>File: {doc.metadata.filePath}</small>}
+            {typeof doc.metadata.screenshotPath === 'string' && <small>Screenshot: {doc.metadata.screenshotPath}</small>}
+          </section>
+        ))}
+      </div>
+      {packet.contradictions.length > 0 && (
+        <div className="warning-panel">
+          <strong>Contradictions</strong>
+          <ul className="evidence-list compact">{packet.contradictions.map((item) => <li key={item.id}>{item.claim}</li>)}</ul>
+        </div>
+      )}
     </section>
   )
 }

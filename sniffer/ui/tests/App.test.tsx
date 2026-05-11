@@ -225,6 +225,38 @@ beforeEach(() => {
       hasFixPacket: true
     }])
     if (url.startsWith('/api/reports/latest/fix-packets')) return response([])
+    if (url.startsWith('/api/reports/latest/retrieve-evidence')) return response({
+      context: { query: 'raw json copy' },
+      intent: 'ad_hoc_evidence_query',
+      retrievedDocuments: [{
+        id: 'surface-raw-json',
+        kind: 'surface',
+        text: 'Raw JSON view with Copy JSON action',
+        metadata: { filePath: 'src/App.tsx' },
+        relatedEvidenceIds: ['fact-feature-request'],
+        score: 14.5,
+        whyRetrieved: ['token overlap: raw, json, copy']
+      }],
+      graphNodes: [],
+      sourceFacts: [],
+      runtimeFacts: [],
+      screenshots: [],
+      priorFindings: [],
+      priorFixPackets: [],
+      priorRepairAttempts: [],
+      contradictions: [],
+      confidenceSummary: {
+        sourceFactCount: 0,
+        runtimeFactCount: 0,
+        sourceDocumentCount: 1,
+        runtimeDocumentCount: 0,
+        scenarioDocumentCount: 0,
+        priorFixPacketCount: 0,
+        contradictionCount: 0,
+        averageConfidence: 0,
+        averageScore: 14.5
+      }
+    })
     if (url.startsWith('/api/repairs/history')) return response([])
     if (url === '/api/audits' && init?.method === 'POST') return response({ runId: 'run-1', command: ['tsx', 'src/cli/index.ts', 'audit', '--execute-generated-scenarios'] }, 202)
     if (url === '/api/audits/run-1') return response({
@@ -393,11 +425,15 @@ describe('Agent Model view', () => {
     expect(screen.getByText(/Only high-confidence/)).toBeInTheDocument()
   })
 
-  it('shows evidence retrieval and evidence packets', () => {
+  it('shows evidence retrieval and evidence packets', async () => {
     render(<AgentModelView report={report} projectId="demo" projectName="Demo UI" />)
     fireEvent.click(screen.getByRole('tab', { name: 'Evidence Retrieval' }))
     expect(screen.getByText('Retrieved context packets')).toBeInTheDocument()
     expect(screen.getByText('Run Timeline context')).toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Evidence retrieval query'), { target: { value: 'raw json copy' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Retrieve' }))
+    expect(await screen.findByTestId('evidence-packet-result')).toBeInTheDocument()
+    expect(screen.getByText('Raw JSON view with Copy JSON action')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('tab', { name: 'Evidence Packets' }))
     expect(screen.getByText('Critic and repair context')).toBeInTheDocument()
     expect(screen.getAllByText('Run Timeline').length).toBeGreaterThan(0)

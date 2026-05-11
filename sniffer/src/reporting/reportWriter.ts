@@ -901,9 +901,11 @@ function renderEvidenceRetrievalSummaries(report: SnifferReport): string {
     `- Source facts: ${summary.sourceFactCount}`,
     `- Runtime facts: ${summary.runtimeFactCount}`,
     `- Contradictions: ${summary.contradictionCount}`,
+    summary.averageScore !== undefined ? `- Average score: ${summary.averageScore}` : undefined,
+    summary.sourceRuntimeRepairSplit ? `- Source/runtime/prior split: source ${summary.sourceRuntimeRepairSplit.source}, runtime ${summary.sourceRuntimeRepairSplit.runtime}, scenario ${summary.sourceRuntimeRepairSplit.scenario}, prior findings ${summary.sourceRuntimeRepairSplit.priorFindings}, fix packets ${summary.sourceRuntimeRepairSplit.priorFixPackets}, repairs ${summary.sourceRuntimeRepairSplit.priorRepairAttempts}` : undefined,
     '- Top evidence:',
     ...(summary.topDocuments.length
-      ? summary.topDocuments.map((doc) => `  - ${doc.kind} ${doc.id}: ${doc.text}`)
+      ? summary.topDocuments.map((doc) => `  - ${doc.kind} ${doc.id}${doc.score !== undefined ? ` score=${doc.score}` : ''}: ${doc.text}${doc.whyRetrieved?.length ? ` (${doc.whyRetrieved.join('; ')})` : ''}`)
       : ['  - none'])
   ].filter(Boolean).join('\n')).join('\n\n')
 }

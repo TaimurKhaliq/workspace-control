@@ -32,6 +32,7 @@ export function createFixPacket(issue: Issue, report: SnifferReport, reportPath:
     runtimeWorkflows: report.runtimeAppModel?.workflows,
     scenarioRuns: report.scenarioRuns,
     issues: report.issues,
+    productExperience: report.productExperience,
     issueId: issue.issue_id,
     entityHints: suspectedFiles,
     includeRuntime: true,
@@ -216,7 +217,7 @@ function renderCodexPrompt(
     `- Console errors: ${report.crawlGraph.consoleErrors.length}`,
     `- Network failures: ${report.crawlGraph.networkFailures.length}`,
     '',
-    'Retrieved evidence packet:',
+    'Evidence used:',
     ...(evidencePacket
       ? [
         `- Query: ${evidencePacket.context.query}`,
@@ -224,7 +225,7 @@ function renderCodexPrompt(
         `- Source facts: ${evidencePacket.sourceFacts.length}`,
         `- Runtime facts: ${evidencePacket.runtimeFacts.length}`,
         `- Contradictions: ${evidencePacket.contradictions.length}`,
-        ...evidencePacket.retrievedDocuments.slice(0, 8).map((doc) => `- ${doc.kind}: ${doc.text.slice(0, 220)}`)
+        ...evidencePacket.retrievedDocuments.slice(0, 8).map((doc) => `- ${doc.kind}${doc.score ? ` score=${doc.score}` : ''}: ${doc.text.slice(0, 220)}${doc.whyRetrieved?.length ? ` (${doc.whyRetrieved.join('; ')})` : ''}`)
       ]
       : ['- none']),
     '',

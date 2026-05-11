@@ -282,7 +282,43 @@ export interface EvidenceRetrievalSummary {
   sourceFactCount: number
   runtimeFactCount: number
   contradictionCount: number
-  topDocuments: Array<{ id: string; kind: string; text: string }>
+  kindBreakdown?: Record<string, number>
+  sourceRuntimeRepairSplit?: {
+    source: number
+    runtime: number
+    scenario: number
+    productExperience: number
+    priorFindings: number
+    priorFixPackets: number
+    priorRepairAttempts: number
+  }
+  averageScore?: number
+  topDocuments: Array<{ id: string; kind: string; text: string; score?: number; whyRetrieved?: string[] }>
+}
+
+export interface EvidenceRetrievalDocument {
+  id: string
+  kind: string
+  text: string
+  metadata: Record<string, unknown>
+  relatedEvidenceIds: string[]
+  score?: number
+  whyRetrieved?: string[]
+}
+
+export interface EvidencePacket {
+  context: EvidenceRetrievalSummary['context']
+  intent?: string
+  retrievedDocuments: EvidenceRetrievalDocument[]
+  graphNodes: UIIntentNode[]
+  sourceFacts: EvidenceFact[]
+  runtimeFacts: EvidenceFact[]
+  screenshots: string[]
+  priorFindings?: Issue[]
+  priorFixPackets?: unknown[]
+  priorRepairAttempts?: EvidenceRetrievalDocument[]
+  contradictions: EvidenceInference[]
+  confidenceSummary: Record<string, number>
 }
 
 export interface ProductExperienceContext {
@@ -771,6 +807,11 @@ export async function getGraphRefinements(projectId?: string): Promise<GraphRefi
 
 export async function getEvidenceRetrieval(projectId?: string): Promise<unknown> {
   return request(projectPath('/api/reports/latest/evidence-retrieval', projectId))
+}
+
+export async function retrieveEvidence(query: string, projectId?: string): Promise<EvidencePacket> {
+  const base = `/api/reports/latest/retrieve-evidence?query=${encodeURIComponent(query)}`
+  return request(projectPath(base, projectId))
 }
 
 export async function getEvidencePackets(projectId?: string): Promise<unknown> {

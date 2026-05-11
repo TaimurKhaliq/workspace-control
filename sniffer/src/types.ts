@@ -203,6 +203,8 @@ export type EvidenceRetrievalDocumentKind =
   | 'surface'
   | 'api_call'
   | 'runtime_dom'
+  | 'scenario_trace'
+  | 'product_experience'
   | 'screenshot_metadata'
   | 'issue'
   | 'fix_packet'
@@ -214,6 +216,8 @@ export interface EvidenceRetrievalDocument {
   text: string
   metadata: Record<string, unknown>
   relatedEvidenceIds: string[]
+  score?: number
+  whyRetrieved?: string[]
 }
 
 export interface EvidenceRetrievalOptions {
@@ -221,11 +225,15 @@ export interface EvidenceRetrievalOptions {
   screenName?: string
   workflowName?: string
   issueId?: string
+  surfaceId?: string
+  filePath?: string
   entityHints?: string[]
   kinds?: EvidenceRetrievalDocumentKind[]
   maxResults?: number
   includeRuntime?: boolean
+  includeScreenshots?: boolean
   includePriorRepairs?: boolean
+  minConfidence?: number
 }
 
 export interface EvidencePacket {
@@ -236,19 +244,30 @@ export interface EvidencePacket {
     featureRequest?: string
     query: string
   }
+  intent?: string
   retrievedDocuments: EvidenceRetrievalDocument[]
   graphNodes: UIIntentNode[]
   sourceFacts: EvidenceFact[]
   runtimeFacts: EvidenceFact[]
   screenshots: string[]
+  priorFindings?: Issue[]
+  priorFixPackets?: FixPacket[]
+  priorRepairAttempts?: EvidenceRetrievalDocument[]
   contradictions: EvidenceInference[]
   confidenceSummary: {
     sourceFactCount: number
     runtimeFactCount: number
+    sourceDocumentCount?: number
+    runtimeDocumentCount?: number
+    scenarioDocumentCount?: number
+    priorFindingCount?: number
+    priorFixPacketCount?: number
+    priorRepairAttemptCount?: number
     heuristicInferenceCount: number
     llmInferenceCount: number
     contradictionCount: number
     averageConfidence: number
+    averageScore?: number
   }
 }
 
@@ -258,10 +277,23 @@ export interface EvidenceRetrievalSummary {
   sourceFactCount: number
   runtimeFactCount: number
   contradictionCount: number
+  kindBreakdown?: Record<string, number>
+  sourceRuntimeRepairSplit?: {
+    source: number
+    runtime: number
+    scenario: number
+    productExperience: number
+    priorFindings: number
+    priorFixPackets: number
+    priorRepairAttempts: number
+  }
+  averageScore?: number
   topDocuments: Array<{
     id: string
     kind: EvidenceRetrievalDocumentKind
     text: string
+    score?: number
+    whyRetrieved?: string[]
   }>
 }
 

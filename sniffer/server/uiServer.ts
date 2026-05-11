@@ -8,7 +8,8 @@ import { loadSnifferEnv } from '../src/config/env.js'
 import { initProject, listProjects, getProject, removeProject } from '../src/projects/registry.js'
 import { latestReportDir, projectLatestReportDir } from '../src/reporting/paths.js'
 import { generateFixPackets } from '../src/repair/fixPackets.js'
-import type { SnifferReport } from '../src/types.js'
+import type { FixPacket, SnifferReport } from '../src/types.js'
+import { retrieveEvidenceFromReport } from '../src/evidence/retrieval.js'
 import { resolveReportArtifact } from './artifacts.js'
 import {
   buildDashboardAuditCommand,
@@ -186,6 +187,20 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (!report) return json(res, 404, { error: 'Latest report not found' })
     const payload = reportSlicePayload(report, reportSliceMatch[1] as ReportSliceName)
     return payload ? json(res, 200, payload) : json(res, 404, { error: 'Report section not available' })
+  }
+  if (req.method === 'GET' && parsed.pathname === '/api/reports/latest/retrieve-evidence') {
+    const report = await readJsonFile<SnifferReport>(latestReportPathFor(parsed)).catch(() => undefined)
+    if (!report) return json(res, 404, { error: 'Latest report not found' })
+    const query = parsed.searchParams.get('query')?.trim()
+    if (!query) return json(res, 400, { error: 'query is required' })
+    const packet = retrieveEvidenceFromReport(query, report, {
+      fixPackets: await fixPacketsForRetrieval(latestDirFor(parsed)),
+      includeRuntime: true,
+      includeScreenshots: true,
+      includePriorRepairs: true,
+      maxResults: Number(parsed.searchParams.get('maxResults') ?? 16)
+    })
+    return json(res, 200, packet)
   }
   if (req.method === 'GET' && parsed.pathname.startsWith('/api/reports/latest/artifacts/')) {
     return sendReportArtifact(res, latestDirFor(parsed), parsed.pathname.replace('/api/reports/latest/artifacts/', ''))
@@ -656,6 +671,13 @@ async function fixPacketList(baseDir = latestDir): Promise<Array<Record<string, 
       const rel = path.relative(baseDir, file)
       return { issueId, name: path.basename(file), relativePath: rel, kind: path.extname(file).slice(1) }
     })
+}
+
+async function fixPacketsForRetrieval(baseDir = latestDir): Promise<FixPacket[]> {
+  const items = await fixPacketList(baseDir)
+  const issueIds = [...new Set(items.map((item) => item.issueId))]
+  const packets = await Promise.all(issueIds.map((issueId) => readFixPacketDetail(baseDir, issueId).catch(() => undefined)))
+  return packets.map((packet) => packet?.json).filter((packet): packet is FixPacket => Boolean(packet))
 }
 
 async function sendFixPacket(res: ServerResponse, baseDir: string, issueId: string, parsed?: URL): Promise<void> {

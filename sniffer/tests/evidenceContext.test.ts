@@ -4,11 +4,11 @@ import { randomUUID } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import { discoverSource } from '../src/discovery/sourceDiscovery.js'
-import { retrieveEvidence } from '../src/evidence/retrieval.js'
+import { evidencePacketSummary, retrieveEvidence, retrieveEvidenceFromReport } from '../src/evidence/retrieval.js'
 import { runProductExperienceCritic } from '../src/critic/productExperienceCritic.js'
 import { generateFixPackets } from '../src/repair/fixPackets.js'
 import { renderMarkdown } from '../src/reporting/reportWriter.js'
-import type { CrawlGraph, ProductExperienceContext, ProductExperienceDecision, SnifferReport, SourceGraph } from '../src/types.js'
+import type { CrawlGraph, FixPacket, ProductExperienceContext, ProductExperienceDecision, SnifferReport, SourceGraph } from '../src/types.js'
 import type { LlmProvider } from '../src/llm/provider.js'
 
 describe('agent context evidence layers', () => {
@@ -62,6 +62,94 @@ describe('agent context evidence layers', () => {
     expect(packet.retrievedDocuments.every((doc) => ['workflow', 'surface'].includes(doc.kind))).toBe(true)
   })
 
+  it('retrieves RawJsonView and Copy JSON evidence from a raw-json query', async () => {
+    const graph = await discoverSource(await rawJsonRepo())
+    const packet = retrieveEvidence('raw json copy', {
+      sourceGraph: graph,
+      crawlGraph: crawlGraph(['Raw JSON', 'Latest report payload', 'Copy JSON', '{"ok":true}']),
+      screenName: 'Raw JSON',
+      workflowName: 'Inspect raw report payload',
+      includeRuntime: true,
+      maxResults: 10
+    })
+
+    expect(packet.retrievedDocuments.some((doc) => /raw json/i.test(doc.text))).toBe(true)
+    expect(packet.retrievedDocuments.some((doc) => /copy json/i.test(doc.text))).toBe(true)
+    expect(packet.confidenceSummary.runtimeDocumentCount).toBeGreaterThan(0)
+  })
+
+  it('retrieves issue, fix packet, and screenshot evidence by issue id', async () => {
+    const graph = await discoverSource(await planRunRepo())
+    const baseReport = report(graph)
+    const issue = { ...baseReport.issues[0], screenshotPath: 'screenshots/plan-runs.png' }
+    const fixPacket: FixPacket = {
+      issue_id: issue.issue_id ?? 'reopen-ambiguous',
+      title: issue.title,
+      repo_path: graph.repoPath,
+      repair_root: graph.repoPath,
+      allowed_paths: ['src/App.tsx'],
+      working_directory: graph.repoPath,
+      evidence_paths: ['screenshots/plan-runs.png'],
+      suspected_files: ['src/App.tsx'],
+      prompt: 'Fix repeated Reopen buttons in plan run history.',
+      constraints: [],
+      verification_command: 'npm test',
+      pass_conditions: []
+    }
+
+    const packet = retrieveEvidence('reopen ambiguous issue', {
+      sourceGraph: graph,
+      crawlGraph: crawlGraph(),
+      issues: [issue],
+      fixPackets: [fixPacket],
+      issueId: issue.issue_id,
+      includeRuntime: true,
+      includeScreenshots: true,
+      includePriorRepairs: true,
+      maxResults: 10
+    })
+
+    expect(packet.priorFindings?.some((item) => item.issue_id === issue.issue_id)).toBe(true)
+    expect(packet.priorFixPackets?.some((item) => item.issue_id === issue.issue_id)).toBe(true)
+    expect(packet.screenshots).toContain('screenshots/plan-runs.png')
+  })
+
+  it('ranks exact workflow and screen matches above generic chunks', async () => {
+    const graph = await discoverSource(await planRunRepo())
+    const packet = retrieveEvidence('history list', {
+      sourceGraph: graph,
+      workflowName: 'Browse/reopen previous plan runs',
+      screenName: 'Plan Runs',
+      maxResults: 5
+    })
+
+    expect(['workflow', 'surface']).toContain(packet.retrievedDocuments[0]?.kind)
+    expect(packet.retrievedDocuments[0]?.whyRetrieved?.join(' ')).toMatch(/workflow match|screen match|token overlap/)
+  })
+
+  it('summarizes source/runtime/prior repair breakdowns', async () => {
+    const graph = await discoverSource(await planRunRepo())
+    const packet = retrieveEvidence('reopen previous plan run', {
+      sourceGraph: graph,
+      crawlGraph: crawlGraph(),
+      repairAttempts: [{
+        id: 'repair-attempt:reopen-ambiguous:1',
+        kind: 'repair_attempt',
+        text: 'reopen-ambiguous repaired previous plan run aria-labels in src/App.tsx',
+        metadata: { issueId: 'reopen-ambiguous', changedFiles: ['src/App.tsx'] },
+        relatedEvidenceIds: []
+      }],
+      includeRuntime: true,
+      includePriorRepairs: true,
+      maxResults: 30
+    })
+    const summary = evidencePacketSummary(packet)
+
+    expect(summary.sourceRuntimeRepairSplit?.source).toBeGreaterThan(0)
+    expect(summary.sourceRuntimeRepairSplit?.runtime).toBeGreaterThan(0)
+    expect(summary.sourceRuntimeRepairSplit?.priorRepairAttempts).toBeGreaterThan(0)
+  })
+
   it('passes retrieved evidence into Product Experience Critic contexts', async () => {
     const graph = await discoverSource(await planRunRepo())
     const result = await runProductExperienceCritic({
@@ -86,7 +174,20 @@ describe('agent context evidence layers', () => {
     const packets = await generateFixPackets(reportPath)
 
     expect(packets[0].evidence_packet?.retrievedDocuments.length).toBeGreaterThan(0)
-    expect(packets[0].prompt).toContain('Retrieved evidence packet')
+    expect(packets[0].prompt).toContain('Evidence used')
+    expect(packets[0].evidence_retrieval_summary?.topDocuments[0]?.whyRetrieved?.length ?? 0).toBeGreaterThan(0)
+  })
+
+  it('retrieves evidence from a complete report object', async () => {
+    const graph = await discoverSource(await planRunRepo())
+    const packet = retrieveEvidenceFromReport('reopen plan run', report(graph), {
+      workflowName: 'Browse/reopen previous plan runs',
+      includeRuntime: true,
+      maxResults: 8
+    })
+
+    expect(packet.retrievedDocuments.length).toBeGreaterThan(0)
+    expect(packet.graphNodes.some((node) => /plan runs|reopen/i.test(node.label))).toBe(true)
   })
 
   it('suppresses missing-control findings when retrieved evidence contradicts them', async () => {

@@ -281,7 +281,7 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
       .filter(Boolean)
       .slice(0, 40)
   const screenshotPath = scenarioTrace?.screenshotPath ?? state?.screenshotPath ?? input.runtimeDomSnapshot?.screenshotPath
-  const evidencePacket = retrieveEvidence(`${pageIntent.screen_name} ${pageIntent.workflow_intent}`, {
+  const evidencePacket = retrieveEvidence(`${pageIntent.screen_name} ${pageIntent.nav_label} ${pageIntent.page_intent} ${pageIntent.workflow_intent}`, {
     sourceGraph: input.sourceGraph,
     crawlGraph: input.crawlGraph,
     runtimeDomSnapshot: input.runtimeDomSnapshot,
@@ -291,6 +291,7 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
     workflowName: pageIntent.workflow_intent,
     entityHints: pageIntent.evidence_keywords,
     includeRuntime: true,
+    includeScreenshots: true,
     includePriorRepairs: false,
     maxResults: 10
   })
