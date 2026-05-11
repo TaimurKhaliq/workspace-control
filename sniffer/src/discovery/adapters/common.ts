@@ -52,13 +52,19 @@ export function endpointStrings(content: string): string[] {
 
 export function normalizeEndpointReference(endpoint: string): string {
   let value = endpoint.trim()
+  value = value.replace(/\$\{[^}]*relativePath[^}]*\}/g, '{artifactPath}')
+  value = value.replace(/\$\{[^}]*query[^}]*\}/g, '')
   value = value.replace(/\$\{([^}]*)\}/g, (_, expression: string) => {
     const name = expression.match(/\b([A-Za-z_][\w]*)\b(?!\s*\()/)?.[1] ?? 'param'
     return `{${name}}`
   })
+  if (value.includes('/api/reports/latest/artifacts/')) {
+    value = value.replace(/\/api\/reports\/latest\/artifacts\/(?:\{[^}]+\}|[^/?#'"]+).*/, '/api/reports/latest/artifacts/{artifactPath}')
+  }
   value = value.replace(/\$\{[\s\S]*$/, '')
   value = value.replace(/[?#].*$/, '')
   value = value.replace(/\/+$/, '')
+  if (value === '/api/reports/latest/artifacts') return '/api/reports/latest/artifacts/{artifactPath}'
   return value === '/api' ? '/api/' : value
 }
 
@@ -72,7 +78,7 @@ export function isApiPrefixReference(endpoint: string): boolean {
       return false
     }
   }
-  return value === '/api' || value === '/api/'
+  return value === '/api' || value === '/api/' || /^\/api\/\{[^/}]+\}$/.test(value)
 }
 
 export function inferHttpMethod(content: string, fallback?: string): string | undefined {

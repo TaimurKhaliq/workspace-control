@@ -26,7 +26,9 @@ export class HtmlTemplateDiscoveryAdapter implements DiscoveryAdapter {
     if (detection.confidence <= 0) return result
     const templates = templateFiles(context.files)
     result.routes = dedupeRoutes(templates.flatMap((file) => discoverRoutes(file)))
-    result.components = templates.map((file) => ({ file: file.relative, name: relativeName(file.relative), sourceScope: file.sourceScope, discoveredBy: [this.id], framework: 'template', confidence: 0.45 }))
+    result.components = templates
+      .filter((file) => !isStaticHtmlShell(file))
+      .map((file) => ({ file: file.relative, name: relativeName(file.relative), sourceScope: file.sourceScope, discoveredBy: [this.id], framework: 'template', confidence: 0.45 }))
     result.forms = templates.flatMap((file) => discoverForms(file))
     result.uiSurfaces = templates.flatMap((file) => discoverUiSurfaces(file))
     result.sourceWorkflows = inferWorkflows(templates, result.forms)
@@ -84,8 +86,9 @@ function discoverForms(file: SourceFileContent): SourceForm[] {
 }
 
 function discoverUiSurfaces(file: SourceFileContent): UiSurface[] {
+  if (isStaticHtmlShell(file)) return []
   const headings = tagText(file.content, ['h1', 'h2', 'h3'])
-  const buttons = unique([...tagText(file.content, ['button']), ...attrValues(file.content, 'aria-label').filter((value) => /button|copy|submit|save|add|new|create|login|sign/i.test(value))])
+  const buttons = unique([...tagText(file.content, ['button']), ...attrValues(file.content, 'aria-label').filter((value) => /button|copy|submit|save|add|new|create|login|sign/i.test(value))]).filter(isLikelyButtonLabel)
   const inputs = unique([
     ...tagText(file.content, ['label']),
     ...attrValues(file.content, 'placeholder'),
@@ -102,6 +105,14 @@ function discoverUiSurfaces(file: SourceFileContent): UiSurface[] {
     surfaces.push(surface(file, wordsFromName(relativeName(file.relative)) || 'Template UI', [...buttons, ...inputs, ...routes].slice(0, 16), buttons, inputs, 0.42))
   }
   return surfaces
+}
+
+function isStaticHtmlShell(file: SourceFileContent): boolean {
+  if (path.basename(file.relative).toLowerCase() !== 'index.html') return false
+  const bodyText = cleanText(file.content)
+  const hasInteractive = /<(button|form|input|textarea|select|a)\b/i.test(file.content)
+  const hasAppMount = /<script\b[^>]*type=["']module["'][^>]*\bsrc=["'][^"']+["']|<div\b[^>]*\bid=["'](?:root|app)["']/i.test(file.content)
+  return hasAppMount && !hasInteractive && bodyText.split(/\s+/).filter(Boolean).length <= 8
 }
 
 function surface(file: SourceFileContent, displayName: string, evidence: string[], buttons: string[], inputs: string[], confidence: number): UiSurface {
@@ -178,6 +189,14 @@ function isBackendApiReference(endpoint: string): boolean {
   if (/^\/?(?:src|assets|static|public)\//i.test(endpoint)) return false
   if (/\.(?:js|mjs|ts|tsx|css|png|jpe?g|gif|svg|webp|ico|woff2?)(?:[?#].*)?$/i.test(endpoint)) return false
   return /^\/api\/.+/i.test(endpoint) || /^https?:\/\/[^/]+\/api\/.+/i.test(endpoint)
+}
+
+function isLikelyButtonLabel(value: string): boolean {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (!normalized) return false
+  if (/\bconfidence\b|\bevidence ids?\b|steps\/assertions|planned\s*·\s*executed|executed\s*·\s*issues/i.test(normalized)) return false
+  if (normalized.includes('·') && normalized.split(/\s+/).length > 5) return false
+  return normalized.length <= 96
 }
 
 function dedupeRoutes(routes: SourceRoute[]): SourceRoute[] {

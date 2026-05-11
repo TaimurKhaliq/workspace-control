@@ -188,13 +188,19 @@ async function main(): Promise<void> {
 
   if (command === 'audit') {
     const discoveryMode = discoveryModeArg(args)
+    emitProgress('phase_started', 'source discovery', 'Resolving target and discovering source context.')
     const ctx = await resolveTarget(args, { needRepo: discoveryMode !== 'runtime', needUrl: true })
     const repo = ctx.repo
     const url = ctx.url
     const reportDir = ctx.reportDir
     let sourceGraph = discoveryMode === 'runtime' ? emptySourceGraph(repo || url, ctx.project) : await discoverSource(repo, sourceDiscoveryOptions(args))
+    emitProgress('phase_completed', 'source discovery', 'Source discovery completed.')
+    emitProgress('phase_started', 'crawl', 'Crawling the running UI.')
     const crawlGraph = await crawlApp(url, crawlOptions(args, reportDir))
+    emitProgress('phase_completed', 'crawl', 'Runtime crawl completed.')
+    emitProgress('phase_started', 'runtime DOM discovery', 'Capturing runtime DOM snapshot.')
     const runtimeDomSnapshot = discoveryMode === 'source' ? undefined : await inspectUrl({ url, reportDir })
+    emitProgress('phase_completed', 'runtime DOM discovery', runtimeDomSnapshot ? 'Runtime DOM snapshot captured.' : 'Runtime DOM discovery skipped in source-only mode.')
     const productGoal = typeof args['product-goal'] === 'string' ? args['product-goal'] : undefined
     const intentMode = (typeof args['intent-mode'] === 'string' ? args['intent-mode'] : 'deterministic') as ProductIntentMode
     const productExperienceMode = productExperienceCriticModeArg(args)
@@ -203,8 +209,10 @@ async function main(): Promise<void> {
     const provider = args['use-llm'] || args['critic-mode'] === 'llm' || args['ux-critic'] === 'llm' || productExperienceMode === 'llm' || productExperienceMode === 'auto' || graphRefinerMode === 'llm' || graphRefinerMode === 'auto' || intentMode === 'llm' || intentMode === 'auto' || providerName === 'mock'
       ? createLlmProvider(providerName)
       : undefined
+    emitProgress('phase_started', 'graph refinement', 'Refining source graph structure.')
     const refinement = await runGraphStructureRefiner({ sourceGraph, mode: graphRefinerMode, provider, runtimeDomSnapshot })
     sourceGraph = refinement.sourceGraph
+    emitProgress('phase_completed', 'graph refinement', 'Source graph refinement completed.')
     const sourceOnlyAppProfile = inferAppProfile({ sourceGraph, productGoal })
     const deterministicAppProfile = inferAppProfile({ sourceGraph, crawlGraph, productGoal })
     const scenarioSlug = (typeof args.scenario === 'string' ? args.scenario : undefined) as ScenarioSlug | undefined
@@ -215,11 +223,14 @@ async function main(): Promise<void> {
       runtimeDomSnapshot,
       productGoal
     })
+    emitProgress('phase_started', 'scenario execution', 'Selecting and running built-in scenarios when applicable.')
     let scenarioRuns = shouldRunBuiltInScenarioPack({ scenarioSlug, appProfile: sourceOnlyAppProfile, scenarioSelection })
       ? await runScenarios({ url, reportDir, scenario: scenarioSlug as ScenarioSlug })
       : []
+    emitProgress('phase_completed', 'scenario execution', `Built-in scenario execution completed with ${scenarioRuns.length} run(s).`)
     let appIntent = buildDeterministicIntent(sourceGraph)
     const runtimeValidationSourceGraph = sourceGraphForRuntimeValidation(sourceGraph, scenarioSelection)
+    emitProgress('phase_started', 'product intent modeling', 'Building deterministic and optional LLM intent context.')
     if (args['use-llm']) {
       if (provider) appIntent = await provider.inferIntent({ sourceGraph, deterministicIntent: appIntent })
     }
@@ -244,6 +255,8 @@ async function main(): Promise<void> {
     let activeCrawlGraph = crawlGraph
     let runtimeWorkflowVerifications = await verifyRuntimeIntent({ url, sourceGraph: runtimeValidationSourceGraph })
     let candidateIssues = classifyRuntimeIssues(runtimeValidationSourceGraph, activeCrawlGraph, runtimeWorkflowVerifications)
+    emitProgress('phase_completed', 'product intent modeling', 'Initial product and runtime intent context prepared.')
+    emitProgress('phase_started', 'workflow critic', 'Running workflow critic and safe-action loop.')
     const criticMode = (typeof args['critic-mode'] === 'string' ? args['critic-mode'] : args['use-llm'] ? 'llm' : 'deterministic') as CriticMode
     const criticProvider: LlmCriticProvider | undefined = provider?.critiqueWorkflow ? provider as LlmCriticProvider : undefined
     let critic = await critiqueFindings({
@@ -273,6 +286,8 @@ async function main(): Promise<void> {
         })
       }
     }
+    emitProgress('phase_completed', 'workflow critic', `Workflow critic completed with ${critic.issues.length} issue(s).`)
+    emitProgress('phase_started', 'UX critic', 'Running deterministic UX/accessibility checks and optional UX critic.')
     const uxMode = (typeof args['ux-critic'] === 'string'
       ? args['ux-critic']
       : scenarioSlug ? 'deterministic' : 'off') as UxCriticMode
@@ -287,6 +302,7 @@ async function main(): Promise<void> {
       crawlGraph: activeCrawlGraph,
       candidateIssues: uxCandidateIssues
     })
+    emitProgress('phase_completed', 'UX critic', `UX critic completed with ${uxCritic.issues.length + uxCandidateIssues.length} candidate issue(s).`)
     const consistencyCheckEnabled = boolArg(args, 'consistency-check') || scenarioSlug === 'prompt-output-consistency'
     const promptsSource = typeof args['consistency-prompts'] === 'string' ? args['consistency-prompts'] : 'built-in'
     const promptConsistency = shouldRunPromptConsistency({ consistencyCheckEnabled, scenarioSlug, promptsSource, appProfile: sourceOnlyAppProfile, scenarioSelection })
@@ -299,6 +315,7 @@ async function main(): Promise<void> {
         useLlm: Boolean(provider?.critiquePromptConsistency && (criticMode === 'llm' || uxMode === 'llm' || args['use-llm']))
       })
       : undefined
+    emitProgress('phase_started', 'product intent modeling', 'Synthesizing product intent model.')
     const productIntent = await synthesizeProductIntent({
       sourceGraph,
       crawlGraph: activeCrawlGraph,
@@ -314,12 +331,18 @@ async function main(): Promise<void> {
       ? buildRuntimeAppModel({ snapshot: runtimeDomSnapshot, sourceGraph, appProfile, llmIntent: llmRuntimeIntent })
       : undefined
     const runtimeDomQualityIssues = runtimeDomSnapshot ? analyzeRuntimeDomQuality(runtimeDomSnapshot) : []
+    emitProgress('phase_completed', 'product intent modeling', 'Product intent model synthesized.')
+    emitProgress('phase_started', 'scenario generation', 'Generating generic/runtime scenarios.')
     const generatedScenarios = generateGenericScenarios({ appProfile, sourceGraph, runtimeAppModel, scenarioSelection })
+    emitProgress('phase_completed', 'scenario generation', `Generated ${generatedScenarios.length} scenario(s).`)
     if (shouldExecuteGeneratedScenarios(args, scenarioSlug, generatedScenarios.length)) {
+      emitProgress('phase_started', 'scenario execution', 'Executing generated scenarios.')
       const executedGenericRuns = await executeGeneratedScenarios({ url, reportDir, scenarios: generatedScenarios })
       const existingSlugs = new Set(scenarioRuns.map((run) => run.slug))
       scenarioRuns = [...scenarioRuns, ...executedGenericRuns.filter((run) => !existingSlugs.has(run.slug))]
+      emitProgress('phase_completed', 'scenario execution', `Generated scenario execution completed with ${executedGenericRuns.length} run(s).`)
     }
+    emitProgress('phase_started', 'product experience critic', 'Running Product Experience Critic.')
     const productExperiencePreflight = productExperienceMode === 'llm'
       ? await productExperienceProviderPreflight(provider)
       : undefined
@@ -339,8 +362,10 @@ async function main(): Promise<void> {
       reportDir,
       projectId: ctx.projectId
     })
+    emitProgress('phase_completed', 'product experience critic', `Product Experience Critic completed with ${productExperience.issues.length} issue(s).`)
     const scenarioRuntimeIssues = scenarioIssues(scenarioRuns)
     const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...runtimeDomQualityIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues, ...productExperience.issues]
+    emitProgress('phase_started', 'issue grouping', `Grouping ${rawFindings.length} raw finding(s).`)
     const shouldUseLlmTriage = (criticMode === 'llm' || uxMode === 'llm' || productExperienceMode === 'llm') && provider?.triageIssues
     let triagedIssues = shouldUseLlmTriage
       ? await provider.triageIssues!({
@@ -364,6 +389,8 @@ async function main(): Promise<void> {
         ...productIntent.issues.filter((issue) => !existingProductTitles.has(issue.title))
       ]
     }
+    emitProgress('phase_completed', 'issue grouping', `Issue grouping completed with ${triagedIssues.length} repair group(s).`)
+    emitProgress('phase_started', 'report writing', 'Writing latest report artifacts.')
     await writeAuditReports(reportDir, {
       sourceGraph,
       crawlGraph: activeCrawlGraph,
@@ -390,6 +417,7 @@ async function main(): Promise<void> {
     if (runtimeDomSnapshot) await writeRuntimeDomArtifacts(reportDir, runtimeDomSnapshot)
     await mirrorReportDirs(ctx)
     await updateProjectFromDiscovery(ctx, sourceGraph, appProfile, { discoveryMode, runtimeDomSnapshot, runtimeAppModel, generatedScenarios, crawlGraph: activeCrawlGraph })
+    emitProgress('phase_completed', 'report writing', 'Latest report artifacts written.')
     console.log(`Wrote ${path.join(reportDir, 'latest_report.md')}`)
     return
   }
@@ -724,6 +752,10 @@ async function updateProjectRuntime(ctx: TargetContext, snapshot: RuntimeDomSnap
 
 function productGoalArg(args: Record<string, string | boolean>): string | undefined {
   return typeof args['product-goal'] === 'string' ? args['product-goal'] : undefined
+}
+
+function emitProgress(type: 'phase_started' | 'phase_completed' | 'log' | 'error', phase: string, message: string): void {
+  console.log(`[sniffer-progress] ${JSON.stringify({ type, phase, message, timestamp: new Date().toISOString() })}`)
 }
 
 function discoveryModeArg(args: Record<string, string | boolean>): DiscoveryMode {

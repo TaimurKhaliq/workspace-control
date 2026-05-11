@@ -117,8 +117,12 @@ describe('discoverSource', () => {
     const graph = await discoverSource(repo)
     const workflowNames = graph.sourceWorkflows.map((workflow) => workflow.name)
 
+    expect(graph.workflowInferenceIntegrity?.appSubtype).toBe('sniffer_dashboard')
     expect(workflowNames).not.toContain('View plan bundle tabs')
     expect(workflowNames).not.toContain('Copy handoff prompt')
+    expect(workflowNames).not.toContain('Refresh discovery')
+    expect(workflowNames).not.toContain('Refresh learning')
+    expect(workflowNames).not.toContain('Generate plan bundle')
     expect(workflowNames).toEqual(expect.arrayContaining([
       'Run Sniffer audit',
       'Inspect report sections',
@@ -128,6 +132,32 @@ describe('discoverSource', () => {
       'Review agent model',
       'Copy repair/fix prompts'
     ]))
+    expect(graph.workflowInferenceIntegrity?.suppressedWorkflows.map((workflow) => workflow.workflowName)).toContain('Refresh discovery')
+    expect(graph.workflowInferenceIntegrity?.suppressedWorkflows.find((workflow) => workflow.workflowName === 'Refresh discovery')?.reason).toMatch(/workspace_control workflow vocabulary does not match appSubtype=sniffer_dashboard|low confidence/)
+  })
+
+  it('does not emit workspace-control discovery workflows for generic discovery text', async () => {
+    const repo = await tempRepo()
+    await writeFile(path.join(repo, 'package.json'), JSON.stringify({
+      name: 'generic-dashboard',
+      scripts: { dev: 'vite' },
+      dependencies: { react: '^18.0.0', vite: '^5.0.0' }
+    }))
+    await mkdir(path.join(repo, 'src'), { recursive: true })
+    await writeFile(path.join(repo, 'src', 'App.tsx'), `
+      export default function App() {
+        return <main>
+          <h1>Discovery Console</h1>
+          <p>Review source discovery results after an analysis run.</p>
+        </main>
+      }
+    `)
+
+    const graph = await discoverSource(repo)
+
+    expect(graph.sourceWorkflows.map((workflow) => workflow.name)).not.toContain('Refresh discovery')
+    expect(graph.workflowInferenceIntegrity?.suppressedWorkflows.map((workflow) => workflow.workflowName)).toContain('Refresh discovery')
+    expect(graph.workflowInferenceIntegrity?.suppressedWorkflows.find((workflow) => workflow.workflowName === 'Refresh discovery')?.workflowKind).toBe('user_workflow')
   })
 
   it('normalizes malformed template literal API paths and suppresses broad API prefixes', async () => {
@@ -137,9 +167,52 @@ describe('discoverSource', () => {
     const endpoints = graph.apiCalls.map((call) => call.endpoint)
 
     expect(endpoints).toContain('/api/repairs/history')
+    expect(endpoints).toContain('/api/reports/latest/artifacts/{artifactPath}')
+    expect(endpoints).not.toContain('/api/reports/latest/artifacts')
     expect(endpoints.some((endpoint) => endpoint.includes('${query'))).toBe(false)
+    expect(endpoints.some((endpoint) => endpoint.includes('{parsed}'))).toBe(false)
     expect(endpoints).not.toContain('/api/')
     expect(endpoints).not.toContain('/api')
+  })
+
+  it('classifies static index.html as an entrypoint shell, not a component or surface', async () => {
+    const repo = await monorepoRepo()
+
+    const graph = await discoverSource(repo)
+
+    expect(graph.components.map((component) => component.file)).not.toContain('ui/index.html')
+    expect(graph.uiSurfaces.map((surface) => surface.file)).not.toContain('ui/index.html')
+    expect(graph.sourceInventory?.facts.some((fact) => fact.kind === 'entrypoint_document' && fact.filePath === 'ui/index.html')).toBe(true)
+    expect(graph.sourceInventory?.facts.some((fact) => fact.kind === 'api_call' && fact.value.includes('/src/main.tsx'))).toBe(false)
+  })
+
+  it('does not classify metadata text as related buttons', async () => {
+    const repo = await tempRepo()
+    await writeFile(path.join(repo, 'package.json'), JSON.stringify({
+      name: 'metadata-buttons',
+      scripts: { dev: 'vite' },
+      dependencies: { react: '^18.0.0', vite: '^5.0.0' }
+    }))
+    await mkdir(path.join(repo, 'src'), { recursive: true })
+    await writeFile(path.join(repo, 'src', 'App.tsx'), `
+      export default function App() {
+        return <main>
+          <h1>Report Viewer</h1>
+          <button>· confidence evidence ids</button>
+          <button>steps/assertions · screenshots</button>
+          <button>· planned · executed · issues</button>
+          <button>Copy JSON</button>
+        </main>
+      }
+    `)
+
+    const graph = await discoverSource(repo)
+    const buttons = graph.uiSurfaces.flatMap((surface) => surface.relatedButtons)
+
+    expect(buttons).toContain('Copy JSON')
+    expect(buttons).not.toContain('· confidence evidence ids')
+    expect(buttons).not.toContain('steps/assertions · screenshots')
+    expect(buttons).not.toContain('· planned · executed · issues')
   })
 
   it('can include fixture surfaces when explicitly requested', async () => {
@@ -167,6 +240,8 @@ describe('discoverSource', () => {
       export function createWorkspace(name: string) { return request('/api/workspaces', { method: 'POST', body: JSON.stringify({ name }) }) }
       export function addRepo(workspaceId: string) { return request(\`/api/workspaces/\${workspaceId}/repos\`, { method: 'POST' }) }
       export function validateRepoTarget() { return request('/api/repos/validate-target', { method: 'POST' }) }
+      export function discoverRepo() { return request('/api/repos/petclinic/discover', { method: 'POST' }) }
+      export function refreshLearning() { return request('/api/repos/petclinic/learning-status', { method: 'POST' }) }
       export function generatePlanBundle(workspaceId: string) { return request(\`/api/workspaces/\${workspaceId}/plan-bundles\`, { method: 'POST' }) }
     `)
     await writeFile(path.join(repo, 'src', 'App.tsx'), `
@@ -192,6 +267,8 @@ describe('discoverSource', () => {
             <h2>Discovery targets</h2>
             <label>Repository target id <input placeholder="petclinic-react" value={repoTargetId} /></label>
             <button>Add repo</button>
+            <button>Discover</button>
+            <button>Refresh learning</button>
           </form>
           <form onSubmit={onGeneratePlan}>
             <h2>Prompt composer</h2>
@@ -227,10 +304,13 @@ describe('discoverSource', () => {
       'Create/select workspace',
       'Add repo',
       'Validate repo path',
+      'Refresh discovery',
+      'Refresh learning',
       'Generate plan bundle',
       'View plan bundle tabs',
       'Copy handoff prompt'
     ]))
+    expect(graph.workflowInferenceIntegrity?.appSubtype).toBe('workspace_control')
     expect(graph.apiCalls.map((call) => call.endpoint)).toEqual(expect.arrayContaining([
       '/api/workspaces',
       '/api/repos/validate-target'
@@ -398,6 +478,7 @@ async function monorepoRepo(): Promise<string> {
           <label>App URL <input value="" onChange={(event) => onLauncherChange({ url: event.target.value })} placeholder="http://localhost:5173" /></label>
           <label>Product goal <textarea value="" onChange={(event) => onLauncherChange({ productGoal: event.target.value })} rows={3} aria-describedby="product-goal-help" /></label>
         </form>
+        <p>Source discovery and runtime discovery run during audits.</p>
         <button onClick={onRunAudit}>Run Audit</button>
         <button>Run Consistency Check</button>
         <button>Generate Fix Packets</button>
@@ -414,6 +495,7 @@ async function monorepoRepo(): Promise<string> {
     export function sourceInventory() { return request('/api/reports/latest/source-inventory') }
     export function uiIntentGraph() { return request('/api/reports/latest/ui-intent-graph') }
     export function repairHistory(query: string) { return request(\`/api/repairs/history\${query ? \`?\${query}\` : ''}\`) }
+    export function artifactUrl(parsed: { relativePath: string }, query: string) { return request(\`/api/reports/latest/artifacts/\${encodeURIComponent(parsed.relativePath)}\${query ? \`?\${query}\` : ''}\`) }
     export function startRepair(issueId: string) { return request('/api/repairs/start', { method: 'POST', body: JSON.stringify({ issueId }) }) }
     export function helperPrefix(path: string) { return path.startsWith('/api/') ? path : \`/api/\${path}\` }
   `)

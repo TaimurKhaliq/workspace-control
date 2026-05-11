@@ -46,6 +46,18 @@ export function buildSourceInventory(input: {
       confidence: 1,
       extractionMethod: 'deterministic'
     })
+    if (isStaticHtmlShell(file)) {
+      addFact({
+        kind: 'entrypoint_document',
+        value: file.relative,
+        source: 'source_inventory',
+        filePath: file.relative,
+        sourceScope: file.sourceScope,
+        snippet: firstMeaningfulLine(file.content),
+        confidence: 0.95,
+        extractionMethod: 'deterministic'
+      })
+    }
     return {
       path: file.relative,
       extension: path.extname(file.relative),
@@ -151,7 +163,7 @@ export function buildSourceInventory(input: {
     packageBuildSignals: facts.filter((fact) => fact.kind === 'package_name' || fact.kind === 'build_tool_signal' || fact.kind === 'package_script'),
     rawExtractedSymbols: facts.filter((fact) => ['component', 'page', 'state_variable', 'handler', 'submit_handler'].includes(fact.kind)),
     rawRoutes: facts.filter((fact) => fact.kind === 'route'),
-    rawTemplates: facts.filter((fact) => ['ui_surface_label', 'button_label', 'input_label', 'form_control', 'action_control', 'static_asset_reference'].includes(fact.kind)),
+    rawTemplates: facts.filter((fact) => ['ui_surface_label', 'button_label', 'input_label', 'form_control', 'action_control', 'static_asset_reference', 'entrypoint_document'].includes(fact.kind)),
     rawHandlers: facts.filter((fact) => fact.kind === 'handler' || fact.kind === 'submit_handler'),
     rawApiCalls: facts.filter((fact) => fact.kind === 'api_call'),
     provenance: facts.filter((fact) => fact.filePath || fact.source === 'package.json'),
@@ -495,6 +507,15 @@ function extractStaticAssetReferences(file: SourceFileContent): string[] {
     ...[...file.content.matchAll(/<link\b[^>]*\bhref=["']([^"']+)["'][^>]*>/gi)].map((match) => match[1]),
     ...[...file.content.matchAll(/\b(?:src|href)=["']([^"']+\.(?:js|mjs|ts|tsx|css|png|jpe?g|gif|svg|webp|ico|woff2?))["']/gi)].map((match) => match[1])
   ].filter(isStaticAssetReference))
+}
+
+function isStaticHtmlShell(file: SourceFileContent): boolean {
+  if (path.basename(file.relative).toLowerCase() !== 'index.html') return false
+  const content = file.content
+  const visibleText = cleanControlText(content)
+  const hasInteractive = /<(button|form|input|textarea|select|a)\b/i.test(content)
+  const hasAppMount = /<script\b[^>]*type=["']module["'][^>]*\bsrc=["'][^"']+["']|<div\b[^>]*\bid=["'](?:root|app)["']/i.test(content)
+  return hasAppMount && !hasInteractive && visibleText.split(/\s+/).filter(Boolean).length <= 8
 }
 
 function isStaticAssetReference(value: string): boolean {

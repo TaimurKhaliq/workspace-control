@@ -169,6 +169,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderWorkflowDiscoverySources(report),
     '',
+    '## Workflow Inference Integrity',
+    '',
+    renderWorkflowInferenceIntegrity(report),
+    '',
     '## Runtime Summary',
     '',
     `- Start URL: ${report.crawlGraph.startUrl}`,
@@ -663,6 +667,33 @@ function renderWorkflowDiscoverySources(report: SnifferReport): string {
     `- LLM workflows: ${summary?.llm_workflows_count ?? report.llmRuntimeIntent?.workflows.length ?? 0}`,
     `- Generated scenarios: ${summary?.generated_scenarios_count ?? report.generatedScenarios?.length ?? 0}`,
     `- Executed scenarios: ${summary?.executed_scenarios_count ?? report.scenarioRuns?.length ?? 0}`
+  ].join('\n')
+}
+
+function renderWorkflowInferenceIntegrity(report: SnifferReport): string {
+  const integrity = report.sourceGraph.workflowInferenceIntegrity
+  if (!integrity) return 'No workflow inference integrity metadata recorded.'
+  const emitted = integrity.emittedWorkflows.slice(0, 12).map((workflow) =>
+    `- ${workflow.workflowName} (${workflow.matchedVocabularyPack}, ${workflow.workflowKind ?? 'user_workflow'}, confidence ${workflow.confidence})`
+  )
+  const suppressed = integrity.suppressedWorkflows.slice(0, 12).map((workflow) => [
+    `- ${workflow.workflowName}`,
+    `  - Reason: ${workflow.reason}`,
+    `  - Matched vocabulary: ${workflow.matchedVocabularyPack}`,
+    `  - Evidence: ${workflow.matchedEvidence.join('; ') || 'none'}`
+  ].join('\n'))
+  return [
+    `- App subtype: ${integrity.appSubtype}`,
+    `- Workflow vocabulary packs: ${integrity.selectedVocabularyPacks.join(', ') || 'none'}`,
+    `- Emitted workflows: ${integrity.emittedWorkflows.length}`,
+    `- Suppressed workflows: ${integrity.suppressedWorkflows.length}`,
+    `- App-specific mismatches prevented: ${integrity.appSpecificWorkflowMismatchesPrevented}`,
+    '',
+    'Emitted:',
+    emitted.length ? emitted.join('\n') : '- none',
+    '',
+    'Suppressed:',
+    suppressed.length ? suppressed.join('\n') : '- none'
   ].join('\n')
 }
 

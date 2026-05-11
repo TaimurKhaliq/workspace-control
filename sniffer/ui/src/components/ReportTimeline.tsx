@@ -17,8 +17,26 @@ export function ReportTimeline({ report, fixPackets, run, projectId, projectName
               <h2>{run.phase || 'Waiting for Sniffer'}</h2>
               <p className="muted">Current run: {run.runId}</p>
             </div>
-            <span className={`status-chip ${run.status === 'error' ? 'danger' : run.status === 'success' ? 'good' : 'warn'}`}>{run.status}</span>
+            <span className={`status-chip ${run.status === 'failed' ? 'danger' : run.status === 'succeeded' ? 'good' : 'warn'}`}>{run.status}</span>
           </div>
+          {run.errorSummary && <div className="alert danger" role="alert">{run.errorSummary}</div>}
+          {run.command?.length && (
+            <details className="command-preview">
+              <summary>Command</summary>
+              <pre>{run.command.join(' ')}</pre>
+            </details>
+          )}
+          {run.events?.length ? (
+            <div className="timeline compact" aria-label="Live Sniffer phases">
+              {run.events.filter((event) => event.type !== 'log').slice(-12).map((event, index) => (
+                <div key={`${event.timestamp}-${index}`} className={`timeline-step ${event.type === 'error' ? 'failed' : event.type === 'phase_completed' ? 'done' : event.phase === run.phase ? 'active' : ''}`}>
+                  <span />
+                  <strong>{event.phase}</strong>
+                  <small>{event.message}</small>
+                </div>
+              ))}
+            </div>
+          ) : null}
           <div className="run-log-list">
             {(run.logs.length ? run.logs : ['No logs yet.']).slice(-8).map((line, index) => <pre key={`${index}-${line}`}>{line}</pre>)}
           </div>

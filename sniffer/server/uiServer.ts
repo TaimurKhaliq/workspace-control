@@ -10,6 +10,14 @@ import { latestReportDir, projectLatestReportDir } from '../src/reporting/paths.
 import { generateFixPackets } from '../src/repair/fixPackets.js'
 import type { SnifferReport } from '../src/types.js'
 import { resolveReportArtifact } from './artifacts.js'
+import {
+  buildDashboardAuditCommand,
+  isOpenAICompatibleProviderConfigured,
+  parseProgressEvent,
+  type DashboardAuditRequest,
+  type DashboardRunEvent,
+  type DashboardRunStatus
+} from './auditRunner.js'
 import { reportSlicePayload, type ReportSliceName } from './reportSlices.js'
 import {
   attachRepairStatuses,
@@ -26,34 +34,23 @@ import {
 
 loadSnifferEnv()
 
-type RunStatus = 'queued' | 'running' | 'success' | 'error'
-
-interface AuditRequest {
-  projectId?: string
-  repoPath?: string
-  url?: string
-  productGoal?: string
-  scenario?: string
-  criticMode?: string
-  uxCritic?: string
-  intentMode?: string
-  provider?: string
-  discoveryMode?: string
-  maxIterations?: number
-  consistencyCheck?: boolean
-}
+type RunStatus = DashboardRunStatus
 
 interface RunRecord {
   runId: string
   status: RunStatus
   phase: string
   command: string[]
+  events: DashboardRunEvent[]
   logs: string[]
   stdout: string
   stderr: string
+  stdoutTail: string
+  stderrTail: string
   startedAt: string
-  completedAt?: string
+  endedAt?: string
   exitCode?: number | null
+  errorSummary?: string
   reportPath?: string
   projectId?: string
 }
@@ -247,31 +244,20 @@ async function startAudit(req: IncomingMessage, res: ServerResponse): Promise<vo
   if ([...runs.values()].some((run) => run.status === 'running')) {
     return json(res, 409, { error: 'A Sniffer run is already active.' })
   }
-  const body = await readJsonBody<AuditRequest>(req)
+  const body = await readJsonBody<DashboardAuditRequest>(req)
   if (!body.projectId && !body.repoPath?.trim()) return json(res, 400, { error: 'repoPath is required' })
   if (!body.projectId && !body.url?.trim()) return json(res, 400, { error: 'url is required' })
   const reportPath = body.projectId
     ? path.join(projectLatestReportDir(body.projectId, snifferRoot), 'latest_report.json')
     : latestReportPath
-  const args = [
-    'audit',
-    '--critic-mode', body.criticMode ?? 'deterministic',
-    '--ux-critic', body.uxCritic ?? 'deterministic',
-    '--intent-mode', body.intentMode ?? 'deterministic',
-    '--discovery-mode', body.discoveryMode ?? 'hybrid',
-    '--provider', body.provider ?? 'auto',
-    '--max-iterations', String(body.maxIterations ?? 3)
-  ]
-  if (body.projectId) {
-    args.splice(1, 0, '--project', body.projectId)
-  } else {
-    args.splice(1, 0, '--repo', body.repoPath ?? '', '--url', body.url ?? '')
+  let built
+  try {
+    built = buildDashboardAuditCommand(body, { providerConfigured: isOpenAICompatibleProviderConfigured(process.env) })
+  } catch (error) {
+    return json(res, 400, { error: error instanceof Error ? error.message : String(error) })
   }
-  if (body.scenario && body.scenario !== 'off' && body.scenario !== 'selected') args.push('--scenario', body.scenario)
-  if (body.consistencyCheck) args.push('--consistency-check')
-  if (body.productGoal?.trim()) args.push('--product-goal', body.productGoal.trim())
-  const run = spawnCliRun('audit', args, reportPath, body.projectId)
-  return json(res, 202, { runId: run.runId })
+  const run = spawnCliRun('audit', built.cliArgs, reportPath, body.projectId)
+  return json(res, 202, { runId: run.runId, command: run.command, auditDepth: built.auditDepth })
 }
 
 function startGenerateFixes(res: ServerResponse, reportPath: string, projectId?: string, issueIds?: string[]): void {
@@ -380,10 +366,10 @@ async function startRepairVerification(req: IncomingMessage, res: ServerResponse
 async function startRepairAuditRerun(req: IncomingMessage, res: ServerResponse, repairRunId: string): Promise<void> {
   const repair = repairRuns.get(repairRunId)
   if (!repair) return json(res, 404, { error: 'Repair run not found' })
-  const body = await readJsonBody<Partial<AuditRequest>>(req)
+  const body = await readJsonBody<Partial<DashboardAuditRequest>>(req)
   const report = await readJsonFile<SnifferReport>(repair.reportPath).catch(() => undefined)
   const project = repair.project ? await getProject(repair.project, snifferRoot).catch(() => undefined) : undefined
-  const auditBody: AuditRequest = project
+  const auditBody: DashboardAuditRequest = project
     ? { ...body, projectId: project.id, repoPath: project.repoPath, url: project.appUrl, scenario: body.scenario ?? 'all' }
     : {
       ...body,
@@ -403,9 +389,17 @@ function spawnCliRun(phase: string, cliArgs: string[], reportPath = latestReport
     status: 'running',
     phase: phaseLabel(phase),
     command,
+    events: [{
+      type: 'phase_started',
+      phase: phaseLabel(phase),
+      message: `${phaseLabel(phase)} queued`,
+      timestamp: new Date().toISOString()
+    }],
     logs: [`$ ${command.map(shellQuote).join(' ')}`],
     stdout: '',
     stderr: '',
+    stdoutTail: '',
+    stderrTail: '',
     startedAt: new Date().toISOString(),
     reportPath,
     projectId
@@ -422,18 +416,28 @@ function spawnCliRun(phase: string, cliArgs: string[], reportPath = latestReport
   child.stdout.on('data', (chunk) => appendRunOutput(run, 'stdout', chunk.toString()))
   child.stderr.on('data', (chunk) => appendRunOutput(run, 'stderr', chunk.toString()))
   child.on('error', (error) => {
-    run.status = 'error'
+    run.status = 'failed'
     run.phase = 'Error'
     run.stderr += `${error.message}\n`
+    run.stderrTail = tail(run.stderr)
     run.logs.push(error.message)
-    run.completedAt = new Date().toISOString()
+    run.errorSummary = error.message
+    run.events.push({ type: 'error', phase: 'Error', message: error.message, timestamp: new Date().toISOString() })
+    run.endedAt = new Date().toISOString()
     void writeRunLog(run)
   })
   child.on('close', (code) => {
     run.exitCode = code
-    run.status = code === 0 ? 'success' : 'error'
+    run.status = code === 0 ? 'succeeded' : 'failed'
     run.phase = code === 0 ? 'Done' : 'Error'
-    run.completedAt = new Date().toISOString()
+    run.endedAt = new Date().toISOString()
+    if (code !== 0) run.errorSummary = tail(run.stderr || `Process exited with code ${code}`, 800)
+    run.events.push({
+      type: code === 0 ? 'phase_completed' : 'error',
+      phase: run.phase,
+      message: `Process exited with code ${code}`,
+      timestamp: new Date().toISOString()
+    })
     run.logs.push(`Process exited with code ${code}`)
     void writeRunLog(run)
   })
@@ -541,12 +545,25 @@ function publicRepairRun(run: RepairRunRecord): RepairRunRecord {
 
 function appendRunOutput(run: RunRecord, stream: 'stdout' | 'stderr', text: string): void {
   run[stream] += text
+  if (stream === 'stdout') run.stdoutTail = tail(run.stdout)
+  else run.stderrTail = tail(run.stderr)
   const lines = text.split(/\r?\n/).filter(Boolean)
   for (const line of lines) {
+    const event = parseProgressEvent(line)
+    if (event) {
+      run.events.push(event)
+      if (event.type === 'phase_started' || event.type === 'phase_completed') run.phase = event.phase
+      if (event.type === 'error') {
+        run.phase = event.phase
+        run.errorSummary = event.message
+      }
+      continue
+    }
     run.logs.push(line)
     const phase = phaseFromLog(line)
     if (phase) run.phase = phase
   }
+  run.events = run.events.slice(-300)
   run.logs = run.logs.slice(-250)
   void writeRunLog(run)
 }
@@ -562,11 +579,12 @@ async function statusPayload(): Promise<Record<string, unknown>> {
   const pkg = JSON.parse(await readFile(path.join(snifferRoot, 'package.json'), 'utf8')) as { version?: string }
   const latest = await readJsonFile<Record<string, unknown>>(latestReportPath).catch(() => undefined)
   const projects = await listProjects(snifferRoot).catch(() => [])
+  const providerConfigured = isOpenAICompatibleProviderConfigured(process.env)
   return {
     version: pkg.version ?? '0.0.0',
     status: [...runs.values()].some((run) => run.status === 'running') ? 'running' : 'idle',
     provider: {
-      configured: Boolean(process.env.SNIFFER_LLM_API_KEY && process.env.SNIFFER_LLM_BASE_URL && process.env.SNIFFER_LLM_MODEL),
+      configured: providerConfigured,
       baseUrlConfigured: Boolean(process.env.SNIFFER_LLM_BASE_URL),
       model: process.env.SNIFFER_LLM_MODEL ?? null,
       apiStyle: process.env.SNIFFER_LLM_API_STYLE ?? 'auto'

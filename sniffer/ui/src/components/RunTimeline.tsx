@@ -19,7 +19,7 @@ export function RunTimeline({ run }: { run?: RunRecord | null }) {
           <p className="eyebrow">Live run</p>
           <h2>{run ? run.phase : 'No active run'}</h2>
         </div>
-        {run && <span className={`status-chip ${run.status === 'error' ? 'danger' : run.status === 'success' ? 'good' : 'warn'}`}>{run.status}</span>}
+        {run && <span className={`status-chip ${run.status === 'failed' ? 'danger' : run.status === 'succeeded' ? 'good' : 'warn'}`}>{run.status}</span>}
       </div>
       <div className="timeline" aria-label="Sniffer run phases">
         {phases.map((phase) => (
@@ -41,7 +41,7 @@ export function RunTimeline({ run }: { run?: RunRecord | null }) {
 function phaseClass(run: RunRecord | null | undefined, phase: string): string {
   if (!run) return 'timeline-step'
   if (run.phase === phase) return 'timeline-step active'
-  if (run.status === 'success') return 'timeline-step done'
+  if (run.status === 'succeeded') return 'timeline-step done'
   const currentIndex = phases.indexOf(run.phase)
   const index = phases.indexOf(phase)
   return currentIndex >= 0 && index < currentIndex ? 'timeline-step done' : 'timeline-step'

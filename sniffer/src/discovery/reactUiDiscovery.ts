@@ -282,7 +282,7 @@ function jsxTagText(content: string, tags: string[]): string[] {
 function discoverButtonText(content: string): string[] {
   const direct = jsxTagText(content, ['button'])
   const title = [...content.matchAll(/<button\b[^>]*\btitle=["']([^"']+)["'][^>]*>/gi)].map((match) => cleanText(match[1]))
-  return unique([...direct, ...title].filter(isHumanText))
+  return unique([...direct, ...title].filter(isLikelyButtonLabel))
 }
 
 function discoverTabs(content: string): string[] {
@@ -360,6 +360,15 @@ function cleanText(value: string): string {
 
 function isHumanText(value: string): boolean {
   return /[A-Za-z]/.test(value) && !/\w+\([^)]*\)/.test(value) && !/[{}]/.test(value)
+}
+
+function isLikelyButtonLabel(value: string): boolean {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (!normalized || !isHumanText(normalized)) return false
+  if (/\bconfidence\b|\bevidence ids?\b|steps\/assertions|planned\s*·\s*executed|executed\s*·\s*issues/i.test(normalized)) return false
+  if (normalized.includes('·') && normalized.split(/\s+/).length > 5) return false
+  if (normalized.length > 96) return false
+  return true
 }
 
 function includesLoose(value: string, term: string): boolean {

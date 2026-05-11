@@ -42,6 +42,7 @@ export interface SourceGraph {
   sourceInventory?: SourceInventory
   uiIntentGraph?: UIIntentGraph
   graphRefinement?: GraphRefinementResult
+  workflowInferenceIntegrity?: WorkflowInferenceIntegrity
   routes: SourceRoute[]
   pages: SourceFileSummary[]
   components: SourceFileSummary[]
@@ -280,6 +281,31 @@ export interface WorkflowDiscoverySummary {
   executed_scenarios_count?: number
 }
 
+export type WorkflowVocabularyPack = 'workspace_control' | 'sniffer_dashboard' | 'generic' | 'unknown'
+export type WorkflowKind = 'user_workflow' | 'internal_engine_step' | 'support_api_dependency' | 'debug_evidence'
+
+export interface WorkflowInferenceRecord {
+  workflowName: string
+  source: string
+  appSubtype: AppSubtype | 'unknown'
+  matchedVocabularyPack: WorkflowVocabularyPack
+  requiredEvidence: string[]
+  matchedEvidence: string[]
+  missingEvidence: string[]
+  confidence: number
+  reason: string
+  sourceFiles?: string[]
+  workflowKind?: WorkflowKind
+}
+
+export interface WorkflowInferenceIntegrity {
+  appSubtype: AppSubtype | 'unknown'
+  selectedVocabularyPacks: WorkflowVocabularyPack[]
+  emittedWorkflows: WorkflowInferenceRecord[]
+  suppressedWorkflows: WorkflowInferenceRecord[]
+  appSpecificWorkflowMismatchesPrevented: number
+}
+
 export interface SourceRoute {
   path: string
   file: string
@@ -434,6 +460,13 @@ export interface SourceWorkflow {
   evidence: string[]
   likelyUserActions: string[]
   confidence: number
+  workflowKind?: WorkflowKind
+  appSubtype?: AppSubtype | 'unknown'
+  matchedVocabularyPack?: WorkflowVocabularyPack
+  requiredEvidence?: string[]
+  matchedEvidence?: string[]
+  missingEvidence?: string[]
+  reason?: string
   sourceScope?: SourceScope
   discoveredBy?: string[]
   framework?: string

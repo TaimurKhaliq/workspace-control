@@ -74,6 +74,8 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
 
   const browser = await chromium.launch()
   const page = await browser.newPage()
+  page.setDefaultTimeout(5_000)
+  page.setDefaultNavigationTimeout(10_000)
   const consoleErrors: RuntimeMessage[] = []
   const networkFailures: NetworkFailure[] = []
   const states: CrawlState[] = []
@@ -115,118 +117,132 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
     })
   })
 
-  await page.goto(url, { waitUntil: 'domcontentloaded' })
-  let stale = 0
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10_000 })
+    let stale = 0
 
-  for (let actionIndex = 0; actionIndex <= maxActions && Date.now() < deadline; actionIndex += 1) {
-    const captured = applyRouteHint(await captureState(page), routeHintsByStateHash)
-    const existing = stateByHash.get(captured.hash)
-    const state = existing ?? captured
-    if (existing) {
-      stale += 1
-      existing.duplicateCount = (existing.duplicateCount ?? 1) + 1
-    } else {
-      stale = 0
-      state.id = `state-${states.length + 1}`
-      state.sequenceNumber = states.length + 1
-      state.duplicateCount = 1
-      states.push(state)
-      stateByHash.set(state.hash, state)
-      const screenshotPath = path.join(screenshotsDir, `state-${states.length}.png`)
-      const capturedScreenshot = await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
-      if (capturedScreenshot) {
-        screenshots.push(screenshotPath)
-        state.screenshotPath = screenshotPath
+    for (let actionIndex = 0; actionIndex <= maxActions && Date.now() < deadline; actionIndex += 1) {
+      let captured: CrawlState
+      try {
+        captured = applyRouteHint(await withTimeout(captureState(page), 5_000, 'state capture timed out'), routeHintsByStateHash)
+      } catch (error) {
+        consoleErrors.push({ text: `Crawler state capture failed: ${errorMessage(error)}`, location: safePageUrl(page, url) })
+        break
       }
-      routeVisitCounts.set(stateRouteKey(state), (routeVisitCounts.get(stateRouteKey(state)) ?? 0) + 1)
-    }
-    if (stale >= staleIterations) break
-    if (states.length >= maxStates) break
+      const existing = stateByHash.get(captured.hash)
+      const state = existing ?? captured
+      if (existing) {
+        stale += 1
+        existing.duplicateCount = (existing.duplicateCount ?? 1) + 1
+      } else {
+        stale = 0
+        state.id = `state-${states.length + 1}`
+        state.sequenceNumber = states.length + 1
+        state.duplicateCount = 1
+        states.push(state)
+        stateByHash.set(state.hash, state)
+        const screenshotPath = path.join(screenshotsDir, `state-${states.length}.png`)
+        const capturedScreenshot = await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
+        if (capturedScreenshot) {
+          screenshots.push(screenshotPath)
+          state.screenshotPath = screenshotPath
+        }
+        routeVisitCounts.set(stateRouteKey(state), (routeVisitCounts.get(stateRouteKey(state)) ?? 0) + 1)
+      }
+      if (stale >= staleIterations) break
+      if (states.length >= maxStates) break
 
-    const candidates = buildCrawlCandidates(captured, {
-      attemptedActionKeys,
-      ineffectiveActionKeys,
-      routeVisitCounts,
-      maxPerRoute,
-      maxDuplicateActions,
-      allowedOrigin: new URL(url).origin
-    })
-    recordSkippedFrontier(captured, candidates.skipped, unvisitedSafeActions)
-    const candidate = candidates.next
-    if (!candidate) break
-
-    const urlBefore = page.url()
-    const screenshotBefore = state.screenshotPath
-    const sequenceNumber = actions.length + 1
-    let stateHashAfter: string | undefined
-    let screenshotAfter: string | undefined
-    try {
-      if (candidate.actionType === 'type') await typeCandidate(page, candidate.element)
-      else await clickCandidate(page, candidate.element)
-      await page.waitForLoadState('domcontentloaded', { timeout: 2_000 }).catch(() => undefined)
-      await page.waitForTimeout(200)
-      const after = applyRouteHint(await captureState(page), routeHintsByStateHash)
-      stateHashAfter = after.hash
-      if (candidate.targetRoute && candidate.targetRoute !== routeKey(urlBefore)) {
-        routeHintsByStateHash.set(after.hash, candidate.targetRoute)
-        applyRouteHint(after, routeHintsByStateHash)
-      }
-      const screenshotAfterPath = path.join(screenshotsDir, `action-${sequenceNumber}-after.png`)
-      screenshotAfter = await page.screenshot({ path: screenshotAfterPath, fullPage: true, timeout: 5_000 }).then(() => screenshotAfterPath).catch(() => undefined)
-      const changedState = after.hash !== captured.hash || page.url() !== urlBefore
-      if (!changedState) {
-        ineffectiveActionKeys.set(candidate.ineffectiveKey, (ineffectiveActionKeys.get(candidate.ineffectiveKey) ?? 0) + 1)
-      }
-      attemptedActionKeys.add(candidate.actionKey)
-      actions.push({
-        id: `action-${sequenceNumber}`,
-        sequenceNumber,
-        type: candidate.actionType,
-        actionType: candidate.actionType,
-        label: candidate.label,
-        role: candidate.role,
-        locatorUsed: candidate.locatorUsed,
-        target: candidate.target,
-        urlBefore,
-        urlAfter: page.url(),
-        stateHashBefore: captured.hash,
-        stateHashAfter,
-        changedState,
-        safe: true,
-        safeReason: candidate.safeReason,
-        screenshotBefore,
-        screenshotAfter,
-        reason: candidate.safeReason
+      const candidates = buildCrawlCandidates(captured, {
+        attemptedActionKeys,
+        ineffectiveActionKeys,
+        routeVisitCounts,
+        maxPerRoute,
+        maxDuplicateActions,
+        allowedOrigin: new URL(url).origin
       })
-    } catch (error) {
-      attemptedActionKeys.add(candidate.actionKey)
-      actions.push({
-        id: `action-${sequenceNumber}`,
-        sequenceNumber,
-        type: 'skip',
-        actionType: 'skip',
-        label: candidate.label,
-        role: candidate.role,
-        locatorUsed: candidate.locatorUsed,
-        target: candidate.target,
-        urlBefore,
-        stateHashBefore: captured.hash,
-        safe: true,
-        safeReason: candidate.safeReason,
-        skipped: true,
-        skippedReason: error instanceof Error ? error.message : 'action failed',
-        screenshotBefore,
-        reason: error instanceof Error ? error.message : 'action failed'
-      })
+      recordSkippedFrontier(captured, candidates.skipped, unvisitedSafeActions)
+      const candidate = candidates.next
+      if (!candidate) break
+
+      const urlBefore = safePageUrl(page, url)
+      const screenshotBefore = state.screenshotPath
+      const sequenceNumber = actions.length + 1
+      let stateHashAfter: string | undefined
+      let screenshotAfter: string | undefined
+      try {
+        if (candidate.actionType === 'type') await typeCandidate(page, candidate.element)
+        else await clickCandidate(page, candidate.element)
+        await page.waitForLoadState('domcontentloaded', { timeout: 2_000 }).catch(() => undefined)
+        await page.waitForTimeout(200)
+        const after = applyRouteHint(await withTimeout(captureState(page), 5_000, 'state capture timed out after action'), routeHintsByStateHash)
+        stateHashAfter = after.hash
+        if (candidate.targetRoute && candidate.targetRoute !== routeKey(urlBefore)) {
+          routeHintsByStateHash.set(after.hash, candidate.targetRoute)
+          applyRouteHint(after, routeHintsByStateHash)
+        }
+        const screenshotAfterPath = path.join(screenshotsDir, `action-${sequenceNumber}-after.png`)
+        screenshotAfter = await page.screenshot({ path: screenshotAfterPath, fullPage: true, timeout: 5_000 }).then(() => screenshotAfterPath).catch(() => undefined)
+        const changedState = after.hash !== captured.hash || safePageUrl(page, url) !== urlBefore
+        if (!changedState) {
+          ineffectiveActionKeys.set(candidate.ineffectiveKey, (ineffectiveActionKeys.get(candidate.ineffectiveKey) ?? 0) + 1)
+        }
+        attemptedActionKeys.add(candidate.actionKey)
+        actions.push({
+          id: `action-${sequenceNumber}`,
+          sequenceNumber,
+          type: candidate.actionType,
+          actionType: candidate.actionType,
+          label: candidate.label,
+          role: candidate.role,
+          locatorUsed: candidate.locatorUsed,
+          target: candidate.target,
+          urlBefore,
+          urlAfter: safePageUrl(page, url),
+          stateHashBefore: captured.hash,
+          stateHashAfter,
+          changedState,
+          safe: true,
+          safeReason: candidate.safeReason,
+          screenshotBefore,
+          screenshotAfter,
+          reason: candidate.safeReason
+        })
+      } catch (error) {
+        attemptedActionKeys.add(candidate.actionKey)
+        actions.push({
+          id: `action-${sequenceNumber}`,
+          sequenceNumber,
+          type: 'skip',
+          actionType: 'skip',
+          label: candidate.label,
+          role: candidate.role,
+          locatorUsed: candidate.locatorUsed,
+          target: candidate.target,
+          urlBefore,
+          stateHashBefore: captured.hash,
+          safe: true,
+          safeReason: candidate.safeReason,
+          skipped: true,
+          skippedReason: errorMessage(error),
+          screenshotBefore,
+          reason: errorMessage(error)
+        })
+        if (/target.*crash|page.*crash|browser.*closed/i.test(errorMessage(error))) {
+          consoleErrors.push({ text: `Crawler action failed after page crash: ${errorMessage(error)}`, location: urlBefore })
+          break
+        }
+      }
     }
+  } catch (error) {
+    consoleErrors.push({ text: `Crawler failed: ${errorMessage(error)}`, location: safePageUrl(page, url) })
   }
 
   annotateActionStateLinks(states, actions)
 
   const graph: CrawlGraph = {
     startUrl: url,
-    title: await page.title(),
-    finalUrl: page.url(),
+    title: await safePageTitle(page),
+    finalUrl: safePageUrl(page, url),
     states,
     actions,
     unvisitedSafeActions,
@@ -247,8 +263,44 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
     generatedAt: new Date().toISOString()
   }
 
-  await browser.close()
+  await browser.close().catch(() => undefined)
   return graph
+}
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function safePageUrl(page: Page, fallback: string): string {
+  try {
+    return page.url()
+  } catch {
+    return fallback
+  }
+}
+
+async function safePageTitle(page: Page): Promise<string> {
+  try {
+    return await page.title()
+  } catch {
+    return ''
+  }
+}
+
+function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(message)), timeoutMs)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
 }
 
 export async function captureState(page: Page): Promise<CrawlState> {

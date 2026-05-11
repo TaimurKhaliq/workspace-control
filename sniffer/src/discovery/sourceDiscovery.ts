@@ -6,6 +6,7 @@ import { mergeAdapterResults, runDiscoveryAdapters } from './adapters/registry.j
 import type { DiscoveryContext, SourceFileContent } from './adapters/types.js'
 import { buildSourceInventory, buildUIIntentGraph } from '../evidence/contextModel.js'
 import { isApiPrefixReference, normalizeEndpointReference } from './adapters/common.js'
+import { inferSourceAppSubtype, scopeSourceWorkflows } from './workflowVocabulary.js'
 
 const ignoredDirs = new Set([
   'node_modules',
@@ -478,13 +479,15 @@ function normalizeSourceGraph(graph: SourceGraph): SourceGraph {
     ...graph,
     apiCalls: normalizeApiCalls(graph.apiCalls)
   }
-  return isSnifferDashboardSource(withApis)
+  const appSubtype = inferSourceAppSubtype(withApis)
+  const normalized = appSubtype === 'sniffer_dashboard'
     ? {
         ...withApis,
         sourceWorkflows: normalizeSnifferDashboardWorkflows(withApis),
         apiCalls: withApis.apiCalls.map((call) => ({ ...call, likelyWorkflow: snifferDashboardWorkflowForApi(call) ?? call.likelyWorkflow }))
       }
     : withApis
+  return scopeSourceWorkflows(normalized, appSubtype)
 }
 
 function normalizeApiCalls(calls: ApiCall[]): ApiCall[] {
@@ -580,13 +583,13 @@ function normalizeSnifferDashboardWorkflows(graph: SourceGraph): SourceWorkflow[
   ].join('\n')
   return dedupeWorkflows([
     ...mapped,
-    dashboardWorkflowFromEvidence('Run Sniffer audit', text, /run audit|\/api\/audits|startAudit|audit launcher/i, ['Configure audit target', 'Run audit', 'Watch run status']),
+    dashboardWorkflowFromEvidence('Run Sniffer audit', text, /run audit|\/api\/audits|startAudit|audit launcher|source discovery|runtime discovery/i, ['Configure audit target', 'Run audit', 'Watch run status']),
     dashboardWorkflowFromEvidence('Inspect report sections', text, /run timeline|crawl path|workflow evidence|issues|screenshots|graph explorer|reports\/latest/i, ['Open report section navigation', 'Inspect timeline, scenarios, crawl path, issues, and evidence']),
     dashboardWorkflowFromEvidence('Inspect raw report payload', text, /raw json|raw report|json view/i, ['Open Raw JSON', 'Inspect raw report payload', 'Copy JSON']),
     dashboardWorkflowFromEvidence('Copy repair/fix prompts', text, /copy (?:fix|repair|prompt)|clipboard|copy prompt/i, ['Open Issues or Fix Packets', 'Copy repair prompt']),
     dashboardWorkflowFromEvidence('Inspect fix packets', text, /fix packets|fix-packets|repair packet/i, ['Open Fix Packets', 'Inspect packet details', 'Copy prompt']),
     dashboardWorkflowFromEvidence('Use repair workbench', text, /repair workbench|\/api\/repairs|startRepair|repair-proof/i, ['Open Repair Workbench', 'Select issue', 'Run manual proof or Codex repair']),
-    dashboardWorkflowFromEvidence('Review agent model', text, /agent model|source[- ]inventory|ui[- ]intent[- ]graph|evidence[- ]packet|graph[- ]refinement/i, ['Open Agent Model', 'Review source facts, UI intent graph, LLM refinements, and suppressions'])
+    dashboardWorkflowFromEvidence('Review agent model', text, /agent model|source[- ]inventory|ui[- ]intent[- ]graph|evidence[- ]packet|graph[- ]refinement|source discovery|runtime discovery|discovery adapters/i, ['Open Agent Model', 'Review source facts, UI intent graph, LLM refinements, and suppressions'])
   ].filter(Boolean) as SourceWorkflow[])
 }
 

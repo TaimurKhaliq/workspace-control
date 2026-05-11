@@ -165,7 +165,7 @@ function discoverTemplateForms(file: SourceFileContent): SourceForm[] {
 function discoverTemplateSurfaces(file: SourceFileContent): UiSurface[] {
   const content = templateContent(file)
   const headings = tagText(content, ['h1', 'h2', 'h3'])
-  const buttons = unique([...tagText(content, ['button']), ...attrValues(content, 'aria-label').filter((value) => /button|submit|save|sign|log|follow|favorite|publish|update|delete|new|add/i.test(value))])
+  const buttons = unique([...tagText(content, ['button']), ...attrValues(content, 'aria-label').filter((value) => /button|submit|save|sign|log|follow|favorite|publish|update|delete|new|add/i.test(value))]).filter(isLikelyButtonLabel)
   const inputs = templateInputs(content)
   const routes = discoverTemplateRoutes(file).map((route) => route.path)
   const surfaces: UiSurface[] = []
@@ -191,6 +191,14 @@ function surface(file: SourceFileContent, name: string, evidence: string[], butt
     discoveredBy: ['angular'],
     framework: 'angular'
   }
+}
+
+function isLikelyButtonLabel(value: string): boolean {
+  const normalized = value.replace(/\s+/g, ' ').trim()
+  if (!normalized) return false
+  if (/\bconfidence\b|\bevidence ids?\b|steps\/assertions|planned\s*·\s*executed|executed\s*·\s*issues/i.test(normalized)) return false
+  if (normalized.includes('·') && normalized.split(/\s+/).length > 5) return false
+  return normalized.length <= 96
 }
 
 function discoverAngularApiCalls(files: SourceFileContent[]): ApiCall[] {

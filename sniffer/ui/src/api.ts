@@ -579,26 +579,41 @@ export interface AuditForm {
   repoPath: string
   url: string
   productGoal: string
+  auditDepth: 'fast' | 'deep'
   discoveryMode: string
   scenario: string
+  executeGeneratedScenarios: boolean
   criticMode: string
   uxCritic: string
   intentMode: string
+  productExperienceCritic: string
   provider: string
   maxIterations: number
   consistencyCheck: boolean
 }
 
+export interface RunEvent {
+  type: 'phase_started' | 'phase_completed' | 'log' | 'error'
+  phase: string
+  message: string
+  timestamp: string
+}
+
 export interface RunRecord {
   runId: string
-  status: 'queued' | 'running' | 'success' | 'error'
+  status: 'queued' | 'running' | 'succeeded' | 'failed'
   phase: string
+  command?: string[]
+  events?: RunEvent[]
   logs: string[]
   stdout: string
   stderr: string
+  stdoutTail?: string
+  stderrTail?: string
   startedAt: string
-  completedAt?: string
+  endedAt?: string
   exitCode?: number | null
+  errorSummary?: string
   reportPath?: string
 }
 
@@ -730,7 +745,7 @@ export async function removeProject(id: string): Promise<{ removed: boolean }> {
   return request(`/api/projects/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
-export async function startAudit(form: AuditForm): Promise<{ runId: string }> {
+export async function startAudit(form: AuditForm): Promise<{ runId: string; command?: string[]; auditDepth?: string }> {
   return request('/api/audits', { method: 'POST', body: JSON.stringify(form) })
 }
 

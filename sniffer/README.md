@@ -68,6 +68,31 @@ The dashboard provides:
 
 The UI never receives API keys. It only displays configured/unconfigured status, model name, and API style as reported by the local Node server. The server shells out to existing Sniffer CLI commands and captures stdout/stderr. It prevents concurrent audit runs by default and does not auto-apply fixes.
 
+### Dashboard Audit Launch Modes
+
+The dashboard audit launcher has two explicit modes:
+
+- **Fast deterministic audit**: runs hybrid discovery, all scenarios, generated scenario execution, deterministic workflow/UX/intent critics, and `provider=auto`.
+- **Deep LLM product audit**: runs hybrid discovery, all scenarios, generated scenario execution, deterministic workflow/UX/intent critics, and the LLM-first Product Experience Critic with `provider=openai-compatible`.
+
+When the OpenAI-compatible provider is configured, the dashboard defaults to Deep LLM product audit. Otherwise it defaults to Fast deterministic audit and shows a clear warning if the user selects LLM mode without provider configuration. The generated command is visible in the collapsed **Command** preview before launch.
+
+Deep LLM launches include:
+
+```bash
+npm run sniffer -- audit \
+  --discovery-mode hybrid \
+  --scenario all \
+  --execute-generated-scenarios \
+  --critic-mode deterministic \
+  --ux-critic deterministic \
+  --intent-mode deterministic \
+  --provider openai-compatible \
+  --product-experience-critic llm
+```
+
+The local server records each dashboard run with `queued`, `running`, `succeeded`, or `failed` status; the exact command; start/end timestamps; stdout/stderr tails; structured phase events; and an error summary when the CLI exits non-zero. The Run Timeline view polls this status and renders live phases such as source discovery, graph refinement, runtime DOM discovery, crawl, scenario generation, scenario execution, Product Experience Critic, issue grouping, fix packet generation, and report writing.
+
 ## Commands
 
 ```bash
@@ -457,6 +482,8 @@ Failing counts usually mean:
 To add a new matrix target, add a `MatrixTarget` entry in `src/verification/matrix.ts` with repo path, app URL, expected framework/profile, and minimum workflow/scenario counts. Prefer low minimums for arbitrary apps and rely on the detailed target report for quality.
 
 The matrix also dogfoods the Sniffer UI. It starts the local dashboard server when `ui/dist/index.html` exists and verifies that the dashboard loads, project selector is visible, run launcher is visible, report navigation is visible, and Timeline/Crawl/Graph/Screenshots/Fix Packet pages open without crashing.
+
+Dashboard audit launch is covered by integration-style tests using mocked audit responses and structured progress events. The coverage verifies that generated scenarios are executed by default, Deep LLM mode includes `--product-experience-critic llm` and `--provider openai-compatible`, missing provider configuration returns a clear error instead of crashing, failed runs surface stderr/error summaries, and live phase events render in the Run Timeline.
 
 ## Product Experience Calibration
 

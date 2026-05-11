@@ -9,7 +9,8 @@ import { AgentModelView } from '../src/components/AgentModelView'
 import { SnifferMascot } from '../src/components/SnifferMascot'
 import { ScenariosView } from '../src/components/ScenariosView'
 import { ScreenshotImage } from '../src/components/ScreenshotModal'
-import type { Issue, SnifferReport } from '../src/api'
+import { ReportTimeline } from '../src/components/ReportTimeline'
+import type { AuditForm, Issue, SnifferReport } from '../src/api'
 
 const report: SnifferReport = {
   generatedAt: '2026-04-28T12:00:00.000Z',
@@ -225,7 +226,21 @@ beforeEach(() => {
     }])
     if (url.startsWith('/api/reports/latest/fix-packets')) return response([])
     if (url.startsWith('/api/repairs/history')) return response([])
-    if (url === '/api/audits' && init?.method === 'POST') return response({ runId: 'run-1' }, 202)
+    if (url === '/api/audits' && init?.method === 'POST') return response({ runId: 'run-1', command: ['tsx', 'src/cli/index.ts', 'audit', '--execute-generated-scenarios'] }, 202)
+    if (url === '/api/audits/run-1') return response({
+      runId: 'run-1',
+      status: 'running',
+      phase: 'scenario execution',
+      command: ['tsx', 'src/cli/index.ts', 'audit', '--execute-generated-scenarios'],
+      events: [
+        { type: 'phase_started', phase: 'source discovery', message: 'Resolving target.', timestamp: '2026-04-28T12:00:00.000Z' },
+        { type: 'phase_started', phase: 'scenario execution', message: 'Executing generated scenarios.', timestamp: '2026-04-28T12:00:01.000Z' }
+      ],
+      logs: ['source discovery', 'scenario execution'],
+      stdout: '',
+      stderr: '',
+      startedAt: '2026-04-28T12:00:00.000Z'
+    })
     return response({})
   }))
 })
@@ -275,6 +290,59 @@ describe('Sniffer UI dashboard', () => {
     await screen.findByDisplayValue('/tmp/web')
     fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
     await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/audits', expect.objectContaining({ method: 'POST' })))
+  })
+
+  it('renders audit depth controls and defaults to deep LLM when provider is configured', async () => {
+    render(<App />)
+
+    const depth = await screen.findByLabelText('Audit depth')
+    await waitFor(() => expect(depth).toHaveValue('deep'))
+    expect(screen.getByLabelText('Product Experience Critic')).toHaveValue('llm')
+    expect(screen.getByLabelText('Provider')).toHaveValue('openai-compatible')
+  })
+
+  it('shows a command preview with generated scenario execution', async () => {
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Audit a running UI' })
+    await waitFor(() => expect(screen.getByLabelText('Product Experience Critic')).toHaveValue('llm'))
+    fireEvent.click(screen.getByText('Command'))
+
+    expect(screen.getByText((content) => content.includes('--execute-generated-scenarios'))).toBeInTheDocument()
+    expect(screen.getByText((content) => content.includes('--product-experience-critic llm'))).toBeInTheDocument()
+  })
+
+  it('sends deep audit options to the backend and shows running state', async () => {
+    render(<App />)
+    await screen.findByDisplayValue('/tmp/web')
+    fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
+
+    await waitFor(() => {
+      const call = vi.mocked(fetch).mock.calls.find(([url, init]) => url === '/api/audits' && init?.method === 'POST')
+      expect(call).toBeTruthy()
+      const body = JSON.parse(String(call?.[1]?.body)) as AuditForm
+      expect(body.auditDepth).toBe('deep')
+      expect(body.executeGeneratedScenarios).toBe(true)
+      expect(body.productExperienceCritic).toBe('llm')
+    })
+    expect((await screen.findAllByText('Starting audit')).length).toBeGreaterThan(0)
+  })
+
+  it('shows backend audit launch failures without crashing', async () => {
+    vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/status') return response({ version: '0.1.0', status: 'idle', provider: { configured: true, baseUrlConfigured: true, model: 'gpt-test', apiStyle: 'responses' }, agent: { configured: false, name: 'manual' }, latestReport: { path: '/tmp/latest_report.json', issues: 0, rawFindings: 0, repoPath: '/tmp/web', appUrl: 'http://127.0.0.1:5173' }, reportDir: '/tmp/reports' })
+      if (url === '/api/projects') return response([])
+      if (url.startsWith('/api/reports/latest')) return response(url.includes('screenshots') || url.includes('fix-packets') || url.includes('issues') ? [] : { ...report, issues: [] })
+      if (url.startsWith('/api/repairs/history')) return response([])
+      if (url === '/api/audits' && init?.method === 'POST') return response({ error: 'LLM provider is not configured. Run provider check or use fast deterministic audit.' }, 400)
+      return response({})
+    })
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Audit a running UI' })
+    await screen.findByDisplayValue('/tmp/web')
+    fireEvent.click(screen.getByRole('button', { name: 'Run Audit' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('LLM provider is not configured')
   })
 
   it('shows the project selector and Projects page', async () => {
@@ -435,7 +503,7 @@ describe('issue and fix packet components', () => {
       })
       return response({})
     })
-    render(<RepairWorkbench report={report} projectId="demo" form={{ repoPath: '/tmp/web', url: 'http://app', productGoal: '', discoveryMode: 'hybrid', scenario: 'all', criticMode: 'deterministic', uxCritic: 'deterministic', intentMode: 'deterministic', provider: 'auto', maxIterations: 3, consistencyCheck: false }} onAuditQueued={() => undefined} onRefreshReport={() => undefined} status={{ version: '0.1.0', status: 'idle', provider: { configured: false, baseUrlConfigured: false, model: null, apiStyle: 'auto' }, agent: { configured: false, name: 'manual' }, latestReport: null, reportDir: '/tmp' }} />)
+    render(<RepairWorkbench report={report} projectId="demo" form={auditForm()} onAuditQueued={() => undefined} onRefreshReport={() => undefined} status={{ version: '0.1.0', status: 'idle', provider: { configured: false, baseUrlConfigured: false, model: null, apiStyle: 'auto' }, agent: { configured: false, name: 'manual' }, latestReport: null, reportDir: '/tmp' }} />)
     expect((await screen.findAllByText('Plan output review is hard to scan')).length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: /Run repair proof/i }))
     expect(await screen.findByText(/No files changed/)).toBeInTheDocument()
@@ -465,6 +533,32 @@ describe('scenario planning view', () => {
   })
 })
 
+describe('live run timeline', () => {
+  it('shows structured phases and failed status details', () => {
+    render(<ReportTimeline report={report} fixPackets={[]} run={{
+      runId: 'run-1',
+      status: 'failed',
+      phase: 'Error',
+      command: ['tsx', 'src/cli/index.ts', 'audit', '--execute-generated-scenarios'],
+      events: [
+        { type: 'phase_started', phase: 'source discovery', message: 'Resolving target.', timestamp: '2026-04-28T12:00:00.000Z' },
+        { type: 'phase_started', phase: 'scenario execution', message: 'Executing generated scenarios.', timestamp: '2026-04-28T12:00:01.000Z' },
+        { type: 'error', phase: 'Error', message: 'CLI exited with code 1', timestamp: '2026-04-28T12:00:02.000Z' }
+      ],
+      logs: ['source discovery', 'scenario execution', 'Process exited with code 1'],
+      stdout: '',
+      stderr: 'boom',
+      errorSummary: 'boom',
+      startedAt: '2026-04-28T12:00:00.000Z',
+      exitCode: 1
+    }} projectId="demo" projectName="Demo UI" />)
+
+    expect(screen.getAllByText('source discovery').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('scenario execution').length).toBeGreaterThan(0)
+    expect(screen.getByRole('alert')).toHaveTextContent('boom')
+  })
+})
+
 describe('mascot', () => {
   it('switches to sniffing state', () => {
     render(<SnifferMascot state="sniffing" />)
@@ -485,4 +579,23 @@ function response(body: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' }
   })
+}
+
+function auditForm(): AuditForm {
+  return {
+    repoPath: '/tmp/web',
+    url: 'http://app',
+    productGoal: '',
+    auditDepth: 'fast',
+    discoveryMode: 'hybrid',
+    scenario: 'all',
+    executeGeneratedScenarios: true,
+    criticMode: 'deterministic',
+    uxCritic: 'deterministic',
+    intentMode: 'deterministic',
+    productExperienceCritic: 'deterministic',
+    provider: 'auto',
+    maxIterations: 3,
+    consistencyCheck: false
+  }
 }

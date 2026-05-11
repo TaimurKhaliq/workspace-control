@@ -42,17 +42,21 @@ const emptyForm: AuditForm = {
   repoPath: '',
   url: '',
   productGoal: '',
+  auditDepth: 'fast',
   discoveryMode: 'hybrid',
-  scenario: 'auto',
+  scenario: 'all',
+  executeGeneratedScenarios: true,
   criticMode: 'deterministic',
   uxCritic: 'deterministic',
   intentMode: 'deterministic',
+  productExperienceCritic: 'deterministic',
   provider: 'auto',
   maxIterations: 3,
   consistencyCheck: false
 }
 
 export default function App() {
+  const savedFormText = window.localStorage.getItem('sniffer.ui.form')
   const [screen, setScreen] = useState<Screen>('summary')
   const [status, setStatus] = useState<ServerStatus>()
   const [projects, setProjects] = useState<SnifferProject[]>([])
@@ -63,9 +67,10 @@ export default function App() {
   const [run, setRun] = useState<RunRecord | null>(null)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
   const [form, setForm] = useState<AuditForm>(() => {
-    const saved = window.localStorage.getItem('sniffer.ui.form')
+    const saved = savedFormText
     return saved ? { ...emptyForm, ...JSON.parse(saved) as Partial<AuditForm> } : emptyForm
   })
+  const [providerDefaultsPending, setProviderDefaultsPending] = useState(!savedFormText)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -106,12 +111,25 @@ export default function App() {
   }, [status])
 
   useEffect(() => {
+    if (!status || !providerDefaultsPending) return
+    setForm((current) => ({
+      ...current,
+      auditDepth: status.provider.configured ? 'deep' : 'fast',
+      productExperienceCritic: status.provider.configured ? 'llm' : 'deterministic',
+      provider: status.provider.configured ? 'openai-compatible' : 'auto',
+      scenario: 'all',
+      executeGeneratedScenarios: true
+    }))
+    setProviderDefaultsPending(false)
+  }, [status, providerDefaultsPending])
+
+  useEffect(() => {
     if (!run || run.status !== 'running') return
     const timer = window.setInterval(() => {
       void getRun(run.runId)
         .then((next) => {
           setRun(next)
-          if (next.status === 'success') void refreshAll()
+          if (next.status === 'succeeded') void refreshAll()
         })
         .catch((err) => setError(err instanceof Error ? err.message : String(err)))
     }, 1200)
@@ -120,8 +138,8 @@ export default function App() {
 
   const mascotState: MascotState = useMemo(() => {
     if (run?.status === 'running') return 'sniffing'
-    if (run?.status === 'error') return 'error'
-    if (run?.status === 'success') return 'success'
+    if (run?.status === 'failed') return 'error'
+    if (run?.status === 'succeeded') return 'success'
     return 'idle'
   }, [run])
   const reportArtifactProjectId = useMemo(() => projectIdFromReportArtifacts(reportArtifactPaths(report), selectedProjectId || undefined), [report, selectedProjectId])
@@ -178,7 +196,7 @@ export default function App() {
       return undefined
     })
     if (response) {
-      setRun({ runId: response.runId, status: 'running', phase: 'Starting audit', logs: ['Audit queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
+      setRun({ runId: response.runId, status: 'running', phase: 'Starting audit', command: response.command, events: [], logs: ['Audit queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
       setScreen('timeline')
     }
   }
@@ -190,13 +208,13 @@ export default function App() {
       return undefined
     })
     if (response) {
-      setRun({ runId: response.runId, status: 'running', phase: 'Generating fix packets', logs: ['Fix packet generation queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
+      setRun({ runId: response.runId, status: 'running', phase: 'Generating fix packets', events: [], logs: ['Fix packet generation queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
       setScreen('fixes')
     }
   }
 
   function setAuditRunFromId(runId: string) {
-    setRun({ runId, status: 'running', phase: 'Starting audit', logs: ['Audit queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
+    setRun({ runId, status: 'running', phase: 'Starting audit', events: [], logs: ['Audit queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
     setScreen('timeline')
   }
 
@@ -214,7 +232,7 @@ export default function App() {
       return undefined
     })
     if (response) {
-      setRun({ runId: response.runId, status: 'running', phase: 'Running verification', logs: ['Verification queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
+      setRun({ runId: response.runId, status: 'running', phase: 'Running verification', events: [], logs: ['Verification queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
       setScreen('timeline')
     }
   }

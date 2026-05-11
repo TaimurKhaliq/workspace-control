@@ -439,6 +439,25 @@ code {
   color: var(--danger);
 }
 
+.alert.warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
+.command-preview {
+  margin-top: 1rem;
+}
+
+.command-preview pre {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .status-note {
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -634,6 +653,26 @@ code {
 
 .timeline-step.done span {
   background: var(--success);
+}
+
+.timeline-step.failed {
+  border-color: #fecaca;
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.timeline-step.failed span {
+  background: var(--danger);
+}
+
+.timeline.compact {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0.75rem 0;
+}
+
+.timeline-step small {
+  display: block;
+  color: inherit;
 }
 
 .log-panel {
