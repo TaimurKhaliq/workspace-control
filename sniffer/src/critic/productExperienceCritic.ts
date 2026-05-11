@@ -188,6 +188,8 @@ export function deterministicProductExperienceDecision(context: ProductExperienc
   const findings: ProductExperienceFinding[] = [
     ...navigationPromiseFindings(context),
     ...runContextFindings(context),
+    ...rawJsonActionabilityFindings(context),
+    ...summaryInformationHierarchyFindings(context),
     ...screenshotContextFindings(context),
     ...graphContextFindings(context),
     ...emptyStateFindings(context)
@@ -272,7 +274,7 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
     headings: scenarioTrace?.headings?.length ? scenarioTrace.headings : headingsFromText(pageIntent, domText, input.runtimeDomSnapshot),
     visible_controls: controls,
     visible_status_text: statusText(domText),
-    visible_empty_states: domText.filter((line) => /no .*found|no .*yet|empty|not found|unavailable/i.test(line)),
+    visible_empty_states: domText.filter((line) => /no .*found|no .*yet|no issues|empty|not found|unavailable/i.test(line)),
     visible_errors: domText.filter((line) => /error|failed|warning|not found|unavailable/i.test(line)),
     active_nav_state: scenarioTrace?.activeNavState ?? pageIntent.nav_label,
     run_project_report_context_visible: visibleRunContext(domText),
@@ -450,8 +452,12 @@ function runContextFindings(context: ProductExperienceContext): ProductExperienc
 
 function screenshotContextFindings(context: ProductExperienceContext): ProductExperienceFinding[] {
   if (context.current_screen_name !== 'Screenshots') return []
-  const text = visibleText(context)
-  const hasContext = /state|scenario|step|action|crawl|evidence|issue/i.test(text)
+  const text = [
+    ...context.dom_summary,
+    ...context.headings,
+    ...context.visible_controls
+  ].join(' ')
+  const hasContext = /scenario\s*:|step\s*:|action\s*:|url\s*:|crawl state|state\s+\d|evidence for|related issue|screen\s*:/i.test(text)
   if (hasContext) return []
   return [finding(context, {
     title: 'Screenshots view does not explain screenshot context',
@@ -463,6 +469,77 @@ function screenshotContextFindings(context: ProductExperienceContext): ProductEx
     evidence: evidence(context, [`dom_excerpt: ${context.dom_summary.join(' ').slice(0, 240)}`]),
     why_it_matters: 'Screenshots are only useful QA evidence when the user knows what action or state produced them.',
     suggested_fix: 'Show state/scenario/action metadata on screenshot thumbnails and in the modal.'
+  })]
+}
+
+function rawJsonActionabilityFindings(context: ProductExperienceContext): ProductExperienceFinding[] {
+  if (!isRawJsonDebugPayloadScreen(context)) return []
+  if (!rawJsonPayloadVisible(context) || rawJsonCopyExportActionVisible(context)) return []
+  return [finding(context, {
+    title: 'Raw JSON lacks copy action',
+    type: 'actionability_gap',
+    severity: 'medium',
+    rubric_ids: ['actionability', 'information_hierarchy'],
+    expected: 'Raw JSON/debug payload screens should expose a visible copy/export action.',
+    observed: 'Raw JSON payload is visible but no Copy JSON/export/download control was found.',
+    evidence: evidence(context, [
+      `dom_excerpt: ${context.dom_summary.join(' ').slice(0, 240)}`,
+      `visible_controls_checked: ${context.visible_controls.join(', ') || 'none'}`,
+      'missing_control: Copy JSON / Copy raw payload / Copy report JSON / Download JSON / Export JSON'
+    ]),
+    why_it_matters: 'Copying or exporting exact raw data is a core user job for debug/report payload screens, not a cosmetic convenience.',
+    suggested_fix: 'Add a visible, accessible Copy JSON, Copy raw payload, Copy report JSON, Download JSON, or Export JSON control near the payload.'
+  })]
+}
+
+function isRawJsonDebugPayloadScreen(context: ProductExperienceContext): boolean {
+  const intentText = [
+    context.current_screen_name,
+    context.nav_label_clicked,
+    context.page_intent,
+    context.workflow_intent,
+    ...context.expected_primary_content,
+    ...context.expected_next_actions
+  ].join(' ')
+  return /raw json|raw report payload|debug payload|debug_payload|exact report data|json inspection|report payload|json payload/i.test(intentText)
+}
+
+function rawJsonPayloadVisible(context: ProductExperienceContext): boolean {
+  const domText = [
+    ...context.dom_summary,
+    ...context.visible_status_text
+  ].join(' ')
+  return /raw report payload|debug payload|json payload|report payload|latest report payload|\{\s*["{]|"[^"]+"\s*:/i.test(domText)
+}
+
+function rawJsonCopyExportActionVisible(context: ProductExperienceContext): boolean {
+  const controlText = [
+    ...context.visible_controls,
+    ...context.dom_summary
+  ].join(' ')
+  return /copy\s+(json|raw payload|report json|raw json)|download\s+(json|report json|raw json)|export\s+(json|report json|raw json)/i.test(controlText)
+}
+
+function summaryInformationHierarchyFindings(context: ProductExperienceContext): ProductExperienceFinding[] {
+  if (context.current_screen_name !== 'Summary') return []
+  const text = [
+    ...context.dom_summary,
+    ...context.headings,
+    ...context.visible_controls
+  ].join(' ')
+  const rawJsonSignals = (text.match(/"[^"]+"\s*:|\{|\}|\[|\]/g) ?? []).length
+  const hasHumanSummary = /overall status|latest run|selected run|scenario (pass|fail|count)|scenarios (passed|failed|executed)|issues (found|open|count)|fix packets (generated|available|count)|screenshots captured|summary card|run audit/i.test(text)
+  if (rawJsonSignals < 8 || hasHumanSummary) return []
+  return [finding(context, {
+    title: 'Summary relies on raw JSON instead of human-readable report summary',
+    type: 'information_hierarchy_gap',
+    severity: 'medium',
+    rubric_ids: ['information_hierarchy', 'intent_fit'],
+    expected: 'Summary should lead with human-readable run status, issue counts, scenario status, screenshots, and next actions, with raw JSON kept as an advanced view.',
+    observed: 'The Summary screen is dominated by raw JSON-shaped content without an obvious human-readable summary.',
+    evidence: evidence(context, [`raw_json_signal_count: ${rawJsonSignals}`, `dom_excerpt: ${context.dom_summary.join(' ').slice(0, 240)}`]),
+    why_it_matters: 'The first report screen should help users decide what to inspect next; raw JSON forces users to parse internal data before understanding the run.',
+    suggested_fix: 'Replace the primary Summary content with compact status cards and top repair groups, and link to Raw JSON for advanced debugging.'
   })]
 }
 
@@ -488,14 +565,14 @@ function graphContextFindings(context: ProductExperienceContext): ProductExperie
 function emptyStateFindings(context: ProductExperienceContext): ProductExperienceFinding[] {
   const empty = context.visible_empty_states.join(' ')
   if (!empty) return []
-  const text = visibleText(context)
-  const hasWhy = /because|run an audit|no raw findings|no .*recorded|after an audit|generate|load/i.test(text)
-  const hasNext = /run audit|open|generate|select|inspect|copy|verify/i.test(text)
+  const text = normalize(empty)
+  const hasWhy = /because|run an audit|no raw findings|no .*recorded|no .*detected|after an audit|after running|checked|verified|load a report/i.test(text)
+  const hasNext = /run audit|open|generate fix|generate packet|select|inspect|copy|verify|start/i.test(text)
   if (hasWhy && hasNext) return []
   return [finding(context, {
     title: `${context.current_screen_name} empty state lacks explanation or next action`,
     type: 'empty_state_gap',
-    severity: 'low',
+    severity: context.current_screen_name === 'Issues' ? 'medium' : 'low',
     rubric_ids: ['state_empty_honesty', 'actionability'],
     expected: 'Empty states should explain why content is missing and what creates or loads it.',
     observed: empty.slice(0, 220),
@@ -561,7 +638,11 @@ function productExperienceIssue(finding: ProductExperienceFinding, decision: Pro
 }
 
 function normalizeLlmDecision(decision: ProductExperienceDecision, context: ProductExperienceContext, deterministic: ProductExperienceDecision): ProductExperienceDecision {
-  const findings = (decision.findings ?? []).map((finding) => normalizeFinding(finding, context))
+  const findings = mergeMandatoryDeterministicFindings(
+    (decision.findings ?? []).map((finding) => normalizeFinding(finding, context)),
+    deterministic,
+    context
+  )
   const overall = normalizeOverall(decision, deterministic, context, findings)
   const nonIssues = [
     ...(decision.non_issues ?? []),
@@ -590,6 +671,38 @@ function normalizeLlmDecision(decision: ProductExperienceDecision, context: Prod
   }
 }
 
+function mergeMandatoryDeterministicFindings(
+  llmFindings: ProductExperienceFinding[],
+  deterministic: ProductExperienceDecision,
+  context: ProductExperienceContext
+): ProductExperienceFinding[] {
+  const merged = [...llmFindings]
+  for (const candidate of deterministic.findings.filter((finding) => isMandatoryDeterministicFinding(finding, context))) {
+    if (merged.some((finding) => sameProductExperienceFinding(finding, candidate))) continue
+    const normalized = normalizeFinding({
+      ...candidate,
+      evidence: [
+        ...candidate.evidence,
+        'deterministic_candidate_preserved: LLM did not return this evidence-backed core debug-payload actionability finding.'
+      ]
+    }, context)
+    if (normalized.should_report) merged.push(normalized)
+  }
+  return merged
+}
+
+function isMandatoryDeterministicFinding(finding: ProductExperienceFinding, context: ProductExperienceContext): boolean {
+  return finding.type === 'actionability_gap' &&
+    finding.title === 'Raw JSON lacks copy action' &&
+    isRawJsonDebugPayloadScreen(context) &&
+    rawJsonPayloadVisible(context) &&
+    !rawJsonCopyExportActionVisible(context)
+}
+
+function sameProductExperienceFinding(left: ProductExperienceFinding, right: ProductExperienceFinding): boolean {
+  return left.type === right.type && normalize(left.title) === normalize(right.title)
+}
+
 function normalizeOverall(
   decision: ProductExperienceDecision,
   deterministic: ProductExperienceDecision,
@@ -598,7 +711,16 @@ function normalizeOverall(
 ): ProductExperienceDecision['overall'] {
   const overall = decision.overall ?? deterministic.overall
   const reportable = findings.filter((finding) => finding.should_report)
-  if (reportable.length > 0 || overall.classification === 'aligned' || overall.classification === 'inconclusive') return overall
+  if (reportable.length > 0) {
+    if (overall.classification !== 'aligned' && overall.classification !== 'inconclusive') return overall
+    const major = reportable.some((finding) => finding.severity === 'high' || finding.severity === 'critical')
+    return {
+      classification: major ? 'major_gap' : 'minor_gap',
+      confidence: 'high',
+      summary: `${context.current_screen_name} has ${reportable.length} evidence-backed product experience gap(s) after deterministic candidate preservation and evidence gating.`
+    }
+  }
+  if (overall.classification === 'aligned' || overall.classification === 'inconclusive') return overall
 
   const suppressed = findings.filter((finding) => finding.suppression_reason)
   const suffix = suppressed.length > 0
@@ -654,14 +776,15 @@ function suppressionReasonForFinding(finding: ProductExperienceFinding, context:
   if (isUnsupportedReportContextProminenceClaim(finding, context)) return 'visual report-context prominence claim requires vision or concrete DOM evidence'
   if (isRawJsonPayloadEcho(finding, context)) return 'embedded Raw JSON payload findings are report data, not current Raw JSON page behavior'
   if (isRawJsonCopyActionContradicted(finding, context)) return 'Copy JSON is visible in same-screen runtime evidence'
-  if (positiveEvidence.length > 0 && missingControlClaim(finding)) return positiveEvidence.join('; ')
+  const contradictingControlEvidence = positiveEvidence.filter((item) => /same_screen_control|retrieved_.*copy|download json|export json/i.test(item))
+  if (contradictingControlEvidence.length > 0 && missingControlClaim(finding)) return contradictingControlEvidence.join('; ')
   return undefined
 }
 
 function positiveEvidenceForFinding(finding: ProductExperienceFinding, context: ProductExperienceContext): string[] {
   const text = visibleText(context)
   const evidence = [
-    /copy json|copy raw json/.test(text) ? 'same_screen_control: Copy JSON present' : undefined,
+    rawJsonCopyExportActionVisible(context) ? 'same_screen_control: Raw JSON copy/export/download action present' : undefined,
     /raw json/.test(text) && /latest report payload|report payload/.test(text) ? 'same_screen_surface: Raw JSON payload visible' : undefined,
     /copy prompt|copy fix prompt|copy repair prompt/.test(text) ? 'same_screen_control: fix prompt copy present' : undefined,
     /copy/.test(text) && /fix packet|prompt|repair/.test(text) ? 'same_screen_control: fix-packet copy affordance present' : undefined
@@ -724,7 +847,7 @@ function isRawJsonPayloadEcho(finding: ProductExperienceFinding, context: Produc
 
 function isRawJsonCopyActionContradicted(finding: ProductExperienceFinding, context: ProductExperienceContext): boolean {
   if (context.current_screen_name !== 'Raw JSON') return false
-  if (!/copy json|copy raw json/.test(visibleText(context))) return false
+  if (!rawJsonCopyExportActionVisible(context)) return false
   const findingText = findingTextFor(finding)
   return /copy/.test(findingText) && /missing|no .*found|lacks|not visible|not clearly visible/.test(findingText)
 }
@@ -738,7 +861,7 @@ function isCrossScreenRawJsonCopyClaim(finding: ProductExperienceFinding, contex
 
 function hasEmbeddedRawJsonPanel(context: ProductExperienceContext): boolean {
   const text = visibleText(context)
-  return /raw json/.test(text) && /copy json|latest report payload|report payload|\{\s*"/.test(text)
+  return /raw json/.test(text) && /copy json|copy raw json|download json|export json|latest report payload|report payload|\{\s*"/.test(text)
 }
 
 function missingControlClaim(finding: ProductExperienceFinding): boolean {

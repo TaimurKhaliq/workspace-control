@@ -371,6 +371,52 @@ describe('Product Experience Critic', () => {
     expect(result.decisions.find((decision) => decision.screen_name === 'Raw JSON')?.findings[0]?.should_report).toBe(false)
   })
 
+  it('reports Raw JSON payloads without a copy/export/download action', async () => {
+    const result = await runProductExperienceCritic({
+      mode: 'deterministic',
+      sourceGraph: sourceGraph(),
+      crawlGraph: rawJsonCrawlGraph(['RAW JSON Latest report payload', '{ "ok": true, "issues": [] }']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        title: 'Raw JSON lacks copy action',
+        type: 'product_experience_gap'
+      })
+    ]))
+    expect(result.decisions.find((decision) => decision.screen_name === 'Raw JSON')?.findings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+      type: 'actionability_gap',
+      should_report: true
+      })
+    ]))
+  })
+
+  it('preserves the evidence-backed Raw JSON missing-copy candidate when the LLM overlooks it', async () => {
+    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context))
+    const result = await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: rawJsonCrawlGraph(['RAW JSON Latest report payload', '{ "ok": true, "issues": [] }']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const rawJsonDecision = result.decisions.find((decision) => decision.screen_name === 'Raw JSON')
+    expect(result.issues.map((issue) => issue.title)).toContain('Raw JSON lacks copy action')
+    expect(rawJsonDecision?.findings.some((finding) =>
+      finding.title === 'Raw JSON lacks copy action' &&
+      finding.evidence.some((item) => item.includes('deterministic_candidate_preserved'))
+    )).toBe(true)
+  })
+
   it('does not report missing Raw JSON copy action when Copy JSON is visible', async () => {
     const provider = new SpyProductExperienceProvider((context) => {
       if (context.current_screen_name !== 'Raw JSON') return alignedDecision(context)
@@ -410,6 +456,24 @@ describe('Product Experience Critic', () => {
 
     expect(result.issues.map((issue) => issue.title)).not.toContain('Missing copy action control for Raw JSON screen')
     expect(result.decisions.find((decision) => decision.screen_name === 'Raw JSON')?.findings[0]?.should_report).toBe(false)
+  })
+
+  it('treats Download JSON and Export JSON as valid Raw JSON actions', async () => {
+    for (const action of ['Download JSON', 'Export JSON']) {
+      const result = await runProductExperienceCritic({
+        mode: 'deterministic',
+        sourceGraph: sourceGraph(),
+        crawlGraph: rawJsonCrawlGraph(['RAW JSON Latest report payload', action, '{ "ok": true }'], [action]),
+        appProfile: appProfile(),
+        appSubtype: 'sniffer_dashboard',
+        scenarioRuns: [],
+        reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+      })
+
+      const rawJsonFindings = result.decisions.find((decision) => decision.screen_name === 'Raw JSON')?.findings ?? []
+      expect(result.issues.map((issue) => issue.title)).not.toContain('Raw JSON lacks copy action')
+      expect(rawJsonFindings.some((finding) => finding.type === 'actionability_gap' && finding.title === 'Raw JSON lacks copy action')).toBe(false)
+    }
   })
 
   it('does not let Issues screen create a Raw JSON missing-copy finding without embedded Raw JSON', async () => {
@@ -768,6 +832,16 @@ function screenshotsCrawlGraph(text: string[]): CrawlGraph {
       visible: [{ kind: 'button', text: 'Open screenshot' }]
     }]
   }
+}
+
+function rawJsonCrawlGraph(text: string[], controls: string[] = []): CrawlGraph {
+  const graph = crawlGraph(text)
+  graph.finalUrl = 'http://localhost:4877/#raw-json'
+  graph.states[0].url = 'http://localhost:4877/#raw-json'
+  graph.states[0].hashRoute = '#raw-json'
+  graph.states[0].inferredScreenName = 'Raw JSON'
+  graph.states[0].visible = controls.map((label) => ({ kind: 'button', text: label }))
+  return graph
 }
 
 function scenarioRunWithTrace(screenName: string, hash: string) {

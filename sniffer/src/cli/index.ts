@@ -40,6 +40,7 @@ import { inspectUrl, writeRuntimeDomArtifacts } from '../runtime/domSnapshot.js'
 import { buildRuntimeAppModel, buildRuntimeIntentContext } from '../runtime/runtimeAppModel.js'
 import type { DiscoveryMode, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent } from '../types.js'
 import { runVerificationMatrix } from '../verification/matrix.js'
+import { runProductExperienceCalibration } from '../verification/productExperienceCalibration.js'
 import { runProductExperienceCritic } from '../critic/productExperienceCritic.js'
 import type { GraphRefinerMode, ProductExperienceCriticMode } from '../types.js'
 import { runGraphStructureRefiner } from '../evidence/graphRefiner.js'
@@ -77,6 +78,36 @@ async function main(): Promise<void> {
     console.log(`- ${matrix.dogfood.status.toUpperCase()} dogfood: ${matrix.dogfood.appUrl ?? matrix.dogfood.skipReason ?? ''}`)
     console.log(`Wrote ${matrix.reportMarkdownPath}`)
     if (matrix.status === 'failed') process.exitCode = 1
+    return
+  }
+
+  if (command === 'audit-product-calibration') {
+    const provider = createLlmProvider(typeof args.provider === 'string' ? args.provider : 'auto')
+    const mode = typeof args['product-experience-critic'] === 'string'
+      ? args['product-experience-critic'] as ProductExperienceCriticMode
+      : undefined
+    const fixtureIds = typeof args.fixture === 'string'
+      ? args.fixture.split(',').map((item) => item.trim()).filter(Boolean)
+      : undefined
+    const calibration = await runProductExperienceCalibration({
+      snifferRoot: process.cwd(),
+      provider,
+      mode,
+      fixtureIds,
+      includeGood: boolArg(args, 'include-good')
+    })
+    console.log(`Product Experience Calibration ${calibration.status.toUpperCase()}`)
+    for (const target of calibration.targets) {
+      const missing = target.missingFindings.length
+        ? ` missing=${target.missingFindings.map((finding) => finding.titleIncludes).join('; ')}`
+        : ''
+      const unexpected = target.unexpectedFindings.length
+        ? ` unexpected=${target.unexpectedFindings.map((finding) => finding.title).join('; ')}`
+        : ''
+      console.log(`- ${target.status.toUpperCase()} ${target.fixture}: expected=${target.expectedFindings.length} detected=${target.detectedFindings.length}${missing}${unexpected}`)
+    }
+    console.log(`Wrote ${calibration.reportMarkdownPath}`)
+    if (calibration.status === 'failed') process.exitCode = 1
     return
   }
 
@@ -855,6 +886,7 @@ Commands:
   sniffer generate-tests --repo <path> --url <url> | --project <id> [--use-llm] [--include-test-sources|--include-tests] [--include-fixtures]
   sniffer run-tests [--project <id>] [--use-llm]
   sniffer verify-matrix
+  sniffer audit-product-calibration [--product-experience-critic deterministic|llm|auto] [--provider mock|openai-compatible|auto] [--fixture id[,id]] [--include-good]
 `)
 }
 

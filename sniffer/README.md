@@ -94,6 +94,7 @@ npm run sniffer -- verify --issue <issue_id> --url http://localhost:3000 --repor
 npm run sniffer -- repair-loop --repo ../web --url http://localhost:3000 --agent manual --max-iterations 3
 npm run sniffer -- generate-tests --repo ../web --url http://localhost:3000
 npm run sniffer -- run-tests
+npm run sniffer -- audit-product-calibration --product-experience-critic deterministic
 ```
 
 ## Multi-Project Mode
@@ -456,6 +457,52 @@ Failing counts usually mean:
 To add a new matrix target, add a `MatrixTarget` entry in `src/verification/matrix.ts` with repo path, app URL, expected framework/profile, and minimum workflow/scenario counts. Prefer low minimums for arbitrary apps and rely on the detailed target report for quality.
 
 The matrix also dogfoods the Sniffer UI. It starts the local dashboard server when `ui/dist/index.html` exists and verifies that the dashboard loads, project selector is visible, run launcher is visible, report navigation is visible, and Timeline/Crawl/Graph/Screenshots/Fix Packet pages open without crashing.
+
+## Product Experience Calibration
+
+Use the calibration suite to prove the Product Experience Critic is not merely passing happy paths. It serves intentionally flawed local fixtures and checks that Sniffer reports the expected evidence-backed product gaps:
+
+```bash
+npm run sniffer -- audit-product-calibration
+```
+
+For a no-key baseline:
+
+```bash
+npm run sniffer -- audit-product-calibration \
+  --product-experience-critic deterministic \
+  --include-good
+```
+
+When an LLM provider is configured, the runner defaults to LLM mode. You can force the real product critic with:
+
+```bash
+npm run sniffer -- audit-product-calibration \
+  --product-experience-critic llm \
+  --provider openai-compatible
+```
+
+The suite currently includes fixtures for:
+
+- Run Timeline missing selected/latest run context.
+- Raw JSON payload with no Copy JSON action.
+- Graph Explorer with no legend, filters, or selected-node detail.
+- Repeated plan-run row actions with identical `Reopen` names.
+- Duplicate plan-run status/chip text.
+- Screenshot gallery that only lists files without scenario/state/action context.
+- Issues empty state that says only `No issues`.
+- Summary page that uses raw JSON as the primary explanation.
+
+It also includes a small good Sniffer-dashboard baseline. The suite passes only when every bad fixture produces its expected finding and the good baseline has no reportable findings.
+
+Reports are written to:
+
+```text
+reports/sniffer/product-calibration/latest/latest_calibration.json
+reports/sniffer/product-calibration/latest/latest_calibration.md
+```
+
+If a fixture fails, the markdown report lists the expected finding, detected findings, missing oracle, screenshot path, critic mode, and whether the LLM was used. Add new calibration fixtures under `fixtures/product-experience-bad/` with an expected finding entry in `src/verification/productExperienceCalibration.ts`.
 
 ## No-Key Deterministic Audit
 
