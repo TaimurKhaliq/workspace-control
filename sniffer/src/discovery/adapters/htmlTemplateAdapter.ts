@@ -2,7 +2,7 @@ import path from 'node:path'
 import type { ApiCall, SourceForm, SourceRoute, SourceWorkflow, UiSurface } from '../../types.js'
 import type { AdapterDetection, DiscoveryAdapter, DiscoveryContext, FrameworkDiscoveryResult, SourceFileContent } from './types.js'
 import { emptyDiscoveryResult } from './types.js'
-import { attrValues, cleanText, endpointStrings, regexMatches, relativeName, roundConfidence, tagText, unique, wordsFromName } from './common.js'
+import { attrValues, cleanText, endpointStrings, isApiPrefixReference, regexMatches, relativeName, roundConfidence, tagText, unique, wordsFromName } from './common.js'
 
 const templateExtensions = new Set(['.html', '.vue', '.svelte', '.astro', '.hbs', '.ejs'])
 
@@ -26,7 +26,7 @@ export class HtmlTemplateDiscoveryAdapter implements DiscoveryAdapter {
     if (detection.confidence <= 0) return result
     const templates = templateFiles(context.files)
     result.routes = dedupeRoutes(templates.flatMap((file) => discoverRoutes(file)))
-    result.components = templates.map((file) => ({ file: file.relative, name: relativeName(file.relative), discoveredBy: [this.id], framework: 'template', confidence: 0.45 }))
+    result.components = templates.map((file) => ({ file: file.relative, name: relativeName(file.relative), sourceScope: file.sourceScope, discoveredBy: [this.id], framework: 'template', confidence: 0.45 }))
     result.forms = templates.flatMap((file) => discoverForms(file))
     result.uiSurfaces = templates.flatMap((file) => discoverUiSurfaces(file))
     result.sourceWorkflows = inferWorkflows(templates, result.forms)
@@ -49,6 +49,7 @@ function discoverRoutes(file: SourceFileContent): SourceRoute[] {
     path: route,
     file: file.relative,
     source: route.startsWith('#') ? 'link' : 'router',
+    sourceScope: file.sourceScope,
     discoveredBy: ['html-template'],
     framework: 'template',
     confidence: 0.55,
@@ -73,6 +74,7 @@ function discoverForms(file: SourceFileContent): SourceForm[] {
       file: file.relative,
       name: cleanText(tagText(body, ['h1', 'h2', 'h3'])[0] ?? attrValues(match[1], 'aria-label')[0] ?? `Form ${index + 1}`),
       inputs,
+      sourceScope: file.sourceScope,
       discoveredBy: ['html-template'],
       framework: 'template',
       confidence: inputs.length ? 0.65 : 0.45,
@@ -111,6 +113,7 @@ function surface(file: SourceFileContent, displayName: string, evidence: string[
     relatedButtons: unique(buttons).slice(0, 10),
     relatedInputs: unique(inputs).slice(0, 10),
     confidence: roundConfidence(confidence),
+    sourceScope: file.sourceScope,
     discoveredBy: ['html-template'],
     framework: 'template'
   }
@@ -128,29 +131,30 @@ function inferWorkflows(files: SourceFileContent[], forms: SourceForm[]): Source
     const routes = discoverRoutes(file)
     if (routes.length) routeFiles.add(file.relative)
     if (forms.some((form) => form.file === file.relative)) {
-      workflows.push(workflow('Submit form', file.relative, ['form', ...actions].slice(0, 10), ['Inspect labelled fields', 'Avoid destructive submit unless explicitly safe'], 0.45))
+      workflows.push(workflow('Submit form', file.relative, ['form', ...actions].slice(0, 10), ['Inspect labelled fields', 'Avoid destructive submit unless explicitly safe'], 0.45, file.sourceScope))
     }
     if (/password|sign in|log in|login/.test(text)) {
-      workflows.push(workflow('Login form discoverability', file.relative, ['password', 'sign in', ...actions].slice(0, 10), ['Find email/username field', 'Find password field', 'Find sign in button without submitting credentials'], 0.65))
+      workflows.push(workflow('Login form discoverability', file.relative, ['password', 'sign in', ...actions].slice(0, 10), ['Find email/username field', 'Find password field', 'Find sign in button without submitting credentials'], 0.65, file.sourceScope))
     }
     if (/search|filter/.test(text)) {
-      workflows.push(workflow('Search/filter', file.relative, ['search', 'filter'], ['Find search/filter input', 'Verify filter affordance is visible'], 0.5))
+      workflows.push(workflow('Search/filter', file.relative, ['search', 'filter'], ['Find search/filter input', 'Verify filter affordance is visible'], 0.5, file.sourceScope))
     }
     if (/<table\b|<ul\b|<ol\b|ngFor|v-for|each\s/.test(file.content)) {
-      workflows.push(workflow('Table/list scan', file.relative, ['list/table template', ...tagText(file.content, ['th', 'li']).slice(0, 8)], ['Inspect list/table rows', 'Check row actions and overflow'], 0.55))
+      workflows.push(workflow('Table/list scan', file.relative, ['list/table template', ...tagText(file.content, ['th', 'li']).slice(0, 8)], ['Inspect list/table rows', 'Check row actions and overflow'], 0.55, file.sourceScope))
     }
   }
-  if (routeFiles.size > 0) workflows.push(workflow('Navigation route', [...routeFiles].sort(), ['router/href links'], ['Open safe navigation links', 'Verify route or content changes'], 0.55))
+  if (routeFiles.size > 0) workflows.push(workflow('Navigation route', [...routeFiles].sort(), ['router/href links'], ['Open safe navigation links', 'Verify route or content changes'], 0.55, files.find((file) => routeFiles.has(file.relative))?.sourceScope))
   return dedupeWorkflows(workflows)
 }
 
-function workflow(name: string, sourceFiles: string | string[], evidence: string[], actions: string[], confidence: number): SourceWorkflow {
+function workflow(name: string, sourceFiles: string | string[], evidence: string[], actions: string[], confidence: number, sourceScope?: SourceWorkflow['sourceScope']): SourceWorkflow {
   return {
     name,
     sourceFiles: Array.isArray(sourceFiles) ? sourceFiles : [sourceFiles],
     evidence: unique(evidence).slice(0, 12),
     likelyUserActions: actions,
     confidence: roundConfidence(confidence),
+    sourceScope,
     discoveredBy: ['html-template'],
     framework: 'template'
   }
@@ -160,6 +164,7 @@ function discoverApiCalls(file: SourceFileContent): ApiCall[] {
   return endpointStrings(file.content).filter(isBackendApiReference).map((endpoint) => ({
     endpoint,
     sourceFile: file.relative,
+    sourceScope: file.sourceScope,
     method: undefined,
     discoveredBy: ['html-template'],
     framework: 'template',
@@ -169,9 +174,10 @@ function discoverApiCalls(file: SourceFileContent): ApiCall[] {
 }
 
 function isBackendApiReference(endpoint: string): boolean {
+  if (isApiPrefixReference(endpoint)) return false
   if (/^\/?(?:src|assets|static|public)\//i.test(endpoint)) return false
   if (/\.(?:js|mjs|ts|tsx|css|png|jpe?g|gif|svg|webp|ico|woff2?)(?:[?#].*)?$/i.test(endpoint)) return false
-  return /^\/api(?:\/|$)/i.test(endpoint) || /^https?:\/\/[^/]+\/api(?:\/|$)/i.test(endpoint)
+  return /^\/api\/.+/i.test(endpoint) || /^https?:\/\/[^/]+\/api\/.+/i.test(endpoint)
 }
 
 function dedupeRoutes(routes: SourceRoute[]): SourceRoute[] {

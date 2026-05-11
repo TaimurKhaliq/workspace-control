@@ -30,8 +30,15 @@ export type IssueType =
 export interface SourceGraph {
   repoPath: string
   packageName?: string
+  rootPackageName?: string
+  uiPackageName?: string
   framework: string
+  rootFramework?: string
+  uiFramework?: string
   buildTool: string
+  rootBuildTool?: string
+  uiBuildTool?: string
+  sourceScopeSummary?: SourceScopeSummary
   sourceInventory?: SourceInventory
   uiIntentGraph?: UIIntentGraph
   graphRefinement?: GraphRefinementResult
@@ -50,6 +57,14 @@ export interface SourceGraph {
 }
 
 export type EvidenceExtractionMethod = 'deterministic' | 'heuristic' | 'llm' | 'runtime'
+export type SourceScope =
+  | 'primary_ui_source'
+  | 'api_server_support'
+  | 'agent_engine'
+  | 'fixture'
+  | 'test'
+  | 'config'
+  | 'unknown'
 
 export interface EvidenceFact {
   id: string
@@ -67,6 +82,7 @@ export interface EvidenceFact {
   rawText?: string
   suppressedFromSemanticGraph?: boolean
   refinedFromFactId?: string
+  sourceScope?: SourceScope
   filePath?: string
   symbol?: string
   snippet?: string
@@ -87,7 +103,29 @@ export interface SourceInventoryFile {
   path: string
   extension: string
   moduleName?: string
+  sourceScope?: SourceScope
   evidenceIds: string[]
+}
+
+export interface SourceScopeRoot {
+  path: string
+  scope: SourceScope
+  reason: string
+  framework?: string
+  buildTool?: string
+  packageName?: string
+}
+
+export interface SourceScopeSummary {
+  primaryUiRoots: SourceScopeRoot[]
+  supportRoots: SourceScopeRoot[]
+  fixtureRoots: SourceScopeRoot[]
+  excludedPaths: string[]
+  scannedFileCountsByScope: Record<SourceScope, number>
+  rootFramework?: string
+  rootBuildTool?: string
+  uiFramework?: string
+  uiBuildTool?: string
 }
 
 export interface SourceInventory {
@@ -122,6 +160,7 @@ export interface UIIntentNode {
   kind: UIIntentNodeKind
   label: string
   filePath?: string
+  sourceScope?: SourceScope
   symbol?: string
   route?: string
   confidence: number
@@ -245,6 +284,7 @@ export interface SourceRoute {
   path: string
   file: string
   source: 'filesystem' | 'router' | 'link'
+  sourceScope?: SourceScope
   discoveredBy?: string[]
   confidence?: number
   evidence?: string[]
@@ -254,6 +294,7 @@ export interface SourceRoute {
 export interface SourceFileSummary {
   file: string
   name: string
+  sourceScope?: SourceScope
   discoveredBy?: string[]
   confidence?: number
   evidence?: string[]
@@ -264,6 +305,7 @@ export interface SourceForm {
   file: string
   name: string
   inputs: string[]
+  sourceScope?: SourceScope
   discoveredBy?: string[]
   confidence?: number
   evidence?: string[]
@@ -381,6 +423,7 @@ export interface UiSurface {
   relatedButtons: string[]
   relatedInputs: string[]
   confidence: number
+  sourceScope?: SourceScope
   discoveredBy?: string[]
   framework?: string
 }
@@ -391,6 +434,7 @@ export interface SourceWorkflow {
   evidence: string[]
   likelyUserActions: string[]
   confidence: number
+  sourceScope?: SourceScope
   discoveredBy?: string[]
   framework?: string
 }
@@ -401,6 +445,7 @@ export interface ApiCall {
   sourceFile: string
   functionName?: string
   likelyWorkflow?: string
+  sourceScope?: SourceScope
   discoveredBy?: string[]
   confidence?: number
   evidence?: string[]
@@ -414,6 +459,7 @@ export interface StateActionHints {
   submitHandlers: string[]
   loadingStateVariables: string[]
   errorStateVariables: string[]
+  sourceScope?: SourceScope
   discoveredBy?: string[]
   confidence?: number
   evidence?: string[]

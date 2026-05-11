@@ -149,6 +149,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '',
     renderDiscoveryAdapters(report),
     '',
+    '## Source Scope Summary',
+    '',
+    renderSourceScopeSummary(report),
+    '',
     '## Source Inventory Summary',
     '',
     renderSourceInventorySummary(report),
@@ -532,6 +536,25 @@ function renderDiscoveryAdapters(report: SnifferReport): string {
   ].filter(Boolean).join('\n')).join('\n\n')
 }
 
+function renderSourceScopeSummary(report: SnifferReport): string {
+  const summary = report.sourceGraph.sourceScopeSummary
+  if (!summary) return 'No source scope summary was recorded.'
+  const counts = Object.entries(summary.scannedFileCountsByScope)
+    .map(([scope, count]) => `- ${scope}: ${count}`)
+    .join('\n')
+  return [
+    `- Root framework/build: ${summary.rootFramework ?? 'unknown'} / ${summary.rootBuildTool ?? 'unknown'}`,
+    `- Primary UI framework/build: ${summary.uiFramework ?? 'unknown'} / ${summary.uiBuildTool ?? 'unknown'}`,
+    `- Primary UI roots: ${summary.primaryUiRoots.map((root) => `${root.path} (${root.framework ?? 'unknown'}, ${root.reason})`).join('; ') || 'none'}`,
+    `- Support roots: ${summary.supportRoots.map((root) => `${root.path} (${root.scope}, ${root.reason})`).join('; ') || 'none'}`,
+    `- Fixture roots: ${summary.fixtureRoots.map((root) => `${root.path} (${root.reason})`).join('; ') || 'none'}`,
+    `- Excluded paths: ${summary.excludedPaths.join(', ') || 'none'}`,
+    '',
+    'Scanned files by scope:',
+    counts
+  ].join('\n')
+}
+
 function renderSourceInventorySummary(report: SnifferReport): string {
   const inventory = report.sourceInventory ?? report.sourceGraph.sourceInventory
   if (!inventory) return 'No Source Inventory was recorded.'
@@ -548,7 +571,7 @@ function renderSourceInventorySummary(report: SnifferReport): string {
     `- Total facts: ${inventory.facts.length}`,
     '',
     'Top facts:',
-    ...inventory.facts.filter((fact) => !rawJsxFragment(fact.value)).slice(0, 10).map((fact) => `- ${fact.kind}: ${fact.label ?? fact.value}${fact.filePath ? ` (${fact.filePath})` : ''} [${fact.extractionMethod}, ${fact.confidence}]`)
+    ...inventory.facts.filter((fact) => !rawJsxFragment(fact.value)).slice(0, 10).map((fact) => `- ${fact.kind}: ${fact.label ?? fact.value}${fact.filePath ? ` (${fact.filePath})` : ''} [${fact.extractionMethod}, ${fact.sourceScope ?? 'unknown'}, ${fact.confidence}]`)
   ].join('\n')
 }
 

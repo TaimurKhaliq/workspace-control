@@ -3,7 +3,7 @@ import path from 'node:path'
 import type { ApiCall, SourceFileSummary, SourceForm, SourceRoute, SourceWorkflow, StateActionHints, UiSurface } from '../../types.js'
 import type { AdapterDetection, DiscoveryAdapter, DiscoveryContext, FrameworkDiscoveryResult, SourceFileContent } from './types.js'
 import { emptyDiscoveryResult } from './types.js'
-import { attrValues, cleanText, endpointStrings, inferHttpMethod, regexMatches, relativeName, roundConfidence, tagText, unique, wordsFromName } from './common.js'
+import { attrValues, cleanText, endpointStrings, inferHttpMethod, isApiPrefixReference, regexMatches, relativeName, roundConfidence, tagText, unique, wordsFromName } from './common.js'
 
 export class AngularDiscoveryAdapter implements DiscoveryAdapter {
   id = 'angular'
@@ -65,6 +65,7 @@ function discoverComponents(components: SourceFileContent[], templates: SourceFi
   const summaries = components.map((file) => ({
     file: file.relative,
     name: file.content.match(/export\s+class\s+(\w+)/)?.[1] ?? wordsFromName(relativeName(file.relative)),
+    sourceScope: file.sourceScope,
     discoveredBy: ['angular'],
     framework: 'angular',
     confidence: 0.85,
@@ -78,6 +79,7 @@ function discoverComponents(components: SourceFileContent[], templates: SourceFi
     .map((file) => ({
       file: file.relative,
       name: wordsFromName(relativeName(file.relative)),
+      sourceScope: file.sourceScope,
       discoveredBy: ['angular'],
       framework: 'angular',
       confidence: 0.6,
@@ -99,6 +101,7 @@ function discoverRoutes(files: SourceFileContent[]): SourceRoute[] {
       path: route === '' ? '/' : `/${route.replace(/^\//, '')}`,
       file: file.relative,
       source: 'router' as const,
+      sourceScope: file.sourceScope,
       discoveredBy: ['angular'],
       framework: 'angular',
       confidence: 0.85,
@@ -118,6 +121,7 @@ function discoverTemplateRoutes(file: SourceFileContent): SourceRoute[] {
     path: route.startsWith('/') || route.startsWith('#') ? route : `/${route}`,
     file: file.relative,
     source: 'link' as const,
+    sourceScope: file.sourceScope,
     discoveredBy: ['angular'],
     framework: 'angular',
     confidence: 0.65,
@@ -134,6 +138,7 @@ function discoverTemplateForms(file: SourceFileContent): SourceForm[] {
       file: file.relative,
       name: wordsFromName(relativeName(file.relative)),
       inputs,
+      sourceScope: file.sourceScope,
       discoveredBy: ['angular'],
       framework: 'angular',
       confidence: 0.55,
@@ -148,6 +153,7 @@ function discoverTemplateForms(file: SourceFileContent): SourceForm[] {
       file: file.relative,
       name: cleanText(tagText(body, ['h1', 'h2', 'h3'])[0] ?? submit ?? `Form ${index + 1}`),
       inputs,
+      sourceScope: file.sourceScope,
       discoveredBy: ['angular'],
       framework: 'angular',
       confidence: inputs.length ? 0.75 : 0.55,
@@ -164,23 +170,24 @@ function discoverTemplateSurfaces(file: SourceFileContent): UiSurface[] {
   const routes = discoverTemplateRoutes(file).map((route) => route.path)
   const surfaces: UiSurface[] = []
   for (const heading of headings.slice(0, 8)) {
-    surfaces.push(surface(file.relative, heading, [heading, ...buttons.slice(0, 8), ...inputs.slice(0, 8), ...routes.slice(0, 4)], buttons, inputs, 0.65))
+    surfaces.push(surface(file, heading, [heading, ...buttons.slice(0, 8), ...inputs.slice(0, 8), ...routes.slice(0, 4)], buttons, inputs, 0.65))
   }
   if (surfaces.length === 0 && (buttons.length || inputs.length || routes.length)) {
-    surfaces.push(surface(file.relative, wordsFromName(relativeName(file.relative)), [...buttons, ...inputs, ...routes].slice(0, 16), buttons, inputs, 0.55))
+    surfaces.push(surface(file, wordsFromName(relativeName(file.relative)), [...buttons, ...inputs, ...routes].slice(0, 16), buttons, inputs, 0.55))
   }
   return surfaces
 }
 
-function surface(file: string, name: string, evidence: string[], buttons: string[], inputs: string[], confidence: number): UiSurface {
+function surface(file: SourceFileContent, name: string, evidence: string[], buttons: string[], inputs: string[], confidence: number): UiSurface {
   return {
-    file,
+    file: file.relative,
     surface_type: 'unknown_ui_section',
     display_name: name,
     evidence: unique(evidence).slice(0, 14),
     relatedButtons: unique(buttons).slice(0, 12),
     relatedInputs: unique(inputs).slice(0, 12),
     confidence: roundConfidence(confidence),
+    sourceScope: file.sourceScope,
     discoveredBy: ['angular'],
     framework: 'angular'
   }
@@ -196,13 +203,13 @@ function discoverAngularApiCalls(files: SourceFileContent[]): ApiCall[] {
       for (const http of body.matchAll(/http\.(get|post|put|patch|delete)\s*(?:<[^>]+>)?\s*\(\s*['"`]([^'"`]+)['"`]/gi)) {
         calls.push(apiCall(file, http[2], http[1].toUpperCase(), methodName, body))
       }
-      for (const endpoint of endpointStrings(body)) {
+      for (const endpoint of endpointStrings(body).filter((item) => !isApiPrefixReference(item))) {
         if (!calls.some((call) => call.sourceFile === file.relative && call.endpoint === endpoint && call.functionName === methodName)) {
           calls.push(apiCall(file, endpoint, inferHttpMethod(body), methodName, body))
         }
       }
     }
-    for (const endpoint of endpointStrings(file.content)) {
+    for (const endpoint of endpointStrings(file.content).filter((item) => !isApiPrefixReference(item))) {
       if (!calls.some((call) => call.endpoint === endpoint)) calls.push(apiCall(file, endpoint, inferHttpMethod(file.content), undefined, file.content))
     }
     return calls
@@ -216,6 +223,7 @@ function apiCall(file: SourceFileContent, endpoint: string, method: string | und
     sourceFile: file.relative,
     functionName,
     likelyWorkflow: inferWorkflowForApi(functionName, endpoint, evidenceSource),
+    sourceScope: file.sourceScope,
     discoveredBy: ['angular'],
     framework: 'angular',
     confidence: 0.75,
@@ -239,6 +247,7 @@ function discoverStateActions(components: SourceFileContent[], templates: Source
     const handlerNames = unique([...methodNames.filter((name) => /login|submit|save|create|delete|update|publish|follow|favorite|search|filter|open|close|cancel|register|sign/i.test(name)), ...templateHandlers])
     return {
       file: file.relative,
+      sourceScope: file.sourceScope,
       stateVariables,
       handlerNames,
       submitHandlers: handlerNames.filter((name) => /submit|save|create|update|publish|login|register|sign/i.test(name)),
@@ -267,38 +276,39 @@ function inferAngularWorkflows(input: {
     const buttons = tagText(content, ['button'])
     const actions = unique([...clickHandlers(content), ...submitHandlers(content), ...buttons])
     if (/password|sign in|log in|login/.test(text)) {
-      workflows.push(workflow('Login form', template.relative, unique(['password', 'login', ...actions]).slice(0, 12), ['Find username/email field', 'Find password field', 'Find sign in button without submitting credentials'], 0.8))
+      workflows.push(workflow('Login form', template.relative, unique(['password', 'login', ...actions]).slice(0, 12), ['Find username/email field', 'Find password field', 'Find sign in button without submitting credentials'], 0.8, template.sourceScope))
     }
     if (input.forms.some((form) => form.file === template.relative)) {
-      workflows.push(workflow('Submit form', template.relative, unique(['form', ...actions]).slice(0, 12), ['Inspect labelled form controls', 'Avoid submit unless explicitly safe'], 0.65))
+      workflows.push(workflow('Submit form', template.relative, unique(['form', ...actions]).slice(0, 12), ['Inspect labelled form controls', 'Avoid submit unless explicitly safe'], 0.65, template.sourceScope))
     }
     if (/new article|edit article|publish|save|update|create/.test(text) || actions.some((action) => /publish|save|update|create/i.test(action))) {
-      workflows.push(workflow('Create/edit entity', template.relative, unique([...buttons, ...actions]).slice(0, 12), ['Open create/edit form', 'Inspect required fields', 'Verify save/cancel affordances'], 0.65))
+      workflows.push(workflow('Create/edit entity', template.relative, unique([...buttons, ...actions]).slice(0, 12), ['Open create/edit form', 'Inspect required fields', 'Verify save/cancel affordances'], 0.65, template.sourceScope))
     }
     if (/search|filter/.test(text)) {
-      workflows.push(workflow('Search/filter', template.relative, ['search', 'filter'], ['Find search/filter control', 'Verify results/list context'], 0.55))
+      workflows.push(workflow('Search/filter', template.relative, ['search', 'filter'], ['Find search/filter control', 'Verify results/list context'], 0.55, template.sourceScope))
     }
     if (/<table\b|<ul\b|<ol\b|\*ngFor|@for\s*\(|article-preview|app-article-list/.test(content)) {
-      workflows.push(workflow('Table/list scan', template.relative, unique(['list/table template', ...tagText(content, ['h1', 'h2', 'li', 'th']).slice(0, 8)]), ['Inspect list/table rows', 'Check row action names and overflow'], 0.65))
+      workflows.push(workflow('Table/list scan', template.relative, unique(['list/table template', ...tagText(content, ['h1', 'h2', 'li', 'th']).slice(0, 8)]), ['Inspect list/table rows', 'Check row action names and overflow'], 0.65, template.sourceScope))
     }
   }
   if (input.routes.length) {
-    workflows.push(workflow('Navigation route', unique(input.routes.map((route) => route.file)), unique(input.routes.map((route) => route.path)).slice(0, 16), ['Open safe navigation links', 'Verify route/content changes'], 0.75))
+    workflows.push(workflow('Navigation route', unique(input.routes.map((route) => route.file)), unique(input.routes.map((route) => route.path)).slice(0, 16), ['Open safe navigation links', 'Verify route/content changes'], 0.75, input.routes[0]?.sourceScope))
   }
   for (const call of input.apiCalls) {
     if (!call.likelyWorkflow) continue
-    workflows.push(workflow(call.likelyWorkflow, call.sourceFile, [`${call.method ?? 'GET'} ${call.endpoint}`, call.functionName ?? ''].filter(Boolean), [`Use ${wordsFromName(call.functionName ?? call.likelyWorkflow)}`], 0.55))
+    workflows.push(workflow(call.likelyWorkflow, call.sourceFile, [`${call.method ?? 'GET'} ${call.endpoint}`, call.functionName ?? ''].filter(Boolean), [`Use ${wordsFromName(call.functionName ?? call.likelyWorkflow)}`], 0.55, call.sourceScope))
   }
   return mergeWorkflows(workflows)
 }
 
-function workflow(name: string, sourceFiles: string | string[], evidence: string[], actions: string[], confidence: number): SourceWorkflow {
+function workflow(name: string, sourceFiles: string | string[], evidence: string[], actions: string[], confidence: number, sourceScope?: SourceWorkflow['sourceScope']): SourceWorkflow {
   return {
     name,
     sourceFiles: Array.isArray(sourceFiles) ? sourceFiles : [sourceFiles],
     evidence: unique(evidence).slice(0, 14),
     likelyUserActions: actions,
     confidence: roundConfidence(confidence),
+    sourceScope,
     discoveredBy: ['angular'],
     framework: 'angular'
   }

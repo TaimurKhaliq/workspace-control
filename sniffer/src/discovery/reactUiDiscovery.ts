@@ -1,5 +1,6 @@
 import path from 'node:path'
 import type { ApiCall, SourceWorkflow, StateActionHints, UiSurface, UiSurfaceType } from '../types.js'
+import { isApiPrefixReference, normalizeEndpointReference } from './adapters/common.js'
 
 type FileContent = readonly [string, string]
 
@@ -250,7 +251,9 @@ function discoverApiCalls(repoPath: string, file: string, content: string): ApiC
     })
   }
 
-  return dedupeApiCalls(calls.filter((call) => call.endpoint.includes('/api/')))
+  return dedupeApiCalls(calls
+    .map((call) => ({ ...call, endpoint: normalizeEndpointReference(call.endpoint) }))
+    .filter((call) => call.endpoint.includes('/api/') && !isApiPrefixReference(call.endpoint)))
 }
 
 function discoverStateActions(repoPath: string, file: string, content: string): StateActionHints {
@@ -307,7 +310,7 @@ function endpointStrings(content: string): string[] {
     ...[...content.matchAll(/['"`]([^'"`]*\/api\/[^'"`]*)['"`]/g)].map((match) => match[1]),
     ...[...content.matchAll(/request<[^>]+>\(([`'"])(.+?)\1/g)].map((match) => match[2]),
     ...[...content.matchAll(/request\(([`'"])(.+?)\1/g)].map((match) => match[2])
-  ].filter(Boolean))
+  ].filter(Boolean).map(normalizeEndpointReference).filter((endpoint) => !isApiPrefixReference(endpoint)))
 }
 
 function inferMethod(content: string): string | undefined {

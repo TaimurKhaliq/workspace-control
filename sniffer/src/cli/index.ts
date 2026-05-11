@@ -696,7 +696,8 @@ function graphRefinerProvider(args: Record<string, string | boolean>, mode: Grap
 
 function sourceDiscoveryOptions(args: Record<string, string | boolean>) {
   return {
-    includeTestSources: boolArg(args, 'include-test-sources')
+    includeTestSources: boolArg(args, 'include-test-sources') || boolArg(args, 'include-tests'),
+    includeFixtures: boolArg(args, 'include-fixtures')
   }
 }
 
@@ -843,15 +844,15 @@ Commands:
   sniffer providers check --provider openai-compatible
   sniffer llm-check [--provider openai-compatible]
   sniffer inspect-url --url <url> | --project <id>
-  sniffer discover --repo <path> | --project <id> [--include-test-sources] [--graph-refiner off|llm|auto] [--provider mock|openai-compatible|auto]
+  sniffer discover --repo <path> | --project <id> [--include-test-sources|--include-tests] [--include-fixtures] [--graph-refiner off|llm|auto] [--provider mock|openai-compatible|auto]
   sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
-  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--graph-refiner off|llm|auto] [--ux-critic off|deterministic|llm] [--product-experience-critic off|llm|deterministic|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
+  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources|--include-tests] [--include-fixtures] [--consistency-check] [--consistency-prompts built-in|path] [--graph-refiner off|llm|auto] [--ux-critic off|deterministic|llm] [--product-experience-critic off|llm|deterministic|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
   sniffer repair-proof --issue <issue_id> --report <path> --agent manual
   sniffer apply-fix [--issue <issue_id>] [--report <path>] [--agent manual|mock|codex]
   sniffer verify --issue <issue_id> --url <url> --report <path>
   sniffer repair-loop --repo <path> --url <url> | --project <id> [--agent manual|mock|codex] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--provider mock|openai-compatible|auto] [--max-iterations 3]
-  sniffer generate-tests --repo <path> --url <url> | --project <id> [--use-llm] [--include-test-sources]
+  sniffer generate-tests --repo <path> --url <url> | --project <id> [--use-llm] [--include-test-sources|--include-tests] [--include-fixtures]
   sniffer run-tests [--project <id>] [--use-llm]
   sniffer verify-matrix
 `)

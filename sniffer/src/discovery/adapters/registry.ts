@@ -158,13 +158,14 @@ function mergeStateActions(items: StateActionHints[]): StateActionHints[] {
   )
 }
 
-function mergeMeta<T extends { discoveredBy?: string[]; evidence?: string[]; confidence?: number; framework?: string }>(left: T, right: T): T {
+function mergeMeta<T extends { discoveredBy?: string[]; evidence?: string[]; confidence?: number; framework?: string; sourceScope?: unknown }>(left: T, right: T): T {
   return {
     ...left,
     discoveredBy: unique([...(left.discoveredBy ?? []), ...(right.discoveredBy ?? [])]),
     evidence: unique([...(left.evidence ?? []), ...(right.evidence ?? [])]),
     confidence: Math.max(left.confidence ?? 0, right.confidence ?? 0) || undefined,
-    framework: left.framework === right.framework ? left.framework : left.framework ?? right.framework
+    framework: left.framework === right.framework ? left.framework : left.framework ?? right.framework,
+    sourceScope: left.sourceScope ?? right.sourceScope
   }
 }
 

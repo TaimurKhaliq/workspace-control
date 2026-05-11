@@ -6,6 +6,7 @@ import type {
   SourceGraph,
   SourceInventory,
   SourceInventoryFile,
+  SourceScope,
   UIIntentEdge,
   UIIntentGraph,
   UIIntentNode
@@ -40,6 +41,7 @@ export function buildSourceInventory(input: {
       value: file.relative,
       source: 'source_inventory',
       filePath: file.relative,
+      sourceScope: file.sourceScope,
       snippet: firstMeaningfulLine(file.content),
       confidence: 1,
       extractionMethod: 'deterministic'
@@ -48,31 +50,32 @@ export function buildSourceInventory(input: {
       path: file.relative,
       extension: path.extname(file.relative),
       moduleName: moduleName(file.relative),
+      sourceScope: file.sourceScope,
       evidenceIds: [fact.id]
     }
   })
 
   const packageName = typeof input.packageJson.name === 'string' ? input.packageJson.name : undefined
   if (packageName) {
-    addFact({ kind: 'package_name', value: packageName, source: 'package.json', confidence: 1, extractionMethod: 'deterministic' })
+    addFact({ kind: 'package_name', value: packageName, source: 'package.json', sourceScope: 'config', confidence: 1, extractionMethod: 'deterministic' })
   }
-  addFact({ kind: 'framework_signal', value: input.sourceGraph.framework, source: 'source_discovery', confidence: input.sourceGraph.framework === 'unknown' ? 0.3 : 0.9, extractionMethod: 'deterministic' })
-  addFact({ kind: 'build_tool_signal', value: input.sourceGraph.buildTool, source: 'source_discovery', confidence: input.sourceGraph.buildTool === 'unknown' ? 0.3 : 0.9, extractionMethod: 'deterministic' })
+  addFact({ kind: 'framework_signal', value: input.sourceGraph.framework, source: 'source_discovery', sourceScope: 'primary_ui_source', confidence: input.sourceGraph.framework === 'unknown' ? 0.3 : 0.9, extractionMethod: 'deterministic' })
+  addFact({ kind: 'build_tool_signal', value: input.sourceGraph.buildTool, source: 'source_discovery', sourceScope: 'primary_ui_source', confidence: input.sourceGraph.buildTool === 'unknown' ? 0.3 : 0.9, extractionMethod: 'deterministic' })
 
   for (const [name, command] of Object.entries(input.sourceGraph.packageScripts)) {
-    addFact({ kind: 'package_script', value: `${name}: ${command}`, source: 'package.json', symbol: name, confidence: 1, extractionMethod: 'deterministic' })
+    addFact({ kind: 'package_script', value: `${name}: ${command}`, source: 'package.json', sourceScope: 'config', symbol: name, confidence: 1, extractionMethod: 'deterministic' })
   }
   for (const route of input.sourceGraph.routes) {
-    addFact({ kind: 'route', value: route.path, source: route.source, filePath: route.file, snippet: evidenceSnippet(route.evidence), confidence: route.confidence ?? 0.8, extractionMethod: 'deterministic' })
+    addFact({ kind: 'route', value: route.path, source: route.source, filePath: route.file, sourceScope: route.sourceScope ?? sourceScopeForFile(input.sourceGraph, route.file), snippet: evidenceSnippet(route.evidence), confidence: route.confidence ?? 0.8, extractionMethod: 'deterministic' })
   }
   for (const page of input.sourceGraph.pages) {
-    addFact({ kind: 'page', value: page.name, source: 'source_discovery', filePath: page.file, snippet: evidenceSnippet(page.evidence), confidence: page.confidence ?? 0.7, extractionMethod: 'deterministic' })
+    addFact({ kind: 'page', value: page.name, source: 'source_discovery', filePath: page.file, sourceScope: page.sourceScope ?? sourceScopeForFile(input.sourceGraph, page.file), snippet: evidenceSnippet(page.evidence), confidence: page.confidence ?? 0.7, extractionMethod: 'deterministic' })
   }
   for (const component of input.sourceGraph.components) {
-    addFact({ kind: 'component', value: component.name, source: 'source_discovery', filePath: component.file, snippet: evidenceSnippet(component.evidence), confidence: component.confidence ?? 0.7, extractionMethod: 'deterministic' })
+    addFact({ kind: 'component', value: component.name, source: 'source_discovery', filePath: component.file, sourceScope: component.sourceScope ?? sourceScopeForFile(input.sourceGraph, component.file), snippet: evidenceSnippet(component.evidence), confidence: component.confidence ?? 0.7, extractionMethod: 'deterministic' })
   }
   for (const form of input.sourceGraph.forms) {
-    addFact({ kind: 'form', value: form.name, source: 'source_discovery', filePath: form.file, snippet: form.inputs.map(cleanControlText).filter(Boolean).join(', '), confidence: form.confidence ?? 0.75, extractionMethod: 'deterministic' })
+    addFact({ kind: 'form', value: form.name, source: 'source_discovery', filePath: form.file, sourceScope: form.sourceScope ?? sourceScopeForFile(input.sourceGraph, form.file), snippet: form.inputs.map(cleanControlText).filter(Boolean).join(', '), confidence: form.confidence ?? 0.75, extractionMethod: 'deterministic' })
   }
   for (const file of input.files) {
     for (const control of extractNormalizedControls(file)) {
@@ -90,6 +93,7 @@ export function buildSourceInventory(input: {
         rawText: control.rawText,
         source: 'source_inventory',
         filePath: control.filePath,
+        sourceScope: file.sourceScope,
         symbol: componentSymbol(file.relative),
         snippet: control.rawText.slice(0, 240),
         confidence: control.kind === 'action_control' ? 0.85 : 0.8,
@@ -102,6 +106,7 @@ export function buildSourceInventory(input: {
         value: asset,
         source: 'source_inventory',
         filePath: file.relative,
+        sourceScope: file.sourceScope,
         snippet: asset,
         confidence: 0.9,
         extractionMethod: 'deterministic'
@@ -109,33 +114,33 @@ export function buildSourceInventory(input: {
     }
   }
   for (const surface of input.sourceGraph.uiSurfaces) {
-    addFact({ kind: 'ui_surface_label', value: surface.display_name, source: 'source_discovery', filePath: surface.file, snippet: evidenceSnippet(surface.evidence), confidence: surface.confidence, extractionMethod: 'heuristic' })
+    addFact({ kind: 'ui_surface_label', value: surface.display_name, source: 'source_discovery', filePath: surface.file, sourceScope: surface.sourceScope ?? sourceScopeForFile(input.sourceGraph, surface.file), snippet: evidenceSnippet(surface.evidence), confidence: surface.confidence, extractionMethod: 'heuristic' })
     for (const button of surface.relatedButtons) {
-      addFact({ kind: 'button_label', value: button, source: 'source_discovery', filePath: surface.file, symbol: surface.display_name, confidence: surface.confidence, extractionMethod: 'deterministic' })
+      addFact({ kind: 'button_label', value: button, source: 'source_discovery', filePath: surface.file, sourceScope: surface.sourceScope ?? sourceScopeForFile(input.sourceGraph, surface.file), symbol: surface.display_name, confidence: surface.confidence, extractionMethod: 'deterministic' })
     }
     for (const inputName of surface.relatedInputs) {
-      addFact({ kind: 'input_label', value: inputName, source: 'source_discovery', filePath: surface.file, symbol: surface.display_name, confidence: surface.confidence, extractionMethod: 'deterministic' })
+      addFact({ kind: 'input_label', value: inputName, source: 'source_discovery', filePath: surface.file, sourceScope: surface.sourceScope ?? sourceScopeForFile(input.sourceGraph, surface.file), symbol: surface.display_name, confidence: surface.confidence, extractionMethod: 'deterministic' })
     }
   }
   for (const workflow of input.sourceGraph.sourceWorkflows) {
-    addFact({ kind: 'workflow_signal', value: workflow.name, source: 'source_discovery', filePath: workflow.sourceFiles[0], snippet: evidenceSnippet(workflow.evidence), confidence: workflow.confidence, extractionMethod: 'heuristic' })
+    addFact({ kind: 'workflow_signal', value: workflow.name, source: 'source_discovery', filePath: workflow.sourceFiles[0], sourceScope: workflow.sourceScope ?? sourceScopeForFile(input.sourceGraph, workflow.sourceFiles[0]), snippet: evidenceSnippet(workflow.evidence), confidence: workflow.confidence, extractionMethod: 'heuristic' })
     for (const action of workflow.likelyUserActions) {
-      addFact({ kind: 'user_action_signal', value: action, source: 'source_discovery', filePath: workflow.sourceFiles[0], symbol: workflow.name, confidence: workflow.confidence, extractionMethod: 'heuristic' })
+      addFact({ kind: 'user_action_signal', value: action, source: 'source_discovery', filePath: workflow.sourceFiles[0], sourceScope: workflow.sourceScope ?? sourceScopeForFile(input.sourceGraph, workflow.sourceFiles[0]), symbol: workflow.name, confidence: workflow.confidence, extractionMethod: 'heuristic' })
     }
   }
   for (const call of input.sourceGraph.apiCalls) {
     if (isStaticAssetReference(call.endpoint)) continue
-    addFact({ kind: 'api_call', value: formatApiCall(call), source: 'source_discovery', filePath: call.sourceFile, symbol: call.functionName, snippet: evidenceSnippet(call.evidence), confidence: call.confidence ?? 0.85, extractionMethod: 'deterministic' })
+    addFact({ kind: 'api_call', value: formatApiCall(call), source: 'source_discovery', filePath: call.sourceFile, sourceScope: call.sourceScope ?? sourceScopeForFile(input.sourceGraph, call.sourceFile), symbol: call.functionName, snippet: evidenceSnippet(call.evidence), confidence: call.confidence ?? 0.85, extractionMethod: 'deterministic' })
   }
   for (const state of input.sourceGraph.stateActions) {
     for (const name of state.stateVariables) {
-      addFact({ kind: 'state_variable', value: name, source: 'source_discovery', filePath: state.file, confidence: state.confidence ?? 0.8, extractionMethod: 'deterministic' })
+      addFact({ kind: 'state_variable', value: name, source: 'source_discovery', filePath: state.file, sourceScope: state.sourceScope ?? sourceScopeForFile(input.sourceGraph, state.file), confidence: state.confidence ?? 0.8, extractionMethod: 'deterministic' })
     }
     for (const name of state.handlerNames) {
-      addFact({ kind: 'handler', value: name, source: 'source_discovery', filePath: state.file, confidence: state.confidence ?? 0.8, extractionMethod: 'deterministic' })
+      addFact({ kind: 'handler', value: name, source: 'source_discovery', filePath: state.file, sourceScope: state.sourceScope ?? sourceScopeForFile(input.sourceGraph, state.file), confidence: state.confidence ?? 0.8, extractionMethod: 'deterministic' })
     }
     for (const name of state.submitHandlers) {
-      addFact({ kind: 'submit_handler', value: name, source: 'source_discovery', filePath: state.file, confidence: state.confidence ?? 0.8, extractionMethod: 'deterministic' })
+      addFact({ kind: 'submit_handler', value: name, source: 'source_discovery', filePath: state.file, sourceScope: state.sourceScope ?? sourceScopeForFile(input.sourceGraph, state.file), confidence: state.confidence ?? 0.8, extractionMethod: 'deterministic' })
     }
   }
 
@@ -169,6 +174,7 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
       kind: 'surface',
       label: surface.display_name,
       filePath: surface.file,
+      sourceScope: surface.sourceScope ?? sourceScopeForFile(sourceGraph, surface.file),
       confidence: surface.confidence,
       evidenceIds,
       extractionMethod: 'heuristic',
@@ -181,6 +187,7 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
       kind: 'workflow',
       label: workflow.name,
       filePath: workflow.sourceFiles[0],
+      sourceScope: workflow.sourceScope ?? sourceScopeForFile(sourceGraph, workflow.sourceFiles[0]),
       confidence: workflow.confidence,
       evidenceIds,
       extractionMethod: 'heuristic',
@@ -198,6 +205,7 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
         kind: 'action',
         label: action,
         filePath: workflow.sourceFiles[0],
+        sourceScope: workflow.sourceScope ?? sourceScopeForFile(sourceGraph, workflow.sourceFiles[0]),
         confidence: workflow.confidence,
         evidenceIds: evidenceForFiles(workflow.sourceFiles, [action], factIndex),
         extractionMethod: 'heuristic',
@@ -220,6 +228,7 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
       kind: 'form',
       label: form.name,
       filePath: form.file,
+      sourceScope: form.sourceScope ?? sourceScopeForFile(sourceGraph, form.file),
       confidence: form.confidence ?? 0.75,
       evidenceIds: evidenceForSurface(form.file, [form.name, ...form.inputs.map(cleanControlText)], factIndex),
       extractionMethod: 'deterministic',
@@ -230,6 +239,7 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
         kind: 'control',
         label: input,
         filePath: form.file,
+        sourceScope: form.sourceScope ?? sourceScopeForFile(sourceGraph, form.file),
         confidence: form.confidence ?? 0.75,
         evidenceIds: evidenceForSurface(form.file, [input], factIndex),
         extractionMethod: 'deterministic',
@@ -238,11 +248,12 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
       addEdge(formNode.id, controlNode.id, 'contains_control', controlNode.confidence, controlNode.evidenceIds)
     }
   }
-  for (const fact of factIndex.filter((item) => item.kind === 'form_control' || item.kind === 'action_control')) {
+  for (const fact of factIndex.filter((item) => (item.kind === 'form_control' || item.kind === 'action_control') && isSemanticUiFact(item, sourceGraph))) {
     const node = addNode({
       kind: fact.kind === 'action_control' ? 'action' : 'control',
       label: fact.label ?? fact.value,
       filePath: fact.filePath,
+      sourceScope: fact.sourceScope,
       symbol: fact.handler,
       confidence: fact.confidence,
       evidenceIds: [fact.id],
@@ -269,6 +280,7 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
       kind: 'api_dependency',
       label: formatApiCall(call),
       filePath: call.sourceFile,
+      sourceScope: call.sourceScope ?? sourceScopeForFile(sourceGraph, call.sourceFile),
       symbol: call.functionName,
       confidence: call.confidence ?? 0.85,
       evidenceIds: evidenceForSurface(call.sourceFile, [call.endpoint, call.functionName ?? '', call.method ?? ''], factIndex),
@@ -280,12 +292,13 @@ export function buildUIIntentGraph(sourceGraph: SourceGraph, inventory: SourceIn
       if (workflowNode) addEdge(workflowNode.id, apiNode.id, 'calls_api', apiNode.confidence, apiNode.evidenceIds)
     }
   }
-  for (const state of sourceGraph.stateActions) {
+  for (const state of sourceGraph.stateActions.filter((item) => isSemanticUiScope(item.sourceScope ?? sourceScopeForFile(sourceGraph, item.file), sourceGraph))) {
     for (const value of [...state.stateVariables, ...state.handlerNames, ...state.submitHandlers]) {
       addNode({
         kind: state.handlerNames.includes(value) || state.submitHandlers.includes(value) ? 'action' : 'state',
         label: value,
         filePath: state.file,
+        sourceScope: state.sourceScope ?? sourceScopeForFile(sourceGraph, state.file),
         confidence: state.confidence ?? 0.8,
         evidenceIds: evidenceForSurface(state.file, [value], factIndex),
         extractionMethod: 'deterministic',
@@ -355,6 +368,21 @@ function edgeFactory(edges: UIIntentEdge[]) {
 
 function factLookup(facts: EvidenceFact[]): EvidenceFact[] {
   return facts.filter((fact) => !fact.suppressedFromSemanticGraph)
+}
+
+function sourceScopeForFile(sourceGraph: SourceGraph, filePath: string | undefined): SourceScope | undefined {
+  if (!filePath) return undefined
+  return sourceGraph.sourceInventory?.files.find((file) => file.path === filePath)?.sourceScope
+}
+
+function isSemanticUiFact(fact: EvidenceFact, sourceGraph: SourceGraph): boolean {
+  return isSemanticUiScope(fact.sourceScope, sourceGraph)
+}
+
+function isSemanticUiScope(sourceScope: SourceScope | undefined, sourceGraph: SourceGraph): boolean {
+  if (!sourceScope) return true
+  if (sourceScope === 'primary_ui_source') return true
+  return sourceScope === 'fixture' && !(sourceGraph.sourceScopeSummary?.excludedPaths ?? []).includes('fixtures')
 }
 
 function evidenceForSurface(filePath: string | undefined, values: string[], facts: EvidenceFact[]): string[] {

@@ -1,9 +1,10 @@
-import type { ApiCall, SourceFileSummary, SourceForm, SourceRoute, StateActionHints, UiSurface, SourceWorkflow } from '../../types.js'
+import type { ApiCall, SourceFileSummary, SourceForm, SourceRoute, SourceScope, StateActionHints, UiSurface, SourceWorkflow } from '../../types.js'
 
 export interface SourceFileContent {
   file: string
   relative: string
   content: string
+  sourceScope?: SourceScope
 }
 
 export interface DiscoveryContext {

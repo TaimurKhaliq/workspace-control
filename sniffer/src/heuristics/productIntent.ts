@@ -48,6 +48,7 @@ export async function synthesizeProductIntent(input: ProductIntentInput): Promis
 }
 
 export function buildDeterministicProductIntent(input: Pick<ProductIntentInput, 'sourceGraph' | 'crawlGraph' | 'appIntent' | 'productGoal'>): ProductIntentModel {
+  if (isSnifferDashboard(input)) return buildSnifferDashboardProductIntent(input)
   const source = sourceText(input.sourceGraph)
   const runtime = runtimeText(input.crawlGraph)
   const goal = input.productGoal ?? ''
@@ -125,6 +126,84 @@ export function buildDeterministicProductIntent(input: Pick<ProductIntentInput, 
     risks_of_hallucination: [
       'Common UI/product patterns are not reportable issues unless source, runtime, or user evidence supports them.',
       'Sniffer does not infer backend data semantics beyond discovered API/state names.'
+    ],
+    product_goal: input.productGoal,
+    llmUsed: false
+  }
+}
+
+function buildSnifferDashboardProductIntent(
+  input: Pick<ProductIntentInput, 'sourceGraph' | 'crawlGraph' | 'appIntent' | 'productGoal'>
+): ProductIntentModel {
+  const goal = input.productGoal ?? ''
+  const evidence = evidenceForTerms(sourceText(input.sourceGraph), runtimeText(input.crawlGraph), goal, [
+    'Sniffer Dashboard',
+    'Run Audit',
+    'Run Timeline',
+    'Scenarios',
+    'Crawl Path',
+    'Workflow Evidence',
+    'Issues',
+    'Fix Packets',
+    'Screenshots',
+    'Graph Explorer',
+    'Raw JSON',
+    'Repair Workbench',
+    'Agent Model',
+    'source inventory',
+    'ui intent graph'
+  ]).slice(0, 18)
+  const coreEntities = [
+    entity('project', 'A registered UI target with repo path and app URL.', ['Project', 'Projects', 'repoPath', 'appUrl'], input),
+    entity('audit run', 'A Sniffer execution over one target app.', ['Run Audit', 'audit', '/api/audits'], input),
+    entity('report', 'The structured Sniffer output for a run.', ['latest report', 'reports/latest', 'Summary', 'Raw JSON'], input),
+    entity('scenario trace', 'Step-by-step runtime evidence for a workflow being checked.', ['Scenarios', 'scenarioRuns', 'Run Timeline', 'Crawl Path'], input),
+    entity('issue', 'A grouped finding with severity, evidence, and suspected files.', ['Issues', 'issue', 'findings'], input),
+    entity('fix packet', 'A structured repair handoff generated from an issue.', ['Fix Packets', 'fix packet', 'Copy prompt'], input),
+    entity('screenshot evidence', 'Captured visual evidence from crawl/scenario steps.', ['Screenshots', 'screenshot', 'artifacts'], input),
+    entity('agent model', 'Source inventory, UI intent graph, retrieved evidence, refinements, and suppressions.', ['Agent Model', 'Source Inventory', 'UI Intent Graph', 'Evidence Packets'], input)
+  ].filter((item) => item.evidence.length > 0)
+  const primaryJobs = [
+    workflowItem('register/select projects', ['Projects', 'Add project', 'Project selector', 'repoPath', 'appUrl'], input),
+    workflowItem('run UI audits', ['Run Audit', '/api/audits', 'audit launcher'], input),
+    workflowItem('inspect run timeline and crawl evidence', ['Run Timeline', 'Crawl Path', 'Scenarios', 'Workflow Evidence'], input),
+    workflowItem('review issues and fix packets', ['Issues', 'Fix Packets', 'Copy prompt'], input),
+    workflowItem('inspect screenshots and graph evidence', ['Screenshots', 'Graph Explorer', 'Evidence graph'], input),
+    workflowItem('review agent model evidence', ['Agent Model', 'Source Inventory', 'UI Intent Graph', 'Evidence Packets', 'LLM Refinements'], input),
+    workflowItem('run human-approved repairs', ['Repair Workbench', '/api/repairs', 'repair proof', 'apply fix'], input)
+  ].filter((item) => item.evidence.length > 0 || item.support.includes('user_stated'))
+  const expectedNavigation = [
+    workflowItem('sidebar navigation should expose report/evidence sections', ['Summary', 'Projects', 'Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues', 'Fix Packets', 'Screenshots', 'Graph Explorer', 'Raw JSON', 'Settings'], input),
+    workflowItem('current project/report context should stay visible on evidence pages', ['selected project', 'Latest report', 'ReportContextStrip', 'run id', 'generatedAt'], input)
+  ].filter((item) => item.evidence.length > 0 || item.support.includes('user_stated'))
+  const expectedPersistence = [
+    workflowItem('projects and latest report metadata should be loaded locally', ['/api/projects', '/api/reports/latest', 'projects.json'], input),
+    workflowItem('repair attempts should be recorded with logs and diff context', ['/api/repairs', 'repair_attempts', 'diff'], input)
+  ].filter((item) => item.evidence.length > 0)
+  const outputReview = [
+    workflowItem('report sections should summarize run status, evidence, issues, and fix packets', ['Summary', 'Run Timeline', 'Issues', 'Fix Packets'], input),
+    workflowItem('screenshots and graph nodes should include context about the state/action/scenario they came from', ['Screenshots', 'Graph Explorer', 'Crawl Path', 'screenshot'], input),
+    workflowItem('raw JSON should remain an advanced/debug view with copy affordance', ['Raw JSON', 'Copy JSON'], input)
+  ].filter((item) => item.evidence.length > 0 || item.support.includes('user_stated'))
+
+  return {
+    app_category: 'planning_control_panel',
+    product_summary: 'A local-first UI QA dashboard for running Sniffer audits, reviewing evidence-backed reports, inspecting the agent model, and launching human-approved repairs.',
+    primary_user_jobs: primaryJobs,
+    core_entities: coreEntities,
+    expected_workflows: primaryJobs,
+    expected_navigation_model: expectedNavigation,
+    expected_persistence_model: expectedPersistence,
+    expected_output_review_model: outputReview,
+    confidence: evidence.length >= 6 && primaryJobs.length >= 4 ? 'high' : evidence.length >= 3 ? 'medium' : 'low',
+    evidence,
+    assumptions: [
+      ...(goal ? ['User-provided product goal is treated as strong evidence for intended jobs.'] : []),
+      'Sniffer Dashboard subtype is supported by source/runtime dashboard navigation and audit/report controls.'
+    ],
+    risks_of_hallucination: [
+      'Do not convert common dashboard-product expectations into bugs unless source, runtime, screenshot, or user evidence supports them.',
+      'Do not apply workspace-control plan-bundle or handoff expectations to the Sniffer Dashboard subtype.'
     ],
     product_goal: input.productGoal,
     llmUsed: false

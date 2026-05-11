@@ -92,6 +92,33 @@ describe('product intent synthesis', () => {
     expect(result.issues.map((issue) => issue.title)).not.toContain('Plan run history is not usable for repeated prompt workflows')
   })
 
+  it('uses Sniffer Dashboard product language for dashboard intent', () => {
+    const graph = workspaceControlGraph()
+    graph.packageName = 'sniffer-ui'
+    graph.uiSurfaces = [
+      surface('app_shell', 'Sniffer Dashboard', ['Run Timeline', 'Crawl Path', 'Workflow Evidence', 'Issues', 'Fix Packets', 'Graph Explorer', 'Agent Model', 'Repair Workbench'])
+    ]
+    graph.sourceWorkflows = [
+      workflow('Inspect report sections', ['Run Timeline', 'Crawl Path', 'Issues']),
+      workflow('Use repair workbench', ['Repair Workbench', 'Copy prompt'])
+    ]
+    graph.apiCalls = [
+      { method: 'POST', endpoint: '/api/audits', sourceFile: 'ui/src/api.ts', functionName: 'startAudit', likelyWorkflow: 'Run Sniffer audit' },
+      { method: 'GET', endpoint: '/api/reports/latest/fix-packets', sourceFile: 'ui/src/api.ts', functionName: 'fixPackets', likelyWorkflow: 'Inspect fix packets' }
+    ]
+
+    const model = buildDeterministicProductIntent({
+      sourceGraph: graph,
+      crawlGraph: crawl(['Sniffer Dashboard', 'Run Timeline', 'Crawl Path', 'Workflow Evidence', 'Fix Packets', 'Repair Workbench', 'Agent Model']),
+      appIntent: { summary: 'React app', likelyWorkflows: [], sourceSignals: [], llmUsed: false }
+    })
+
+    const text = JSON.stringify(model)
+    expect(model.product_summary).toContain('UI QA dashboard')
+    expect(model.primary_user_jobs.map((item) => item.name)).toEqual(expect.arrayContaining(['run UI audits', 'review issues and fix packets', 'review agent model evidence']))
+    expect(text).not.toMatch(/plan bundle|handoff prompt/i)
+  })
+
   it('does not report plan-run gap when source exposes list, metadata, and reopen controls', async () => {
     const graph = workspaceControlGraph()
     graph.uiSurfaces.push(surface('plan_bundle_view', 'Plan runs history', [

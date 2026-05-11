@@ -446,11 +446,11 @@ function rebuildInventoryIndexes(inventory?: SourceInventory): SourceInventory |
   }
 }
 
-function parseReclassification(value: string | undefined): { kind?: string; value?: string } {
+function parseReclassification(value: unknown): { kind?: string; value?: string } {
   if (!value) return {}
   const parsed = parseJsonObject(value)
   if (parsed) return { kind: typeof parsed.kind === 'string' ? parsed.kind : undefined, value: typeof parsed.value === 'string' ? parsed.value : undefined }
-  return { kind: value }
+  return typeof value === 'string' ? { kind: value } : {}
 }
 
 function defaultRefinedFactValue(fact: EvidenceFact, kind: string): string {
@@ -458,28 +458,30 @@ function defaultRefinedFactValue(fact: EvidenceFact, kind: string): string {
   return fact.value
 }
 
-function parseNormalizedControl(value: string | undefined): Partial<EvidenceFact> {
+function parseNormalizedControl(value: unknown): Partial<EvidenceFact> {
   const parsed = parseJsonObject(value)
-  if (!parsed) return { label: value, kind: 'form_control' }
+  if (!parsed) return { label: typeof value === 'string' ? value : undefined, kind: 'form_control' }
   return parsed as Partial<EvidenceFact>
 }
 
-function parseWorkflow(value: string | undefined): { name?: string; likelyUserActions?: string[] } {
+function parseWorkflow(value: unknown): { name?: string; likelyUserActions?: string[] } {
   const parsed = parseJsonObject(value)
-  if (!parsed) return { name: value }
+  if (!parsed) return { name: typeof value === 'string' ? value : undefined }
   return {
     name: typeof parsed.name === 'string' ? parsed.name : undefined,
     likelyUserActions: Array.isArray(parsed.likelyUserActions) ? parsed.likelyUserActions.filter((item): item is string => typeof item === 'string') : undefined
   }
 }
 
-function parseEdge(value: string | undefined): Partial<UIIntentEdge> {
+function parseEdge(value: unknown): Partial<UIIntentEdge> {
   const parsed = parseJsonObject(value)
   return parsed ? parsed as Partial<UIIntentEdge> : {}
 }
 
-function parseJsonObject(value: string | undefined): Record<string, unknown> | undefined {
+function parseJsonObject(value: unknown): Record<string, unknown> | undefined {
   if (!value) return undefined
+  if (typeof value === 'object' && !Array.isArray(value)) return value as Record<string, unknown>
+  if (typeof value !== 'string') return undefined
   try {
     const parsed = JSON.parse(value)
     return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed as Record<string, unknown> : undefined

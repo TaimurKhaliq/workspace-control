@@ -17,7 +17,7 @@ describe('agent context evidence layers', () => {
 
     expect(graph.sourceInventory?.facts.some((fact) =>
       fact.kind === 'api_call' &&
-      fact.value.includes('/api/workspaces/${workspaceId}/plan-runs') &&
+      fact.value.includes('/api/workspaces/{workspaceId}/plan-runs') &&
       fact.filePath === 'src/api.ts' &&
       fact.extractionMethod === 'deterministic'
     )).toBe(true)

@@ -188,13 +188,75 @@ export class OpenAICompatibleProvider implements LlmProvider {
   async critiqueProductExperience(context: ProductExperienceContext): Promise<ProductExperienceDecision> {
     if (!this.isConfigured()) throw new Error('LLM provider is not configured')
     const compact = {
-      ...context,
+      app_name: context.app_name,
+      app_profile: context.app_profile,
+      app_subtype: context.app_subtype,
+      product_intent_summary: truncateText(context.product_intent_summary, 700),
+      primary_user_jobs: truncateList(context.primary_user_jobs, 12, 180),
+      current_screen_name: context.current_screen_name,
+      nav_label_clicked: context.nav_label_clicked,
+      page_intent: context.page_intent,
+      workflow_intent: context.workflow_intent,
+      scenario_name: context.scenario_name,
+      scenario_step: context.scenario_step,
+      user_goal: context.user_goal,
+      expected_user_questions: truncateList(context.expected_user_questions, 10, 180),
+      expected_primary_content: truncateList(context.expected_primary_content, 12, 180),
+      expected_next_actions: truncateList(context.expected_next_actions, 10, 180),
+      required_context: truncateList(context.required_context, 10, 180),
+      screenshot_path: context.screenshot_path,
+      screenshot_artifact_url: context.screenshot_artifact_url,
+      scenario_screenshot_used: context.scenario_screenshot_used,
       screenshot_binary_included: false,
-      dom_summary: context.dom_summary.slice(0, 18),
-      visible_controls: context.visible_controls.slice(0, 30),
-      source_evidence: context.source_evidence.slice(0, 12),
-      runtime_evidence: context.runtime_evidence.slice(0, 12),
-      candidate_findings: context.candidate_findings?.slice(0, 8)
+      dom_summary: truncateList(context.dom_summary, 18, 500),
+      headings: truncateList(context.headings, 12, 180),
+      visible_controls: truncateList(context.visible_controls, 30, 220),
+      visible_status_text: truncateList(context.visible_status_text, 12, 220),
+      visible_empty_states: truncateList(context.visible_empty_states, 8, 220),
+      visible_errors: truncateList(context.visible_errors, 8, 220),
+      active_nav_state: truncateText(context.active_nav_state, 180),
+      run_project_report_context_visible: truncateList(context.run_project_report_context_visible, 16, 220),
+      source_evidence: truncateList(context.source_evidence, 12, 260),
+      runtime_evidence: truncateList(context.runtime_evidence, 12, 260),
+      related_issues: truncateList(context.related_issues, 8, 220),
+      related_fix_packets: truncateList(context.related_fix_packets, 8, 220),
+      rubric: context.rubric.map((item) => ({
+        id: item.id,
+        name: item.name,
+        description: item.description,
+        applies_to: item.applies_to,
+        evidence_required: item.evidence_required,
+        default_severity: item.default_severity
+      })),
+      context_sufficiency: context.context_sufficiency,
+      context_sufficiency_score: context.context_sufficiency_score,
+      context_sufficiency_signals: context.context_sufficiency_signals,
+      context_warnings: truncateList(context.context_warnings, 10, 240),
+      vision_capable: context.vision_capable,
+      vision_used: context.vision_used,
+      vision_not_used_reason: context.vision_not_used_reason,
+      llm_provider: context.llm_provider,
+      llm_model: context.llm_model,
+      llm_api_style: context.llm_api_style,
+      real_llm_expected: context.real_llm_expected,
+      candidate_findings: context.candidate_findings?.slice(0, 8),
+      evidence_retrieval_summary: context.evidence_retrieval_summary,
+      evidence_packet_summary: context.evidence_packet ? {
+        context: context.evidence_packet.context,
+        retrievedDocumentCount: context.evidence_packet.retrievedDocuments.length,
+        graphNodeCount: context.evidence_packet.graphNodes.length,
+        sourceFactCount: context.evidence_packet.sourceFacts.length,
+        runtimeFactCount: context.evidence_packet.runtimeFacts.length,
+        screenshots: context.evidence_packet.screenshots.slice(0, 6),
+        contradictions: context.evidence_packet.contradictions.slice(0, 6).map((item) => item.claim),
+        confidenceSummary: context.evidence_packet.confidenceSummary,
+      topRetrievedDocuments: context.evidence_packet.retrievedDocuments.slice(0, 8).map((doc) => ({
+          id: doc.id,
+          kind: doc.kind,
+          text: truncateText(doc.text, 280),
+          metadata: doc.metadata
+        }))
+      } : undefined
     }
     const prompt = [
       'You are an intent-aware Product Experience Critic for Sniffer.',
@@ -451,6 +513,16 @@ function redactSecrets(text: string): string {
   return text
     .replace(/sk-[A-Za-z0-9_*.-]{8,}/g, 'sk-***')
     .replace(/Bearer\s+[A-Za-z0-9._~+/-]+=*/gi, 'Bearer ***')
+}
+
+function truncateList(values: string[] | undefined, limit: number, maxChars: number): string[] {
+  return (values ?? []).slice(0, limit).map((value) => truncateText(value, maxChars)).filter(Boolean) as string[]
+}
+
+function truncateText(value: string | undefined, maxChars: number): string | undefined {
+  if (!value) return undefined
+  const compact = value.replace(/\s+/g, ' ').trim()
+  return compact.length > maxChars ? `${compact.slice(0, maxChars - 3)}...` : compact
 }
 
 export function extractProviderText(json: unknown): string {

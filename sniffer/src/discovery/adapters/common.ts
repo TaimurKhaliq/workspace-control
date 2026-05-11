@@ -45,7 +45,34 @@ export function endpointStrings(content: string): string[] {
   return unique([
     ...regexMatches(content, /['"`]((?:https?:\/\/[^'"`]+|\/[^'"`\s]+))['"`]/g),
     ...regexMatches(content, /(?:get|post|put|patch|delete)\s*\(\s*['"`]([^'"`]+)['"`]/gi)
-  ]).filter((item) => item.startsWith('/') || item.startsWith('http'))
+  ])
+    .map(normalizeEndpointReference)
+    .filter((item) => item.startsWith('/') || item.startsWith('http'))
+}
+
+export function normalizeEndpointReference(endpoint: string): string {
+  let value = endpoint.trim()
+  value = value.replace(/\$\{([^}]*)\}/g, (_, expression: string) => {
+    const name = expression.match(/\b([A-Za-z_][\w]*)\b(?!\s*\()/)?.[1] ?? 'param'
+    return `{${name}}`
+  })
+  value = value.replace(/\$\{[\s\S]*$/, '')
+  value = value.replace(/[?#].*$/, '')
+  value = value.replace(/\/+$/, '')
+  return value === '/api' ? '/api/' : value
+}
+
+export function isApiPrefixReference(endpoint: string): boolean {
+  const value = normalizeEndpointReference(endpoint)
+  if (/^https?:\/\//.test(value)) {
+    try {
+      const parsed = new URL(value)
+      return parsed.pathname === '/api' || parsed.pathname === '/api/'
+    } catch {
+      return false
+    }
+  }
+  return value === '/api' || value === '/api/'
 }
 
 export function inferHttpMethod(content: string, fallback?: string): string | undefined {
