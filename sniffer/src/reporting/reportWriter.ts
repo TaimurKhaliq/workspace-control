@@ -1,11 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import type { AppIntent, AppProfile, AppSubtype, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, DiscoveryMode, GeneratedScenario, Issue, LocatorRepairResult, ProductExperienceResult, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent, RuntimeWorkflowVerification, ScenarioPackSelection, ScenarioRun, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { AppIntent, AppProfile, AppSubtype, CandidateFinding, CrawlCoverage, CrawlGraph, CrawlState, DiscoveryMode, EvidenceProvenanceSummary, GeneratedScenario, GraphRefinementSuggestion, Issue, LocatorRepairResult, ProductExperienceContext, ProductExperienceContextScope, ProductExperienceResult, ProductIntentFinding, ProductIntentModel, PromptConsistencyResult, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent, RuntimeWorkflowVerification, ScenarioPackSelection, ScenarioRun, ScreenshotEvidenceSource, SnifferReport, SourceGraph, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import { writeJson } from './json.js'
 import { matchRuntimeSurfaces } from '../heuristics/runtimeSurfaceMatcher.js'
 import { enrichIssues } from '../repair/issueMetadata.js'
 import { triageIssues } from '../heuristics/issueTriage.js'
 import { buildUIIntentGraph } from '../evidence/contextModel.js'
+import { buildRuntimeEventIntegrity } from './runtimeEvents.js'
 
 export async function writeAuditReports(reportDir: string, input: {
   sourceGraph: SourceGraph
@@ -35,6 +36,7 @@ export async function writeAuditReports(reportDir: string, input: {
   issues: Issue[]
 }): Promise<SnifferReport> {
   await mkdir(reportDir, { recursive: true })
+  const generatedAt = new Date().toISOString()
   const sourceGraph: SourceGraph = {
     ...input.sourceGraph,
     uiIntentGraph: input.sourceGraph.uiIntentGraph ?? buildUIIntentGraph(input.sourceGraph),
@@ -47,15 +49,20 @@ export async function writeAuditReports(reportDir: string, input: {
       executed_scenarios_count: input.scenarioRuns?.length ?? 0
     }
   }
-  const rawFindings = enrichIssues(input.rawFindings ?? input.issues, sourceGraph, input.crawlGraph)
+  const runtimeIntegritySeed = buildRuntimeEventIntegrity(input.crawlGraph, input.rawFindings ?? input.issues)
+  const rawFindings = enrichIssues([...(input.rawFindings ?? input.issues), ...runtimeIntegritySeed.unexplainedIssues], sourceGraph, input.crawlGraph)
+  const runtimeIntegrity = buildRuntimeEventIntegrity(input.crawlGraph, rawFindings)
   const triagedIssues = input.rawFindings
-    ? enrichIssues(input.issues, sourceGraph, input.crawlGraph)
+    ? enrichIssues([...input.issues, ...runtimeIntegritySeed.unexplainedIssues], sourceGraph, input.crawlGraph)
     : enrichIssues(triageIssues({
       rawFindings,
       sourceGraph,
       workflowVerifications: input.runtimeWorkflowVerifications
     }), sourceGraph, input.crawlGraph)
   const crawlGraph = enrichCrawlGraphForReport(input.crawlGraph, sourceGraph, triagedIssues, input.runtimeWorkflowVerifications, input.scenarioRuns ?? [])
+  const productExperience = input.productExperience
+    ? attachProductExperienceProvenance(input.productExperience, generatedAt)
+    : undefined
   const report: SnifferReport = {
     ...input,
     sourceGraph,
@@ -73,9 +80,11 @@ export async function writeAuditReports(reportDir: string, input: {
     llmRuntimeIntent: input.llmRuntimeIntent,
     locatorFailures: input.locatorFailures ?? [],
     generatedScenarios: input.generatedScenarios ?? [],
-    productExperience: input.productExperience,
+    productExperience,
     graphRefinement: sourceGraph.graphRefinement,
-    evidenceRetrievalSummaries: input.productExperience?.evidenceRetrievalSummaries ?? [],
+    evidenceRetrievalSummaries: productExperience?.evidenceRetrievalSummaries ?? [],
+    evidenceProvenance: productExperience?.evidenceProvenance,
+    suppressedRuntimeEvents: runtimeIntegrity.suppressedRuntimeEvents,
     scenarioRuns: input.scenarioRuns ?? [],
     criticDecisions: input.criticDecisions ?? [],
     uxCriticFindings: input.uxCriticFindings ?? [],
@@ -83,7 +92,7 @@ export async function writeAuditReports(reportDir: string, input: {
     blockedChecks: input.blockedChecks ?? [],
     needsMoreCrawling: input.needsMoreCrawling ?? [],
     runtimeSurfaceMatches: matchRuntimeSurfaces(sourceGraph, crawlGraph),
-    generatedAt: new Date().toISOString()
+    generatedAt
   }
   await writeJson(path.join(reportDir, 'source_graph.json'), sourceGraph)
   if (sourceGraph.sourceInventory) await writeJson(path.join(reportDir, 'source_inventory.json'), sourceGraph.sourceInventory)
@@ -94,12 +103,112 @@ export async function writeAuditReports(reportDir: string, input: {
   if (input.runtimeDomSnapshot) await writeJson(path.join(reportDir, 'runtime_dom_snapshot.json'), input.runtimeDomSnapshot)
   if (input.runtimeAppModel) await writeJson(path.join(reportDir, 'runtime_app_model.json'), input.runtimeAppModel)
   if (input.productIntent) await writeJson(path.join(reportDir, 'product_intent.json'), input.productIntent)
-  if (input.productExperience) await writeJson(path.join(reportDir, 'product_experience_critic.json'), input.productExperience)
+  if (productExperience) await writeJson(path.join(reportDir, 'product_experience_critic.json'), productExperience)
+  await writeJson(path.join(reportDir, 'suppressed_runtime_events.json'), runtimeIntegrity.suppressedRuntimeEvents)
   await writeJson(path.join(reportDir, 'crawl_graph.json'), crawlGraph)
   await writeJson(path.join(reportDir, 'latest_report.json'), report)
   await writeFile(path.join(reportDir, 'latest_report.md'), renderMarkdown(report), 'utf8')
   await writeFile(path.join(reportDir, 'fix_prompts.md'), renderFixPrompts(triagedIssues), 'utf8')
   return report
+}
+
+function attachProductExperienceProvenance(result: ProductExperienceResult, outerReportGeneratedAt: string): ProductExperienceResult {
+  const contexts = result.contexts.map((context) => ({
+    ...context,
+    outerReportGeneratedAt,
+    context_warnings: unique([
+      ...context.context_warnings,
+      provenanceMismatchWarning(context, outerReportGeneratedAt)
+    ].filter(Boolean) as string[])
+  }))
+  const contextByScreen = new Map(contexts.map((context) => [context.current_screen_name, context]))
+  const decisions = result.decisions.map((decision) => {
+    const context = contextByScreen.get(decision.screen_name)
+    return {
+      ...decision,
+      outerReportGeneratedAt,
+      displayedReportId: decision.displayedReportId ?? context?.displayedReportId,
+      displayedReportGeneratedAt: decision.displayedReportGeneratedAt ?? context?.displayedReportGeneratedAt,
+      displayedReportPath: decision.displayedReportPath ?? context?.displayedReportPath,
+      screenshotSource: decision.screenshotSource ?? context?.screenshotSource,
+      contextScope: decision.contextScope ?? context?.contextScope,
+      context_warnings: unique([
+        ...decision.context_warnings,
+        provenanceMismatchWarning(context, outerReportGeneratedAt)
+      ].filter(Boolean) as string[])
+    }
+  })
+  return {
+    ...result,
+    contexts,
+    decisions,
+    evidenceProvenance: buildEvidenceProvenanceSummary(contexts, outerReportGeneratedAt)
+  }
+}
+
+function provenanceMismatchWarning(context: ProductExperienceContext | undefined, outerReportGeneratedAt: string): string | undefined {
+  if (!context || context.contextScope !== 'displayed_report' || !context.displayedReportGeneratedAt) return undefined
+  if (sameTimestampish(context.displayedReportGeneratedAt, outerReportGeneratedAt)) return undefined
+  return `dashboard-visible report timestamp (${context.displayedReportGeneratedAt}) differs from outer audit report timestamp (${outerReportGeneratedAt}); judge visible counts as displayed-report evidence only`
+}
+
+function buildEvidenceProvenanceSummary(contexts: ProductExperienceContext[], outerAuditReportGeneratedAt: string): EvidenceProvenanceSummary {
+  const contextScopeCounts = emptyScopeCounts()
+  const screenshotSourceCounts = emptyScreenshotSourceCounts()
+  const displayedReportContexts = contexts.map((context) => {
+    const scopeKey = context.contextScope ?? 'unset'
+    const sourceKey = context.screenshotSource ?? 'unset'
+    contextScopeCounts[scopeKey] += 1
+    screenshotSourceCounts[sourceKey] += 1
+    return {
+      screen: context.current_screen_name,
+      navLabel: context.nav_label_clicked,
+      scenarioName: context.scenario_name,
+      screenshotPath: context.screenshot_path,
+      screenshotSource: context.screenshotSource,
+      contextScope: context.contextScope,
+      displayedReportId: context.displayedReportId,
+      displayedReportGeneratedAt: context.displayedReportGeneratedAt,
+      displayedReportPath: context.displayedReportPath,
+      warnings: context.context_warnings.filter((warning) => /displayed|provenance|outer audit|dashboard-visible/i.test(warning))
+    }
+  })
+  return {
+    outerAuditReportGeneratedAt,
+    contextScopeCounts,
+    screenshotSourceCounts,
+    displayedReportContexts,
+    warnings: unique(displayedReportContexts.flatMap((context) => context.warnings))
+  }
+}
+
+function emptyScopeCounts(): Record<ProductExperienceContextScope | 'unset', number> {
+  return {
+    current_audit: 0,
+    displayed_report: 0,
+    mixed: 0,
+    unknown: 0,
+    unset: 0
+  }
+}
+
+function emptyScreenshotSourceCounts(): Record<ScreenshotEvidenceSource | 'unset', number> {
+  return {
+    current_audit_screen: 0,
+    dashboard_displayed_report: 0,
+    previous_report: 0,
+    unknown: 0,
+    unset: 0
+  }
+}
+
+function sameTimestampish(left: string, right: string): boolean {
+  const leftTime = Date.parse(left)
+  const rightTime = Date.parse(right)
+  if (Number.isFinite(leftTime) && Number.isFinite(rightTime)) {
+    return Math.abs(leftTime - rightTime) < 2000
+  }
+  return left === right
 }
 
 export function renderMarkdown(report: SnifferReport): string {
@@ -185,6 +294,10 @@ export function renderMarkdown(report: SnifferReport): string {
     `- Raw findings: ${rawFindings.length}`,
     `- Triaged issues / repair groups: ${report.issues.length}`,
     '',
+    '## Suppressed Runtime Events',
+    '',
+    renderSuppressedRuntimeEvents(report),
+    '',
     '## Source UI Surfaces',
     '',
     renderSurfaceSummary(report),
@@ -256,6 +369,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '## Product Experience Critic',
     '',
     renderProductExperienceCritic(report),
+    '',
+    '## Evidence Provenance',
+    '',
+    renderEvidenceProvenance(report),
     '',
     '## Evidence Retrieval Summaries',
     '',
@@ -633,12 +750,8 @@ function intentEvidenceCoverage(graph: NonNullable<SnifferReport['uiIntentGraph'
 function renderGraphStructureCritic(report: SnifferReport): string {
   const refinement = report.graphRefinement ?? report.sourceGraph.graphRefinement
   if (!refinement) return 'Graph Structure Critic was not run.'
-  const applied = refinement.appliedSuggestions.slice(0, 8).map((suggestion) =>
-    `- ${suggestion.type}: ${suggestion.fromValue ?? suggestion.targetId} -> ${suggestion.toValue ?? 'applied'} (${suggestion.reason})`
-  )
-  const rejected = refinement.rejectedSuggestions.slice(0, 8).map((suggestion) =>
-    `- ${suggestion.type}: ${suggestion.targetId} rejected: ${suggestion.rejectedReason}`
-  )
+  const applied = refinement.appliedSuggestions.slice(0, 8).map((suggestion) => renderGraphRefinementSuggestion(suggestion, 'applied'))
+  const rejected = refinement.rejectedSuggestions.slice(0, 8).map((suggestion) => renderGraphRefinementSuggestion(suggestion, 'rejected', suggestion.rejectedReason))
   return [
     `- Mode: ${refinement.mode ?? 'unknown'}`,
     `- Status: ${refinement.status ?? 'completed'}`,
@@ -657,6 +770,39 @@ function renderGraphStructureCritic(report: SnifferReport): string {
     'Top rejected refinements:',
     rejected.length ? rejected.join('\n') : '- none'
   ].filter((item): item is string => Boolean(item)).join('\n')
+}
+
+function renderGraphRefinementSuggestion(suggestion: GraphRefinementSuggestion, status: 'applied' | 'rejected', rejectedReason?: string): string {
+  const from = formatGraphRefinementValue(suggestion.fromValue ?? suggestion.targetId)
+  const to = formatGraphRefinementValue(suggestion.toValue ?? (status === 'applied' ? 'applied' : 'n/a'))
+  return [
+    `- ${suggestion.type}: ${from} -> ${to}`,
+    `  - Target: ${suggestion.targetId}`,
+    `  - Evidence ids: ${suggestion.evidenceIds.join(', ') || 'none'}`,
+    `  - Confidence/risk: ${suggestion.confidence}/${suggestion.risk}`,
+    rejectedReason ? `  - Status: rejected (${rejectedReason})` : `  - Status: ${status}`,
+    `  - Reason: ${suggestion.reason}`
+  ].join('\n')
+}
+
+function formatGraphRefinementValue(value: unknown): string {
+  if (value === undefined || value === null) return 'n/a'
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) return value.map(formatGraphRefinementValue).join(', ')
+  if (typeof value !== 'object') return String(value)
+  const record = value as Record<string, unknown>
+  const kind = stringField(record.kind) ?? stringField(record.type) ?? stringField(record.edgeKind)
+  const label = stringField(record.label) ?? stringField(record.value) ?? stringField(record.name) ?? stringField(record.id)
+  const source = stringField(record.source)
+  const target = stringField(record.target)
+  if (source && target) return `${source}${kind ? ` -${kind}-> ` : ' -> '}${target}`
+  if (kind && label) return `${kind}: ${label}`
+  if (label) return label
+  return JSON.stringify(value, null, 2)
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
 function renderWorkflowDiscoverySources(report: SnifferReport): string {
@@ -831,6 +977,11 @@ function renderProductExperienceCritic(report: SnifferReport): string {
       `- LLM request status: ${decision.llm_request_status}`,
       `- Vision used: ${decision.vision_used ? 'yes' : 'no'}`,
       decision.vision_not_used_reason ? `- Vision not used reason: ${decision.vision_not_used_reason}` : undefined,
+      `- Context scope: ${decision.contextScope ?? 'unknown'}`,
+      `- Screenshot source: ${decision.screenshotSource ?? 'unknown'}`,
+      decision.outerReportGeneratedAt ? `- Outer report generated: ${decision.outerReportGeneratedAt}` : undefined,
+      decision.displayedReportId ? `- Dashboard-visible report: ${decision.displayedReportId}` : undefined,
+      decision.displayedReportGeneratedAt ? `- Dashboard-visible report generated: ${decision.displayedReportGeneratedAt}` : undefined,
       `- Scenario screenshot used: ${decision.scenario_screenshot_used ? 'yes' : 'no'}`,
       `- Context sufficiency: ${decision.context_sufficiency} (${decision.context_sufficiency_score})`,
       decision.context_warnings.length ? `- Context warnings: ${decision.context_warnings.join('; ')}` : '- Context warnings: none',
@@ -885,6 +1036,51 @@ function renderProductExperienceCritic(report: SnifferReport): string {
     '',
     screenBlocks || 'No screen decisions recorded.'
   ].filter(Boolean).join('\n')
+}
+
+function renderEvidenceProvenance(report: SnifferReport): string {
+  const provenance = report.evidenceProvenance ?? report.productExperience?.evidenceProvenance
+  if (!provenance) return 'No evidence provenance summary recorded.'
+  const contexts = provenance.displayedReportContexts.slice(0, 16).map((context) => [
+    `- ${context.screen}`,
+    `  - Scope: ${context.contextScope ?? 'unset'}`,
+    `  - Screenshot source: ${context.screenshotSource ?? 'unset'}`,
+    context.navLabel ? `  - Nav label: ${context.navLabel}` : undefined,
+    context.scenarioName ? `  - Scenario: ${context.scenarioName}` : undefined,
+    context.screenshotPath ? `  - Screenshot: ${context.screenshotPath}` : undefined,
+    context.displayedReportId ? `  - Displayed report: ${context.displayedReportId}` : undefined,
+    context.displayedReportGeneratedAt ? `  - Displayed report generated: ${context.displayedReportGeneratedAt}` : undefined,
+    context.displayedReportPath ? `  - Displayed report path: ${context.displayedReportPath}` : undefined,
+    context.warnings.length ? `  - Warnings: ${context.warnings.join('; ')}` : undefined
+  ].filter(Boolean).join('\n'))
+  return [
+    `- Outer audit report generated: ${provenance.outerAuditReportGeneratedAt ?? report.generatedAt}`,
+    `- Context scopes: ${Object.entries(provenance.contextScopeCounts).map(([key, value]) => `${key}=${value}`).join(', ')}`,
+    `- Screenshot sources: ${Object.entries(provenance.screenshotSourceCounts).map(([key, value]) => `${key}=${value}`).join(', ')}`,
+    provenance.warnings.length ? `- Provenance warnings: ${provenance.warnings.join('; ')}` : '- Provenance warnings: none',
+    '',
+    'Reviewed screen provenance:',
+    contexts.length ? contexts.join('\n') : '- none'
+  ].join('\n')
+}
+
+function renderSuppressedRuntimeEvents(report: SnifferReport): string {
+  const suppressed = report.suppressedRuntimeEvents ?? []
+  if (suppressed.length === 0) {
+    const hasRuntimeEvents = report.crawlGraph.consoleErrors.length + report.crawlGraph.networkFailures.length > 0
+    return hasRuntimeEvents
+      ? 'No suppressed runtime events recorded; observed runtime events are represented as findings or repair groups.'
+      : 'No console or network runtime events were observed.'
+  }
+  return suppressed.map((event) => [
+    `- ${event.type}: ${event.text}`,
+    event.location ? `  - Location: ${event.location}` : undefined,
+    event.url ? `  - URL: ${event.url}` : undefined,
+    event.method ? `  - Method: ${event.method}` : undefined,
+    event.failureText ? `  - Failure: ${event.failureText}` : undefined,
+    `  - Provenance: ${event.provenance}`,
+    `  - Reason suppressed: ${event.reason}`
+  ].filter(Boolean).join('\n')).join('\n')
 }
 
 function renderEvidenceRetrievalSummaries(report: SnifferReport): string {

@@ -415,8 +415,8 @@ export interface GraphRefinementSuggestion {
   id: string
   type: GraphRefinementSuggestionType
   targetId: string
-  fromValue?: string
-  toValue?: string
+  fromValue?: unknown
+  toValue?: unknown
   reason: string
   evidenceIds: string[]
   confidence: GraphRefinementConfidence
@@ -912,6 +912,8 @@ export interface SnifferReport {
   productExperience?: ProductExperienceResult
   graphRefinement?: GraphRefinementResult
   evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
+  evidenceProvenance?: EvidenceProvenanceSummary
+  suppressedRuntimeEvents?: SuppressedRuntimeEvent[]
   promptConsistency?: PromptConsistencyResult
   runtimeSurfaceMatches: RuntimeSurfaceMatch[]
   runtimeWorkflowVerifications: RuntimeWorkflowVerification[]
@@ -924,6 +926,59 @@ export interface SnifferReport {
   rawFindings?: Issue[]
   issues: Issue[]
   generatedAt: string
+}
+
+export type ScreenshotEvidenceSource =
+  | 'current_audit_screen'
+  | 'dashboard_displayed_report'
+  | 'previous_report'
+  | 'unknown'
+
+export type ProductExperienceContextScope =
+  | 'current_audit'
+  | 'displayed_report'
+  | 'mixed'
+  | 'unknown'
+
+export type RuntimeEventProvenance =
+  | 'current_audit_runtime'
+  | 'dashboard_displayed_report'
+  | 'previous_report_data'
+  | 'browser_extension_noise'
+  | 'known_benign'
+  | 'unknown'
+
+export interface EvidenceProvenanceContextSummary {
+  screen: string
+  navLabel?: string
+  scenarioName?: string
+  screenshotPath?: string
+  screenshotSource?: ScreenshotEvidenceSource
+  contextScope?: ProductExperienceContextScope
+  displayedReportId?: string
+  displayedReportGeneratedAt?: string
+  displayedReportPath?: string
+  warnings: string[]
+}
+
+export interface EvidenceProvenanceSummary {
+  outerAuditRunId?: string
+  outerAuditReportGeneratedAt?: string
+  contextScopeCounts: Record<ProductExperienceContextScope | 'unset', number>
+  screenshotSourceCounts: Record<ScreenshotEvidenceSource | 'unset', number>
+  displayedReportContexts: EvidenceProvenanceContextSummary[]
+  warnings: string[]
+}
+
+export interface SuppressedRuntimeEvent {
+  type: 'console_error' | 'network_error'
+  text: string
+  location?: string
+  url?: string
+  method?: string
+  failureText?: string
+  reason: string
+  provenance: RuntimeEventProvenance
 }
 
 export type AppProfileType =
@@ -1183,6 +1238,13 @@ export interface ProductExperienceContext {
   required_context: string[]
   screenshot_path?: string
   screenshot_artifact_url?: string
+  outerAuditRunId?: string
+  outerReportGeneratedAt?: string
+  displayedReportId?: string
+  displayedReportGeneratedAt?: string
+  displayedReportPath?: string
+  screenshotSource?: ScreenshotEvidenceSource
+  contextScope?: ProductExperienceContextScope
   scenario_screenshot_used: boolean
   dom_summary: string[]
   headings: string[]
@@ -1254,6 +1316,13 @@ export interface ProductExperienceDecision {
   llm_request_status: 'success' | 'not_requested' | 'not_run' | 'provider_error'
   vision_used: boolean
   vision_not_used_reason?: string
+  outerAuditRunId?: string
+  outerReportGeneratedAt?: string
+  displayedReportId?: string
+  displayedReportGeneratedAt?: string
+  displayedReportPath?: string
+  screenshotSource?: ScreenshotEvidenceSource
+  contextScope?: ProductExperienceContextScope
   scenario_screenshot_used: boolean
   context_sufficiency: ProductExperienceContextSufficiency
   context_sufficiency_score: number
@@ -1294,6 +1363,7 @@ export interface ProductExperienceResult {
   rubric: ProductExperienceRubricItem[]
   contexts: ProductExperienceContext[]
   decisions: ProductExperienceDecision[]
+  evidenceProvenance?: EvidenceProvenanceSummary
   evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
   issues: Issue[]
 }

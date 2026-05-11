@@ -350,7 +350,7 @@ function LlmRefinementsPanel({ model }: { model: AgentModel }) {
                 <td><span className={`status-chip ${status === 'applied' ? 'good' : 'warn'}`}>{status}</span></td>
                 <td>{suggestion.type}</td>
                 <td><code>{suggestion.targetId}</code></td>
-                <td><span className="wrap-cell">{suggestion.fromValue ?? 'n/a'} → {suggestion.toValue ?? 'n/a'}</span></td>
+                <td><span className="wrap-cell">{formatRefinementValue(suggestion.fromValue) ?? 'n/a'} → {formatRefinementValue(suggestion.toValue) ?? 'n/a'}</span></td>
                 <td>{suggestion.confidence}/{suggestion.risk}</td>
                 <td>{rejectedReason || suggestion.reason}<EvidenceIdRow ids={suggestion.evidenceIds} /></td>
               </tr>
@@ -360,6 +360,26 @@ function LlmRefinementsPanel({ model }: { model: AgentModel }) {
       </div>
     </section>
   )
+}
+
+function formatRefinementValue(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return String(value)
+  if (Array.isArray(value)) return value.map(formatRefinementValue).filter(Boolean).join(', ')
+  if (typeof value !== 'object') return String(value)
+  const record = value as Record<string, unknown>
+  const kind = stringValue(record.kind) ?? stringValue(record.type) ?? stringValue(record.edgeKind)
+  const label = stringValue(record.label) ?? stringValue(record.value) ?? stringValue(record.name) ?? stringValue(record.id)
+  const source = stringValue(record.source)
+  const target = stringValue(record.target)
+  if (source && target) return `${source}${kind ? ` -${kind}-> ` : ' -> '}${target}`
+  if (kind && label) return `${kind}: ${label}`
+  if (label) return label
+  return JSON.stringify(value, null, 2)
+}
+
+function stringValue(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
 function EvidencePacketsPanel({ report, model }: { report?: SnifferReport | null; model: AgentModel }) {

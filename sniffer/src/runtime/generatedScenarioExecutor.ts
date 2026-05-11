@@ -171,6 +171,21 @@ async function snifferDashboardAssertions(
   if (scenario.id === 'sniffer-report-sections') {
     return [await clickRequiredButtons(page, 'Report section navigation is reachable', ['Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues'], shot, 4)]
   }
+  if (scenario.id === 'sniffer-run-timeline') {
+    return [await openDashboardSection(page, 'Run Timeline', 'Run Timeline view is reachable', shot)]
+  }
+  if (scenario.id === 'sniffer-crawl-path') {
+    return [await openDashboardSection(page, 'Crawl Path', 'Crawl Path view is reachable', shot)]
+  }
+  if (scenario.id === 'sniffer-workflow-evidence') {
+    return [await openDashboardSection(page, 'Workflow Evidence', 'Workflow Evidence view is reachable', shot)]
+  }
+  if (scenario.id === 'sniffer-agent-model') {
+    return [await openDashboardSection(page, 'Agent Model', 'Agent Model evidence view is reachable', shot)]
+  }
+  if (scenario.id === 'sniffer-repair-workbench') {
+    return [await openDashboardSection(page, 'Repair Workbench', 'Repair Workbench view is reachable', shot)]
+  }
   if (scenario.id === 'sniffer-issues-fix-packets') {
     return [await clickRequiredButtons(page, 'Issues and fix packets are reachable', ['Issues', 'Fix Packets'], shot, 2)]
   }
@@ -219,6 +234,19 @@ async function snifferDashboardAssertions(
   return [{ label: 'Sniffer dashboard scenario planned', status: 'blocked', evidence: [`No deterministic executor for ${scenario.id}.`], screenshotPath: snapshot.screenshotPath }]
 }
 
+async function openDashboardSection(page: Page, name: string, assertionLabel: string, shot: (name: string, actionLabel?: string) => Promise<string | undefined>): Promise<ScenarioAssertionResult> {
+  const visible = await clickNavButton(page, name)
+  await page.waitForTimeout(150)
+  const screenshotPath = await shot(name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), `click ${name}`)
+  const textVisible = await page.getByText(new RegExp(escapeRegex(name), 'i')).first().isVisible({ timeout: 600 }).catch(() => false)
+  return {
+    label: assertionLabel,
+    status: visible && textVisible ? 'passed' : 'failed',
+    evidence: [`nav_visible:${visible}`, `screen_text_visible:${textVisible}`],
+    screenshotPath
+  }
+}
+
 async function clickRequiredButtons(page: Page, label: string, names: string[], shot: (name: string, actionLabel?: string) => Promise<string | undefined>, minimum: number): Promise<ScenarioAssertionResult> {
   const evidence: string[] = []
   let passed = 0
@@ -240,9 +268,12 @@ async function clickRequiredButtons(page: Page, label: string, names: string[], 
   return { label, status: passed >= minimum ? 'passed' : 'failed', evidence, screenshotPath: undefined }
 }
 
-async function clickNavButton(page: Page, name: string): Promise<void> {
-  await page.getByRole('button', { name: new RegExp(`^${escapeRegex(name)}$`, 'i') }).first().click({ timeout: 2_000 }).catch(() => undefined)
+async function clickNavButton(page: Page, name: string): Promise<boolean> {
+  const locator = page.getByRole('button', { name: new RegExp(`^${escapeRegex(name)}$`, 'i') }).first()
+  const visible = await locator.isVisible({ timeout: 500 }).catch(() => false)
+  if (visible) await locator.click({ timeout: 2_000 }).catch(() => undefined)
   await page.waitForTimeout(150)
+  return visible
 }
 
 async function controlsVisible(page: Page, label: string, patterns: RegExp[], screenshotPath?: string): Promise<ScenarioAssertionResult> {

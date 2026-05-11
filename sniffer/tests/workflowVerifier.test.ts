@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildWorkflowStatus, workflowIssues } from '../src/runtime/workflowVerifier.js'
+import { buildWorkflowStatus, genericWorkflowLocatorLabels, workflowIssues } from '../src/runtime/workflowVerifier.js'
 import type { RuntimeControlCheck } from '../src/types.js'
 
 describe('workflow verification helpers', () => {
@@ -30,6 +30,20 @@ describe('workflow verification helpers', () => {
       type: 'missing_form_control',
       title: 'Missing runtime control for Add repo'
     })
+  })
+
+  it('derives target labels from generic dashboard workflow actions', () => {
+    expect(genericWorkflowLocatorLabels('Open Raw JSON')).toContain('Raw JSON')
+    expect(genericWorkflowLocatorLabels('Open Fix Packets')).toContain('Fix Packets')
+    expect(genericWorkflowLocatorLabels('Inspect timeline, scenarios, crawl path, issues, and evidence')).toEqual(expect.arrayContaining([
+      'timeline',
+      'scenarios',
+      'crawl path',
+      'issues'
+    ]))
+    expect(genericWorkflowLocatorLabels('Inspect raw report payload')).toContain('Raw JSON')
+    expect(genericWorkflowLocatorLabels('Copy repair/fix prompts')).toEqual(expect.arrayContaining(['Fix Packets', 'Copy prompt']))
+    expect(genericWorkflowLocatorLabels('Run Sniffer audit')).toContain('Run Audit')
   })
 })
 

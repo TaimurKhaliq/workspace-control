@@ -136,7 +136,7 @@ export const GOOD_PRODUCT_EXPERIENCE_FIXTURES: ProductExperienceCalibrationFixtu
     id: 'good-sniffer-dashboard',
     name: 'Good Sniffer dashboard baseline',
     root: path.join('fixtures', 'product-experience-good', 'sniffer-dashboard'),
-    hash: '#timeline',
+    hash: '#screenshots',
     appSubtype: undefined,
     expectedFindings: []
   }

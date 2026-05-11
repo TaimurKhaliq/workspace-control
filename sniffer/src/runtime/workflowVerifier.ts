@@ -243,8 +243,57 @@ async function verifyRawJson(page: Page, attempted: string[]): Promise<RuntimeCo
 }
 
 async function verifyGenericWorkflow(page: Page, workflow: SourceWorkflow): Promise<RuntimeControlCheck[]> {
-  const checks = workflow.likelyUserActions.slice(0, 3).map((action) => checkAny(page, action, [page.getByText(new RegExp(escapeRegex(action.split(' ')[0] ?? action), 'i'))]))
+  const checks = workflow.likelyUserActions.slice(0, 3).map((action) => {
+    const locators = genericWorkflowLocatorLabels(action).flatMap((label) => {
+      const pattern = new RegExp(escapeRegex(label), 'i')
+      return [
+        byRole(page, 'button', pattern),
+        byRole(page, 'link', pattern),
+        byRole(page, 'tab', pattern),
+        page.getByText(pattern)
+      ]
+    })
+    return checkAny(page, action, locators)
+  })
   return Promise.all(checks)
+}
+
+export function genericWorkflowLocatorLabels(action: string): string[] {
+  const cleaned = action
+    .replace(/\b(open|inspect|review|watch|copy|run|use|select|click|view|navigate to|go to)\b/gi, ' ')
+    .replace(/\band\b/gi, ',')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const semanticAliases = workflowActionAliases(action)
+  const candidates = [
+    action,
+    cleaned,
+    ...semanticAliases,
+    ...cleaned.split(/[,/]+/g),
+    ...cleaned.split(/\bor\b/gi)
+  ]
+  return [...new Set(candidates
+    .map((candidate) => candidate.replace(/\s+/g, ' ').trim())
+    .filter((candidate) => candidate.length >= 3)
+    .filter((candidate) => !/^(the|a|an|status|details|evidence)$/i.test(candidate))
+  )]
+}
+
+function workflowActionAliases(action: string): string[] {
+  const text = action.toLowerCase()
+  return [
+    /raw report payload|raw payload|report payload/.test(text) ? 'Raw JSON' : undefined,
+    /repair\/fix prompts|fix prompts|repair prompts|copy repair|copy fix/.test(text) ? 'Fix Packets' : undefined,
+    /repair\/fix prompts|fix prompts|repair prompts|copy repair|copy fix/.test(text) ? 'Copy prompt' : undefined,
+    /report sections?/.test(text) ? 'Summary' : undefined,
+    /report sections?/.test(text) ? 'Run Timeline' : undefined,
+    /report sections?/.test(text) ? 'Scenarios' : undefined,
+    /sniffer audit|audit launcher|run audit/.test(text) ? 'Run Audit' : undefined,
+    /sniffer audit|audit launcher|run audit/.test(text) ? 'Audit a running UI' : undefined,
+    /fix packets?/.test(text) ? 'Fix Packets' : undefined,
+    /repair workbench/.test(text) ? 'Repair Workbench' : undefined,
+    /agent model|evidence model/.test(text) ? 'Agent Model' : undefined
+  ].filter(Boolean) as string[]
 }
 
 function byRole(page: Page, role: Parameters<Page['getByRole']>[0], name: RegExp): Locator {

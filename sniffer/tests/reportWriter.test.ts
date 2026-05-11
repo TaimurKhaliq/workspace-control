@@ -11,6 +11,66 @@ describe('renderMarkdown', () => {
     expect(markdown).toContain('Product Experience Critic')
     expect(markdown).toContain('Rubric version: product-experience.v1')
   })
+
+  it('renders graph refinement object values without object string leaks', () => {
+    const withRefinement = report()
+    withRefinement.graphRefinement = {
+      mode: 'llm',
+      status: 'completed',
+      modelReviewed: 'UIIntentGraphDraft',
+      llmUsed: true,
+      provider: 'openai-compatible',
+      suggestions: [],
+      appliedSuggestions: [{
+        id: 'edge-1',
+        type: 'add_edge',
+        targetId: 'edge-1',
+        fromValue: { source: 'workflow:raw-json', target: 'control:copy-json', kind: 'supports' },
+        toValue: { kind: 'edge', source: 'workflow:raw-json', target: 'control:copy-json' },
+        reason: 'Copy JSON supports raw payload inspection.',
+        evidenceIds: ['fact-copy-json'],
+        confidence: 'high',
+        risk: 'low',
+        appliedAt: '2026-05-11T00:00:00.000Z'
+      }],
+      rejectedSuggestions: [{
+        id: 'fact-1',
+        type: 'reclassify_fact',
+        targetId: 'fact-1',
+        fromValue: { kind: 'action_control', label: 'Copy JSON' },
+        toValue: { kind: 'copy_action', label: 'Copy JSON' },
+        reason: 'Object values should render readably.',
+        evidenceIds: ['fact-1'],
+        confidence: 'low',
+        risk: 'low',
+        rejectedReason: 'low confidence'
+      }],
+      warnings: []
+    }
+
+    const markdown = renderMarkdown(withRefinement)
+
+    expect(markdown).not.toContain('[object Object]')
+    expect(markdown).toContain('workflow:raw-json -supports-> control:copy-json')
+    expect(markdown).toContain('copy_action: Copy JSON')
+  })
+
+  it('renders suppressed runtime event explanations', () => {
+    const withSuppression = report()
+    withSuppression.crawlGraph.consoleErrors = [{ text: 'ResizeObserver loop limit exceeded', location: 'http://localhost:3000' }]
+    withSuppression.suppressedRuntimeEvents = [{
+      type: 'console_error',
+      text: 'ResizeObserver loop limit exceeded',
+      location: 'http://localhost:3000',
+      provenance: 'known_benign',
+      reason: 'Known benign browser ResizeObserver notification with no reported UI failure.'
+    }]
+
+    const markdown = renderMarkdown(withSuppression)
+
+    expect(markdown).toContain('Suppressed Runtime Events')
+    expect(markdown).toContain('Reason suppressed: Known benign browser ResizeObserver notification')
+  })
 })
 
 function report(): SnifferReport {

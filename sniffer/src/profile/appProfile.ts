@@ -1,4 +1,4 @@
-import type { AppProfile, AppProfileType, CrawlGraph, ProductIntentConfidence, ProductIntentModel, SourceGraph } from '../types.js'
+import type { AppProfile, AppProfileType, CrawlGraph, ProductIntentConfidence, ProductIntentModel, ScenarioPackSelection, SourceGraph } from '../types.js'
 
 type ProfileScore = {
   type: AppProfileType
@@ -63,6 +63,25 @@ export function augmentAppProfileWithProductIntent(profile: AppProfile, productI
     expected_navigation_patterns: unique([...profile.expected_navigation_patterns, ...productIntent.expected_navigation_model.map((item) => item.name)]).slice(0, 16),
     expected_workflows: unique([...profile.expected_workflows, ...productIntent.expected_workflows.map((item) => item.name)]).slice(0, 18),
     expected_output_surfaces: unique([...profile.expected_output_surfaces, ...productIntent.expected_output_review_model.map((item) => item.name)]).slice(0, 16)
+  }
+}
+
+export function applyScenarioPackProfileGate(profile: AppProfile, selection?: ScenarioPackSelection): AppProfile {
+  if (selection?.scenarioPack !== 'sniffer_dashboard' || selection.confidence !== 'high') return profile
+  return {
+    ...profile,
+    profile_type: 'planning_control_panel',
+    confidence: 'high',
+    evidence: unique([
+      'Generic profile candidates suppressed because high-confidence sniffer_dashboard subtype was selected.',
+      `Scenario pack reason: ${selection.reason}`,
+      ...profile.evidence
+    ]).slice(0, 20),
+    core_entities: unique(['Sniffer audit run', 'report', 'scenario', 'crawl state', 'source inventory', 'UI intent graph', 'evidence packet', 'fix packet', 'repair attempt', ...profile.core_entities]).slice(0, 16),
+    primary_user_jobs: unique(['run UI audits', 'review report evidence', 'inspect scenarios and crawl paths', 'inspect agent/evidence model', 'generate and review fix packets', 'run repair workbench', ...profile.primary_user_jobs]).slice(0, 16),
+    expected_navigation_patterns: unique(['dashboard sidebar sections are reachable', 'report/evidence pages preserve current run context', ...profile.expected_navigation_patterns]).slice(0, 16),
+    expected_workflows: unique(['dashboard navigation', 'audit launcher form discoverability', 'report section navigation', 'review run timeline', 'review crawl path', 'inspect workflow evidence', 'inspect issues and fix packets', 'browse screenshots/evidence', 'inspect graph explorer', 'inspect raw report payload', 'review settings', ...profile.expected_workflows]).slice(0, 20),
+    expected_output_surfaces: unique(['summary cards', 'run timeline', 'scenario traces', 'crawl path', 'workflow evidence', 'issues', 'fix packets', 'screenshots', 'graph explorer', 'raw JSON', 'agent model', ...profile.expected_output_surfaces]).slice(0, 20)
   }
 }
 

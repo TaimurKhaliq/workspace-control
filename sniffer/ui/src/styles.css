@@ -1101,6 +1101,12 @@ code {
   white-space: nowrap;
 }
 
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
 .sticky-detail {
   position: sticky;
   top: 92px;
@@ -1130,8 +1136,27 @@ code {
 .screenshot-card {
   display: grid;
   gap: 0.45rem;
+  min-width: 0;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.65rem;
   color: var(--text);
+  font: inherit;
+  text-align: left;
   text-decoration: none;
+  cursor: pointer;
+}
+
+.screenshot-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
+}
+
+.screenshot-card:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.28);
+  outline-offset: 2px;
 }
 
 .screenshot-card img {
@@ -1162,9 +1187,34 @@ code {
   font-size: 0.76rem;
 }
 
-.screenshot-card span {
+.screenshot-card span,
+.screenshot-card dd {
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+.screenshot-card strong {
+  overflow-wrap: anywhere;
+}
+
+.screenshot-card-meta {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0.2rem 0.5rem;
+  margin: 0;
+}
+
+.screenshot-card-meta dt {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.screenshot-card-meta dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .screenshot-modal-backdrop {

@@ -29,6 +29,17 @@ export interface ScenarioRun {
   stepsAttempted?: string[]
   assertions?: Array<{ label: string; status: string; evidence?: string[]; screenshotPath?: string }>
   steps?: Array<{ name?: string; status?: string; action?: string; error?: string; evidence?: string[] }>
+  stepTraces?: Array<{
+    scenarioName?: string
+    scenarioSlug?: string
+    stepName?: string
+    actionLabel?: string
+    url?: string
+    screenName?: string
+    screenshotPath?: string
+    headings?: string[]
+    visibleControls?: string[]
+  }>
   issues?: Issue[]
   screenshots?: string[]
 }
@@ -41,6 +52,8 @@ export interface SnifferReport {
   uiIntentGraph?: UIIntentGraph
   graphRefinement?: GraphRefinementResult
   evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
+  evidenceProvenance?: Record<string, unknown>
+  suppressedRuntimeEvents?: Array<Record<string, unknown>>
   appProfile?: AppProfile
   discoveryMode?: string
   runtimeDomSnapshot?: {
@@ -241,8 +254,8 @@ export interface GraphRefinementSuggestion {
   id: string
   type: string
   targetId: string
-  fromValue?: string
-  toValue?: string
+  fromValue?: unknown
+  toValue?: unknown
   reason: string
   evidenceIds: string[]
   confidence: string

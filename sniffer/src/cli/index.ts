@@ -21,7 +21,7 @@ import { applyFix } from '../repair/applyFix.js'
 import { verifyIssue } from '../repair/verify.js'
 import { runRepairLoop } from '../repair/repairLoop.js'
 import { critiqueFindings, type CriticMode } from '../critic/workflowCritic.js'
-import type { AppProfile, Issue, LlmCriticProvider, SnifferProject, SourceGraph } from '../types.js'
+import type { AppProfile, CrawlAction, CrawlGraph, CrawlState, Issue, LlmCriticProvider, ScenarioRun, SnifferProject, SourceGraph, VisibleElement } from '../types.js'
 import { executeNextSafeActions } from '../critic/nextActionExecutor.js'
 import { runScenarios, scenarioIssues } from '../runtime/scenarios.js'
 import { runUxHeuristicAudit } from '../heuristics/uxHeuristics.js'
@@ -32,7 +32,7 @@ import { synthesizeProductIntent } from '../heuristics/productIntent.js'
 import { analyzeRuntimeDomQuality } from '../heuristics/runtimeDomQuality.js'
 import { runPromptConsistencyCheck } from '../runtime/promptConsistency.js'
 import { initProject, getProject, listProjects, removeProject, upsertProject, createProjectFromSource, normalizeAppUrl } from '../projects/registry.js'
-import { augmentAppProfileWithProductIntent, inferAppProfile } from '../profile/appProfile.js'
+import { applyScenarioPackProfileGate, augmentAppProfileWithProductIntent, inferAppProfile } from '../profile/appProfile.js'
 import { generateGenericScenarios } from '../runtime/genericScenarios.js'
 import { executeGeneratedScenarios } from '../runtime/generatedScenarioExecutor.js'
 import { selectScenarioPack, shouldRunBuiltInScenarioPack, shouldRunPromptConsistency, sourceGraphForRuntimeValidation } from '../runtime/scenarioSelection.js'
@@ -326,7 +326,10 @@ async function main(): Promise<void> {
       mode: intentMode,
       provider
     })
-    const appProfile = augmentAppProfileWithProductIntent(deterministicAppProfile, productIntent.productIntent)
+    const appProfile = applyScenarioPackProfileGate(
+      augmentAppProfileWithProductIntent(deterministicAppProfile, productIntent.productIntent),
+      scenarioSelection
+    )
     const runtimeAppModel = runtimeDomSnapshot
       ? buildRuntimeAppModel({ snapshot: runtimeDomSnapshot, sourceGraph, appProfile, llmIntent: llmRuntimeIntent })
       : undefined
@@ -340,6 +343,7 @@ async function main(): Promise<void> {
       const executedGenericRuns = await executeGeneratedScenarios({ url, reportDir, scenarios: generatedScenarios })
       const existingSlugs = new Set(scenarioRuns.map((run) => run.slug))
       scenarioRuns = [...scenarioRuns, ...executedGenericRuns.filter((run) => !existingSlugs.has(run.slug))]
+      activeCrawlGraph = mergeScenarioTracesIntoCrawlGraph(activeCrawlGraph, scenarioRuns)
       emitProgress('phase_completed', 'scenario execution', `Generated scenario execution completed with ${executedGenericRuns.length} run(s).`)
     }
     emitProgress('phase_started', 'product experience critic', 'Running Product Experience Critic.')
@@ -364,7 +368,8 @@ async function main(): Promise<void> {
     })
     emitProgress('phase_completed', 'product experience critic', `Product Experience Critic completed with ${productExperience.issues.length} issue(s).`)
     const scenarioRuntimeIssues = scenarioIssues(scenarioRuns)
-    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...runtimeDomQualityIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues, ...productExperience.issues]
+    const auditIntegrityIssues = scenarioPackAuditIntegrityIssues(scenarioSelection, generatedScenarios, scenarioRuns, activeCrawlGraph)
+    const rawFindings = [...critic.issues, ...scenarioRuntimeIssues, ...runtimeDomQualityIssues, ...uxCandidateIssues, ...uxCritic.issues, ...(promptConsistency?.issues ?? []), ...productIntent.issues, ...productExperience.issues, ...auditIntegrityIssues]
     emitProgress('phase_started', 'issue grouping', `Grouping ${rawFindings.length} raw finding(s).`)
     const shouldUseLlmTriage = (criticMode === 'llm' || uxMode === 'llm' || productExperienceMode === 'llm') && provider?.triageIssues
     let triagedIssues = shouldUseLlmTriage
@@ -902,6 +907,132 @@ function normalizedIssueText(issue: Issue): string {
 
 function normalizeText(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
+}
+
+function mergeScenarioTracesIntoCrawlGraph(crawlGraph: CrawlGraph, scenarioRuns: ScenarioRun[]): CrawlGraph {
+  const states: CrawlState[] = [...crawlGraph.states]
+  const actions: CrawlAction[] = [...crawlGraph.actions]
+  const seen = new Set(states.map((state) => `${state.url}|${state.inferredScreenName ?? ''}|${state.screenshotPath ?? ''}`))
+  let previousState = states.at(-1)
+  for (const run of scenarioRuns) {
+    for (const trace of run.stepTraces ?? []) {
+      const key = `${trace.url}|${trace.screenName ?? ''}|${trace.screenshotPath ?? ''}`
+      let state = states.find((item) => `${item.url}|${item.inferredScreenName ?? ''}|${item.screenshotPath ?? ''}` === key)
+      if (!state && !seen.has(key)) {
+        const route = routeFromUrl(trace.url)
+        const visible = trace.visibleControls.slice(0, 40).map((label): VisibleElement => ({ kind: 'button', text: label }))
+        state = {
+          id: `state-${states.length + 1}`,
+          sequenceNumber: states.length + 1,
+          url: trace.url,
+          hashRoute: route,
+          title: trace.scenarioName,
+          hash: `scenario-${run.slug}-${states.length + 1}`,
+          stateHash: `scenario-${run.slug}-${states.length + 1}`,
+          inferredScreenName: trace.screenName,
+          inferredPageType: 'scenario_step',
+          screenshotPath: trace.screenshotPath,
+          primaryVisibleText: trace.domSummary,
+          matchedSourceWorkflows: [trace.scenarioName],
+          visible
+        }
+        states.push(state)
+        seen.add(key)
+      }
+      if (previousState && state && previousState.id !== state.id) {
+        const sequenceNumber = actions.length + 1
+        actions.push({
+          id: `action-${sequenceNumber}`,
+          sequenceNumber,
+          type: 'click',
+          actionType: 'click',
+          label: trace.actionLabel ?? trace.stepName,
+          target: trace.navLabel ?? trace.screenName ?? trace.stepName,
+          urlBefore: previousState.url,
+          urlAfter: state.url,
+          stateHashBefore: previousState.hash,
+          stateHashAfter: state.hash,
+          changedState: previousState.hash !== state.hash || previousState.url !== state.url,
+          safe: true,
+          safeReason: 'Recorded from generated scenario execution.',
+          screenshotBefore: previousState.screenshotPath,
+          screenshotAfter: state.screenshotPath,
+          workflowContext: trace.scenarioName,
+          scenarioContext: trace.scenarioName,
+          reason: 'Generated scenario step reached this screen.'
+        })
+      }
+      if (state) previousState = state
+    }
+  }
+  return {
+    ...crawlGraph,
+    states,
+    actions,
+    screenshots: [...new Set([...crawlGraph.screenshots, ...states.map((state) => state.screenshotPath).filter((value): value is string => Boolean(value))])],
+    finalUrl: states.at(-1)?.url ?? crawlGraph.finalUrl,
+    coverage: crawlGraph.coverage
+      ? {
+        ...crawlGraph.coverage,
+        visitedRoutes: [...new Set([...crawlGraph.coverage.visitedRoutes, ...states.map((state) => state.hashRoute ?? routeFromUrl(state.url))])],
+        scenariosPassed: scenarioRuns.filter((run) => run.status === 'passed').length,
+        scenariosFailed: scenarioRuns.filter((run) => run.status === 'failed').length,
+        scenariosSkipped: scenarioRuns.filter((run) => run.status === 'blocked').length,
+        workflowsExercised: scenarioRuns.length
+      }
+      : crawlGraph.coverage
+  }
+}
+
+function scenarioPackAuditIntegrityIssues(
+  selection: { scenarioPack: string; appSubtype: string },
+  generatedScenarios: Array<{ id: string; scenarioPack?: string }>,
+  scenarioRuns: ScenarioRun[],
+  crawlGraph: CrawlGraph
+): Issue[] {
+  if (selection.scenarioPack !== 'sniffer_dashboard' || selection.appSubtype !== 'sniffer_dashboard') return []
+  const dashboardScenarioCount = generatedScenarios.filter((scenario) => scenario.scenarioPack === 'sniffer_dashboard' || scenario.id.startsWith('sniffer-')).length
+  const dashboardRunCount = scenarioRuns.filter((run) => run.slug.startsWith('sniffer-')).length
+  const issues: Issue[] = []
+  if (dashboardScenarioCount <= 5 || dashboardRunCount <= 5) {
+    issues.push({
+      severity: 'high',
+      type: 'test_bug',
+      title: 'Sniffer dashboard scenario pack was selected but not executed',
+      description: 'The audit selected the sniffer_dashboard subtype but generated or executed too few Sniffer-dashboard-specific scenarios.',
+      evidence: [
+        `generated_sniffer_dashboard_scenarios:${dashboardScenarioCount}`,
+        `executed_sniffer_dashboard_scenarios:${dashboardRunCount}`,
+        `total_generated_scenarios:${generatedScenarios.length}`,
+        `total_scenario_runs:${scenarioRuns.length}`
+      ],
+      suggestedFixPrompt: 'Ensure high-confidence sniffer_dashboard subtype controls scenario generation and execution before generic CRUD scenarios are considered.'
+    })
+  }
+  if (crawlGraph.states.length <= 1 || crawlGraph.actions.length <= 1) {
+    issues.push({
+      severity: 'medium',
+      type: 'test_bug',
+      title: 'Sniffer dashboard audit did not capture enough executed screen states',
+      description: 'A dashboard audit should record multiple reached screens and actions from crawl or scenario execution.',
+      evidence: [
+        `states_captured:${crawlGraph.states.length}`,
+        `actions_attempted:${crawlGraph.actions.length}`,
+        `scenario_runs:${scenarioRuns.length}`
+      ],
+      suggestedFixPrompt: 'Merge generated scenario step traces into the runtime journey or improve crawl frontier coverage for dashboard navigation.'
+    })
+  }
+  return issues
+}
+
+function routeFromUrl(value: string): string {
+  try {
+    const url = new URL(value)
+    return url.hash || url.pathname || '/'
+  } catch {
+    return value.startsWith('#') ? value : '/'
+  }
 }
 
 function textOverlaps(left: string, right: string): boolean {

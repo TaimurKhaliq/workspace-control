@@ -163,9 +163,10 @@ function dialogLabelIssues(elements: DomUxElement[], screenshotPath: string): Is
 
 function copyAccessibilityIssues(elements: DomUxElement[], bodyText: string, screenshotPath: string): Issue[] {
   if (!/handoff|raw json|prompt/i.test(bodyText)) return []
+  const generatedOutputPattern = /handoff|raw json|schema_version|recommended_change_set|plan bundle|fix packet|copy prompt/i
   const hasGeneratedOutput = elements.some((el) =>
-    el.tag === 'pre' ||
-    /handoff-card|json-viewer|bundle-panel/.test(el.className) && /handoff|raw json|schema_version|recommended_change_set/i.test(el.text)
+    (el.tag === 'pre' && generatedOutputPattern.test(el.text)) ||
+    (/handoff-card|json-viewer|bundle-panel/.test(el.className) && generatedOutputPattern.test(el.text))
   )
   if (!hasGeneratedOutput) return []
   const copyButtons = elements.filter((el) => (el.tag === 'button' || el.role === 'button') && /copy/i.test(accessibleName(el)))

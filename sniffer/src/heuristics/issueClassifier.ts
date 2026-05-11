@@ -19,6 +19,7 @@ export function classifyRuntimeIssues(sourceGraph: SourceGraph, crawlGraph: Craw
 
   for (const error of dedupeBy(crawlGraph.consoleErrors, (item) => `${item.text}:${item.location ?? ''}`)) {
     if (error.location && groupedEvidenceUrls.has(error.location)) continue
+    if (isCrawlerInstrumentationEvent(error.text)) continue
     issues.push({
       severity: 'medium',
       type: 'console_error',
@@ -110,6 +111,10 @@ export function classifyRuntimeIssues(sourceGraph: SourceGraph, crawlGraph: Craw
   }
 
   return issues
+}
+
+function isCrawlerInstrumentationEvent(text: string): boolean {
+  return /^Crawler state capture failed:|^Crawler action failed after page crash:/i.test(text)
 }
 
 function dedupeBy<T>(items: T[], keyFor: (item: T) => string): T[] {

@@ -139,7 +139,8 @@ export async function runProductExperienceCritic(input: {
   }
 
   const providerMetadata = providerMetadataOf(input.provider)
-  const rawContexts = buildProductExperienceContexts(input)
+  const outerReportGeneratedAt = new Date().toISOString()
+  const rawContexts = buildProductExperienceContexts(input).map((context) => ({ ...context, outerReportGeneratedAt }))
   const contexts = rawContexts.map((context) => enrichProductExperienceContext(context, rubric, providerMetadata))
   if (input.mode === 'llm' && input.providerPreflightError) {
     return {
@@ -253,6 +254,7 @@ export function deterministicProductExperienceDecision(context: ProductExperienc
     llm_request_status: 'not_requested',
     vision_used: false,
     vision_not_used_reason: context.vision_not_used_reason,
+    ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: context.context_sufficiency,
     context_sufficiency_score: context.context_sufficiency_score,
@@ -281,6 +283,28 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
       .filter(Boolean)
       .slice(0, 40)
   const screenshotPath = scenarioTrace?.screenshotPath ?? state?.screenshotPath ?? input.runtimeDomSnapshot?.screenshotPath
+  const displayedReport = displayedReportContextFromText(domText)
+  const reportContextSignals = visibleRunContext(domText)
+  const reportLikeDashboardScreen = input.appSubtype === 'sniffer_dashboard' &&
+    /summary|run timeline|scenarios|crawl path|workflow evidence|issues|fix packets|screenshots|graph explorer|raw json|agent model|evidence model/i.test(pageIntent.screen_name)
+  const screenshotSource = reportLikeDashboardScreen && (displayedReport.hasContext || reportContextSignals.length > 0)
+    ? 'dashboard_displayed_report'
+    : scenarioTrace?.screenshotPath
+      ? 'current_audit_screen'
+      : 'unknown'
+  const contextScope = screenshotSource === 'dashboard_displayed_report'
+    ? 'displayed_report'
+    : screenshotSource === 'current_audit_screen'
+      ? 'current_audit'
+      : 'unknown'
+  const provenanceWarnings = [
+    contextScope === 'displayed_report'
+      ? 'dashboard-visible report data; do not compare visible counts with outer audit totals unless report identity/timestamp matches'
+      : undefined,
+    contextScope === 'unknown'
+      ? 'evidence provenance could not be tied to a scenario step or displayed report'
+      : undefined
+  ].filter(Boolean) as string[]
   const evidencePacket = retrieveEvidence(`${pageIntent.screen_name} ${pageIntent.nav_label} ${pageIntent.page_intent} ${pageIntent.workflow_intent}`, {
     sourceGraph: input.sourceGraph,
     crawlGraph: input.crawlGraph,
@@ -315,6 +339,11 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
     required_context: pageIntent.required_context,
     screenshot_path: screenshotPath,
     screenshot_artifact_url: screenshotPath ? artifactUrlForReport(input.reportDir, screenshotPath, input.projectId) : undefined,
+    displayedReportId: displayedReport.displayedReportId,
+    displayedReportGeneratedAt: displayedReport.displayedReportGeneratedAt,
+    displayedReportPath: displayedReport.displayedReportPath,
+    screenshotSource,
+    contextScope,
     scenario_screenshot_used: Boolean(scenarioTrace?.screenshotPath),
     dom_summary: domText,
     headings: scenarioTrace?.headings?.length ? scenarioTrace.headings : headingsFromText(pageIntent, domText, input.runtimeDomSnapshot),
@@ -323,7 +352,7 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
     visible_empty_states: domText.filter((line) => /no .*found|no .*yet|no issues|empty|not found|unavailable/i.test(line)),
     visible_errors: domText.filter((line) => /error|failed|warning|not found|unavailable/i.test(line)),
     active_nav_state: scenarioTrace?.activeNavState ?? pageIntent.nav_label,
-    run_project_report_context_visible: visibleRunContext(domText),
+    run_project_report_context_visible: reportContextSignals,
     source_evidence: unique([
       ...sourceEvidenceForPage(pageIntent, input.sourceGraph),
       ...evidencePacket.sourceFacts.slice(0, 8).map((fact) => `${fact.kind}: ${fact.value}`)
@@ -338,7 +367,7 @@ function contextForPageIntent(pageIntent: ProductExperiencePageIntent, input: Pa
     context_sufficiency: 'low',
     context_sufficiency_score: 0,
     context_sufficiency_signals: [],
-    context_warnings: [],
+    context_warnings: provenanceWarnings,
     vision_capable: false,
     vision_used: false,
     vision_not_used_reason: undefined,
@@ -366,6 +395,7 @@ function enrichProductExperienceContext(
   const score = total > 0 ? Number((present / total).toFixed(2)) : 0
   const sufficiency: ProductExperienceContextSufficiency = score >= 0.75 ? 'high' : score >= 0.45 ? 'medium' : 'low'
   const warnings = [
+    ...context.context_warnings,
     sufficiency === 'low' ? 'context_sufficiency=low; LLM should judge available evidence and choose inconclusive if evidence is insufficient.' : undefined,
     !context.screenshot_path ? 'screenshot missing' : undefined,
     !context.dom_summary.length ? 'DOM summary missing' : undefined,
@@ -399,6 +429,7 @@ function contextSufficiencySignals(context: ProductExperienceContext): ProductEx
     { name: 'product_intent', present: Boolean(context.product_intent_summary || context.primary_user_jobs.length || context.user_goal), weight: 2 },
     { name: 'page_intent', present: Boolean(context.page_intent && context.workflow_intent), weight: 2 },
     { name: 'screenshot', present: Boolean(context.screenshot_path), weight: 2 },
+    { name: 'screen_specific_scenario_evidence', present: !runContextRelevant || context.scenario_screenshot_used, weight: 4 },
     { name: 'dom_summary', present: context.dom_summary.length > 0 || context.visible_controls.length > 0, weight: 2 },
     { name: 'workflow_or_scenario_context', present: Boolean(context.scenario_name || context.runtime_evidence.length || context.source_evidence.length), weight: 1 },
     { name: 'active_nav_or_page_label', present: Boolean(context.nav_label_clicked || context.active_nav_state), weight: 1 },
@@ -692,7 +723,7 @@ function normalizeLlmDecision(decision: ProductExperienceDecision, context: Prod
     deterministic,
     context
   )
-  const overall = normalizeOverall(decision, deterministic, context, findings)
+  const overall = scopeOverallSummary(normalizeOverall(decision, deterministic, context, findings), context)
   const nonIssues = [
     ...(decision.non_issues ?? []),
     ...suppressedFindingNotes(findings)
@@ -709,6 +740,7 @@ function normalizeLlmDecision(decision: ProductExperienceDecision, context: Prod
     llm_request_status: 'success',
     vision_used: context.vision_used,
     vision_not_used_reason: context.vision_not_used_reason,
+    ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: decision.context_sufficiency ?? context.context_sufficiency,
     context_sufficiency_score: decision.context_sufficiency_score ?? context.context_sufficiency_score,
@@ -717,6 +749,15 @@ function normalizeLlmDecision(decision: ProductExperienceDecision, context: Prod
     overall,
     findings,
     non_issues: nonIssues
+  }
+}
+
+function scopeOverallSummary(overall: ProductExperienceDecision['overall'], context: ProductExperienceContext): ProductExperienceDecision['overall'] {
+  if (context.contextScope !== 'displayed_report') return overall
+  if (/dashboard-visible report/i.test(overall.summary)) return overall
+  return {
+    ...overall,
+    summary: `Dashboard-visible report evidence, not outer audit totals: ${overall.summary}`
   }
 }
 
@@ -796,6 +837,26 @@ function evidenceGatedConfidence(
     : findings.some((finding) => finding.rubric_ids.length > 0)
   const hasContradiction = findings.some((finding) => finding.suppression_reason || finding.contradiction_check_result?.startsWith('contradicted'))
   return hasPageIntent && hasWorkflowIntent && hasScreenEvidence && matchedRubric && !hasContradiction ? 'high' : 'medium'
+}
+
+function decisionProvenance(context: ProductExperienceContext): Pick<ProductExperienceDecision,
+  'outerAuditRunId' |
+  'outerReportGeneratedAt' |
+  'displayedReportId' |
+  'displayedReportGeneratedAt' |
+  'displayedReportPath' |
+  'screenshotSource' |
+  'contextScope'
+> {
+  return {
+    outerAuditRunId: context.outerAuditRunId,
+    outerReportGeneratedAt: context.outerReportGeneratedAt,
+    displayedReportId: context.displayedReportId,
+    displayedReportGeneratedAt: context.displayedReportGeneratedAt,
+    displayedReportPath: context.displayedReportPath,
+    screenshotSource: context.screenshotSource,
+    contextScope: context.contextScope
+  }
 }
 
 function suppressedFindingNotes(findings: ProductExperienceFinding[]): ProductExperienceDecision['non_issues'] {
@@ -963,6 +1024,7 @@ function llmFailedDecision(context: ProductExperienceContext, error: unknown): P
     llm_request_status: 'provider_error',
     vision_used: false,
     vision_not_used_reason: context.vision_not_used_reason,
+    ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: context.context_sufficiency,
     context_sufficiency_score: context.context_sufficiency_score,
@@ -991,6 +1053,7 @@ function llmPreflightFailedDecision(context: ProductExperienceContext, reason: s
     llm_request_status: 'provider_error',
     vision_used: false,
     vision_not_used_reason: context.vision_not_used_reason,
+    ...decisionProvenance(context),
     scenario_screenshot_used: context.scenario_screenshot_used,
     context_sufficiency: context.context_sufficiency,
     context_sufficiency_score: context.context_sufficiency_score,
@@ -1103,9 +1166,30 @@ function findScenarioTraceForPage(pageIntent: ProductExperiencePageIntent, runs:
   const expectedHash = hashForScreen(pageIntent.screen_name)
   const label = normalize(pageIntent.nav_label)
   const traces = runs.flatMap((run) => run.stepTraces ?? [])
-  return traces.find((trace) => routeKey(trace.url) === expectedHash)
-    ?? traces.find((trace) => normalize(`${trace.screenName ?? ''} ${trace.navLabel ?? ''} ${trace.stepName} ${trace.actionLabel ?? ''}`).includes(label))
-    ?? traces.find((trace) => normalize(trace.domSummary.join(' ')).includes(label))
+  const scored = traces
+    .map((trace) => ({ trace, score: scenarioTraceLocalityScore(trace, pageIntent, expectedHash, label) }))
+    .filter((item) => item.score >= 6)
+    .sort((left, right) => right.score - left.score)
+  return scored[0]?.trace
+}
+
+function scenarioTraceLocalityScore(trace: ScenarioStepTrace, pageIntent: ProductExperiencePageIntent, expectedHash: string, label: string): number {
+  const route = routeKey(trace.url)
+  const fields = normalize(`${trace.screenName ?? ''} ${trace.navLabel ?? ''} ${trace.stepName} ${trace.actionLabel ?? ''}`)
+  const dom = normalize(trace.domSummary.join(' '))
+  const screenshot = normalize(trace.screenshotPath ?? '')
+  let score = 0
+  if (route === expectedHash && expectedHash !== '/') score += 10
+  if (normalize(trace.screenName ?? '') === label) score += 9
+  if (normalize(trace.navLabel ?? '') === label) score += 8
+  if (normalize(trace.actionLabel ?? '').includes(`click ${label}`)) score += 7
+  if (normalize(trace.stepName).includes(label) && !/initial/.test(normalize(trace.stepName))) score += 5
+  if (screenshot.includes(normalize(pageIntent.screen_name).replace(/\s+/g, '-'))) score += 4
+  const headingMatch = trace.headings.some((heading) => normalize(heading) === label)
+  if (headingMatch) score += 6
+  if (fields.includes(label) && !/initial/.test(fields)) score += 2
+  if (dom.includes(label) && !/navigation smoke.*initial|summary projects run timeline scenarios crawl path/i.test(dom)) score += 1
+  return score
 }
 
 function routeOf(state: CrawlState): string {
@@ -1199,6 +1283,31 @@ function visibleRunContext(domText: string[]): string[] {
     /generated\s+\d|generated at|\d{1,2}\/\d{1,2}\/\d{2,4}/i.test(text) ? 'timestamp' : undefined,
     /passed|failed|warning|idle|running/i.test(text) ? 'status' : undefined
   ].filter(Boolean) as string[]
+}
+
+function displayedReportContextFromText(domText: string[]): {
+  hasContext: boolean
+  displayedReportId?: string
+  displayedReportGeneratedAt?: string
+  displayedReportPath?: string
+} {
+  const text = domText.join(' ').replace(/\s+/g, ' ').trim()
+  const generatedMatch = text.match(/generated(?: at)?\s+((?:\d{1,2}\/\d{1,2}\/\d{2,4},?\s+\d{1,2}:\d{2}(?::\d{2})?\s*(?:AM|PM)?|[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9:.TZ+-]+))/i)
+  const runMatch = text.match(/(?:selected run|latest run|current run|run id|viewing)\s*:?\s*([^.;]+?)(?=\s+(?:generated|status|passed|failed|warning|project|repo)|[.;]|$)/i)
+  const pathMatch = text.match(/(?:report path|path)\s*:?\s*([^ ]*reports\/sniffer\/[^ ]+)/i)
+  const latest = /latest report/i.test(text)
+  const rawDisplayedReportId = compactValue(runMatch?.[1])
+  return {
+    hasContext: latest || Boolean(generatedMatch || runMatch || pathMatch),
+    displayedReportId: latest && (!rawDisplayedReportId || /^latest$/i.test(rawDisplayedReportId)) ? 'Latest report' : rawDisplayedReportId ?? (latest ? 'Latest report' : undefined),
+    displayedReportGeneratedAt: compactValue(generatedMatch?.[1]),
+    displayedReportPath: compactValue(pathMatch?.[1])
+  }
+}
+
+function compactValue(value?: string): string | undefined {
+  const trimmed = value?.replace(/\s+/g, ' ').trim()
+  return trimmed || undefined
 }
 
 function sourceEvidenceForPage(pageIntent: ProductExperiencePageIntent, sourceGraph: SourceGraph): string[] {

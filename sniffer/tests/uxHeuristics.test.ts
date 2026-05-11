@@ -123,6 +123,23 @@ describe('UX heuristics', () => {
     expect(result.accessibilityIssues.map((issue) => issue.title)).not.toContain('Generated text lacks an accessible copy action')
   })
 
+  it('does not require copy buttons for unrelated preformatted command previews', () => {
+    const result = analyzeUxSnapshot({
+      elements: [
+        element({
+          tag: 'pre',
+          text: 'npm run sniffer -- audit --product-experience-critic llm'
+        })
+      ],
+      ids: [],
+      bodyText: 'Raw JSON nav item Prompt/output consistency Command preview',
+      sourceGraph,
+      screenshotPath: '/tmp/shot.png'
+    })
+
+    expect(result.accessibilityIssues.map((issue) => issue.title)).not.toContain('Generated text lacks an accessible copy action')
+  })
+
   it('requires copy buttons when generated output panels are visible', () => {
     const result = analyzeUxSnapshot({
       elements: [

@@ -47,6 +47,20 @@ describe('product experience calibration', () => {
     ]))
   })
 
+  it('detects screenshot galleries without scenario or action context', async () => {
+    const result = await runCalibration(['screenshot-gallery-no-context'])
+    const target = result.targets[0]
+
+    expect(result.status).toBe('passed')
+    expect(target.detectedFindings).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        type: 'evidence_gap',
+        title: 'Screenshots view does not explain screenshot context',
+        ruleIds: expect.arrayContaining(['screenshot_gallery_context'])
+      })
+    ]))
+  })
+
   it('keeps the good dashboard baseline passing without reportable findings', async () => {
     const result = await runProductExperienceCalibration({
       snifferRoot: process.cwd(),

@@ -158,6 +158,68 @@ describe('Product Experience Critic', () => {
     expect(result.decisions.find((decision) => decision.screen_name === 'Graph Explorer')?.scenario_screenshot_used).toBe(true)
   })
 
+  it('prefers screen-specific traces over generic navigation screenshots', async () => {
+    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context))
+    await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['SUMMARY', 'Raw JSON']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [genericInitialTraceRun(), scenarioRunWithTrace('Raw JSON', '#raw-json')],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const rawJsonContext = provider.contexts.find((context) => context.current_screen_name === 'Raw JSON')
+    expect(rawJsonContext?.scenario_step).toBe('click Raw JSON')
+    expect(rawJsonContext?.screenshot_path).toContain('raw-json.png')
+    expect(rawJsonContext?.screenshot_path).not.toContain('navigation-smoke-initial.png')
+  })
+
+  it('lowers context when only generic initial navigation evidence exists', async () => {
+    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context))
+    await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['SUMMARY', 'Raw JSON']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [genericInitialTraceRun()],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const rawJsonContext = provider.contexts.find((context) => context.current_screen_name === 'Raw JSON')
+    expect(rawJsonContext?.scenario_screenshot_used).toBe(false)
+    expect(rawJsonContext?.context_sufficiency).not.toBe('high')
+  })
+
+  it('marks dashboard-visible report evidence separately from the outer audit context', async () => {
+    const provider = new SpyProductExperienceProvider((context) => alignedDecision(context))
+    await runProductExperienceCritic({
+      mode: 'llm',
+      provider,
+      sourceGraph: sourceGraph(),
+      crawlGraph: crawlGraph(['SUMMARY']),
+      appProfile: appProfile(),
+      appSubtype: 'sniffer_dashboard',
+      scenarioRuns: [scenarioRunWithTrace('Scenarios', '#scenarios', [
+        'SCENARIOS',
+        'Report context Workspace Control Viewing Latest report for Workspace Control, generated 5/1/2026, 9:00 AM.',
+        'Generated scenarios 0 Executed scenarios 0 No executed scenarios'
+      ])],
+      reportDir: '/tmp/sniffer/reports/sniffer/ad_hoc/latest'
+    })
+
+    const scenariosContext = provider.contexts.find((context) => context.current_screen_name === 'Scenarios')
+    expect(scenariosContext?.contextScope).toBe('displayed_report')
+    expect(scenariosContext?.screenshotSource).toBe('dashboard_displayed_report')
+    expect(scenariosContext?.displayedReportId).toContain('Latest report')
+    expect(scenariosContext?.displayedReportGeneratedAt).toContain('5/1/2026')
+    expect(scenariosContext?.context_warnings.join(' ')).toContain('dashboard-visible report data')
+  })
+
   it('still calls the LLM with low context sufficiency after enrichment', async () => {
     const provider = new SpyProductExperienceProvider((context) => ({
       ...alignedDecision(context),
@@ -869,7 +931,7 @@ function rawJsonCrawlGraph(text: string[], controls: string[] = []): CrawlGraph 
   return graph
 }
 
-function scenarioRunWithTrace(screenName: string, hash: string) {
+function scenarioRunWithTrace(screenName: string, hash: string, domSummary?: string[]) {
   return {
     slug: 'sniffer-dashboard-navigation',
     name: 'Dashboard navigation smoke test',
@@ -886,10 +948,37 @@ function scenarioRunWithTrace(screenName: string, hash: string) {
       screenName,
       navLabel: screenName,
       screenshotPath: `/tmp/sniffer/reports/sniffer/ad_hoc/latest/screenshots/generated-scenarios/${screenName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.png`,
-      domSummary: [`${screenName.toUpperCase()} page`, 'Legend Filters Node detail'],
+      domSummary: domSummary ?? [`${screenName.toUpperCase()} page`, 'Legend Filters Node detail'],
       headings: [screenName],
       visibleControls: ['Legend', 'Filters', 'Node detail'],
       activeNavState: screenName
+    }],
+    assertions: [],
+    issues: []
+  }
+}
+
+function genericInitialTraceRun() {
+  return {
+    slug: 'navigation-smoke',
+    name: 'Navigation smoke test',
+    status: 'passed' as const,
+    prerequisites: [],
+    stepsAttempted: ['Open primary navigation items'],
+    screenshots: ['/tmp/sniffer/reports/sniffer/ad_hoc/latest/screenshots/generated-scenarios/navigation-smoke-initial.png'],
+    stepTraces: [{
+      scenarioName: 'Navigation smoke test',
+      scenarioSlug: 'navigation-smoke',
+      stepName: 'initial',
+      actionLabel: 'initial',
+      url: 'http://localhost:4877/',
+      screenName: 'Summary',
+      navLabel: 'Summary',
+      screenshotPath: '/tmp/sniffer/reports/sniffer/ad_hoc/latest/screenshots/generated-scenarios/navigation-smoke-initial.png',
+      domSummary: ['Summary Projects Run Timeline Scenarios Crawl Path Workflow Evidence Issues Fix Packets Screenshots Graph Explorer Raw JSON Settings'],
+      headings: ['Summary'],
+      visibleControls: ['Raw JSON', 'Screenshots', 'Graph Explorer'],
+      activeNavState: 'Summary'
     }],
     assertions: [],
     issues: []

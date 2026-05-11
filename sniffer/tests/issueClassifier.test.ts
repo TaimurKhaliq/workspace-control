@@ -91,6 +91,22 @@ describe('classifyRuntimeIssues', () => {
 
     expect(issues.map((issue) => issue.title)).not.toContain('Source-discovered UI surfaces were not observed at runtime')
   })
+
+  it('does not classify crawler instrumentation events as app console errors', () => {
+    const issues = classifyRuntimeIssues(sourceGraph(), {
+      startUrl: 'http://localhost:3000',
+      title: 'Demo',
+      finalUrl: 'http://localhost:3000',
+      states: [{ url: 'http://localhost:3000', title: 'Demo', hash: 'x', visible: [] }],
+      actions: [],
+      consoleErrors: [{ text: 'Crawler action failed after page crash: locator.click: Target crashed', location: 'http://localhost:3000' }],
+      networkFailures: [],
+      screenshots: [],
+      generatedAt: new Date().toISOString()
+    })
+
+    expect(issues.some((issue) => issue.type === 'console_error')).toBe(false)
+  })
 })
 
 function sourceGraph(): SourceGraph {

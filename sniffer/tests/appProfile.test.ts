@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { augmentAppProfileWithProductIntent, inferAppProfile } from '../src/profile/appProfile.js'
+import { applyScenarioPackProfileGate, augmentAppProfileWithProductIntent, inferAppProfile } from '../src/profile/appProfile.js'
 import { generateGenericScenarios } from '../src/runtime/genericScenarios.js'
 import type { SourceGraph } from '../src/types.js'
 
@@ -74,6 +74,56 @@ describe('app profile inference and generic scenarios', () => {
     expect(scenarios.map((scenario) => scenario.id)).toContain('plan-run-history')
   })
 
+  it('lets high-confidence sniffer_dashboard subtype suppress CRUD/ecommerce profile pollution', () => {
+    const crudProfile = {
+      ...inferAppProfile({ sourceGraph: snifferDashboardSourceGraph() }),
+      profile_type: 'crud_app' as const,
+      confidence: 'high' as const,
+      evidence: ['crud_app: matched "create" in "createLlmProvider"', 'ecommerce_app: matched "product" in "Product Experience"']
+    }
+
+    const gated = applyScenarioPackProfileGate(crudProfile, {
+      appSubtype: 'sniffer_dashboard',
+      scenarioPack: 'sniffer_dashboard',
+      confidence: 'high',
+      reason: 'Sniffer dashboard nav cluster.',
+      applicability: [],
+      skippedScenarios: []
+    })
+
+    expect(gated.profile_type).toBe('planning_control_panel')
+    expect(gated.evidence[0]).toMatch(/Generic profile candidates suppressed/)
+    expect(gated.primary_user_jobs).toContain('review report evidence')
+  })
+
+  it('generates Sniffer dashboard scenarios from subtype even when generic profile says CRUD', () => {
+    const scenarios = generateGenericScenarios({
+      appProfile: {
+        profile_type: 'crud_app',
+        confidence: 'high',
+        evidence: ['create/search helper terms'],
+        core_entities: [],
+        primary_user_jobs: [],
+        expected_navigation_patterns: [],
+        expected_workflows: [],
+        expected_output_surfaces: []
+      },
+      sourceGraph: snifferDashboardSourceGraph(),
+      scenarioSelection: {
+        appSubtype: 'sniffer_dashboard',
+        scenarioPack: 'sniffer_dashboard',
+        confidence: 'high',
+        reason: 'Sniffer dashboard nav cluster.',
+        applicability: [],
+        skippedScenarios: []
+      }
+    })
+
+    expect(scenarios.filter((scenario) => scenario.scenarioPack === 'sniffer_dashboard').length).toBeGreaterThan(10)
+    expect(scenarios.map((scenario) => scenario.id)).toContain('sniffer-agent-model')
+    expect(scenarios.map((scenario) => scenario.id)).not.toContain('crud-list-create-detail')
+  })
+
   it('can augment a deterministic profile from LLM product intent evidence', () => {
     const profile = inferAppProfile({ sourceGraph: planningSourceGraph() })
 
@@ -132,5 +182,29 @@ function planningSourceGraph(): SourceGraph {
     ],
     packageScripts: { dev: 'vite', build: 'vite build' },
     generatedAt: '2026-05-07T00:00:00.000Z'
+  }
+}
+
+function snifferDashboardSourceGraph(): SourceGraph {
+  return {
+    ...planningSourceGraph(),
+    repoPath: '/tmp/sniffer',
+    packageName: 'sniffer-ui',
+    uiSurfaces: [
+      { file: 'src/App.tsx', surface_type: 'app_shell', display_name: 'Sniffer Dashboard', evidence: ['Summary', 'Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues', 'Fix Packets', 'Screenshots', 'Graph Explorer', 'Raw JSON', 'Settings'], relatedButtons: ['Run Audit', 'Raw JSON', 'Agent Model', 'Repair Workbench'], relatedInputs: ['Repo path', 'App URL', 'Product goal'], confidence: 0.95 },
+      { file: 'src/components/AgentModelView.tsx', surface_type: 'debug_payload_view', display_name: 'Agent Model', evidence: ['Source Inventory', 'UI Intent Graph', 'Evidence Retrieval'], relatedButtons: ['Retrieve'], relatedInputs: ['Evidence retrieval query'], confidence: 0.9 }
+    ],
+    sourceWorkflows: [
+      { name: 'Run Sniffer audit', sourceFiles: ['src/App.tsx'], evidence: ['Run Audit'], likelyUserActions: ['Run Audit'], confidence: 0.9 },
+      { name: 'Inspect report sections', sourceFiles: ['src/App.tsx'], evidence: ['Run Timeline', 'Scenarios', 'Issues'], likelyUserActions: ['Open report section'], confidence: 0.9 },
+      { name: 'Review agent model', sourceFiles: ['src/components/AgentModelView.tsx'], evidence: ['Agent Model'], likelyUserActions: ['Inspect Evidence Retrieval'], confidence: 0.9 }
+    ],
+    apiCalls: [
+      { method: 'POST', endpoint: '/api/audits', sourceFile: 'src/api.ts', functionName: 'runAudit', likelyWorkflow: 'Run Sniffer audit' },
+      { method: 'GET', endpoint: '/api/reports/latest', sourceFile: 'src/api.ts', functionName: 'getLatestReport', likelyWorkflow: 'Inspect report sections' }
+    ],
+    stateActions: [
+      { file: 'src/App.tsx', stateVariables: ['activeView', 'report'], handlerNames: ['setActiveView', 'runAudit'], submitHandlers: ['runAudit'], loadingStateVariables: ['isRunning'], errorStateVariables: ['error'] }
+    ]
   }
 }

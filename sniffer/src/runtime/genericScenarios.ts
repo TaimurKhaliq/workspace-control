@@ -44,7 +44,7 @@ export function generateGenericScenarios(input: {
     )
   }
 
-  if (profile === 'planning_control_panel' && scenarioPack === 'sniffer_dashboard') {
+  if (scenarioPack === 'sniffer_dashboard') {
     scenarios.push(...snifferDashboardScenarios(input.scenarioSelection))
   }
 
@@ -60,7 +60,7 @@ export function generateGenericScenarios(input: {
     )
   }
 
-  if (profile === 'crud_app' || hasCrudSignals(input.sourceGraph)) {
+  if (scenarioPack !== 'sniffer_dashboard' && (profile === 'crud_app' || hasCrudSignals(input.sourceGraph))) {
     scenarios.push(
       generatedScenario('crud-list-create-detail', 'CRUD list/create/detail smoke test', ['crud_app', profile], [], [
         step('Open list view', 'open_list_view', ['list/table/cards']),
@@ -124,6 +124,21 @@ function snifferDashboardScenarios(selection?: ScenarioPackSelection): Generated
     dashboardScenario('sniffer-report-sections', 'Report section navigation', [
       step('Open report section tabs', 'open_report_sections', ['Run Timeline', 'Scenarios', 'Crawl Path', 'Workflow Evidence', 'Issues'])
     ], ['report navigation controls'], ['report sections can be opened safely'], 'high', evidence),
+    dashboardScenario('sniffer-run-timeline', 'Run timeline view', [
+      step('Open Run Timeline', 'open_run_timeline', ['Run Timeline'])
+    ], ['Run Timeline'], ['run timeline page is reachable and scannable'], 'high', evidence),
+    dashboardScenario('sniffer-crawl-path', 'Crawl path view', [
+      step('Open Crawl Path', 'open_crawl_path', ['Crawl Path'])
+    ], ['Crawl Path'], ['crawl path page is reachable and scannable'], 'high', evidence),
+    dashboardScenario('sniffer-workflow-evidence', 'Workflow evidence view', [
+      step('Open Workflow Evidence', 'open_workflow_evidence', ['Workflow Evidence'])
+    ], ['Workflow Evidence'], ['workflow evidence page is reachable and scannable'], 'high', evidence),
+    dashboardScenario('sniffer-agent-model', 'Agent model evidence view', [
+      step('Open Agent Model', 'open_agent_model', ['Agent Model'])
+    ], ['Agent Model'], ['agent model page is reachable and explains source/evidence structure'], 'high', evidence),
+    dashboardScenario('sniffer-repair-workbench', 'Repair workbench view', [
+      step('Open Repair Workbench', 'open_repair_workbench', ['Repair Workbench'])
+    ], ['Repair Workbench'], ['repair workbench page is reachable without running repairs'], 'medium', evidence),
     dashboardScenario('sniffer-issues-fix-packets', 'Issue/fix packet browsing', [
       step('Open issues and fix packets', 'open_issues_fixes', ['Issues', 'Fix Packets', 'Copy fix prompt'])
     ], ['Issues', 'Fix Packets'], ['issues and fix packets are browseable'], 'medium', evidence),
