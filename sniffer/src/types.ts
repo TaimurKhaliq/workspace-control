@@ -34,6 +34,7 @@ export interface SourceGraph {
   buildTool: string
   sourceInventory?: SourceInventory
   uiIntentGraph?: UIIntentGraph
+  graphRefinement?: GraphRefinementResult
   routes: SourceRoute[]
   pages: SourceFileSummary[]
   components: SourceFileSummary[]
@@ -64,6 +65,8 @@ export interface EvidenceFact {
   options?: string[]
   safeActionHint?: boolean
   rawText?: string
+  suppressedFromSemanticGraph?: boolean
+  refinedFromFactId?: string
   filePath?: string
   symbol?: string
   snippet?: string
@@ -277,14 +280,98 @@ export type UiSurfaceType =
   | 'prompt_composer'
   | 'generate_plan_action'
   | 'plan_bundle_view'
+  | 'history_list'
   | 'change_set_table'
   | 'recipe_panel'
   | 'graph_evidence_panel'
   | 'validation_panel'
   | 'handoff_prompt_panel'
   | 'raw_json_panel'
+  | 'debug_payload_view'
+  | 'repair_packet_view'
+  | 'dialog_form'
   | 'copy_action'
   | 'unknown_ui_section'
+
+export type GraphRefinerMode = 'off' | 'llm' | 'auto'
+
+export type GraphRefinementSuggestionType =
+  | 'reclassify_fact'
+  | 'normalize_control'
+  | 'merge_duplicate_surface'
+  | 'split_surface'
+  | 'add_edge'
+  | 'remove_edge'
+  | 'raise_confidence'
+  | 'lower_confidence'
+  | 'mark_as_noise'
+  | 'add_workflow'
+  | 'reclassify_surface'
+
+export type GraphRefinementConfidence = 'low' | 'medium' | 'high'
+export type GraphRefinementRisk = 'low' | 'medium' | 'high'
+
+export interface GraphRefinementSuggestion {
+  id: string
+  type: GraphRefinementSuggestionType
+  targetId: string
+  fromValue?: string
+  toValue?: string
+  reason: string
+  evidenceIds: string[]
+  confidence: GraphRefinementConfidence
+  risk: GraphRefinementRisk
+}
+
+export interface AppliedGraphRefinementSuggestion extends GraphRefinementSuggestion {
+  appliedAt: string
+}
+
+export interface RejectedGraphRefinementSuggestion extends GraphRefinementSuggestion {
+  rejectedReason: string
+}
+
+export interface GraphStructureCriticContext {
+  modelReviewed: string
+  sourceInventorySummary: {
+    totalFacts: number
+    factKinds: Record<string, number>
+    suspiciousFacts: Array<Pick<EvidenceFact, 'id' | 'kind' | 'value' | 'filePath' | 'symbol' | 'confidence' | 'extractionMethod'>>
+    topFacts: Array<Pick<EvidenceFact, 'id' | 'kind' | 'value' | 'label' | 'controlType' | 'handler' | 'filePath' | 'confidence' | 'extractionMethod'>>
+  }
+  uiIntentGraphDraft: {
+    surfaces: UIIntentNode[]
+    workflows: UIIntentNode[]
+    actions: UIIntentNode[]
+    controls: UIIntentNode[]
+    apiDataDependencies: UIIntentNode[]
+    edges: UIIntentEdge[]
+  }
+  runtimeEvidence?: {
+    url: string
+    title: string
+    headings: string[]
+    buttons: string[]
+    links: string[]
+    inputs: string[]
+    testIds: string[]
+    visibleText: string[]
+  }
+  instructions: string[]
+}
+
+export interface GraphRefinementResult {
+  mode?: GraphRefinerMode
+  status?: 'completed' | 'skipped' | 'provider_error'
+  modelReviewed: string
+  llmUsed: boolean
+  provider?: string
+  model?: string
+  suggestions: GraphRefinementSuggestion[]
+  appliedSuggestions: AppliedGraphRefinementSuggestion[]
+  rejectedSuggestions: RejectedGraphRefinementSuggestion[]
+  warnings: string[]
+}
 
 export interface UiSurface {
   file: string
@@ -712,6 +799,7 @@ export interface SnifferReport {
   productIntent?: ProductIntentModel
   productIntentFindings?: ProductIntentFinding[]
   productExperience?: ProductExperienceResult
+  graphRefinement?: GraphRefinementResult
   evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
   promptConsistency?: PromptConsistencyResult
   runtimeSurfaceMatches: RuntimeSurfaceMatch[]

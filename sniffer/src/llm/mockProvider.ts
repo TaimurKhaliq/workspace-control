@@ -1,4 +1,4 @@
-import type { AppIntent, Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, UxCriticContext, UxCriticFinding } from '../types.js'
+import type { AppIntent, GraphRefinementResult, GraphStructureCriticContext, Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, UxCriticContext, UxCriticFinding } from '../types.js'
 import type { SnifferCriticContext, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider } from './provider.js'
 import { deterministicDecision } from '../critic/workflowCritic.js'
@@ -187,5 +187,41 @@ export class MockLlmProvider implements LlmProvider {
       ...issue,
       evidence: [...issue.evidence, 'mock_llm_triage: grouped by mock provider']
     }))
+  }
+
+  async critiqueGraphStructure(context: GraphStructureCriticContext): Promise<Pick<GraphRefinementResult, 'suggestions' | 'warnings'>> {
+    const suggestions = []
+    const staticAsset = context.sourceInventorySummary.suspiciousFacts.find((fact) => fact.kind === 'api_call' && /\/(?:src|assets|static|public)\//i.test(fact.value))
+    if (staticAsset) {
+      suggestions.push({
+        id: 'mock-static-asset-reclassify',
+        type: 'reclassify_fact' as const,
+        targetId: staticAsset.id,
+        fromValue: staticAsset.kind,
+        toValue: 'static_asset_reference',
+        reason: 'Mock graph critic: module/static asset path is not a backend API call.',
+        evidenceIds: [staticAsset.id],
+        confidence: 'high' as const,
+        risk: 'low' as const
+      })
+    }
+    const planRuns = context.uiIntentGraphDraft.surfaces.find((surface) => /plan runs?|history/i.test(surface.label) && surface.metadata?.surface_type === 'unknown_ui_section')
+    if (planRuns?.evidenceIds[0]) {
+      suggestions.push({
+        id: 'mock-plan-runs-history-list',
+        type: 'reclassify_surface' as const,
+        targetId: planRuns.id,
+        fromValue: 'unknown_ui_section',
+        toValue: 'history_list',
+        reason: 'Mock graph critic: plan-run evidence indicates a history/list surface.',
+        evidenceIds: [planRuns.evidenceIds[0]],
+        confidence: 'high' as const,
+        risk: 'low' as const
+      })
+    }
+    return {
+      suggestions,
+      warnings: ['mock_graph_refiner: generated deterministic mock suggestions from compact graph context']
+    }
   }
 }

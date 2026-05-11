@@ -37,6 +37,10 @@ export interface SnifferReport {
   generatedAt: string
   issues: Issue[]
   rawFindings?: Issue[]
+  sourceInventory?: SourceInventory
+  uiIntentGraph?: UIIntentGraph
+  graphRefinement?: GraphRefinementResult
+  evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
   appProfile?: AppProfile
   discoveryMode?: string
   runtimeDomSnapshot?: {
@@ -96,6 +100,10 @@ export interface SnifferReport {
     realLlmScreensReviewed?: number
     llmScreensReviewed?: number
     visionScreensReviewed?: number
+    contexts?: ProductExperienceContext[]
+    decisions?: ProductExperienceDecision[]
+    evidenceRetrievalSummaries?: EvidenceRetrievalSummary[]
+    issues?: Issue[]
   }
   promptConsistency?: {
     enabled: boolean
@@ -129,6 +137,9 @@ export interface SnifferReport {
     sourceWorkflows?: SourceWorkflow[]
     apiCalls?: ApiCall[]
     stateActions?: StateAction[]
+    sourceInventory?: SourceInventory
+    uiIntentGraph?: UIIntentGraph
+    graphRefinement?: GraphRefinementResult
     discoveryAdapters?: Array<{ adapterId: string; framework: string; confidence: number; evidence: string[]; warnings?: string[] }>
     workflowDiscoverySummary?: {
       source_workflows_count: number
@@ -138,6 +149,165 @@ export interface SnifferReport {
       executed_scenarios_count?: number
     }
   }
+}
+
+export interface EvidenceFact {
+  id: string
+  kind: string
+  value: string
+  source: string
+  label?: string
+  controlType?: string
+  handler?: string
+  ariaDescribedBy?: string
+  placeholder?: string
+  testId?: string
+  options?: string[]
+  safeActionHint?: boolean
+  rawText?: string
+  suppressedFromSemanticGraph?: boolean
+  refinedFromFactId?: string
+  filePath?: string
+  symbol?: string
+  snippet?: string
+  confidence: number
+  extractionMethod: 'deterministic' | 'heuristic' | 'llm' | 'runtime' | string
+}
+
+export interface SourceInventory {
+  files?: Array<{ path: string; extension?: string; moduleName?: string; evidenceIds?: string[] }>
+  modules?: string[]
+  frameworkSignals?: EvidenceFact[]
+  packageBuildSignals?: EvidenceFact[]
+  rawExtractedSymbols?: EvidenceFact[]
+  rawRoutes?: EvidenceFact[]
+  rawTemplates?: EvidenceFact[]
+  rawHandlers?: EvidenceFact[]
+  rawApiCalls?: EvidenceFact[]
+  provenance?: EvidenceFact[]
+  facts: EvidenceFact[]
+  generatedAt?: string
+}
+
+export interface UIIntentNode {
+  id: string
+  kind: string
+  label: string
+  filePath?: string
+  symbol?: string
+  route?: string
+  confidence: number
+  evidenceIds: string[]
+  extractionMethod: string
+  metadata?: Record<string, unknown>
+}
+
+export interface UIIntentEdge {
+  id: string
+  source: string
+  target: string
+  kind: string
+  confidence: number
+  evidenceIds: string[]
+}
+
+export interface EvidenceInference {
+  id: string
+  claim: string
+  basedOn: string[]
+  confidence: number
+  method: string
+  contradictedBy?: string[]
+}
+
+export interface UIIntentGraph {
+  surfaces: UIIntentNode[]
+  workflows: UIIntentNode[]
+  actions: UIIntentNode[]
+  controls: UIIntentNode[]
+  forms: UIIntentNode[]
+  state: UIIntentNode[]
+  validation: UIIntentNode[]
+  apiDataDependencies: UIIntentNode[]
+  domainEntities: UIIntentNode[]
+  edges: UIIntentEdge[]
+  confidence: number
+  evidenceReferences?: string[]
+  inferences?: EvidenceInference[]
+  generatedAt?: string
+}
+
+export interface GraphRefinementSuggestion {
+  id: string
+  type: string
+  targetId: string
+  fromValue?: string
+  toValue?: string
+  reason: string
+  evidenceIds: string[]
+  confidence: string
+  risk: string
+}
+
+export interface AppliedGraphRefinementSuggestion extends GraphRefinementSuggestion {
+  appliedAt: string
+}
+
+export interface RejectedGraphRefinementSuggestion extends GraphRefinementSuggestion {
+  rejectedReason: string
+}
+
+export interface GraphRefinementResult {
+  mode?: string
+  status?: string
+  modelReviewed: string
+  llmUsed: boolean
+  provider?: string
+  model?: string
+  suggestions: GraphRefinementSuggestion[]
+  appliedSuggestions: AppliedGraphRefinementSuggestion[]
+  rejectedSuggestions: RejectedGraphRefinementSuggestion[]
+  warnings: string[]
+}
+
+export interface EvidenceRetrievalSummary {
+  context: {
+    issueId?: string
+    screenName?: string
+    workflowName?: string
+    featureRequest?: string
+    query: string
+  }
+  retrievedDocumentCount: number
+  sourceFactCount: number
+  runtimeFactCount: number
+  contradictionCount: number
+  topDocuments: Array<{ id: string; kind: string; text: string }>
+}
+
+export interface ProductExperienceContext {
+  app_name?: string
+  current_screen_name?: string
+  nav_label_clicked?: string
+  page_intent?: string
+  workflow_intent?: string
+  screenshot_path?: string
+  screenshot_artifact_url?: string
+  dom_summary?: string
+  headings?: string[]
+  visible_controls?: unknown[]
+  evidence_retrieval_summary?: EvidenceRetrievalSummary
+  [key: string]: unknown
+}
+
+export interface ProductExperienceDecision {
+  screen_name?: string
+  nav_label?: string
+  workflow_intent?: string
+  overall?: { classification?: string; confidence?: string; summary?: string }
+  findings?: Array<Record<string, unknown>>
+  non_issues?: Array<{ observation?: string; reason_not_reported?: string }>
+  [key: string]: unknown
 }
 
 export interface AppProfile {
@@ -570,6 +740,30 @@ export async function getRun(runId: string): Promise<RunRecord> {
 
 export async function getLatestReport(projectId?: string): Promise<SnifferReport> {
   return request(projectPath('/api/reports/latest', projectId))
+}
+
+export async function getSourceInventory(projectId?: string): Promise<SourceInventory> {
+  return request(projectPath('/api/reports/latest/source-inventory', projectId))
+}
+
+export async function getUiIntentGraph(projectId?: string): Promise<UIIntentGraph> {
+  return request(projectPath('/api/reports/latest/ui-intent-graph', projectId))
+}
+
+export async function getGraphRefinements(projectId?: string): Promise<GraphRefinementResult> {
+  return request(projectPath('/api/reports/latest/graph-refinements', projectId))
+}
+
+export async function getEvidenceRetrieval(projectId?: string): Promise<unknown> {
+  return request(projectPath('/api/reports/latest/evidence-retrieval', projectId))
+}
+
+export async function getEvidencePackets(projectId?: string): Promise<unknown> {
+  return request(projectPath('/api/reports/latest/evidence-packets', projectId))
+}
+
+export async function getSuppressions(projectId?: string): Promise<unknown> {
+  return request(projectPath('/api/reports/latest/suppressions', projectId))
 }
 
 export async function getLatestMarkdown(projectId?: string): Promise<string> {

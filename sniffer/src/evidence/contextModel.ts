@@ -354,7 +354,7 @@ function edgeFactory(edges: UIIntentEdge[]) {
 }
 
 function factLookup(facts: EvidenceFact[]): EvidenceFact[] {
-  return facts
+  return facts.filter((fact) => !fact.suppressedFromSemanticGraph)
 }
 
 function evidenceForSurface(filePath: string | undefined, values: string[], facts: EvidenceFact[]): string[] {

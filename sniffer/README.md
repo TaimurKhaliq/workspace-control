@@ -196,14 +196,68 @@ This supports actual RAG without replacing the `SourceGraph`. The `SourceGraph` 
 ```mermaid
 flowchart LR
   A["Source Inventory<br/>files, routes, APIs, handlers"] --> B["UI Intent Graph<br/>surfaces, workflows, actions, entities"]
-  B --> C["Evidence Retrieval Index<br/>source + runtime + reports + repairs"]
-  C --> D["Evidence Packet<br/>focused context with provenance"]
-  D --> E["Product Experience Critic<br/>LLM evaluator/judge"]
-  E --> F["Fix Packet<br/>bounded repair handoff"]
-  F --> G["Repair Agent<br/>manual or Codex adapter"]
-  G --> H["Verification<br/>rerun checks and compare evidence"]
-  H -. "updated evidence" .-> C
+  B --> C["Graph Structure Critic<br/>LLM suggestions + guarded application"]
+  C --> D["UI Intent Graph Refined<br/>provenance preserved"]
+  D --> E["Evidence Retrieval Index<br/>source + runtime + reports + repairs"]
+  E --> F["Evidence Packet<br/>focused context with provenance"]
+  F --> G["Product Experience Critic<br/>LLM evaluator/judge"]
+  G --> H["Fix Packet<br/>bounded repair handoff"]
+  H --> I["Repair Agent<br/>manual or Codex adapter"]
+  I --> J["Verification<br/>rerun checks and compare evidence"]
+  J -. "updated evidence" .-> E
 ```
+
+## Graph Structure Critic
+
+The optional Graph Structure Critic is an early LLM-powered refinement stage:
+
+```text
+SourceInventory
+-> UIIntentGraphDraft
+-> GraphStructureCritic
+-> UIIntentGraphRefined
+-> EvidenceRetrievalIndex
+```
+
+It reviews a compact Source Inventory and UI Intent Graph draft and returns structured `GraphRefinementSuggestion` objects. It can suggest corrections such as:
+
+- reclassifying `/src/main.tsx` from an API call into a `static_asset_reference`
+- normalizing raw JSX control strings into clean labels, handlers, control types, and test IDs
+- reclassifying `Plan Runs history` from `unknown_ui_section` to `history_list`
+- connecting `onReopenPlanRun` and `/plan-runs` evidence to a “Browse/reopen previous plan runs” workflow
+- marking repeated row actions like `Reopen` as scoped row actions rather than globally unique buttons
+
+The LLM does not directly overwrite deterministic facts. Sniffer applies only suggestions that are:
+
+- schema-valid
+- `confidence=high`
+- `risk=low|medium`
+- tied to an existing `targetId`
+- backed by existing `evidenceIds`
+- not contradicted by deterministic source evidence
+
+Raw facts are never deleted. If a fact is noisy, Sniffer marks it `suppressedFromSemanticGraph=true` and keeps it in Source Inventory for debugging/provenance. Applied refinements produce new LLM-attributed facts or graph metadata with references back to the original evidence.
+
+Run it explicitly:
+
+```bash
+npm run sniffer -- audit \
+  --repo /path/to/ui-repo \
+  --url http://localhost:3000 \
+  --discovery-mode hybrid \
+  --scenario all \
+  --execute-generated-scenarios \
+  --provider openai-compatible \
+  --graph-refiner llm
+```
+
+Or use mock mode for local tests:
+
+```bash
+npm run sniffer -- discover --repo /path/to/ui-repo --graph-refiner llm --provider mock
+```
+
+Reports include a `Graph Structure Critic` section with mode, provider/model, suggestion counts, applied refinements, rejected refinements, and warnings. JSON reports include the full `graphRefinement` result.
 
 ## Source Discovery Adapters
 

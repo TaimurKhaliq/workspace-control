@@ -1,4 +1,4 @@
-import type { AppIntent, Issue, IssueTriageContext, LlmCriticProvider, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SourceGraph, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { AppIntent, GraphRefinementResult, GraphStructureCriticContext, Issue, IssueTriageContext, LlmCriticProvider, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SourceGraph, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 
 export interface LlmProviderMetadata {
   name: string
@@ -59,4 +59,5 @@ export interface LlmProvider extends Partial<LlmCriticProvider> {
   inferRuntimeIntent?(context: RuntimeIntentContext): Promise<RuntimeLlmIntent>
   critiquePromptConsistency?(context: PromptConsistencyContext): Promise<PromptConsistencyDecision>
   triageIssues?(context: IssueTriageContext): Promise<Issue[]>
+  critiqueGraphStructure?(context: GraphStructureCriticContext): Promise<Pick<GraphRefinementResult, 'suggestions' | 'warnings'>>
 }

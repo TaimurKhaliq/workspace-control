@@ -5,6 +5,7 @@ import { IssueGroupCard } from '../src/components/IssueGroupCard'
 import { FixPacketViewer } from '../src/components/FixPacketViewer'
 import { RepairWorkbench } from '../src/components/RepairWorkbench'
 import { ReportContextStrip } from '../src/components/ReportContextStrip'
+import { AgentModelView } from '../src/components/AgentModelView'
 import { SnifferMascot } from '../src/components/SnifferMascot'
 import { ScenariosView } from '../src/components/ScenariosView'
 import { ScreenshotImage } from '../src/components/ScreenshotModal'
@@ -27,7 +28,32 @@ const report: SnifferReport = {
   blockedChecks: [],
   needsMoreCrawling: [],
   scenarioRuns: [{ name: 'Generate plan bundle', status: 'passed' }],
-  productExperience: { status: 'completed', providerName: 'openai-compatible', realLlmScreensReviewed: 11 },
+  productExperience: {
+    status: 'completed',
+    providerName: 'openai-compatible',
+    realLlmScreensReviewed: 11,
+    contexts: [{
+      current_screen_name: 'Run Timeline',
+      nav_label_clicked: 'Run Timeline',
+      page_intent: 'Explain ordered audit phases.',
+      screenshot_path: 'screenshots/state-1.png',
+      dom_summary: 'Run Timeline Latest report'
+    }],
+    decisions: [{
+      screen_name: 'Run Timeline',
+      overall: { classification: 'aligned', confidence: 'high', summary: 'The screen communicates run context.' },
+      findings: [],
+      non_issues: [{ observation: 'Raw JSON has Copy JSON', reason_not_reported: 'candidate suppressed due to contradictory runtime evidence' }]
+    }],
+    evidenceRetrievalSummaries: [{
+      context: { query: 'Run Timeline evidence', screenName: 'Run Timeline' },
+      retrievedDocumentCount: 1,
+      sourceFactCount: 1,
+      runtimeFactCount: 0,
+      contradictionCount: 0,
+      topDocuments: [{ id: 'doc-pe-1', kind: 'workflow', text: 'Run Timeline page intent' }]
+    }]
+  },
   crawlGraph: {
     startUrl: 'http://127.0.0.1:5173',
     finalUrl: 'http://127.0.0.1:5173',
@@ -39,7 +65,123 @@ const report: SnifferReport = {
     repoPath: '/tmp/web',
     framework: 'react',
     buildTool: 'vite'
-  }
+  },
+  sourceInventory: {
+    files: [{ path: 'src/App.tsx', extension: '.tsx', evidenceIds: ['fact-source-app'] }],
+    modules: ['App'],
+    frameworkSignals: [],
+    packageBuildSignals: [],
+    rawExtractedSymbols: [],
+    rawRoutes: [],
+    rawTemplates: [],
+    rawHandlers: [],
+    rawApiCalls: [],
+    provenance: [],
+    generatedAt: '2026-04-28T12:00:00.000Z',
+    facts: [{
+      id: 'fact-feature-request',
+      kind: 'form_control',
+      value: 'Feature request',
+      label: 'Feature request',
+      controlType: 'textarea',
+      handler: 'onPromptChange',
+      source: 'source_inventory',
+      filePath: 'src/App.tsx',
+      snippet: '<textarea aria-label="Feature request" />',
+      confidence: 0.9,
+      extractionMethod: 'deterministic'
+    }, {
+      id: 'fact-main-tsx',
+      kind: 'static_asset_reference',
+      value: '/src/main.tsx',
+      source: 'graph_refiner',
+      filePath: 'index.html',
+      confidence: 0.86,
+      extractionMethod: 'llm'
+    }, {
+      id: 'fact-noisy',
+      kind: 'action_control',
+      value: 'Unlabelled button',
+      source: 'source_inventory',
+      filePath: 'src/App.tsx',
+      confidence: 0.35,
+      extractionMethod: 'deterministic',
+      suppressedFromSemanticGraph: true
+    }]
+  },
+  uiIntentGraph: {
+    surfaces: [{
+      id: 'surface-plan-runs',
+      kind: 'surface',
+      label: 'Plan Runs history',
+      filePath: 'src/App.tsx',
+      confidence: 0.8,
+      evidenceIds: ['fact-feature-request'],
+      extractionMethod: 'heuristic',
+      metadata: { surface_type: 'history_list' }
+    }],
+    workflows: [{
+      id: 'workflow-plan-runs',
+      kind: 'workflow',
+      label: 'Browse/reopen previous plan runs',
+      filePath: 'src/App.tsx',
+      confidence: 0.86,
+      evidenceIds: ['fact-feature-request'],
+      extractionMethod: 'heuristic'
+    }],
+    actions: [],
+    controls: [],
+    forms: [],
+    state: [],
+    validation: [],
+    apiDataDependencies: [],
+    domainEntities: [],
+    edges: [{ id: 'edge-plan-runs', source: 'surface-plan-runs', target: 'workflow-plan-runs', kind: 'supports', confidence: 0.8, evidenceIds: ['fact-feature-request'] }],
+    confidence: 0.82,
+    evidenceReferences: ['fact-feature-request'],
+    inferences: [],
+    generatedAt: '2026-04-28T12:00:00.000Z'
+  },
+  graphRefinement: {
+    mode: 'llm',
+    status: 'completed',
+    modelReviewed: 'SourceInventory(3 facts) + UIIntentGraphDraft(1 surfaces, 1 workflows)',
+    llmUsed: true,
+    provider: 'openai-compatible',
+    model: 'gpt-test',
+    warnings: ['Noisy control found'],
+    suggestions: [],
+    appliedSuggestions: [{
+      id: 'refine-static-asset',
+      type: 'reclassify_fact',
+      targetId: 'fact-main-tsx',
+      fromValue: 'api_call',
+      toValue: 'static_asset_reference',
+      reason: 'Module script is not a backend API.',
+      evidenceIds: ['fact-main-tsx'],
+      confidence: 'high',
+      risk: 'low',
+      appliedAt: '2026-04-28T12:00:00.000Z'
+    }],
+    rejectedSuggestions: [{
+      id: 'reject-low',
+      type: 'mark_as_noise',
+      targetId: 'fact-feature-request',
+      reason: 'Too weak.',
+      evidenceIds: ['fact-feature-request'],
+      confidence: 'low',
+      risk: 'low',
+      rejectedReason: 'Only high-confidence graph refinements are applied.'
+    }]
+  },
+  evidenceRetrievalSummaries: [{
+    context: { query: 'Run Timeline context', screenName: 'Run Timeline' },
+    retrievedDocumentCount: 2,
+    sourceFactCount: 1,
+    runtimeFactCount: 1,
+    contradictionCount: 1,
+    topDocuments: [{ id: 'doc-1', kind: 'surface', text: 'Plan Runs history' }]
+  }]
 }
 
 beforeEach(() => {
@@ -148,6 +290,59 @@ describe('Sniffer UI dashboard', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Repair Workbench' }))
     expect(await screen.findByTestId('repair-workbench-view')).toBeInTheDocument()
     expect(screen.getAllByText('Repair Workbench').length).toBeGreaterThan(0)
+  })
+
+  it('opens the Agent Model from navigation', async () => {
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Agent Model' }))
+    expect(await screen.findByTestId('agent-model-view')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'How Sniffer built its understanding' })).toBeInTheDocument()
+    expect(screen.getByText('Feature request')).toBeInTheDocument()
+  })
+})
+
+describe('Agent Model view', () => {
+  it('shows Source Inventory counts and collapsed snippets', () => {
+    render(<AgentModelView report={report} projectId="demo" projectName="Demo UI" />)
+    expect(screen.getByText('Deterministic facts')).toBeInTheDocument()
+    expect(screen.getAllByText('Feature request').length).toBeGreaterThan(0)
+    expect(screen.getByText('Raw snippet')).toBeInTheDocument()
+  })
+
+  it('shows UI Intent Graph surfaces and detail drawer', () => {
+    render(<AgentModelView report={report} projectId="demo" projectName="Demo UI" />)
+    fireEvent.click(screen.getByRole('tab', { name: 'UI Intent Graph' }))
+    expect(screen.getByText('Semantic model')).toBeInTheDocument()
+    expect(screen.getAllByText('Plan Runs history').length).toBeGreaterThan(0)
+    expect(screen.getByText('Focused relationship map')).toBeInTheDocument()
+  })
+
+  it('shows applied and rejected LLM refinements', () => {
+    render(<AgentModelView report={report} projectId="demo" projectName="Demo UI" />)
+    fireEvent.click(screen.getByRole('tab', { name: 'LLM Refinements' }))
+    expect(screen.getByText('Graph Structure Critic')).toBeInTheDocument()
+    expect(screen.getByText((content) => content.includes('static_asset_reference'))).toBeInTheDocument()
+    expect(screen.getByText(/Only high-confidence/)).toBeInTheDocument()
+  })
+
+  it('shows evidence retrieval and evidence packets', () => {
+    render(<AgentModelView report={report} projectId="demo" projectName="Demo UI" />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Evidence Retrieval' }))
+    expect(screen.getByText('Retrieved context packets')).toBeInTheDocument()
+    expect(screen.getByText('Run Timeline context')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Evidence Packets' }))
+    expect(screen.getByText('Critic and repair context')).toBeInTheDocument()
+    expect(screen.getAllByText('Run Timeline').length).toBeGreaterThan(0)
+  })
+
+  it('shows suppressions and handles legacy reports without new fields', () => {
+    render(<AgentModelView report={report} projectId="demo" projectName="Demo UI" />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Contradictions / Suppressions' }))
+    expect(screen.getByText('Evidence gating decisions')).toBeInTheDocument()
+    expect(screen.getByText('Unlabelled button')).toBeInTheDocument()
+    cleanup()
+    render(<AgentModelView report={{ ...report, sourceInventory: undefined, uiIntentGraph: undefined, graphRefinement: undefined }} />)
+    expect(screen.getByTestId('agent-model-unavailable')).toBeInTheDocument()
   })
 })
 

@@ -1637,6 +1637,11 @@ code {
   gap: 1rem;
 }
 
+.graph-mode-help {
+  margin: -0.1rem 0 0.25rem;
+  font-size: 0.78rem;
+}
+
 .legend-grid {
   display: flex;
   flex-wrap: wrap;
@@ -1682,6 +1687,267 @@ code {
 .legend-grid .status-blocked {
   background: #f1f5f9;
   border-color: #94a3b8;
+}
+
+.tab-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.45rem;
+}
+
+.tab-button {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  padding: 0.45rem 0.7rem;
+}
+
+.tab-button.active {
+  border-color: #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.agent-model-grid {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr) minmax(320px, 0.42fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.agent-model-grid.inventory-layout {
+  grid-template-columns: 320px minmax(0, 1fr);
+}
+
+.agent-model-grid > .agent-filter-panel:first-child:last-child,
+.agent-model-grid > .card-panel:first-child:last-child {
+  grid-column: 1 / -1;
+}
+
+.agent-filter-panel,
+.agent-detail-drawer {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 116px);
+  overflow: auto;
+}
+
+.agent-detail-stack,
+.fact-list,
+.scenario-card-list.tight,
+.agent-filter-form {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.compact-page-stack {
+  max-width: 1320px;
+}
+
+.agent-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+
+.agent-metric {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 0.55rem 0.65rem;
+}
+
+.agent-metric strong,
+.agent-metric span {
+  display: block;
+}
+
+.agent-metric strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.agent-metric span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fact-card {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.75rem;
+}
+
+.fact-card.suppressed {
+  border-style: dashed;
+  background: #f8fafc;
+}
+
+.fact-card-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.fact-card strong,
+.fact-card small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.fact-card small {
+  margin-top: 0.2rem;
+  color: var(--muted);
+}
+
+.fact-card details summary,
+.scenario-card details summary {
+  cursor: pointer;
+  color: var(--primary);
+  font-weight: 750;
+}
+
+.snippet-preview {
+  max-height: 260px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-radius: 8px;
+  background: #f8fafc;
+  padding: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.intent-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+
+.intent-node-card {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+
+.intent-node-card:hover,
+.intent-node-card.active {
+  border-color: #93c5fd;
+  background: #eff6ff;
+  color: var(--text);
+}
+
+.intent-node-card strong,
+.intent-node-card small,
+.intent-node-card span {
+  overflow-wrap: anywhere;
+}
+
+.mini-evidence-graph {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+}
+
+.mini-edge-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.mini-node,
+.mini-edge {
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-subtle);
+  padding: 0.35rem 0.45rem;
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-edge {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.agent-table-card {
+  overflow: auto;
+}
+
+.agent-table {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+}
+
+.agent-table th,
+.agent-table td {
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.agent-table th {
+  color: var(--muted);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+}
+
+.wrap-cell,
+.evidence-id-row {
+  overflow-wrap: anywhere;
+}
+
+.evidence-id-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+}
+
+.three-column-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.three-column-grid.compact {
+  gap: 0.6rem;
+}
+
+.static-card {
+  cursor: default;
+}
+
+.evidence-list.compact {
+  margin-block: 0.35rem 0;
+  padding-left: 1.1rem;
+  font-size: 0.82rem;
 }
 
 @keyframes nose-bob {
@@ -1732,9 +1998,17 @@ code {
   .dashboard-grid,
   .report-grid,
   .graph-workbench,
+  .agent-model-grid,
   .repair-workbench-grid,
-  .settings-grid {
+  .settings-grid,
+  .three-column-grid {
     grid-template-columns: 1fr;
+  }
+
+  .agent-filter-panel,
+  .agent-detail-drawer {
+    position: static;
+    max-height: none;
   }
 
   .repair-runner {
@@ -1796,6 +2070,10 @@ code {
   }
 
   .graph-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .mini-edge-row {
     grid-template-columns: 1fr;
   }
 

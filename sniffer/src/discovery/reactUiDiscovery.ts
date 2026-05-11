@@ -46,7 +46,7 @@ const surfacePatterns: SurfacePattern[] = [
   { type: 'handoff_prompt_panel', displayName: 'Handoff prompt copy area', terms: ['handoff_prompts', 'Handoff', 'prompt', 'copy'], buttonTerms: ['Copy'], minConfidence: 0.65 },
   { type: 'raw_json_panel', displayName: 'Raw JSON view', terms: ['Raw JSON', 'JSON', 'json', 'debug'], minConfidence: 0.6 },
   { type: 'copy_action', displayName: 'Copy action', terms: ['navigator.clipboard', 'Copy', 'copy'], buttonTerms: ['Copy'], minConfidence: 0.65 },
-  { type: 'unknown_ui_section', displayName: 'Plan Runs history', terms: ['Plan Runs', 'plan-run-item', 'plan-runs-list', 'onReopenPlanRun', 'listPlanRuns'], buttonTerms: ['Reopen'], minConfidence: 0.65 }
+  { type: 'history_list', displayName: 'Plan Runs history', terms: ['Plan Runs', 'plan-run-item', 'plan-runs-list', 'onReopenPlanRun', 'listPlanRuns'], buttonTerms: ['Reopen'], minConfidence: 0.65 }
 ]
 
 const workflowPatterns = [

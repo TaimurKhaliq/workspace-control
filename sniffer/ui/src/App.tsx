@@ -31,6 +31,7 @@ import { ReportTimeline } from './components/ReportTimeline'
 import { ScenariosView } from './components/ScenariosView'
 import { CrawlPathView } from './components/CrawlPathView'
 import { WorkflowEvidenceView } from './components/WorkflowEvidenceView'
+import { AgentModelView } from './components/AgentModelView'
 import { RawJsonView } from './components/RawJsonView'
 import { ProjectsView } from './components/ProjectsView'
 import { RepairWorkbench } from './components/RepairWorkbench'
@@ -289,6 +290,7 @@ export default function App() {
       {screen === 'scenarios' && <ScenariosView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'crawl' && <CrawlPathView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'workflows' && <WorkflowEvidenceView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
+      {screen === 'agent' && <AgentModelView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'graph' && <DiscoveryGraph report={report} fixPackets={fixPackets} screenshots={screenshots} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'issues' && <IssueSummary report={report} projectId={reportProjectId} projectName={reportProjectName} selectedIssue={selectedIssue} onSelectIssue={setSelectedIssue} onCopyFixPrompt={copyFixPrompt} onVerifyIssue={(issue) => void runVerification(issue)} />}
       {screen === 'fixes' && <FixPacketViewer report={report} packets={fixPackets} projectId={reportProjectId} projectName={reportProjectName} onGenerateFixes={() => void generateFixes()} />}

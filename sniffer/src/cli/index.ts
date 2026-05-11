@@ -41,7 +41,8 @@ import { buildRuntimeAppModel, buildRuntimeIntentContext } from '../runtime/runt
 import type { DiscoveryMode, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent } from '../types.js'
 import { runVerificationMatrix } from '../verification/matrix.js'
 import { runProductExperienceCritic } from '../critic/productExperienceCritic.js'
-import type { ProductExperienceCriticMode } from '../types.js'
+import type { GraphRefinerMode, ProductExperienceCriticMode } from '../types.js'
+import { runGraphStructureRefiner } from '../evidence/graphRefiner.js'
 
 loadSnifferEnv()
 
@@ -96,9 +97,14 @@ async function main(): Promise<void> {
 
   if (command === 'discover') {
     const ctx = await resolveTarget(args, { needRepo: true, needUrl: false })
-    const graph = await discoverSource(ctx.repo, sourceDiscoveryOptions(args))
+    let graph = await discoverSource(ctx.repo, sourceDiscoveryOptions(args))
+    const graphRefinerMode = graphRefinerModeArg(args)
+    const provider = graphRefinerProvider(args, graphRefinerMode)
+    const refined = await runGraphStructureRefiner({ sourceGraph: graph, mode: graphRefinerMode, provider })
+    graph = refined.sourceGraph
     const profile = inferAppProfile({ sourceGraph: graph, productGoal: productGoalArg(args) })
     await writeJson(path.join(ctx.reportDir, 'source_graph.json'), graph)
+    await writeJson(path.join(ctx.reportDir, 'graph_refinement.json'), refined.refinement)
     await writeJson(path.join(ctx.reportDir, 'app_profile.json'), profile)
     await mirrorReportDirs(ctx)
     await updateProjectFromDiscovery(ctx, graph, profile)
@@ -133,10 +139,19 @@ async function main(): Promise<void> {
     const repo = ctx.repo
     const url = ctx.url
     const reportDir = ctx.reportDir
-    const sourceGraph = discoveryMode === 'runtime' ? emptySourceGraph(repo || url, ctx.project) : await discoverSource(repo, sourceDiscoveryOptions(args))
+    let sourceGraph = discoveryMode === 'runtime' ? emptySourceGraph(repo || url, ctx.project) : await discoverSource(repo, sourceDiscoveryOptions(args))
     const crawlGraph = await crawlApp(url, crawlOptions(args, reportDir))
     const runtimeDomSnapshot = discoveryMode === 'source' ? undefined : await inspectUrl({ url, reportDir })
     const productGoal = typeof args['product-goal'] === 'string' ? args['product-goal'] : undefined
+    const intentMode = (typeof args['intent-mode'] === 'string' ? args['intent-mode'] : 'deterministic') as ProductIntentMode
+    const productExperienceMode = productExperienceCriticModeArg(args)
+    const graphRefinerMode = graphRefinerModeArg(args)
+    const providerName = typeof args.provider === 'string' ? args.provider : args['use-llm'] ? 'auto' : 'auto'
+    const provider = args['use-llm'] || args['critic-mode'] === 'llm' || args['ux-critic'] === 'llm' || productExperienceMode === 'llm' || productExperienceMode === 'auto' || graphRefinerMode === 'llm' || graphRefinerMode === 'auto' || intentMode === 'llm' || intentMode === 'auto' || providerName === 'mock'
+      ? createLlmProvider(providerName)
+      : undefined
+    const refinement = await runGraphStructureRefiner({ sourceGraph, mode: graphRefinerMode, provider, runtimeDomSnapshot })
+    sourceGraph = refinement.sourceGraph
     const sourceOnlyAppProfile = inferAppProfile({ sourceGraph, productGoal })
     const deterministicAppProfile = inferAppProfile({ sourceGraph, crawlGraph, productGoal })
     const scenarioSlug = (typeof args.scenario === 'string' ? args.scenario : undefined) as ScenarioSlug | undefined
@@ -152,12 +167,6 @@ async function main(): Promise<void> {
       : []
     let appIntent = buildDeterministicIntent(sourceGraph)
     const runtimeValidationSourceGraph = sourceGraphForRuntimeValidation(sourceGraph, scenarioSelection)
-    const intentMode = (typeof args['intent-mode'] === 'string' ? args['intent-mode'] : 'deterministic') as ProductIntentMode
-    const productExperienceMode = productExperienceCriticModeArg(args)
-    const providerName = typeof args.provider === 'string' ? args.provider : args['use-llm'] ? 'auto' : 'auto'
-    const provider = args['use-llm'] || args['critic-mode'] === 'llm' || args['ux-critic'] === 'llm' || productExperienceMode === 'llm' || productExperienceMode === 'auto' || intentMode === 'llm' || intentMode === 'auto' || providerName === 'mock'
-      ? createLlmProvider(providerName)
-      : undefined
     if (args['use-llm']) {
       if (provider) appIntent = await provider.inferIntent({ sourceGraph, deterministicIntent: appIntent })
     }
@@ -674,6 +683,17 @@ function productExperienceCriticModeArg(args: Record<string, string | boolean>):
   return value === 'deterministic' || value === 'llm' || value === 'auto' || value === 'off' ? value : 'auto'
 }
 
+function graphRefinerModeArg(args: Record<string, string | boolean>): GraphRefinerMode {
+  const value = typeof args['graph-refiner'] === 'string' ? args['graph-refiner'] : undefined
+  return value === 'llm' || value === 'auto' || value === 'off' ? value : 'auto'
+}
+
+function graphRefinerProvider(args: Record<string, string | boolean>, mode: GraphRefinerMode): LlmProvider | undefined {
+  if (mode === 'off') return undefined
+  const providerName = typeof args.provider === 'string' ? args.provider : 'auto'
+  return createLlmProvider(providerName)
+}
+
 function sourceDiscoveryOptions(args: Record<string, string | boolean>) {
   return {
     includeTestSources: boolArg(args, 'include-test-sources')
@@ -823,9 +843,9 @@ Commands:
   sniffer providers check --provider openai-compatible
   sniffer llm-check [--provider openai-compatible]
   sniffer inspect-url --url <url> | --project <id>
-  sniffer discover --repo <path> | --project <id> [--include-test-sources]
+  sniffer discover --repo <path> | --project <id> [--include-test-sources] [--graph-refiner off|llm|auto] [--provider mock|openai-compatible|auto]
   sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
-  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--ux-critic off|deterministic|llm] [--product-experience-critic off|llm|deterministic|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
+  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources] [--consistency-check] [--consistency-prompts built-in|path] [--graph-refiner off|llm|auto] [--ux-critic off|deterministic|llm] [--product-experience-critic off|llm|deterministic|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
   sniffer repair-proof --issue <issue_id> --report <path> --agent manual
   sniffer apply-fix [--issue <issue_id>] [--report <path>] [--agent manual|mock|codex]

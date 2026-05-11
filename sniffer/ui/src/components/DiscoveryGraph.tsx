@@ -17,7 +17,7 @@ import { ReportContextStrip } from './ReportContextStrip'
 import { ScreenshotImage, artifactUrl } from './ScreenshotModal'
 
 type LayoutMode = 'layered' | 'workflow'
-type GraphScopeMode = 'crawl' | 'scenario' | 'workflow' | 'issue' | 'source' | 'full'
+type GraphScopeMode = 'crawl' | 'scenario' | 'workflow' | 'issue' | 'source' | 'evidence' | 'full'
 
 interface GraphFilters {
   search: string
@@ -145,7 +145,8 @@ export function GraphFilterPanel({
     <aside className="graph-filter-panel" data-testid="graph-filter-panel">
       <p className="eyebrow">Graph filters</p>
       <h2>Explore</h2>
-      <Select label="Graph mode" value={scope.mode} values={['crawl', 'scenario', 'workflow', 'issue', 'source', 'full']} onChange={(mode) => onScopeChange({ mode: mode as GraphScopeMode })} />
+      <Select label="Graph mode" value={scope.mode} values={['crawl', 'scenario', 'workflow', 'issue', 'source', 'evidence', 'full']} onChange={(mode) => onScopeChange({ mode: mode as GraphScopeMode })} />
+      <p className="muted graph-mode-help">{graphModeDescription(scope.mode)}</p>
       {scope.mode === 'scenario' && (
         <Select label="Scenario path" value={scope.workflow || options.scenarios[0] || ''} values={options.scenarios} onChange={(workflow) => onScopeChange({ workflow })} />
       )}
@@ -174,6 +175,7 @@ export function GraphFilterPanel({
         <button type="button" onClick={() => onQuickFilter({ mode: 'scenario' }, { ...defaultFilters, nodeType: 'scenario', status: 'failed' })}>Failed scenarios</button>
         <button type="button" onClick={() => onQuickFilter({ mode: 'crawl' }, { ...defaultFilters })}>Runtime crawl</button>
         <button type="button" onClick={() => onQuickFilter({ mode: 'source' }, { ...defaultFilters })}>Source intent</button>
+        <button type="button" onClick={() => onQuickFilter({ mode: 'evidence' }, { ...defaultFilters })}>Evidence graph</button>
         <button type="button" onClick={() => onQuickFilter({ mode: 'source' }, { ...defaultFilters, nodeType: 'api_call', status: 'failed' })}>API failures</button>
         <button type="button" onClick={() => onQuickFilter({ mode: 'full' }, { ...defaultFilters, nodeType: 'critic_decision' })}>LLM critic</button>
         <button type="button" onClick={() => onQuickFilter({ mode: 'full' }, { ...defaultFilters, nodeType: 'fix_packet' })}>Fix packets</button>
@@ -309,6 +311,7 @@ function scopeGraph(graph: SnifferGraph, scope: { mode: GraphScopeMode; workflow
     return subgraphAround(graph, seeds, 2)
   }
   if (scope.mode === 'source') return subgraphByTypes(graph, ['source_file', 'ui_surface', 'source_workflow', 'api_call', 'state_action'])
+  if (scope.mode === 'evidence') return subgraphByTypes(graph, ['source_file', 'ui_surface', 'source_workflow', 'api_call', 'runtime_state', 'scenario', 'screenshot', 'issue', 'critic_decision', 'fix_packet'])
   if (scope.mode === 'workflow') {
     const workflow = scope.workflow || options.workflows[0]
     const seeds = graph.nodes
@@ -324,6 +327,16 @@ function scopeGraph(graph: SnifferGraph, scope: { mode: GraphScopeMode; workflow
     return subgraphAround(graph, seeds, 2)
   }
   return graph
+}
+
+function graphModeDescription(mode: GraphScopeMode): string {
+  if (mode === 'crawl') return 'Runtime states, screenshots, and actions in crawl order.'
+  if (mode === 'scenario') return 'A focused journey for one generated/executed scenario.'
+  if (mode === 'workflow') return 'Source intent, runtime evidence, issues, and packets around one workflow.'
+  if (mode === 'issue') return 'Evidence, critic decisions, suspected files, and fix packets for one issue.'
+  if (mode === 'source') return 'Source files, UI surfaces, workflows, API calls, and state/action hints.'
+  if (mode === 'evidence') return 'How source, runtime, scenario, screenshot, issue, critic, and fix packet nodes support each other.'
+  return 'Full graph advanced mode; useful for debugging but intentionally not the default.'
 }
 
 function subgraphByTypes(graph: SnifferGraph, types: SnifferGraphNode['type'][]): SnifferGraph {

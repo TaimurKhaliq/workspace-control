@@ -74,6 +74,7 @@ export async function writeAuditReports(reportDir: string, input: {
     locatorFailures: input.locatorFailures ?? [],
     generatedScenarios: input.generatedScenarios ?? [],
     productExperience: input.productExperience,
+    graphRefinement: sourceGraph.graphRefinement,
     evidenceRetrievalSummaries: input.productExperience?.evidenceRetrievalSummaries ?? [],
     scenarioRuns: input.scenarioRuns ?? [],
     criticDecisions: input.criticDecisions ?? [],
@@ -87,6 +88,7 @@ export async function writeAuditReports(reportDir: string, input: {
   await writeJson(path.join(reportDir, 'source_graph.json'), sourceGraph)
   if (sourceGraph.sourceInventory) await writeJson(path.join(reportDir, 'source_inventory.json'), sourceGraph.sourceInventory)
   if (sourceGraph.uiIntentGraph) await writeJson(path.join(reportDir, 'ui_intent_graph.json'), sourceGraph.uiIntentGraph)
+  if (sourceGraph.graphRefinement) await writeJson(path.join(reportDir, 'graph_refinement.json'), sourceGraph.graphRefinement)
   await writeJson(path.join(reportDir, 'app_intent.json'), input.appIntent)
   if (input.appProfile) await writeJson(path.join(reportDir, 'app_profile.json'), input.appProfile)
   if (input.runtimeDomSnapshot) await writeJson(path.join(reportDir, 'runtime_dom_snapshot.json'), input.runtimeDomSnapshot)
@@ -154,6 +156,10 @@ export function renderMarkdown(report: SnifferReport): string {
     '## UI Intent Graph Summary',
     '',
     renderUIIntentGraphSummary(report),
+    '',
+    '## Graph Structure Critic',
+    '',
+    renderGraphStructureCritic(report),
     '',
     '## Workflow Discovery Sources',
     '',
@@ -595,6 +601,35 @@ function intentEvidenceCoverage(graph: NonNullable<SnifferReport['uiIntentGraph'
   ]
   const withEvidence = nodes.filter((node) => node.evidenceIds.length > 0).length
   return `${withEvidence}/${nodes.length} nodes with source evidence ids`
+}
+
+function renderGraphStructureCritic(report: SnifferReport): string {
+  const refinement = report.graphRefinement ?? report.sourceGraph.graphRefinement
+  if (!refinement) return 'Graph Structure Critic was not run.'
+  const applied = refinement.appliedSuggestions.slice(0, 8).map((suggestion) =>
+    `- ${suggestion.type}: ${suggestion.fromValue ?? suggestion.targetId} -> ${suggestion.toValue ?? 'applied'} (${suggestion.reason})`
+  )
+  const rejected = refinement.rejectedSuggestions.slice(0, 8).map((suggestion) =>
+    `- ${suggestion.type}: ${suggestion.targetId} rejected: ${suggestion.rejectedReason}`
+  )
+  return [
+    `- Mode: ${refinement.mode ?? 'unknown'}`,
+    `- Status: ${refinement.status ?? 'completed'}`,
+    `- LLM used: ${refinement.llmUsed ? 'yes' : 'no'}`,
+    `- Provider: ${refinement.provider ?? 'none'}`,
+    refinement.model ? `- Model: ${refinement.model}` : undefined,
+    `- Model reviewed: ${refinement.modelReviewed}`,
+    `- Suggestions: ${refinement.suggestions.length}`,
+    `- Applied suggestions: ${refinement.appliedSuggestions.length}`,
+    `- Rejected suggestions: ${refinement.rejectedSuggestions.length}`,
+    refinement.warnings.length ? `- Warnings: ${refinement.warnings.join('; ')}` : '- Warnings: none',
+    '',
+    'Top applied refinements:',
+    applied.length ? applied.join('\n') : '- none',
+    '',
+    'Top rejected refinements:',
+    rejected.length ? rejected.join('\n') : '- none'
+  ].filter((item): item is string => Boolean(item)).join('\n')
 }
 
 function renderWorkflowDiscoverySources(report: SnifferReport): string {

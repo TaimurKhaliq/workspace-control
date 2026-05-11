@@ -10,6 +10,7 @@ import { latestReportDir, projectLatestReportDir } from '../src/reporting/paths.
 import { generateFixPackets } from '../src/repair/fixPackets.js'
 import type { SnifferReport } from '../src/types.js'
 import { resolveReportArtifact } from './artifacts.js'
+import { reportSlicePayload, type ReportSliceName } from './reportSlices.js'
 import {
   attachRepairStatuses,
   buildRepairCommand,
@@ -181,6 +182,13 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     if (!report) return json(res, 404, { error: 'Latest report not found' })
     const issues = await attachRepairStatuses(summarizeIssues(report, latestDirFor(parsed), projectQuery(parsed)), latestDirFor(parsed))
     return json(res, 200, issues)
+  }
+  const reportSliceMatch = parsed.pathname.match(/^\/api\/reports\/latest\/(source-inventory|ui-intent-graph|evidence-retrieval|graph-refinements|evidence-packets|suppressions)$/)
+  if (req.method === 'GET' && reportSliceMatch) {
+    const report = await readJsonFile<SnifferReport>(latestReportPathFor(parsed)).catch(() => undefined)
+    if (!report) return json(res, 404, { error: 'Latest report not found' })
+    const payload = reportSlicePayload(report, reportSliceMatch[1] as ReportSliceName)
+    return payload ? json(res, 200, payload) : json(res, 404, { error: 'Report section not available' })
   }
   if (req.method === 'GET' && parsed.pathname.startsWith('/api/reports/latest/artifacts/')) {
     return sendReportArtifact(res, latestDirFor(parsed), parsed.pathname.replace('/api/reports/latest/artifacts/', ''))

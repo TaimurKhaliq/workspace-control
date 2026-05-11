@@ -1,5 +1,5 @@
 import type { AppIntent } from '../types.js'
-import type { Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
+import type { GraphRefinementResult, GraphStructureCriticContext, Issue, IssueTriageContext, ProductExperienceContext, ProductExperienceDecision, ProductIntentContext, ProductIntentModel, PromptConsistencyContext, PromptConsistencyDecision, RuntimeIntentContext, RuntimeLlmIntent, SnifferCriticContext, UxCriticContext, UxCriticFinding, WorkflowCriticDecision } from '../types.js'
 import type { LlmProvider, LlmProviderCheckResult, LlmProviderEnvDiagnostics } from './provider.js'
 
 type ApiStyle = 'responses' | 'chat_completions' | 'auto'
@@ -279,6 +279,32 @@ export class OpenAICompatibleProvider implements LlmProvider {
     const text = await this.complete(prompt)
     const parsed = parseJsonFromText<{ issues?: Issue[] }>(text)
     return parsed.issues ?? []
+  }
+
+  async critiqueGraphStructure(context: GraphStructureCriticContext): Promise<Pick<GraphRefinementResult, 'suggestions' | 'warnings'>> {
+    if (!this.isConfigured()) throw new Error('LLM provider is not configured')
+    const prompt = [
+      'You are the Graph Structure Critic for Sniffer, an agentic UI QA system.',
+      'Review a draft SourceInventory and UIIntentGraph. Suggest corrections, but do not rewrite the graph directly.',
+      'Look for misclassified facts, noisy/raw controls, wrong surface types, missing workflow/action/API relationships, duplicates/splits, source-only claims needing runtime confirmation, static assets mislabeled as APIs, and repeated row action patterns.',
+      'Every suggestion must be evidence-backed. Use evidenceIds from the SourceInventory only.',
+      'Sniffer only applies high-confidence, low/medium-risk, schema-valid suggestions with valid targetId and evidenceIds. If unsure, emit a warning instead of a suggestion.',
+      'Do not suggest deletion of deterministic facts. Use mark_as_noise for noisy facts.',
+      'Useful target surface types include history_list, dialog_form, debug_payload_view, repair_packet_view, copy_action, prompt_composer, plan_bundle_view, unknown_ui_section.',
+      'Return JSON only matching this shape:',
+      '{"suggestions":[{"id":"...","type":"reclassify_fact|normalize_control|merge_duplicate_surface|split_surface|add_edge|remove_edge|raise_confidence|lower_confidence|mark_as_noise|add_workflow|reclassify_surface","targetId":"...","fromValue":"...","toValue":"...","reason":"...","evidenceIds":["fact-..."],"confidence":"low|medium|high","risk":"low|medium|high"}],"warnings":["..."]}',
+      'For normalize_control, put JSON in toValue, for example {"kind":"form_control","label":"Workspace name","controlType":"input","handler":"onNameChange","testId":"workspace-name-input"}.',
+      'For reclassify_fact, toValue can be a fact kind like static_asset_reference or JSON {"kind":"static_asset_reference","value":"/src/main.tsx"}.',
+      'For reclassify_surface, targetId should be a surface node id and toValue should be a valid surface type.',
+      'For add_workflow, targetId should be an evidence fact id and toValue should be JSON {"name":"Browse/reopen previous plan runs","likelyUserActions":["click Reopen"]}.',
+      JSON.stringify(context)
+    ].join('\n\n')
+    const text = await this.complete(prompt)
+    const parsed = parseJsonFromText<Pick<GraphRefinementResult, 'suggestions' | 'warnings'>>(text)
+    return {
+      suggestions: parsed.suggestions ?? [],
+      warnings: parsed.warnings ?? []
+    }
   }
 
   private async complete(prompt: string): Promise<string> {
