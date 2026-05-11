@@ -97,7 +97,11 @@ export async function writeAuditReports(reportDir: string, input: {
   await writeJson(path.join(reportDir, 'source_graph.json'), sourceGraph)
   if (sourceGraph.sourceInventory) await writeJson(path.join(reportDir, 'source_inventory.json'), sourceGraph.sourceInventory)
   if (sourceGraph.uiIntentGraph) await writeJson(path.join(reportDir, 'ui_intent_graph.json'), sourceGraph.uiIntentGraph)
-  if (sourceGraph.graphRefinement) await writeJson(path.join(reportDir, 'graph_refinement.json'), sourceGraph.graphRefinement)
+  if (sourceGraph.graphRefinement) {
+    await writeJson(path.join(reportDir, 'graph_refinement.json'), sourceGraph.graphRefinement)
+    await writeJson(path.join(reportDir, 'graph_refinement_result.json'), sourceGraph.graphRefinement)
+    if (sourceGraph.graphRefinement.targetIndex) await writeJson(path.join(reportDir, 'graph_refinement_target_index.json'), sourceGraph.graphRefinement.targetIndex)
+  }
   await writeJson(path.join(reportDir, 'app_intent.json'), input.appIntent)
   if (input.appProfile) await writeJson(path.join(reportDir, 'app_profile.json'), input.appProfile)
   if (input.runtimeDomSnapshot) await writeJson(path.join(reportDir, 'runtime_dom_snapshot.json'), input.runtimeDomSnapshot)
@@ -752,6 +756,7 @@ function renderGraphStructureCritic(report: SnifferReport): string {
   if (!refinement) return 'Graph Structure Critic was not run.'
   const applied = refinement.appliedSuggestions.slice(0, 8).map((suggestion) => renderGraphRefinementSuggestion(suggestion, 'applied'))
   const rejected = refinement.rejectedSuggestions.slice(0, 8).map((suggestion) => renderGraphRefinementSuggestion(suggestion, 'rejected', suggestion.rejectedReason))
+  const summary = refinement.targetResolutionSummary
   return [
     `- Mode: ${refinement.mode ?? 'unknown'}`,
     `- Status: ${refinement.status ?? 'completed'}`,
@@ -760,8 +765,14 @@ function renderGraphStructureCritic(report: SnifferReport): string {
     refinement.model ? `- Model: ${refinement.model}` : undefined,
     `- Model reviewed: ${refinement.modelReviewed}`,
     `- Suggestions: ${refinement.suggestions.length}`,
+    summary ? `- Resolved targets: ${summary.resolvedTargets}` : undefined,
+    summary ? `- Unresolved targets: ${summary.unresolvedTargets}` : undefined,
     `- Applied suggestions: ${refinement.appliedSuggestions.length}`,
     `- Rejected suggestions: ${refinement.rejectedSuggestions.length}`,
+    summary ? `- Rejected due to safety: ${summary.rejectedDueToSafety}` : undefined,
+    summary ? `- Rejected due to low confidence: ${summary.rejectedDueToLowConfidence}` : undefined,
+    summary ? `- Rejected due to contradiction: ${summary.rejectedDueToContradiction}` : undefined,
+    summary ? `- Rejected due to unresolved target: ${summary.rejectedDueToUnresolved}` : undefined,
     refinement.warnings.length ? `- Warnings: ${refinement.warnings.join('; ')}` : '- Warnings: none',
     '',
     'Top applied refinements:',
@@ -775,14 +786,25 @@ function renderGraphStructureCritic(report: SnifferReport): string {
 function renderGraphRefinementSuggestion(suggestion: GraphRefinementSuggestion, status: 'applied' | 'rejected', rejectedReason?: string): string {
   const from = formatGraphRefinementValue(suggestion.fromValue ?? suggestion.targetId)
   const to = formatGraphRefinementValue(suggestion.toValue ?? (status === 'applied' ? 'applied' : 'n/a'))
+  const resolution = suggestion.targetResolution
+  const originalTarget = formatGraphRefinementValue(resolution?.originalTargetId ?? suggestion.targetId)
+  const resolutionLine = resolution
+    ? `  - Resolved target: ${resolution.targetId ?? 'unresolved'}${resolution.targetLabel ? ` (${resolution.targetLabel})` : ''} via ${resolution.resolutionMethod}${resolution.reason ? `; ${resolution.reason}` : ''}`
+    : undefined
+  const candidates = resolution?.candidateTargets?.length && !resolution.resolved
+    ? `  - Candidate targets: ${resolution.candidateTargets.map((target) => `${target.id} ${target.kind}:${target.label}`).join('; ')}`
+    : undefined
   return [
     `- ${suggestion.type}: ${from} -> ${to}`,
-    `  - Target: ${suggestion.targetId}`,
-    `  - Evidence ids: ${suggestion.evidenceIds.join(', ') || 'none'}`,
+    `  - Target: ${originalTarget}`,
+    resolutionLine,
+    candidates,
+    `  - Evidence ids: ${suggestion.evidenceIds?.join(', ') || 'none'}`,
+    suggestion.targetEvidenceIds?.length ? `  - Target evidence ids: ${suggestion.targetEvidenceIds.join(', ')}` : undefined,
     `  - Confidence/risk: ${suggestion.confidence}/${suggestion.risk}`,
     rejectedReason ? `  - Status: rejected (${rejectedReason})` : `  - Status: ${status}`,
     `  - Reason: ${suggestion.reason}`
-  ].join('\n')
+  ].filter((item): item is string => Boolean(item)).join('\n')
 }
 
 function formatGraphRefinementValue(value: unknown): string {

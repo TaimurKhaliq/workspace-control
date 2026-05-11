@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto'
 import os from 'node:os'
 import path from 'node:path'
 import { discoverSource } from '../src/discovery/sourceDiscovery.js'
-import { applyGraphRefinements, runGraphStructureRefiner } from '../src/evidence/graphRefiner.js'
+import { applyGraphRefinements, buildGraphRefinementTargetIndex, resolveGraphRefinementTarget, runGraphStructureRefiner } from '../src/evidence/graphRefiner.js'
 import { buildUIIntentGraph } from '../src/evidence/contextModel.js'
 import { renderMarkdown } from '../src/reporting/reportWriter.js'
 import type { AppIntent, CrawlGraph, GraphRefinementSuggestion, SnifferReport, SourceGraph, UiSurface } from '../src/types.js'
@@ -114,20 +114,186 @@ describe('Graph Structure Critic/refiner', () => {
 
   it('rejects suggestions with missing targets', async () => {
     const graph = await graphWithMisclassifiedAsset()
-    const evidenceId = graph.sourceInventory!.facts[0].id
 
     const result = applyGraphRefinements(graph, [{
       id: 'missing-target',
       type: 'mark_as_noise',
       targetId: 'missing-node',
       reason: 'Target is not in the graph.',
-      evidenceIds: [evidenceId],
+      evidenceIds: ['fact-not-in-index'],
       confidence: 'high',
       risk: 'low'
     }])
 
     expect(result.appliedSuggestions).toHaveLength(0)
-    expect(result.rejectedSuggestions[0].rejectedReason).toMatch(/targetId does not exist/)
+    expect(result.rejectedSuggestions[0].rejectedReason).toMatch(/unresolved target/)
+  })
+
+  it('resolves exact target IDs', async () => {
+    const graph = await graphWithControlFact('App URL')
+    const control = graph.uiIntentGraph!.controls.find((node) => node.label === 'App URL')!
+    const index = buildGraphRefinementTargetIndex(graph)
+
+    const resolved = resolveGraphRefinementTarget({
+      id: 'exact-control',
+      type: 'raise_confidence',
+      targetId: control.id,
+      reason: 'Exact id should resolve.',
+      evidenceIds: control.evidenceIds,
+      confidence: 'high',
+      risk: 'low'
+    }, index)
+
+    expect(resolved).toMatchObject({ resolved: true, targetId: control.id, resolutionMethod: 'exact_id' })
+  })
+
+  it('resolves by evidence ID to the owning fact for fact-only suggestions', async () => {
+    const graph = await graphWithControlFact('App URL')
+    const fact = graph.sourceInventory!.facts.find((item) => item.label === 'App URL')!
+    const control = graph.uiIntentGraph!.controls.find((node) => node.label === 'App URL')!
+    const index = buildGraphRefinementTargetIndex(graph)
+
+    const resolved = resolveGraphRefinementTarget({
+      id: 'evidence-control-to-fact',
+      type: 'mark_as_noise',
+      targetId: control.id,
+      reason: 'The LLM pointed at the control node but the mutation targets its source fact.',
+      evidenceIds: [fact.id],
+      confidence: 'high',
+      risk: 'low'
+    }, index)
+
+    expect(resolved).toMatchObject({ resolved: true, targetId: fact.id, targetKind: 'fact', resolutionMethod: 'evidence_id' })
+  })
+
+  it('resolves by alias', async () => {
+    const graph = await graphWithControlFact('App URL')
+    const fact = graph.sourceInventory!.facts.find((item) => item.label === 'App URL')!
+    const index = buildGraphRefinementTargetIndex(graph)
+
+    const resolved = resolveGraphRefinementTarget({
+      id: 'alias-control',
+      type: 'normalize_control',
+      targetId: 'unknown-target',
+      targetAlias: 'App URL',
+      reason: 'Alias should resolve to the fact.',
+      evidenceIds: [],
+      confidence: 'high',
+      risk: 'low'
+    }, index)
+
+    expect(resolved).toMatchObject({ resolved: true, targetId: fact.id, resolutionMethod: 'alias' })
+  })
+
+  it('resolves by kind and label when unique', async () => {
+    const graph = await graphWithControlFact('App URL')
+    const control = graph.uiIntentGraph!.controls.find((node) => node.label === 'App URL')!
+    const index = buildGraphRefinementTargetIndex(graph)
+
+    const resolved = resolveGraphRefinementTarget({
+      id: 'kind-label-control',
+      type: 'raise_confidence',
+      targetId: 'unknown-target',
+      targetKind: 'control',
+      toValue: 'App URL',
+      reason: 'Kind and label should resolve the unique control.',
+      evidenceIds: [],
+      confidence: 'high',
+      risk: 'low'
+    }, index)
+
+    expect(resolved).toMatchObject({ resolved: true, targetId: control.id, targetKind: 'control', resolutionMethod: 'kind_label' })
+  })
+
+  it('keeps ambiguous aliases unresolved and reports candidates', async () => {
+    const graph = await graphWithControlFact('Reopen')
+    graph.sourceInventory!.facts.push({
+      id: 'fact-reopen-button-extra',
+      kind: 'action_control',
+      value: 'Reopen',
+      label: 'Reopen',
+      source: 'test',
+      filePath: 'src/Other.tsx',
+      confidence: 0.8,
+      extractionMethod: 'deterministic'
+    })
+    graph.uiIntentGraph = buildUIIntentGraph(graph, graph.sourceInventory!)
+    const index = buildGraphRefinementTargetIndex(graph)
+
+    const resolved = resolveGraphRefinementTarget({
+      id: 'ambiguous-reopen',
+      type: 'raise_confidence',
+      targetId: 'Reopen',
+      reason: 'Repeated row actions are ambiguous by label.',
+      evidenceIds: ['fact-reopen-button-extra'],
+      confidence: 'high',
+      risk: 'low'
+    }, index)
+
+    expect(resolved.resolved).toBe(false)
+    expect(resolved.candidateTargets.length).toBeGreaterThan(1)
+  })
+
+  it('applies fact-only suggestions when the LLM targets a control node but supplies fact evidence', async () => {
+    const graph = await graphWithControlFact('Unlabelled control')
+    const fact = graph.sourceInventory!.facts.find((item) => item.label === 'Unlabelled control')!
+    const control = graph.uiIntentGraph!.controls.find((node) => node.label === 'Unlabelled control')!
+
+    const result = applyGraphRefinements(graph, [{
+      id: 'noise-via-control',
+      type: 'mark_as_noise',
+      targetId: control.id,
+      targetKind: 'control',
+      reason: 'This generated control is not meaningful.',
+      evidenceIds: [fact.id],
+      confidence: 'high',
+      risk: 'low'
+    }])
+
+    expect(result.appliedSuggestions).toHaveLength(1)
+    expect(result.appliedSuggestions[0].targetResolution?.resolutionMethod).toBe('evidence_id')
+    expect(result.sourceGraph.sourceInventory?.facts.find((item) => item.id === fact.id)?.suppressedFromSemanticGraph).toBe(true)
+  })
+
+  it('applies normalize_control after resolving from control node to source fact', async () => {
+    const graph = await graphWithControlFact('Workspace name onNameChange(event.target.value)} autoFocus />')
+    const fact = graph.sourceInventory!.facts.find((item) => item.value.startsWith('Workspace name'))!
+    const control = graph.uiIntentGraph!.controls.find((node) => node.label.startsWith('Workspace name'))!
+
+    const result = applyGraphRefinements(graph, [{
+      id: 'normalize-via-control',
+      type: 'normalize_control',
+      targetId: control.id,
+      reason: 'Normalize raw JSX label.',
+      evidenceIds: [fact.id],
+      confidence: 'high',
+      risk: 'low',
+      toValue: { kind: 'form_control', label: 'Workspace name', controlType: 'input', handler: 'onNameChange' }
+    }])
+
+    expect(result.appliedSuggestions).toHaveLength(1)
+    expect(result.sourceGraph.sourceInventory?.facts.some((item) => item.refinedFromFactId === fact.id && item.label === 'Workspace name')).toBe(true)
+  })
+
+  it('rejects medium-confidence reclassify_surface after resolving the target', async () => {
+    const graph = await planRunGraphWithUnknownSurface()
+    const surface = graph.uiIntentGraph!.surfaces.find((node) => node.label === 'Plan Runs history')!
+
+    const result = applyGraphRefinements(graph, [{
+      id: 'medium-surface',
+      type: 'reclassify_surface',
+      targetId: surface.id,
+      fromValue: 'unknown_ui_section',
+      toValue: 'history_list',
+      reason: 'Medium confidence should not apply.',
+      evidenceIds: [surface.evidenceIds[0]],
+      confidence: 'medium',
+      risk: 'low'
+    }])
+
+    expect(result.appliedSuggestions).toHaveLength(0)
+    expect(result.rejectedSuggestions[0].targetResolution?.resolved).toBe(true)
+    expect(result.rejectedSuggestions[0].rejectedReason).toMatch(/Only high-confidence/)
   })
 
   it('reclassifies Plan Runs history surface to history_list', async () => {
@@ -223,7 +389,43 @@ describe('Graph Structure Critic/refiner', () => {
     expect(markdown).toContain('## Graph Structure Critic')
     expect(markdown).toContain('Applied suggestions: 1')
     expect(markdown).toContain('Rejected suggestions: 1')
+    expect(markdown).toContain('Resolved target:')
+    expect(markdown).toContain('via exact_id')
     expect(markdown).toContain('static_asset_reference')
+    expect(markdown).not.toContain('[object Object]')
+  })
+
+  it('renders evidence-id resolution instead of Target fact not found when a control maps to a fact', async () => {
+    const graph = await graphWithControlFact('Unlabelled control')
+    const fact = graph.sourceInventory!.facts.find((item) => item.label === 'Unlabelled control')!
+    const control = graph.uiIntentGraph!.controls.find((node) => node.label === 'Unlabelled control')!
+    const applied = applyGraphRefinements(graph, [{
+      id: 'noise-via-control-report',
+      type: 'mark_as_noise',
+      targetId: control.id,
+      targetKind: 'control',
+      reason: 'Noise.',
+      evidenceIds: [fact.id],
+      confidence: 'high',
+      risk: 'low'
+    }])
+    const sourceGraph = {
+      ...applied.sourceGraph,
+      graphRefinement: {
+        mode: 'llm' as const,
+        status: 'completed' as const,
+        modelReviewed: 'test',
+        llmUsed: true,
+        suggestions: [],
+        appliedSuggestions: applied.appliedSuggestions,
+        rejectedSuggestions: applied.rejectedSuggestions,
+        warnings: []
+      }
+    }
+
+    const markdown = renderMarkdown(report(sourceGraph))
+    expect(markdown).toContain('via evidence_id')
+    expect(markdown).not.toContain('Target fact not found')
   })
 })
 
@@ -281,6 +483,24 @@ async function planRunGraphWithUnknownSurface(): Promise<SourceGraph> {
     value: 'Plan Runs history',
     source: 'test',
     filePath: 'src/App.tsx',
+    confidence: 0.8,
+    extractionMethod: 'deterministic'
+  })
+  graph.uiIntentGraph = buildUIIntentGraph(graph, graph.sourceInventory!)
+  return graph
+}
+
+async function graphWithControlFact(label: string): Promise<SourceGraph> {
+  const graph = await graphWithMisclassifiedAsset()
+  graph.sourceInventory!.facts.push({
+    id: `fact-${label.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'control'}`,
+    kind: 'form_control',
+    value: label,
+    label,
+    controlType: 'input',
+    source: 'test',
+    filePath: 'src/App.tsx',
+    sourceScope: 'primary_ui_source',
     confidence: 0.8,
     extractionMethod: 'deterministic'
   })

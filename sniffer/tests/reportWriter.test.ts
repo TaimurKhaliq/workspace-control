@@ -71,6 +71,33 @@ describe('renderMarkdown', () => {
     expect(markdown).toContain('Suppressed Runtime Events')
     expect(markdown).toContain('Reason suppressed: Known benign browser ResizeObserver notification')
   })
+
+  it('renders malformed rejected graph suggestions without crashing', () => {
+    const withRefinement = report()
+    withRefinement.graphRefinement = {
+      mode: 'llm',
+      status: 'completed',
+      modelReviewed: 'UIIntentGraphDraft',
+      llmUsed: true,
+      suggestions: [],
+      appliedSuggestions: [],
+      rejectedSuggestions: [{
+        id: 'malformed',
+        type: 'unresolved_observation',
+        targetId: 'invented-target',
+        reason: 'Missing evidence ids should not crash markdown rendering.',
+        confidence: 'high',
+        risk: 'low',
+        rejectedReason: 'Missing evidenceIds.'
+      } as any],
+      warnings: []
+    }
+
+    const markdown = renderMarkdown(withRefinement)
+
+    expect(markdown).toContain('Evidence ids: none')
+    expect(markdown).toContain('Missing evidenceIds.')
+  })
 })
 
 function report(): SnifferReport {

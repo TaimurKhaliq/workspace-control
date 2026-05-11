@@ -5,6 +5,11 @@ import type {
   GraphRefinementResult,
   GraphRefinementSuggestion,
   GraphRefinementSuggestionType,
+  GraphRefinementTarget,
+  GraphRefinementTargetIndex,
+  GraphRefinementTargetKind,
+  GraphRefinementTargetReference,
+  GraphRefinementTargetResolution,
   GraphRefinerMode,
   GraphStructureCriticContext,
   RejectedGraphRefinementSuggestion,
@@ -27,7 +32,8 @@ const supportedSuggestionTypes = new Set<GraphRefinementSuggestionType>([
   'lower_confidence',
   'mark_as_noise',
   'add_workflow',
-  'reclassify_surface'
+  'reclassify_surface',
+  'unresolved_observation'
 ])
 
 const surfaceTypes = new Set<UiSurfaceType>([
@@ -101,7 +107,8 @@ export async function runGraphStructureRefiner(input: {
 
   const metadata = input.provider.metadata?.()
   try {
-    const context = buildGraphStructureCriticContext(input.sourceGraph, input.runtimeDomSnapshot)
+    const targetIndex = buildGraphRefinementTargetIndex(input.sourceGraph)
+    const context = buildGraphStructureCriticContext(input.sourceGraph, input.runtimeDomSnapshot, targetIndex)
     const response = await input.provider.critiqueGraphStructure(context)
     const applied = applyGraphRefinements(input.sourceGraph, response.suggestions ?? [])
     const refinement: GraphRefinementResult = {
@@ -111,6 +118,8 @@ export async function runGraphStructureRefiner(input: {
       llmUsed: true,
       provider: metadata?.name ?? input.provider.name,
       model: metadata?.model,
+      targetIndex,
+      targetResolutionSummary: graphRefinementResolutionSummary(response.suggestions ?? [], applied.appliedSuggestions, applied.rejectedSuggestions),
       suggestions: response.suggestions ?? [],
       appliedSuggestions: applied.appliedSuggestions,
       rejectedSuggestions: applied.rejectedSuggestions,
@@ -133,7 +142,7 @@ export async function runGraphStructureRefiner(input: {
   }
 }
 
-export function buildGraphStructureCriticContext(sourceGraph: SourceGraph, runtimeDomSnapshot?: RuntimeDomSnapshot): GraphStructureCriticContext {
+export function buildGraphStructureCriticContext(sourceGraph: SourceGraph, runtimeDomSnapshot?: RuntimeDomSnapshot, targetIndex = buildGraphRefinementTargetIndex(sourceGraph)): GraphStructureCriticContext {
   const inventory = sourceGraph.sourceInventory
   const uiIntentGraph = sourceGraph.uiIntentGraph
   const facts = inventory?.facts ?? []
@@ -143,6 +152,7 @@ export function buildGraphStructureCriticContext(sourceGraph: SourceGraph, runti
   }, {})
   return {
     modelReviewed: modelReviewedLabel(sourceGraph),
+    targetRegistry: compactTargetRegistry(targetIndex),
     sourceInventorySummary: {
       totalFacts: facts.length,
       factKinds,
@@ -174,6 +184,8 @@ export function buildGraphStructureCriticContext(sourceGraph: SourceGraph, runti
     } : undefined,
     instructions: [
       'Find schema-valid, evidence-backed graph corrections only.',
+      'Use only targetId values from targetRegistry. If no target exists, emit unresolved_observation instead of inventing an id.',
+      'If the direct targetId is unknown but targetEvidenceIds identify the right fact/control/surface, include targetEvidenceIds and targetAlias/resolutionHint.',
       'Do not request deletion of deterministic facts. Mark noise instead.',
       'Prefer UI surfaces and workflows as semantic units; files are provenance.',
       'Repeated row actions should be modeled as row actions or locator/accessibility hints, not global unique workflows.',
@@ -190,6 +202,7 @@ export function applyGraphRefinements(sourceGraph: SourceGraph, suggestions: Gra
   const refined = cloneSourceGraph(sourceGraph)
   const inventory = refined.sourceInventory
   const draftGraph = refined.uiIntentGraph
+  const targetIndex = buildGraphRefinementTargetIndex(refined)
   const appliedSuggestions: AppliedGraphRefinementSuggestion[] = []
   const rejectedSuggestions: RejectedGraphRefinementSuggestion[] = []
 
@@ -202,16 +215,26 @@ export function applyGraphRefinements(sourceGraph: SourceGraph, suggestions: Gra
   }
 
   for (const suggestion of suggestions) {
-    const rejection = validateSuggestion(suggestion, inventory, draftGraph)
-    if (rejection) {
-      rejectedSuggestions.push(reject(suggestion, rejection))
+    const resolution = resolveGraphRefinementTarget(suggestion, targetIndex)
+    const resolvedSuggestion = withTargetResolution(suggestion, resolution)
+    if (suggestion.type === 'unresolved_observation') {
+      rejectedSuggestions.push(reject(resolvedSuggestion, 'Unresolved observations are recorded but not applied.'))
       continue
     }
-    const applied = applySuggestion(refined, suggestion)
+    if (!resolution.resolved) {
+      rejectedSuggestions.push(reject(resolvedSuggestion, resolution.reason ?? 'unresolved target'))
+      continue
+    }
+    const rejection = validateSuggestion(resolvedSuggestion, inventory, draftGraph)
+    if (rejection) {
+      rejectedSuggestions.push(reject(resolvedSuggestion, rejection))
+      continue
+    }
+    const applied = applySuggestion(refined, resolvedSuggestion)
     if (applied.ok) {
-      appliedSuggestions.push({ ...suggestion, appliedAt: new Date().toISOString() })
+      appliedSuggestions.push({ ...resolvedSuggestion, appliedAt: new Date().toISOString() })
     } else {
-      rejectedSuggestions.push(reject(suggestion, applied.reason))
+      rejectedSuggestions.push(reject(resolvedSuggestion, applied.reason))
     }
   }
 
@@ -220,6 +243,306 @@ export function applyGraphRefinements(sourceGraph: SourceGraph, suggestions: Gra
   applyPostBuildGraphSuggestions(refined.uiIntentGraph, appliedSuggestions)
 
   return { sourceGraph: refined, appliedSuggestions, rejectedSuggestions }
+}
+
+export function buildGraphRefinementTargetIndex(sourceGraph: SourceGraph): GraphRefinementTargetIndex {
+  const targets: GraphRefinementTarget[] = []
+  const inventory = sourceGraph.sourceInventory
+  const graph = sourceGraph.uiIntentGraph
+  for (const fact of inventory?.facts ?? []) {
+    targets.push(makeTarget({
+      id: fact.id,
+      kind: 'fact',
+      label: fact.label ?? fact.value,
+      value: fact.value,
+      sourceScope: fact.sourceScope,
+      filePath: fact.filePath,
+      symbol: fact.symbol,
+      evidenceIds: [fact.id],
+      aliases: [
+        fact.id,
+        fact.value,
+        fact.label,
+        fact.testId,
+        fact.handler,
+        fact.placeholder,
+        fact.symbol,
+        fact.filePath,
+        fact.filePath && fact.symbol ? `${fact.filePath}:${fact.symbol}` : undefined,
+        fact.filePath && (fact.label ?? fact.value) ? `${fact.filePath}:${fact.label ?? fact.value}` : undefined,
+        slug(fact.label ?? fact.value)
+      ]
+    }))
+  }
+  const nodeById = new Map<string, UIIntentNode>()
+  for (const node of graph ? allNodes(graph) : []) {
+    nodeById.set(node.id, node)
+    const metadataAliases = metadataAliasesForNode(node)
+    targets.push(makeTarget({
+      id: node.id,
+      kind: targetKindForNode(node),
+      label: node.label,
+      value: node.label,
+      sourceScope: node.sourceScope,
+      filePath: node.filePath,
+      symbol: node.symbol,
+      evidenceIds: node.evidenceIds,
+      aliases: [
+        node.id,
+        node.label,
+        node.symbol,
+        node.filePath,
+        node.filePath && node.symbol ? `${node.filePath}:${node.symbol}` : undefined,
+        node.filePath && node.label ? `${node.filePath}:${node.label}` : undefined,
+        slug(node.label),
+        ...metadataAliases
+      ]
+    }))
+  }
+  for (const edge of graph?.edges ?? []) {
+    const source = nodeById.get(edge.source)
+    const target = nodeById.get(edge.target)
+    const label = `${source?.label ?? edge.source} -${edge.kind}-> ${target?.label ?? edge.target}`
+    targets.push(makeTarget({
+      id: edge.id,
+      kind: 'edge',
+      label,
+      sourceScope: source?.sourceScope ?? target?.sourceScope,
+      filePath: source?.filePath ?? target?.filePath,
+      evidenceIds: edge.evidenceIds,
+      aliases: [
+        edge.id,
+        label,
+        `${edge.source}:${edge.kind}:${edge.target}`,
+        `${source?.label ?? edge.source}:${edge.kind}:${target?.label ?? edge.target}`,
+        slug(label)
+      ]
+    }))
+  }
+  const byId: Record<string, string> = {}
+  const byEvidenceId: Record<string, string[]> = {}
+  const byAlias: Record<string, string[]> = {}
+  const byKindAndLabel: Record<string, string[]> = {}
+  const byFileAndSymbol: Record<string, string[]> = {}
+  for (const target of targets) {
+    byId[target.id] = target.id
+    for (const evidenceId of target.evidenceIds) addIndexValue(byEvidenceId, evidenceId, target.id)
+    for (const alias of target.aliases) addIndexValue(byAlias, alias, target.id)
+    addIndexValue(byKindAndLabel, kindLabelKey(target.kind, target.label), target.id)
+    if (target.filePath && target.symbol) addIndexValue(byFileAndSymbol, fileSymbolKey(target.filePath, target.symbol), target.id)
+    if (target.filePath) addIndexValue(byFileAndSymbol, fileSymbolKey(target.filePath, target.label), target.id)
+  }
+  return { targets, byId, byEvidenceId, byAlias, byKindAndLabel, byFileAndSymbol }
+}
+
+export function resolveGraphRefinementTarget(suggestion: GraphRefinementSuggestion, targetIndex: GraphRefinementTargetIndex): GraphRefinementTargetResolution {
+  const targetsById = new Map(targetIndex.targets.map((target) => [target.id, target]))
+  const desiredKinds = targetKindsForSuggestion(suggestion)
+  const originalTargetId = suggestion.targetId
+  const exact = originalTargetId ? targetsById.get(originalTargetId) : undefined
+  if (exact && targetAllowed(exact, desiredKinds)) return resolvedTarget(exact, 'exact_id', originalTargetId, 1)
+
+  const evidenceCandidates = uniqueTargets(
+    [...(suggestion.targetEvidenceIds ?? []), ...(suggestion.evidenceIds ?? []), ...(exact?.evidenceIds ?? [])]
+      .flatMap((id) => targetIndex.byEvidenceId[id] ?? [])
+      .map((id) => targetsById.get(id))
+      .filter((target): target is GraphRefinementTarget => Boolean(target))
+      .filter((target) => targetAllowed(target, desiredKinds))
+  )
+  const evidence = chooseResolutionCandidate(evidenceCandidates, desiredKinds)
+  if (evidence.resolved) return resolvedTarget(evidence.target, 'evidence_id', originalTargetId, evidence.confidence)
+  if (evidenceCandidates.length > 1) return unresolvedTarget('ambiguous evidence_id target', originalTargetId, evidenceCandidates)
+
+  const aliasCandidates = uniqueTargets(
+    [suggestion.targetAlias, originalTargetId, suggestion.resolutionHint]
+      .flatMap((alias) => alias ? (targetIndex.byAlias[normalizeKey(alias)] ?? []) : [])
+      .map((id) => targetsById.get(id))
+      .filter((target): target is GraphRefinementTarget => Boolean(target))
+      .filter((target) => targetAllowed(target, desiredKinds))
+  )
+  const alias = chooseResolutionCandidate(aliasCandidates, desiredKinds)
+  if (alias.resolved) return resolvedTarget(alias.target, 'alias', originalTargetId, alias.confidence)
+  if (aliasCandidates.length > 1) return unresolvedTarget('ambiguous alias target', originalTargetId, aliasCandidates)
+
+  const kind = suggestion.targetKind
+  const label = suggestion.targetAlias ?? stringValue(suggestion.toValue) ?? stringValue(suggestion.fromValue) ?? originalTargetId
+  if (kind && label) {
+    const kindCandidates = uniqueTargets((targetIndex.byKindAndLabel[kindLabelKey(kind, label)] ?? [])
+      .map((id) => targetsById.get(id))
+      .filter((target): target is GraphRefinementTarget => Boolean(target))
+      .filter((target) => targetAllowed(target, desiredKinds)))
+    const kindLabel = chooseResolutionCandidate(kindCandidates, desiredKinds)
+    if (kindLabel.resolved) return resolvedTarget(kindLabel.target, 'kind_label', originalTargetId, kindLabel.confidence)
+    if (kindCandidates.length > 1) return unresolvedTarget('ambiguous kind_label target', originalTargetId, kindCandidates)
+  }
+
+  const fileSymbolCandidates = fileSymbolHints(suggestion)
+    .flatMap((hint) => targetIndex.byFileAndSymbol[fileSymbolKey(hint.filePath, hint.symbol)] ?? [])
+    .map((id) => targetsById.get(id))
+    .filter((target): target is GraphRefinementTarget => Boolean(target))
+    .filter((target) => targetAllowed(target, desiredKinds))
+  const fileSymbol = chooseResolutionCandidate(uniqueTargets(fileSymbolCandidates), desiredKinds)
+  if (fileSymbol.resolved) return resolvedTarget(fileSymbol.target, 'file_symbol', originalTargetId, fileSymbol.confidence)
+
+  return unresolvedTarget(
+    exact ? `targetId resolved to ${exact.kind}, which is not valid for ${suggestion.type}` : 'unresolved target',
+    originalTargetId,
+    exact ? [exact] : uniqueTargets([...evidenceCandidates, ...aliasCandidates, ...fileSymbolCandidates])
+  )
+}
+
+function withTargetResolution(suggestion: GraphRefinementSuggestion, resolution: GraphRefinementTargetResolution): GraphRefinementSuggestion {
+  return {
+    ...suggestion,
+    targetId: resolution.targetId ?? suggestion.targetId,
+    targetKind: suggestion.targetKind ?? resolution.targetKind,
+    targetResolution: resolution
+  }
+}
+
+function makeTarget(input: Omit<GraphRefinementTarget, 'aliases'> & { aliases: Array<string | undefined> }): GraphRefinementTarget {
+  return {
+    ...input,
+    aliases: unique([
+      input.id,
+      input.label,
+      input.value,
+      input.symbol,
+      ...input.aliases
+    ].filter((item): item is string => Boolean(item?.trim())))
+  }
+}
+
+function metadataAliasesForNode(node: UIIntentNode): string[] {
+  const metadata = node.metadata ?? {}
+  return [
+    stringField(metadata.testId),
+    stringField(metadata.handler),
+    stringField(metadata.endpoint),
+    stringField(metadata.method),
+    stringField(metadata.workflow),
+    ...(Array.isArray(metadata.relatedButtons) ? metadata.relatedButtons.filter((item): item is string => typeof item === 'string') : []),
+    ...(Array.isArray(metadata.relatedInputs) ? metadata.relatedInputs.filter((item): item is string => typeof item === 'string') : [])
+  ].filter((item): item is string => Boolean(item))
+}
+
+function targetKindForNode(node: UIIntentNode): GraphRefinementTargetKind {
+  if (node.kind === 'api_dependency') return 'api'
+  return node.kind
+}
+
+function targetKindsForSuggestion(suggestion: GraphRefinementSuggestion): Set<GraphRefinementTargetKind> {
+  if (suggestion.type === 'reclassify_fact' || suggestion.type === 'normalize_control' || suggestion.type === 'mark_as_noise') return new Set(['fact'])
+  if (suggestion.type === 'reclassify_surface' || suggestion.type === 'merge_duplicate_surface' || suggestion.type === 'split_surface') return new Set(['surface'])
+  if (suggestion.type === 'remove_edge') return new Set(['edge'])
+  if (suggestion.targetKind) return new Set([suggestion.targetKind])
+  return new Set(['fact', 'surface', 'workflow', 'action', 'control', 'form', 'state', 'validation', 'api', 'data_dependency', 'domain_entity', 'edge'])
+}
+
+function targetAllowed(target: GraphRefinementTarget, desiredKinds: Set<GraphRefinementTargetKind>): boolean {
+  return desiredKinds.has(target.kind)
+}
+
+function chooseResolutionCandidate(candidates: GraphRefinementTarget[], desiredKinds: Set<GraphRefinementTargetKind>): { resolved: true; target: GraphRefinementTarget; confidence: number } | { resolved: false } {
+  const preferred = candidates.filter((target) => desiredKinds.has(target.kind))
+  if (preferred.length === 1) return { resolved: true, target: preferred[0], confidence: 0.92 }
+  return { resolved: false }
+}
+
+function resolvedTarget(target: GraphRefinementTarget, method: GraphRefinementTargetResolution['resolutionMethod'], originalTargetId: string | undefined, confidence: number): GraphRefinementTargetResolution {
+  return {
+    resolved: true,
+    originalTargetId,
+    targetId: target.id,
+    targetKind: target.kind,
+    targetLabel: target.label,
+    confidence,
+    resolutionMethod: method,
+    candidateTargets: [targetReference(target)]
+  }
+}
+
+function unresolvedTarget(reason: string, originalTargetId: string | undefined, candidates: GraphRefinementTarget[] = []): GraphRefinementTargetResolution {
+  return {
+    resolved: false,
+    originalTargetId,
+    confidence: 0,
+    resolutionMethod: 'unresolved',
+    candidateTargets: candidates.slice(0, 8).map(targetReference),
+    reason
+  }
+}
+
+function targetReference(target: GraphRefinementTarget): GraphRefinementTargetReference {
+  return { id: target.id, kind: target.kind, label: target.label }
+}
+
+function uniqueTargets(targets: GraphRefinementTarget[]): GraphRefinementTarget[] {
+  const seen = new Set<string>()
+  return targets.filter((target) => {
+    if (seen.has(target.id)) return false
+    seen.add(target.id)
+    return true
+  })
+}
+
+function addIndexValue(index: Record<string, string[]>, rawKey: string | undefined, value: string): void {
+  if (!rawKey) return
+  const key = normalizeKey(rawKey)
+  if (!key) return
+  index[key] = unique([...(index[key] ?? []), value])
+}
+
+function normalizeKey(value: string): string {
+  return value.toLowerCase().replace(/["'`]/g, '').replace(/\s+/g, ' ').trim()
+}
+
+function kindLabelKey(kind: string, label: string): string {
+  return `${kind}:${normalizeKey(label)}`
+}
+
+function fileSymbolKey(filePath: string, symbol: string): string {
+  return `${normalizeKey(filePath)}:${normalizeKey(symbol)}`
+}
+
+function stringValue(value: unknown): string | undefined {
+  if (typeof value === 'string') return value
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+  const record = value as Record<string, unknown>
+  return stringField(record.label) ?? stringField(record.value) ?? stringField(record.name) ?? stringField(record.id)
+}
+
+function fileSymbolHints(suggestion: GraphRefinementSuggestion): Array<{ filePath: string; symbol: string }> {
+  const values = [suggestion.resolutionHint, suggestion.targetAlias, stringValue(suggestion.fromValue), stringValue(suggestion.toValue)].filter((item): item is string => Boolean(item))
+  return values.flatMap((value) => {
+    const match = value.match(/^(.+\.[jt]sx?|.+\.html|.+\.vue|.+\.svelte):(.+)$/)
+    return match ? [{ filePath: match[1].trim(), symbol: match[2].trim() }] : []
+  })
+}
+
+function compactTargetRegistry(targetIndex: GraphRefinementTargetIndex): NonNullable<GraphStructureCriticContext['targetRegistry']> {
+  const summary = targetIndex.targets.reduce<Record<GraphRefinementTargetKind, number>>((counts, target) => {
+    counts[target.kind] = (counts[target.kind] ?? 0) + 1
+    return counts
+  }, {} as Record<GraphRefinementTargetKind, number>)
+  const compact = (kind: GraphRefinementTargetKind, limit: number) => targetIndex.targets
+    .filter((target) => target.kind === kind)
+    .slice(0, limit)
+    .map((target) => ({
+      ...target,
+      aliases: target.aliases.slice(0, 10),
+      evidenceIds: target.evidenceIds.slice(0, 10)
+    }))
+  return {
+    summary,
+    facts: compact('fact', 120),
+    surfaces: compact('surface', 80),
+    workflows: compact('workflow', 80),
+    controls: compact('control', 80),
+    actions: compact('action', 80),
+    apis: compact('api', 80),
+    edges: compact('edge', 80)
+  }
 }
 
 function applySuggestion(sourceGraph: SourceGraph, suggestion: GraphRefinementSuggestion): { ok: true } | { ok: false; reason: string } {
@@ -364,6 +687,7 @@ function applySuggestion(sourceGraph: SourceGraph, suggestion: GraphRefinementSu
 function validateSuggestion(suggestion: GraphRefinementSuggestion, inventory: SourceInventory, graph: UIIntentGraph): string | undefined {
   if (!suggestion || typeof suggestion !== 'object') return 'Suggestion is not an object.'
   if (!supportedSuggestionTypes.has(suggestion.type)) return `Unsupported suggestion type: ${String(suggestion.type)}`
+  if (suggestion.type === 'unresolved_observation') return 'Unresolved observations are recorded but not applied.'
   if (!suggestion.targetId) return 'Missing targetId.'
   if (suggestion.confidence !== 'high') return 'Only high-confidence graph refinements are applied.'
   if (suggestion.risk === 'high') return 'High-risk graph refinements are rejected.'
@@ -375,14 +699,31 @@ function validateSuggestion(suggestion: GraphRefinementSuggestion, inventory: So
     graph.edges.some((edge) => edge.id === suggestion.targetId)
   if (!targetExists) return 'targetId does not exist.'
   const targetFact = inventory.facts.find((fact) => fact.id === suggestion.targetId)
+  const targetNode = allNodes(graph).find((node) => node.id === suggestion.targetId)
   if (suggestion.type === 'reclassify_fact') {
     const kind = parseReclassification(suggestion.toValue).kind
     if (!kind || !allowedRefinedFactKinds.has(kind)) return 'Invalid target fact kind for reclassification. Use mark_as_noise for noisy facts.'
   }
+  if (suggestion.type === 'reclassify_surface' && targetNode) {
+    const surfaceType = suggestion.toValue as UiSurfaceType | undefined
+    if (surfaceType && !surfaceReclassificationSupported(surfaceType, targetNode, inventory.facts.filter((fact) => suggestion.evidenceIds.includes(fact.id)))) {
+      return `Target evidence does not support reclassifying surface as ${surfaceType}.`
+    }
+  }
   if (targetFact && deterministicContradiction(targetFact, suggestion)) return 'Suggestion contradicts deterministic source evidence.'
-  const noop = noOpSuggestion(suggestion, targetFact, allNodes(graph).find((node) => node.id === suggestion.targetId))
+  const noop = noOpSuggestion(suggestion, targetFact, targetNode)
   if (noop) return noop
   return undefined
+}
+
+function surfaceReclassificationSupported(surfaceType: UiSurfaceType, node: UIIntentNode, evidenceFacts: EvidenceFact[]): boolean {
+  const text = `${node.label} ${JSON.stringify(node.metadata ?? {})} ${evidenceFacts.map((fact) => `${fact.value} ${fact.label ?? ''} ${fact.snippet ?? ''}`).join(' ')}`.toLowerCase()
+  if (surfaceType === 'dialog_form') return /dialog|modal|popover|cancel|create .*workspace|new .*workspace|add .*repository|workspace name cancel|×/.test(text)
+  if (surfaceType === 'history_list') return /history|runs?|list|items?|table|rows?|previous|timeline|findings/.test(text)
+  if (surfaceType === 'debug_payload_view') return /debug|payload|raw|json|source inventory|ui intent|evidence|runtime state|graph/.test(text)
+  if (surfaceType === 'repair_packet_view') return /fix packet|repair packet|verification command|copy prompt|suspected files/.test(text)
+  if (surfaceType === 'raw_json_panel') return /raw json|json payload|copy json/.test(text)
+  return true
 }
 
 function deterministicContradiction(fact: EvidenceFact, suggestion: GraphRefinementSuggestion): boolean {
@@ -523,6 +864,26 @@ function emptyResult(input: { mode: GraphRefinerMode; status: GraphRefinementRes
   }
 }
 
+function graphRefinementResolutionSummary(
+  suggestions: GraphRefinementSuggestion[],
+  applied: AppliedGraphRefinementSuggestion[],
+  rejected: RejectedGraphRefinementSuggestion[]
+): NonNullable<GraphRefinementResult['targetResolutionSummary']> {
+  const resolved = [...applied, ...rejected].filter((suggestion) => suggestion.targetResolution?.resolved).length
+  const unresolved = [...applied, ...rejected].filter((suggestion) => suggestion.targetResolution && !suggestion.targetResolution.resolved).length
+  return {
+    suggestions: suggestions.length,
+    resolvedTargets: resolved,
+    unresolvedTargets: unresolved,
+    applied: applied.length,
+    rejected: rejected.length,
+    rejectedDueToSafety: rejected.filter((suggestion) => /high-risk|safety|unsupported destructive/i.test(suggestion.rejectedReason)).length,
+    rejectedDueToLowConfidence: rejected.filter((suggestion) => /confidence/i.test(suggestion.rejectedReason)).length,
+    rejectedDueToContradiction: rejected.filter((suggestion) => /contradict/i.test(suggestion.rejectedReason)).length,
+    rejectedDueToUnresolved: rejected.filter((suggestion) => /unresolved|ambiguous|not found|does not exist/i.test(suggestion.rejectedReason) || suggestion.targetResolution?.resolved === false).length
+  }
+}
+
 function modelReviewedLabel(sourceGraph: SourceGraph): string {
   const facts = sourceGraph.sourceInventory?.facts.length ?? 0
   const surfaces = sourceGraph.uiIntentGraph?.surfaces.length ?? 0
@@ -562,6 +923,14 @@ function stableId(prefix: string, value: string): string {
     hash = ((hash << 5) - hash + value.charCodeAt(index)) | 0
   }
   return `${prefix}-${Math.abs(hash).toString(36)}`
+}
+
+function slug(value: string): string {
+  return normalizeKey(value).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+}
+
+function stringField(value: unknown): string | undefined {
+  return typeof value === 'string' && value.trim() ? value.trim() : undefined
 }
 
 function unique<T>(values: T[]): T[] {

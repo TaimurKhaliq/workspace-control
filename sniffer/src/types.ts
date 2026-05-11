@@ -407,20 +407,67 @@ export type GraphRefinementSuggestionType =
   | 'mark_as_noise'
   | 'add_workflow'
   | 'reclassify_surface'
+  | 'unresolved_observation'
 
 export type GraphRefinementConfidence = 'low' | 'medium' | 'high'
 export type GraphRefinementRisk = 'low' | 'medium' | 'high'
+export type GraphRefinementTargetKind = 'fact' | 'surface' | 'workflow' | 'action' | 'control' | 'form' | 'state' | 'validation' | 'api' | 'data_dependency' | 'domain_entity' | 'edge'
+export type GraphRefinementResolutionMethod = 'exact_id' | 'evidence_id' | 'alias' | 'kind_label' | 'file_symbol' | 'unresolved'
+
+export interface GraphRefinementTargetReference {
+  id: string
+  kind: GraphRefinementTargetKind
+  label: string
+}
+
+export interface GraphRefinementTarget {
+  id: string
+  kind: GraphRefinementTargetKind
+  label: string
+  value?: string
+  sourceScope?: SourceScope
+  filePath?: string
+  symbol?: string
+  evidenceIds: string[]
+  aliases: string[]
+}
+
+export interface GraphRefinementTargetIndex {
+  targets: GraphRefinementTarget[]
+  byId: Record<string, string>
+  byEvidenceId: Record<string, string[]>
+  byAlias: Record<string, string[]>
+  byKindAndLabel: Record<string, string[]>
+  byFileAndSymbol: Record<string, string[]>
+}
+
+export interface GraphRefinementTargetResolution {
+  resolved: boolean
+  originalTargetId?: string
+  targetId?: string
+  targetKind?: GraphRefinementTargetKind
+  targetLabel?: string
+  confidence: number
+  resolutionMethod: GraphRefinementResolutionMethod
+  candidateTargets: GraphRefinementTargetReference[]
+  reason?: string
+}
 
 export interface GraphRefinementSuggestion {
   id: string
   type: GraphRefinementSuggestionType
   targetId: string
+  targetKind?: GraphRefinementTargetKind
+  targetEvidenceIds?: string[]
+  targetAlias?: string
+  resolutionHint?: string
   fromValue?: unknown
   toValue?: unknown
   reason: string
   evidenceIds: string[]
   confidence: GraphRefinementConfidence
   risk: GraphRefinementRisk
+  targetResolution?: GraphRefinementTargetResolution
 }
 
 export interface AppliedGraphRefinementSuggestion extends GraphRefinementSuggestion {
@@ -433,6 +480,16 @@ export interface RejectedGraphRefinementSuggestion extends GraphRefinementSugges
 
 export interface GraphStructureCriticContext {
   modelReviewed: string
+  targetRegistry?: {
+    summary: Record<GraphRefinementTargetKind, number>
+    facts: GraphRefinementTarget[]
+    surfaces: GraphRefinementTarget[]
+    workflows: GraphRefinementTarget[]
+    controls: GraphRefinementTarget[]
+    actions: GraphRefinementTarget[]
+    apis: GraphRefinementTarget[]
+    edges: GraphRefinementTarget[]
+  }
   sourceInventorySummary: {
     totalFacts: number
     factKinds: Record<string, number>
@@ -467,6 +524,18 @@ export interface GraphRefinementResult {
   llmUsed: boolean
   provider?: string
   model?: string
+  targetIndex?: GraphRefinementTargetIndex
+  targetResolutionSummary?: {
+    suggestions: number
+    resolvedTargets: number
+    unresolvedTargets: number
+    applied: number
+    rejected: number
+    rejectedDueToSafety: number
+    rejectedDueToLowConfidence: number
+    rejectedDueToContradiction: number
+    rejectedDueToUnresolved: number
+  }
   suggestions: GraphRefinementSuggestion[]
   appliedSuggestions: AppliedGraphRefinementSuggestion[]
   rejectedSuggestions: RejectedGraphRefinementSuggestion[]
