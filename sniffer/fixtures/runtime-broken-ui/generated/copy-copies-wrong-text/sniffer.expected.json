@@ -1,0 +1,23 @@
+{
+  "id": "copy-copies-wrong-text",
+  "template": "copy-export",
+  "mutation": "copy-copies-wrong-text",
+  "title": "Broken copy: copies wrong text",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "copy_action_failure",
+      "titleIncludes": "Copy action does not provide success feedback"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "copy-copies-wrong-text",
+      "failedAssertionIncludes": "Copy action provides success feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

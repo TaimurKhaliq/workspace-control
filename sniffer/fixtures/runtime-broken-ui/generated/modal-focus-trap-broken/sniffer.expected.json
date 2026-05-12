@@ -1,0 +1,23 @@
+{
+  "id": "modal-focus-trap-broken",
+  "template": "modal-dialog",
+  "mutation": "focus-trap-broken",
+  "title": "Broken modal: focus trap broken",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "broken_interaction",
+      "titleIncludes": "Add item button does not open modal"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "modal-focus-trap-broken",
+      "failedAssertionIncludes": "Add item opens a modal dialog"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

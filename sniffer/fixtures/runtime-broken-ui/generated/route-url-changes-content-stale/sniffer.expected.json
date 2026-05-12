@@ -1,0 +1,23 @@
+{
+  "id": "route-url-changes-content-stale",
+  "template": "route-link",
+  "mutation": "url-changes-content-stale",
+  "title": "Broken route: URL changes but content is stale",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "broken_navigation",
+      "titleIncludes": "Navigation link opens a missing route"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "route-url-changes-content-stale",
+      "failedAssertionIncludes": "Missing page link reaches a valid route"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

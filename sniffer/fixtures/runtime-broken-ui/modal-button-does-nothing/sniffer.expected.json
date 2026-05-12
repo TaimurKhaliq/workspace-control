@@ -1,0 +1,9 @@
+{
+  "id": "modal-button-does-nothing",
+  "expectedFindings": [
+    { "type": "broken_interaction", "titleIncludes": "Add item button does not open modal", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "modal-button-does-nothing", "failedAssertionIncludes": "Add item opens a modal dialog" }
+  ]
+}

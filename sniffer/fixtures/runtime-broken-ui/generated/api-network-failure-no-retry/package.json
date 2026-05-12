@@ -1,0 +1,6 @@
+{
+  "name": "sniffer-runtime-fixture-api-network-failure-no-retry",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module"
+}

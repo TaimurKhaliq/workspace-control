@@ -1,0 +1,23 @@
+{
+  "id": "tab-shows-wrong-panel",
+  "template": "navigation-tab",
+  "mutation": "tab-shows-wrong-panel",
+  "title": "Broken tab: wrong panel appears",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "workflow_confusion",
+      "titleIncludes": "Details tab did not change content"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "tab-shows-wrong-panel",
+      "failedAssertionIncludes": "Details tab changes visible content"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

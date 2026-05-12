@@ -1,6 +1,7 @@
 import type { ServerStatus } from '../api'
 
-export function SettingsPanel({ status }: { status?: ServerStatus }) {
+export function SettingsPanel({ status, onRunRuntimeCalibration }: { status?: ServerStatus; onRunRuntimeCalibration?: () => void }) {
+  const calibration = status?.runtimeCalibration
   return (
     <section className="page-stack">
       <section className="card-panel">
@@ -25,6 +26,22 @@ export function SettingsPanel({ status }: { status?: ServerStatus }) {
           ['Latest repo', String(status?.latestReport?.repoPath ?? 'not found')],
           ['Latest app URL', String(status?.latestReport?.appUrl ?? 'not found')]
         ]} />
+        <article className="card-panel config-card">
+          <h2>Runtime Calibration</h2>
+          <div className="config-row">
+            <span>Status</span>
+            <strong>{calibration?.status ?? 'not run'}</strong>
+          </div>
+          <div className="config-row">
+            <span>Fixtures</span>
+            <strong>{calibration ? `${calibration.passedFixtures ?? 0}/${calibration.fixturesCount ?? 0} passed` : 'unknown'}</strong>
+          </div>
+          <div className="config-row">
+            <span>Latest report</span>
+            <strong>{calibration?.reportPath ?? 'not found'}</strong>
+          </div>
+          <button type="button" className="secondary-button" onClick={onRunRuntimeCalibration}>Run runtime calibration</button>
+        </article>
       </section>
     </section>
   )

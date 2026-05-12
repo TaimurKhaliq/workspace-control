@@ -1,0 +1,23 @@
+{
+  "id": "route-link-does-nothing",
+  "template": "route-link",
+  "mutation": "link-does-nothing",
+  "title": "Broken route: link does nothing",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "broken_navigation",
+      "titleIncludes": "Navigation link opens a missing route"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "route-link-does-nothing",
+      "failedAssertionIncludes": "Missing page link reaches a valid route"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

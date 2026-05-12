@@ -17,6 +17,8 @@
     "repair-loop": "tsx src/cli/index.ts repair-loop",
     "verify:matrix": "tsx src/cli/index.ts verify-matrix",
     "audit-product-calibration": "tsx src/cli/index.ts audit-product-calibration",
+    "generate-runtime-fixtures": "tsx src/cli/index.ts generate-runtime-fixtures",
+    "audit-runtime-calibration": "tsx src/cli/index.ts audit-runtime-calibration",
     "ui:server": "tsx server/uiServer.ts",
     "ui:build": "npm --prefix ui run build",
     "ui:test": "npm --prefix ui test"

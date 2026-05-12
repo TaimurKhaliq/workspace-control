@@ -1,0 +1,23 @@
+{
+  "id": "api-infinite-loading",
+  "template": "api-loading",
+  "mutation": "infinite-loading",
+  "title": "Broken API: infinite loading",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "loading_state_stuck",
+      "titleIncludes": "Loading state remains stuck without guidance"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "api-infinite-loading",
+      "failedAssertionIncludes": "Loading state resolves or gives guidance"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

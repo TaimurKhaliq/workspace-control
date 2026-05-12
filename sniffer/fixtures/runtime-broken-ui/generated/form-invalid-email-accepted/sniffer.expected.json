@@ -1,0 +1,23 @@
+{
+  "id": "form-invalid-email-accepted",
+  "template": "form-validation",
+  "mutation": "invalid-email-accepted",
+  "title": "Broken form: invalid email accepted",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "form_validation_issue",
+      "titleIncludes": "Required form can be submitted without validation feedback"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "form-invalid-email-accepted",
+      "failedAssertionIncludes": "Empty required form shows validation feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

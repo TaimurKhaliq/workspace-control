@@ -1,0 +1,9 @@
+{
+  "id": "route-404-broken-link",
+  "expectedFindings": [
+    { "type": "broken_navigation", "titleIncludes": "Navigation link opens a missing route", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "route-404-broken-link", "failedAssertionIncludes": "Missing page link reaches a valid route" }
+  ]
+}

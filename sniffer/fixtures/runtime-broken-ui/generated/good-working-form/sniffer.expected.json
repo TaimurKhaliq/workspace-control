@@ -1,0 +1,13 @@
+{
+  "id": "good-working-form",
+  "template": "good-baseline",
+  "mutation": "working-form",
+  "title": "Good baseline: working form validation",
+  "difficulty": "simple",
+  "expectedFindings": [],
+  "expectedScenarioFailures": [],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": false
+}

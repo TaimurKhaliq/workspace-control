@@ -1,0 +1,10 @@
+{
+  "id": "api-500",
+  "expectedFindings": [
+    { "type": "api_error", "titleIncludes": "API request returns 500", "severity": "high" },
+    { "type": "controlled_error_state_missing", "titleIncludes": "API failure lacks controlled error state", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "api-500", "failedAssertionIncludes": "API failures show controlled error state" }
+  ]
+}

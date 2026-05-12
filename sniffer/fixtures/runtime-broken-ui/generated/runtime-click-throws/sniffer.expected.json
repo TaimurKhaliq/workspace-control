@@ -1,0 +1,23 @@
+{
+  "id": "runtime-click-throws",
+  "template": "runtime-exception",
+  "mutation": "click-throws",
+  "title": "Runtime exception: click throws",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "console_error",
+      "titleIncludes": "Runtime exception after click"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "runtime-click-throws",
+      "failedAssertionIncludes": "Click action does not throw runtime exception"
+    }
+  ],
+  "expectedConsoleErrors": 1,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

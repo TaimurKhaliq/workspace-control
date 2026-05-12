@@ -1,0 +1,23 @@
+{
+  "id": "tab-active-state-stale",
+  "template": "navigation-tab",
+  "mutation": "tab-active-state-stale",
+  "title": "Broken tab: active state stale",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "workflow_confusion",
+      "titleIncludes": "Details tab did not change content"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "tab-active-state-stale",
+      "failedAssertionIncludes": "Details tab changes visible content"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

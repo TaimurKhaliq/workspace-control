@@ -1,0 +1,13 @@
+{
+  "id": "good-working-modal",
+  "template": "good-baseline",
+  "mutation": "working-modal",
+  "title": "Good baseline: working modal",
+  "difficulty": "simple",
+  "expectedFindings": [],
+  "expectedScenarioFailures": [],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": false
+}

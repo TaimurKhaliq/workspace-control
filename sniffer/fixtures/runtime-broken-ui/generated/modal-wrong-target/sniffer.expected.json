@@ -1,0 +1,23 @@
+{
+  "id": "modal-wrong-target",
+  "template": "modal-dialog",
+  "mutation": "wrong-target",
+  "title": "Broken modal: opens wrong target",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "broken_interaction",
+      "titleIncludes": "Add item button does not open modal"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "modal-wrong-target",
+      "failedAssertionIncludes": "Add item opens a modal dialog"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

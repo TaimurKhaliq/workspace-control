@@ -1,0 +1,23 @@
+{
+  "id": "tab-keyboard-navigation-broken",
+  "template": "navigation-tab",
+  "mutation": "tab-keyboard-navigation-broken",
+  "title": "Broken tab: keyboard navigation broken",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "workflow_confusion",
+      "titleIncludes": "Details tab did not change content"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "tab-keyboard-navigation-broken",
+      "failedAssertionIncludes": "Details tab changes visible content"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

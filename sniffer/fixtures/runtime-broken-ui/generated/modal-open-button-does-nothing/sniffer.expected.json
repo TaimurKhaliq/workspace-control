@@ -1,0 +1,23 @@
+{
+  "id": "modal-open-button-does-nothing",
+  "template": "modal-dialog",
+  "mutation": "open-button-does-nothing",
+  "title": "Broken modal: open button does nothing",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "broken_interaction",
+      "titleIncludes": "Add item button does not open modal"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "modal-open-button-does-nothing",
+      "failedAssertionIncludes": "Add item opens a modal dialog"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

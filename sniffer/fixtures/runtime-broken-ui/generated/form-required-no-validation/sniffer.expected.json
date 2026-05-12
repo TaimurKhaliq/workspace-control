@@ -1,0 +1,23 @@
+{
+  "id": "form-required-no-validation",
+  "template": "form-validation",
+  "mutation": "required-submit-no-validation",
+  "title": "Broken form: required submit has no validation",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "form_validation_issue",
+      "titleIncludes": "Required form can be submitted without validation feedback"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "form-required-no-validation",
+      "failedAssertionIncludes": "Empty required form shows validation feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

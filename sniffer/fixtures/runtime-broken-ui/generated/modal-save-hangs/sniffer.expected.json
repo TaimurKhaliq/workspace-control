@@ -1,0 +1,23 @@
+{
+  "id": "modal-save-hangs",
+  "template": "modal-dialog",
+  "mutation": "save-hangs",
+  "title": "Broken modal: save hangs before dialog appears",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "broken_interaction",
+      "titleIncludes": "Add item button does not open modal"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "modal-save-hangs",
+      "failedAssertionIncludes": "Add item opens a modal dialog"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

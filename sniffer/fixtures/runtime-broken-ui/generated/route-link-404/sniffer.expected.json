@@ -1,0 +1,23 @@
+{
+  "id": "route-link-404",
+  "template": "route-link",
+  "mutation": "nav-link-goes-404",
+  "title": "Broken route: link goes to 404",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "broken_navigation",
+      "titleIncludes": "Navigation link opens a missing route"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "route-link-404",
+      "failedAssertionIncludes": "Missing page link reaches a valid route"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

@@ -1,0 +1,9 @@
+{
+  "id": "copy-button-broken",
+  "expectedFindings": [
+    { "type": "copy_action_failure", "titleIncludes": "Copy action throws a console error", "severity": "high" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "copy-button-broken", "failedAssertionIncludes": "Copy action provides success feedback" }
+  ]
+}

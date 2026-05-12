@@ -1,0 +1,13 @@
+{
+  "id": "good-working-api-list",
+  "template": "good-baseline",
+  "mutation": "working-api-list",
+  "title": "Good baseline: working API list",
+  "difficulty": "simple",
+  "expectedFindings": [],
+  "expectedScenarioFailures": [],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": false
+}

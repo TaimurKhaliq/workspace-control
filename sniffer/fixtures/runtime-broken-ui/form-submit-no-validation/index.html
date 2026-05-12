@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Broken Form Validation Fixture</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui; background: #f8fafc; }
+    main { max-width: 620px; margin: 48px auto; background: white; border: 1px solid #dbe3ef; border-radius: 8px; padding: 24px; }
+    label, input { display: block; width: 100%; }
+    input { box-sizing: border-box; margin: 6px 0 14px; padding: 9px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Contact request</h1>
+    <form onsubmit="event.preventDefault(); document.querySelector('#status').textContent='';">
+      <label for="email">Email</label>
+      <input id="email" name="email" type="email" aria-required="true" />
+      <button type="submit">Submit</button>
+      <p id="status" aria-live="polite"></p>
+    </form>
+  </main>
+</body>
+</html>

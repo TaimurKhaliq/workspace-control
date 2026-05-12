@@ -726,6 +726,149 @@ code {
   background: #eff6ff;
 }
 
+.agent-status-panel {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(239, 246, 255, 0.86), rgba(255, 255, 255, 0.96)),
+    var(--surface);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  padding: 1rem;
+}
+
+.agent-status-panel.good {
+  border-color: #bbf7d0;
+}
+
+.agent-status-panel.warn {
+  border-color: #fde68a;
+}
+
+.agent-status-panel.danger {
+  border-color: #fecaca;
+}
+
+.agent-status-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  align-items: start;
+  gap: 1rem;
+}
+
+.agent-status-main h2 {
+  margin-bottom: 0.35rem;
+}
+
+.agent-status-mascot .mascot-card {
+  gap: 0.4rem;
+  padding: 0.65rem;
+}
+
+.agent-status-mascot .sniffer-dog {
+  max-width: 150px;
+}
+
+.agent-status-mascot .mascot-card span {
+  font-size: 0.78rem;
+}
+
+.agent-status-grid,
+.agent-live-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.agent-live-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.trace-metric,
+.trace-field {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+  padding: 0.65rem;
+}
+
+.trace-metric dt,
+.trace-field strong {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.trace-metric dd,
+.trace-field p {
+  overflow-wrap: anywhere;
+  margin: 0.2rem 0 0;
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.trace-metric dd.status-chip {
+  width: fit-content;
+}
+
+.agent-context-note,
+.agent-outcome {
+  margin: 0;
+  color: var(--muted);
+}
+
+.agent-outcome {
+  color: var(--text);
+  font-weight: 650;
+}
+
+.agent-live-trace {
+  background: #f8fbff;
+}
+
+.agent-event-list {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.agent-event {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.65rem;
+}
+
+.agent-event p {
+  margin: 0.15rem 0 0;
+  color: var(--muted);
+}
+
+.agent-event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.agent-event.decision .agent-event-dot {
+  background: var(--success);
+}
+
+.agent-event.error .agent-event-dot {
+  background: var(--danger);
+}
+
 .run-log-list {
   display: grid;
   gap: 0.35rem;
@@ -771,6 +914,7 @@ code {
 .compact-issue-list,
 .scenario-card-list,
 .phase-timeline,
+.agent-trace-timeline,
 .scenario-step-list,
 .crawl-path {
   display: grid;
@@ -820,6 +964,7 @@ code {
 }
 
 .phase-card,
+.agent-trace-card,
 .crawl-state-card,
 .scenario-step {
   border: 1px solid var(--border);
@@ -829,20 +974,24 @@ code {
 }
 
 .phase-card.failed,
+.agent-trace-card.failed,
 .scenario-step.failed {
   border-left: 4px solid var(--danger);
 }
 
-.phase-card.warning {
+.phase-card.warning,
+.agent-trace-card.warning {
   border-left: 4px solid var(--warning);
 }
 
 .phase-card.passed,
+.agent-trace-card.passed,
 .scenario-step.passed {
   border-left: 4px solid var(--success);
 }
 
 .phase-card.skipped,
+.agent-trace-card.skipped,
 .scenario-step.skipped {
   border-left: 4px solid var(--border-strong);
 }
@@ -886,6 +1035,29 @@ code {
   border-top: 1px solid var(--border);
   padding: 0.85rem 1rem 1rem 3.4rem;
   color: var(--muted);
+}
+
+.agent-trace-body {
+  display: grid;
+  gap: 0.85rem;
+  border-top: 1px solid var(--border);
+  padding: 0.85rem;
+}
+
+.agent-trace-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.agent-evidence-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.empty-agent-trace {
+  border-style: dashed;
 }
 
 .scenario-card {
@@ -2136,6 +2308,11 @@ code {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .agent-status-grid,
+  .agent-trace-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .sticky-detail {
     position: static;
     max-height: none;
@@ -2162,6 +2339,10 @@ code {
   .controls-grid,
   .summary-cards,
   .report-context-grid,
+  .agent-status-main,
+  .agent-status-grid,
+  .agent-live-grid,
+  .agent-trace-grid,
   .graph-summary-strip,
   .coverage-panel,
   .coverage-grid,

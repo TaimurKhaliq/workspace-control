@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8" /><title>API 500 Fixture</title></head>
+<body>
+  <main>
+    <h1>Items</h1>
+    <div id="items">Loading items...</div>
+  </main>
+  <script>
+    fetch('/api/items').then(async (response) => {
+      if (!response.ok) {
+        document.querySelector('#items').textContent = '500 Internal Server Error';
+        return;
+      }
+      document.querySelector('#items').textContent = JSON.stringify(await response.json());
+    }).catch((error) => {
+      document.querySelector('#items').textContent = String(error);
+    });
+  </script>
+</body>
+</html>

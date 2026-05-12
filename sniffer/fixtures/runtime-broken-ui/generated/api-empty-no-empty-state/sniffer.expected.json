@@ -1,0 +1,23 @@
+{
+  "id": "api-empty-no-empty-state",
+  "template": "api-loading",
+  "mutation": "empty-response-no-empty-state",
+  "title": "Broken API: empty response lacks empty state",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "controlled_error_state_missing",
+      "titleIncludes": "API failure lacks controlled error state"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "api-empty-no-empty-state",
+      "failedAssertionIncludes": "API failures show controlled error state"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

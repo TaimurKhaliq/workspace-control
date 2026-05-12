@@ -1,0 +1,9 @@
+{
+  "id": "horizontal-overflow-table",
+  "expectedFindings": [
+    { "type": "layout_issue", "titleIncludes": "Wide table causes horizontal overflow", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "horizontal-overflow-table", "failedAssertionIncludes": "Page does not horizontally overflow viewport" }
+  ]
+}

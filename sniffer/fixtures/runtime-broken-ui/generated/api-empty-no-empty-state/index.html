@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Broken API: empty response lacks empty state</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #f7f8fb; color: #1f2937; }
+    main { max-width: 980px; margin: 0 auto; padding: 28px; }
+    h1 { font-size: 24px; margin: 0 0 8px; }
+    .fixture-note { color: #53606f; margin-bottom: 20px; }
+    .panel, .card { background: white; border: 1px solid #d8dee8; border-radius: 8px; padding: 16px; margin: 12px 0; }
+    button, a[role="button"], .tab { border: 1px solid #b7c2d0; background: #fff; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+    [role="tablist"] { display: flex; gap: 8px; margin: 14px 0; }
+    [role="tab"][aria-selected="true"] { background: #dbeafe; border-color: #60a5fa; }
+    input { display: block; margin: 8px 0 12px; padding: 8px; width: min(360px, 100%); }
+    pre { background: #111827; color: #e5e7eb; padding: 12px; border-radius: 6px; overflow: auto; }
+    .wide-table { width: 1800px; border-collapse: collapse; background: white; }
+    .wide-table td, .wide-table th { border: 1px solid #d8dee8; padding: 10px; white-space: nowrap; }
+    .screenshot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .shot { border: 1px solid #d8dee8; border-radius: 6px; padding: 8px; background: white; }
+    .fake-image { height: 110px; background: linear-gradient(135deg, #dbeafe, #fef3c7); border-radius: 4px; }
+  </style>
+</head>
+<body data-fixture-template="api-loading" data-fixture-mutation="empty-response-no-empty-state">
+  <main>
+    <h1>Broken API: empty response lacks empty state</h1>
+    <p class="fixture-note">Broken API: empty response lacks empty state. This fixture intentionally violates the api-loading runtime expectation using mutation &quot;empty-response-no-empty-state&quot;.</p>
+    <section class="panel">
+  <h2>Items</h2>
+  <p id="loading">Loading items...</p>
+  <ul id="items"></ul>
+  <script>
+    fetch('/api/items').then(async (response) => {
+      if (!response.ok) {
+        document.getElementById('loading').textContent = '500 Internal Server Error';
+        return;
+      }
+      const items = await response.json();
+      document.getElementById('loading').textContent = '';
+      document.getElementById('items').innerHTML = items.map((item) => '<li>' + item.name + '</li>').join('');
+    }).catch((error) => {
+      document.getElementById('loading').textContent = String(error);
+    });
+  </script>
+</section>
+  </main>
+</body>
+</html>

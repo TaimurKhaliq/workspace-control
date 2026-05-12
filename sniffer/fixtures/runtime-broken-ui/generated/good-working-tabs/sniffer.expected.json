@@ -1,0 +1,13 @@
+{
+  "id": "good-working-tabs",
+  "template": "good-baseline",
+  "mutation": "working-tabs",
+  "title": "Good baseline: working tabs",
+  "difficulty": "simple",
+  "expectedFindings": [],
+  "expectedScenarioFailures": [],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": false
+}

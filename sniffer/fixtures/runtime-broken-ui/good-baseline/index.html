@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Good Baseline Fixture</title>
+  <style>
+    body { margin: 0; font-family: ui-sans-serif, system-ui; background: #f8fafc; }
+    main { max-width: 760px; margin: 32px auto; background: white; border: 1px solid #dbe3ef; border-radius: 8px; padding: 24px; }
+    [role="tabpanel"] { border: 1px solid #e5e7eb; padding: 12px; margin: 12px 0; }
+    .modal { position: fixed; inset: 20% auto auto 50%; transform: translateX(-50%); background: white; border: 1px solid #94a3b8; border-radius: 8px; padding: 16px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Healthy dashboard</h1>
+    <div role="tablist" aria-label="Sections">
+      <button role="tab" onclick="panel.textContent='Overview panel'">Overview</button>
+      <button role="tab" onclick="panel.textContent='Details panel'">Details</button>
+      <button role="tab" onclick="panel.textContent='Settings panel'">Settings</button>
+    </div>
+    <section role="tabpanel" id="panel">Overview panel</section>
+    <button type="button" onclick="dialog.hidden=false">Add item</button>
+    <div role="dialog" aria-label="Add item dialog" class="modal" id="dialog" hidden>
+      <h2>Add item</h2>
+      <button onclick="dialog.hidden=true">Close</button>
+    </div>
+    <form onsubmit="event.preventDefault(); if (!email.value) error.textContent='Email is required';">
+      <label for="email">Email</label>
+      <input id="email" type="email" />
+      <button type="submit">Submit</button>
+      <p id="error" role="alert"></p>
+    </form>
+    <pre>generated healthy output</pre>
+    <button type="button" onclick="copyStatus.textContent='Copied'">Copy</button>
+    <p id="copyStatus" aria-live="polite"></p>
+    <table><tr><th>Name</th><th>Status</th></tr><tr><td>Small row</td><td>Ready</td></tr></table>
+  </main>
+</body>
+</html>

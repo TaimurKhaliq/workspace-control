@@ -1,0 +1,9 @@
+{
+  "id": "ambiguous-repeated-row-action",
+  "expectedFindings": [
+    { "type": "locator_quality_issue", "titleIncludes": "Repeated Open buttons have ambiguous accessible names", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "ambiguous-repeated-row-action", "failedAssertionIncludes": "Repeated row actions have unique accessible names" }
+  ]
+}

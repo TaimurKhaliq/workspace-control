@@ -1,0 +1,23 @@
+{
+  "id": "screenshots-modal-no-provenance",
+  "template": "screenshot-evidence",
+  "mutation": "modal-image-lacks-provenance",
+  "title": "Broken screenshot evidence: modal lacks provenance",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "product_experience_gap",
+      "titleIncludes": "Screenshot gallery lacks scenario/action context"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "screenshots-modal-no-provenance",
+      "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

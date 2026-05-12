@@ -1,0 +1,23 @@
+{
+  "id": "row-card-treated-as-action",
+  "template": "row-action",
+  "mutation": "non-interactive-card-treated-as-action",
+  "title": "Broken row action: non-interactive card treated as action",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "locator_quality_issue",
+      "titleIncludes": "Repeated Open buttons have ambiguous accessible names"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "row-card-treated-as-action",
+      "failedAssertionIncludes": "Repeated row actions have unique accessible names"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

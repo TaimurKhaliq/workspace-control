@@ -1,0 +1,957 @@
+{
+  "generatedAt": "2026-05-12T00:02:47.236Z",
+  "seed": 1234,
+  "requestedBrokenCount": 40,
+  "fixtures": [
+    {
+      "id": "route-link-404",
+      "template": "route-link",
+      "mutation": "nav-link-goes-404",
+      "title": "Broken route: link goes to 404",
+      "description": "Broken route: link goes to 404. This fixture intentionally violates the route-link runtime expectation using mutation \"nav-link-goes-404\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "broken_navigation",
+          "titleIncludes": "Navigation link opens a missing route"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "route-link-404",
+          "failedAssertionIncludes": "Missing page link reaches a valid route"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "form-disabled-no-reason",
+      "template": "form-validation",
+      "mutation": "submit-disabled-no-reason",
+      "title": "Broken form: submit disabled with no reason",
+      "description": "Broken form: submit disabled with no reason. This fixture intentionally violates the form-validation runtime expectation using mutation \"submit-disabled-no-reason\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "form_validation_issue",
+          "titleIncludes": "Required form can be submitted without validation feedback"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "form-disabled-no-reason",
+          "failedAssertionIncludes": "Empty required form shows validation feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "api-network-failure-no-retry",
+      "template": "api-loading",
+      "mutation": "network-failure-no-retry",
+      "title": "Broken API: network failure without retry",
+      "description": "Broken API: network failure without retry. This fixture intentionally violates the api-loading runtime expectation using mutation \"network-failure-no-retry\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "api_error",
+          "titleIncludes": "API request returns 500 during runtime flow"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "api-network-failure-no-retry",
+          "failedAssertionIncludes": "API failures show controlled error state"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true,
+      "expectedNetworkFailures": 1
+    },
+    {
+      "id": "route-current-nav-not-indicated",
+      "template": "route-link",
+      "mutation": "current-nav-not-indicated",
+      "title": "Broken route: current nav not indicated",
+      "description": "Broken route: current nav not indicated. This fixture intentionally violates the route-link runtime expectation using mutation \"current-nav-not-indicated\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "broken_navigation",
+          "titleIncludes": "Navigation link opens a missing route"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "route-current-nav-not-indicated",
+          "failedAssertionIncludes": "Missing page link reaches a valid route"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "tab-click-does-nothing",
+      "template": "navigation-tab",
+      "mutation": "tab-click-does-nothing",
+      "title": "Broken tab: click does nothing",
+      "description": "Broken tab: click does nothing. This fixture intentionally violates the navigation-tab runtime expectation using mutation \"tab-click-does-nothing\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "workflow_confusion",
+          "titleIncludes": "Details tab did not change content"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "tab-click-does-nothing",
+          "failedAssertionIncludes": "Details tab changes visible content"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "copy-buttons-ambiguous",
+      "template": "copy-export",
+      "mutation": "multiple-copy-buttons-ambiguous",
+      "title": "Broken copy: multiple ambiguous copy buttons",
+      "description": "Broken copy: multiple ambiguous copy buttons. This fixture intentionally violates the copy-export runtime expectation using mutation \"multiple-copy-buttons-ambiguous\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "copy_action_failure",
+          "titleIncludes": "Copy action does not provide success feedback"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "copy-buttons-ambiguous",
+          "failedAssertionIncludes": "Copy action provides success feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "screenshots-modal-no-provenance",
+      "template": "screenshot-evidence",
+      "mutation": "modal-image-lacks-provenance",
+      "title": "Broken screenshot evidence: modal lacks provenance",
+      "description": "Broken screenshot evidence: modal lacks provenance. This fixture intentionally violates the screenshot-evidence runtime expectation using mutation \"modal-image-lacks-provenance\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "product_experience_gap",
+          "titleIncludes": "Screenshot gallery lacks scenario/action context"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "screenshots-modal-no-provenance",
+          "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "tab-keyboard-navigation-broken",
+      "template": "navigation-tab",
+      "mutation": "tab-keyboard-navigation-broken",
+      "title": "Broken tab: keyboard navigation broken",
+      "description": "Broken tab: keyboard navigation broken. This fixture intentionally violates the navigation-tab runtime expectation using mutation \"tab-keyboard-navigation-broken\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "workflow_confusion",
+          "titleIncludes": "Details tab did not change content"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "tab-keyboard-navigation-broken",
+          "failedAssertionIncludes": "Details tab changes visible content"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "modal-open-button-does-nothing",
+      "template": "modal-dialog",
+      "mutation": "open-button-does-nothing",
+      "title": "Broken modal: open button does nothing",
+      "description": "Broken modal: open button does nothing. This fixture intentionally violates the modal-dialog runtime expectation using mutation \"open-button-does-nothing\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "broken_interaction",
+          "titleIncludes": "Add item button does not open modal"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "modal-open-button-does-nothing",
+          "failedAssertionIncludes": "Add item opens a modal dialog"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "tab-active-state-stale",
+      "template": "navigation-tab",
+      "mutation": "tab-active-state-stale",
+      "title": "Broken tab: active state stale",
+      "description": "Broken tab: active state stale. This fixture intentionally violates the navigation-tab runtime expectation using mutation \"tab-active-state-stale\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "workflow_confusion",
+          "titleIncludes": "Details tab did not change content"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "tab-active-state-stale",
+          "failedAssertionIncludes": "Details tab changes visible content"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "row-card-treated-as-action",
+      "template": "row-action",
+      "mutation": "non-interactive-card-treated-as-action",
+      "title": "Broken row action: non-interactive card treated as action",
+      "description": "Broken row action: non-interactive card treated as action. This fixture intentionally violates the row-action runtime expectation using mutation \"non-interactive-card-treated-as-action\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "locator_quality_issue",
+          "titleIncludes": "Repeated Open buttons have ambiguous accessible names"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "row-card-treated-as-action",
+          "failedAssertionIncludes": "Repeated row actions have unique accessible names"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "modal-save-hangs",
+      "template": "modal-dialog",
+      "mutation": "save-hangs",
+      "title": "Broken modal: save hangs before dialog appears",
+      "description": "Broken modal: save hangs before dialog appears. This fixture intentionally violates the modal-dialog runtime expectation using mutation \"save-hangs\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "broken_interaction",
+          "titleIncludes": "Add item button does not open modal"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "modal-save-hangs",
+          "failedAssertionIncludes": "Add item opens a modal dialog"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "layout-long-path-unwrapped",
+      "template": "table-layout",
+      "mutation": "long-path-not-truncated",
+      "title": "Broken layout: long path not wrapped",
+      "description": "Broken layout: long path not wrapped. This fixture intentionally violates the table-layout runtime expectation using mutation \"long-path-not-truncated\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "layout_issue",
+          "titleIncludes": "Wide table causes horizontal overflow"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "layout-long-path-unwrapped",
+          "failedAssertionIncludes": "Page does not horizontally overflow viewport"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "copy-throws-console-error",
+      "template": "copy-export",
+      "mutation": "copy-throws-console-error",
+      "title": "Broken copy: console error",
+      "description": "Broken copy: console error. This fixture intentionally violates the copy-export runtime expectation using mutation \"copy-throws-console-error\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "copy_action_failure",
+          "titleIncludes": "Copy action throws a console error"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "copy-throws-console-error",
+          "failedAssertionIncludes": "Copy action provides success feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true,
+      "expectedConsoleErrors": 1
+    },
+    {
+      "id": "screenshots-filenames-only",
+      "template": "screenshot-evidence",
+      "mutation": "gallery-filenames-only",
+      "title": "Broken screenshot evidence: filenames only",
+      "description": "Broken screenshot evidence: filenames only. This fixture intentionally violates the screenshot-evidence runtime expectation using mutation \"gallery-filenames-only\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "product_experience_gap",
+          "titleIncludes": "Screenshot gallery lacks scenario/action context"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "screenshots-filenames-only",
+          "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "runtime-click-throws",
+      "template": "runtime-exception",
+      "mutation": "click-throws",
+      "title": "Runtime exception: click throws",
+      "description": "Runtime exception: click throws. This fixture intentionally violates the runtime-exception runtime expectation using mutation \"click-throws\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "console_error",
+          "titleIncludes": "Runtime exception after click"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "runtime-click-throws",
+          "failedAssertionIncludes": "Click action does not throw runtime exception"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true,
+      "expectedConsoleErrors": 1
+    },
+    {
+      "id": "layout-jammed-text",
+      "template": "table-layout",
+      "mutation": "jammed-text",
+      "title": "Broken layout: jammed text",
+      "description": "Broken layout: jammed text. This fixture intentionally violates the table-layout runtime expectation using mutation \"jammed-text\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "layout_issue",
+          "titleIncludes": "Wide table causes horizontal overflow"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "layout-jammed-text",
+          "failedAssertionIncludes": "Page does not horizontally overflow viewport"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "tab-panel-updates-aria-stale",
+      "template": "navigation-tab",
+      "mutation": "tab-panel-updates-aria-stale",
+      "title": "Broken tab: aria-selected does not update",
+      "description": "Broken tab: aria-selected does not update. This fixture intentionally violates the navigation-tab runtime expectation using mutation \"tab-panel-updates-aria-stale\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "workflow_confusion",
+          "titleIncludes": "Details tab did not change content"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "tab-panel-updates-aria-stale",
+          "failedAssertionIncludes": "Details tab changes visible content"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "route-link-does-nothing",
+      "template": "route-link",
+      "mutation": "link-does-nothing",
+      "title": "Broken route: link does nothing",
+      "description": "Broken route: link does nothing. This fixture intentionally violates the route-link runtime expectation using mutation \"link-does-nothing\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "broken_navigation",
+          "titleIncludes": "Navigation link opens a missing route"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "route-link-does-nothing",
+          "failedAssertionIncludes": "Missing page link reaches a valid route"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "row-duplicate-status-chip-text",
+      "template": "row-action",
+      "mutation": "duplicate-status-chip-text",
+      "title": "Broken row action: duplicate status text",
+      "description": "Broken row action: duplicate status text. This fixture intentionally violates the row-action runtime expectation using mutation \"duplicate-status-chip-text\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "locator_quality_issue",
+          "titleIncludes": "Repeated Open buttons have ambiguous accessible names"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "row-duplicate-status-chip-text",
+          "failedAssertionIncludes": "Repeated row actions have unique accessible names"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "copy-copies-wrong-text",
+      "template": "copy-export",
+      "mutation": "copy-copies-wrong-text",
+      "title": "Broken copy: copies wrong text",
+      "description": "Broken copy: copies wrong text. This fixture intentionally violates the copy-export runtime expectation using mutation \"copy-copies-wrong-text\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "copy_action_failure",
+          "titleIncludes": "Copy action does not provide success feedback"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "copy-copies-wrong-text",
+          "failedAssertionIncludes": "Copy action provides success feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "copy-no-success-feedback",
+      "template": "copy-export",
+      "mutation": "copy-no-success-feedback",
+      "title": "Broken copy: no success feedback",
+      "description": "Broken copy: no success feedback. This fixture intentionally violates the copy-export runtime expectation using mutation \"copy-no-success-feedback\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "copy_action_failure",
+          "titleIncludes": "Copy action does not provide success feedback"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "copy-no-success-feedback",
+          "failedAssertionIncludes": "Copy action provides success feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "form-required-no-validation",
+      "template": "form-validation",
+      "mutation": "required-submit-no-validation",
+      "title": "Broken form: required submit has no validation",
+      "description": "Broken form: required submit has no validation. This fixture intentionally violates the form-validation runtime expectation using mutation \"required-submit-no-validation\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "form_validation_issue",
+          "titleIncludes": "Required form can be submitted without validation feedback"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "form-required-no-validation",
+          "failedAssertionIncludes": "Empty required form shows validation feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "row-repeated-open-buttons",
+      "template": "row-action",
+      "mutation": "repeated-open-buttons",
+      "title": "Broken row action: repeated Open buttons",
+      "description": "Broken row action: repeated Open buttons. This fixture intentionally violates the row-action runtime expectation using mutation \"repeated-open-buttons\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "locator_quality_issue",
+          "titleIncludes": "Repeated Open buttons have ambiguous accessible names"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "row-repeated-open-buttons",
+          "failedAssertionIncludes": "Repeated row actions have unique accessible names"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "modal-focus-trap-broken",
+      "template": "modal-dialog",
+      "mutation": "focus-trap-broken",
+      "title": "Broken modal: focus trap broken",
+      "description": "Broken modal: focus trap broken. This fixture intentionally violates the modal-dialog runtime expectation using mutation \"focus-trap-broken\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "broken_interaction",
+          "titleIncludes": "Add item button does not open modal"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "modal-focus-trap-broken",
+          "failedAssertionIncludes": "Add item opens a modal dialog"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "row-repeated-reopen-buttons",
+      "template": "row-action",
+      "mutation": "repeated-reopen-buttons",
+      "title": "Broken row action: repeated Reopen buttons",
+      "description": "Broken row action: repeated Reopen buttons. This fixture intentionally violates the row-action runtime expectation using mutation \"repeated-reopen-buttons\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "locator_quality_issue",
+          "titleIncludes": "Repeated Open buttons have ambiguous accessible names"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "row-repeated-reopen-buttons",
+          "failedAssertionIncludes": "Repeated row actions have unique accessible names"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "api-empty-no-empty-state",
+      "template": "api-loading",
+      "mutation": "empty-response-no-empty-state",
+      "title": "Broken API: empty response lacks empty state",
+      "description": "Broken API: empty response lacks empty state. This fixture intentionally violates the api-loading runtime expectation using mutation \"empty-response-no-empty-state\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "controlled_error_state_missing",
+          "titleIncludes": "API failure lacks controlled error state"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "api-empty-no-empty-state",
+          "failedAssertionIncludes": "API failures show controlled error state"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "screenshots-broken-url",
+      "template": "screenshot-evidence",
+      "mutation": "broken-screenshot-url",
+      "title": "Broken screenshot evidence: artifact URL broken",
+      "description": "Broken screenshot evidence: artifact URL broken. This fixture intentionally violates the screenshot-evidence runtime expectation using mutation \"broken-screenshot-url\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "product_experience_gap",
+          "titleIncludes": "Screenshot gallery lacks scenario/action context"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "screenshots-broken-url",
+          "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "layout-horizontal-overflow",
+      "template": "table-layout",
+      "mutation": "horizontal-overflow",
+      "title": "Broken layout: horizontal overflow",
+      "description": "Broken layout: horizontal overflow. This fixture intentionally violates the table-layout runtime expectation using mutation \"horizontal-overflow\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "layout_issue",
+          "titleIncludes": "Wide table causes horizontal overflow"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "layout-horizontal-overflow",
+          "failedAssertionIncludes": "Page does not horizontally overflow viewport"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "api-500-no-controlled-error",
+      "template": "api-loading",
+      "mutation": "api-500-without-controlled-error",
+      "title": "Broken API: 500 without controlled error",
+      "description": "Broken API: 500 without controlled error. This fixture intentionally violates the api-loading runtime expectation using mutation \"api-500-without-controlled-error\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "api_error",
+          "titleIncludes": "API request returns 500 during runtime flow"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "api-500-no-controlled-error",
+          "failedAssertionIncludes": "API failures show controlled error state"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true,
+      "expectedNetworkFailures": 1
+    },
+    {
+      "id": "api-stale-loading-with-content",
+      "template": "api-loading",
+      "mutation": "stale-loading-with-content",
+      "title": "Broken API: stale loading with content",
+      "description": "Broken API: stale loading with content. This fixture intentionally violates the api-loading runtime expectation using mutation \"stale-loading-with-content\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "loading_state_stuck",
+          "titleIncludes": "Loading state remains stuck without guidance"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "api-stale-loading-with-content",
+          "failedAssertionIncludes": "Loading state resolves or gives guidance"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "form-invalid-email-accepted",
+      "template": "form-validation",
+      "mutation": "invalid-email-accepted",
+      "title": "Broken form: invalid email accepted",
+      "description": "Broken form: invalid email accepted. This fixture intentionally violates the form-validation runtime expectation using mutation \"invalid-email-accepted\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "form_validation_issue",
+          "titleIncludes": "Required form can be submitted without validation feedback"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "form-invalid-email-accepted",
+          "failedAssertionIncludes": "Empty required form shows validation feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "tab-shows-wrong-panel",
+      "template": "navigation-tab",
+      "mutation": "tab-shows-wrong-panel",
+      "title": "Broken tab: wrong panel appears",
+      "description": "Broken tab: wrong panel appears. This fixture intentionally violates the navigation-tab runtime expectation using mutation \"tab-shows-wrong-panel\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "workflow_confusion",
+          "titleIncludes": "Details tab did not change content"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "tab-shows-wrong-panel",
+          "failedAssertionIncludes": "Details tab changes visible content"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "route-url-changes-content-stale",
+      "template": "route-link",
+      "mutation": "url-changes-content-stale",
+      "title": "Broken route: URL changes but content is stale",
+      "description": "Broken route: URL changes but content is stale. This fixture intentionally violates the route-link runtime expectation using mutation \"url-changes-content-stale\".",
+      "difficulty": "subtle",
+      "expectedFindings": [
+        {
+          "type": "broken_navigation",
+          "titleIncludes": "Navigation link opens a missing route"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "route-url-changes-content-stale",
+          "failedAssertionIncludes": "Missing page link reaches a valid route"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "api-infinite-loading",
+      "template": "api-loading",
+      "mutation": "infinite-loading",
+      "title": "Broken API: infinite loading",
+      "description": "Broken API: infinite loading. This fixture intentionally violates the api-loading runtime expectation using mutation \"infinite-loading\".",
+      "difficulty": "simple",
+      "expectedFindings": [
+        {
+          "type": "loading_state_stuck",
+          "titleIncludes": "Loading state remains stuck without guidance"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "api-infinite-loading",
+          "failedAssertionIncludes": "Loading state resolves or gives guidance"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "copy-button-missing",
+      "template": "copy-export",
+      "mutation": "copy-button-missing",
+      "title": "Broken copy: button missing near output",
+      "description": "Broken copy: button missing near output. This fixture intentionally violates the copy-export runtime expectation using mutation \"copy-button-missing\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "copy_action_failure",
+          "titleIncludes": "Copy action is missing or not discoverable"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "copy-button-missing",
+          "failedAssertionIncludes": "Copy action provides success feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "screenshots-no-action-context",
+      "template": "screenshot-evidence",
+      "mutation": "cards-lack-action-context",
+      "title": "Broken screenshot evidence: no action context",
+      "description": "Broken screenshot evidence: no action context. This fixture intentionally violates the screenshot-evidence runtime expectation using mutation \"cards-lack-action-context\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "product_experience_gap",
+          "titleIncludes": "Screenshot gallery lacks scenario/action context"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "screenshots-no-action-context",
+          "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "modal-wrong-target",
+      "template": "modal-dialog",
+      "mutation": "wrong-target",
+      "title": "Broken modal: opens wrong target",
+      "description": "Broken modal: opens wrong target. This fixture intentionally violates the modal-dialog runtime expectation using mutation \"wrong-target\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "broken_interaction",
+          "titleIncludes": "Add item button does not open modal"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "modal-wrong-target",
+          "failedAssertionIncludes": "Add item opens a modal dialog"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "runtime-async-handler-throws",
+      "template": "runtime-exception",
+      "mutation": "async-handler-throws",
+      "title": "Runtime exception: async handler throws",
+      "description": "Runtime exception: async handler throws. This fixture intentionally violates the runtime-exception runtime expectation using mutation \"async-handler-throws\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "console_error",
+          "titleIncludes": "Runtime exception after click"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "runtime-async-handler-throws",
+          "failedAssertionIncludes": "Click action does not throw runtime exception"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true,
+      "expectedConsoleErrors": 1
+    },
+    {
+      "id": "form-error-away-from-field",
+      "template": "form-validation",
+      "mutation": "error-away-from-field",
+      "title": "Broken form: error away from field",
+      "description": "Broken form: error away from field. This fixture intentionally violates the form-validation runtime expectation using mutation \"error-away-from-field\".",
+      "difficulty": "medium",
+      "expectedFindings": [
+        {
+          "type": "form_validation_issue",
+          "titleIncludes": "Required form can be submitted without validation feedback"
+        }
+      ],
+      "expectedScenarioFailures": [
+        {
+          "scenarioId": "form-error-away-from-field",
+          "failedAssertionIncludes": "Empty required form shows validation feedback"
+        }
+      ],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": true
+    },
+    {
+      "id": "good-working-tabs",
+      "template": "good-baseline",
+      "mutation": "working-tabs",
+      "title": "Good baseline: working tabs",
+      "description": "Good baseline: working tabs. This healthy control fixture should remain clean.",
+      "difficulty": "simple",
+      "expectedFindings": [],
+      "expectedScenarioFailures": [],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": false,
+      "goodBaseline": true
+    },
+    {
+      "id": "good-working-modal",
+      "template": "good-baseline",
+      "mutation": "working-modal",
+      "title": "Good baseline: working modal",
+      "description": "Good baseline: working modal. This healthy control fixture should remain clean.",
+      "difficulty": "simple",
+      "expectedFindings": [],
+      "expectedScenarioFailures": [],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": false,
+      "goodBaseline": true
+    },
+    {
+      "id": "good-working-form",
+      "template": "good-baseline",
+      "mutation": "working-form",
+      "title": "Good baseline: working form validation",
+      "description": "Good baseline: working form validation. This healthy control fixture should remain clean.",
+      "difficulty": "simple",
+      "expectedFindings": [],
+      "expectedScenarioFailures": [],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": false,
+      "goodBaseline": true
+    },
+    {
+      "id": "good-working-copy",
+      "template": "good-baseline",
+      "mutation": "working-copy",
+      "title": "Good baseline: working copy action",
+      "description": "Good baseline: working copy action. This healthy control fixture should remain clean.",
+      "difficulty": "simple",
+      "expectedFindings": [],
+      "expectedScenarioFailures": [],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": false,
+      "goodBaseline": true
+    },
+    {
+      "id": "good-working-api-list",
+      "template": "good-baseline",
+      "mutation": "working-api-list",
+      "title": "Good baseline: working API list",
+      "description": "Good baseline: working API list. This healthy control fixture should remain clean.",
+      "difficulty": "simple",
+      "expectedFindings": [],
+      "expectedScenarioFailures": [],
+      "expectedScreenshotsMin": 2,
+      "shouldGenerateFixPacket": false,
+      "goodBaseline": true
+    }
+  ]
+}

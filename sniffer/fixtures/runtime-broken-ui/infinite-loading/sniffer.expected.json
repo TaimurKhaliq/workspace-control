@@ -1,0 +1,9 @@
+{
+  "id": "infinite-loading",
+  "expectedFindings": [
+    { "type": "loading_state_stuck", "titleIncludes": "Loading state remains stuck without guidance", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "infinite-loading", "failedAssertionIncludes": "Loading state resolves or gives guidance" }
+  ]
+}

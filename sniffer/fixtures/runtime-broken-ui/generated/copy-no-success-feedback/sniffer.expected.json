@@ -1,0 +1,23 @@
+{
+  "id": "copy-no-success-feedback",
+  "template": "copy-export",
+  "mutation": "copy-no-success-feedback",
+  "title": "Broken copy: no success feedback",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "copy_action_failure",
+      "titleIncludes": "Copy action does not provide success feedback"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "copy-no-success-feedback",
+      "failedAssertionIncludes": "Copy action provides success feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

@@ -1,0 +1,23 @@
+{
+  "id": "layout-horizontal-overflow",
+  "template": "table-layout",
+  "mutation": "horizontal-overflow",
+  "title": "Broken layout: horizontal overflow",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "layout_issue",
+      "titleIncludes": "Wide table causes horizontal overflow"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "layout-horizontal-overflow",
+      "failedAssertionIncludes": "Page does not horizontally overflow viewport"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

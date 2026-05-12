@@ -10,6 +10,7 @@ import {
   getStatus,
   removeProject,
   startAudit,
+  startRuntimeCalibration,
   verifyIssue,
   type AuditForm,
   type FixPacketItem,
@@ -237,6 +238,18 @@ export default function App() {
     }
   }
 
+  async function runRuntimeCalibration() {
+    setError('')
+    const response = await startRuntimeCalibration().catch((err) => {
+      setError(err instanceof Error ? err.message : String(err))
+      return undefined
+    })
+    if (response) {
+      setRun({ runId: response.runId, status: 'running', phase: 'Runtime calibration', command: response.command, events: [], logs: ['Runtime calibration queued'], stdout: '', stderr: '', startedAt: new Date().toISOString() })
+      setScreen('timeline')
+    }
+  }
+
   function copyFixPrompt(issue: Issue) {
     const text = issue.fix_prompt || issue.suggestedFixPrompt || `${issue.title}\n\n${issue.description}`
     void navigator.clipboard?.writeText(text)
@@ -304,7 +317,7 @@ export default function App() {
           }}
         />
       )}
-      {screen === 'timeline' && <ReportTimeline report={report} fixPackets={fixPackets} run={run} projectId={reportProjectId} projectName={reportProjectName} />}
+      {screen === 'timeline' && <ReportTimeline report={report} fixPackets={fixPackets} run={run} projectId={reportProjectId} projectName={reportProjectName} onNavigate={setScreen} />}
       {screen === 'scenarios' && <ScenariosView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'crawl' && <CrawlPathView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'workflows' && <WorkflowEvidenceView report={report} projectId={reportProjectId} projectName={reportProjectName} />}
@@ -325,7 +338,7 @@ export default function App() {
       )}
       {screen === 'screenshots' && <ScreenshotGallery report={report} screenshots={screenshots} projectId={reportProjectId} projectName={reportProjectName} />}
       {screen === 'raw' && <RawJsonView report={report} />}
-      {screen === 'settings' && <SettingsPanel status={status} />}
+      {screen === 'settings' && <SettingsPanel status={status} onRunRuntimeCalibration={() => void runRuntimeCalibration()} />}
     </AppShell>
   )
 }

@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../src/App'
 import { IssueGroupCard } from '../src/components/IssueGroupCard'
@@ -196,6 +196,7 @@ beforeEach(() => {
         provider: { configured: true, baseUrlConfigured: true, model: 'gpt-test', apiStyle: 'responses' },
         agent: { configured: false, name: 'manual' },
         latestReport: { path: '/tmp/latest_report.json', issues: 1, rawFindings: 0, repoPath: '/tmp/web', appUrl: 'http://127.0.0.1:5173' },
+        runtimeCalibration: { status: 'passed', generatedAt: '2026-04-28T12:00:00.000Z', fixturesCount: 11, passedFixtures: 11, failedFixtures: 0, reportPath: '/tmp/latest_runtime_calibration.md' },
         reportDir: '/tmp/reports'
       })
     }
@@ -259,6 +260,7 @@ beforeEach(() => {
     })
     if (url.startsWith('/api/repairs/history')) return response([])
     if (url === '/api/audits' && init?.method === 'POST') return response({ runId: 'run-1', command: ['tsx', 'src/cli/index.ts', 'audit', '--execute-generated-scenarios'] }, 202)
+    if (url === '/api/calibrations/runtime' && init?.method === 'POST') return response({ runId: 'runtime-calibration-1', command: ['tsx', 'src/cli/index.ts', 'audit-runtime-calibration'] }, 202)
     if (url === '/api/audits/run-1') return response({
       runId: 'run-1',
       status: 'running',
@@ -398,6 +400,16 @@ describe('Sniffer UI dashboard', () => {
     expect(await screen.findByTestId('agent-model-view')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'How Sniffer built its understanding' })).toBeInTheDocument()
     expect(screen.getByText('Feature request')).toBeInTheDocument()
+  })
+
+  it('shows runtime calibration status and can queue the calibration command', async () => {
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Settings' }))
+    expect(await screen.findByText('Runtime Calibration')).toBeInTheDocument()
+    expect(screen.getByText('11/11 passed')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Run runtime calibration' }))
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith('/api/calibrations/runtime', expect.objectContaining({ method: 'POST' })))
+    expect(await screen.findByRole('status')).toHaveTextContent('Runtime calibration queued')
   })
 })
 
@@ -570,7 +582,30 @@ describe('scenario planning view', () => {
 })
 
 describe('live run timeline', () => {
-  it('shows structured phases and failed status details', () => {
+  it('renders the Agent Trace heading and phase anatomy', () => {
+    render(<ReportTimeline report={report} fixPackets={[]} projectId="demo" projectName="Demo UI" />)
+
+    expect(screen.getByRole('heading', { name: 'Sniffer Agent Trace' })).toBeInTheDocument()
+    expect(screen.getByText('How Sniffer observed the app, selected tools, judged evidence, and produced repair-ready findings.')).toBeInTheDocument()
+    expect(screen.getByLabelText('Agent run status')).toBeInTheDocument()
+    expect(screen.getByText((content) => content.startsWith('Showing timeline for displayed report: Latest report generated'))).toBeInTheDocument()
+    expect(screen.getByText('Intent')).toBeInTheDocument()
+    expect(screen.getByText('Tool used')).toBeInTheDocument()
+    expect(screen.getByText('Observation')).toBeInTheDocument()
+    expect(screen.getByText('Decision/result')).toBeInTheDocument()
+    expect(screen.getByText('Evidence produced')).toBeInTheDocument()
+    expect(screen.getByText('Next action')).toBeInTheDocument()
+  })
+
+  it('navigates from evidence links to related dashboard pages', async () => {
+    render(<App />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Run Timeline' }))
+    const sourceLinks = await screen.findByLabelText('Source discovery evidence links')
+    fireEvent.click(within(sourceLinks).getByRole('button', { name: 'Agent Model' }))
+    expect(await screen.findByTestId('agent-model-view')).toBeInTheDocument()
+  })
+
+  it('shows structured live status and keeps raw command collapsed', () => {
     render(<ReportTimeline report={report} fixPackets={[]} run={{
       runId: 'run-1',
       status: 'failed',
@@ -589,9 +624,24 @@ describe('live run timeline', () => {
       exitCode: 1
     }} projectId="demo" projectName="Demo UI" />)
 
+    expect(screen.getByText('Live Agent Trace')).toBeInTheDocument()
+    expect(screen.getByText('Last audit failed: run-1.')).toBeInTheDocument()
+    expect(screen.getByText('Current tool: agent_orchestrator · Current run: run-1')).toBeInTheDocument()
     expect(screen.getAllByText('source discovery').length).toBeGreaterThan(0)
     expect(screen.getAllByText('scenario execution').length).toBeGreaterThan(0)
     expect(screen.getByRole('alert')).toHaveTextContent('boom')
+    expect(screen.getByText('Latest observation')).toBeInTheDocument()
+    expect(screen.getByText('Latest decision')).toBeInTheDocument()
+    expect(screen.getByText('Latest tool output')).toBeInTheDocument()
+    const commandDetails = screen.getByText('Raw command').closest('details')
+    expect(commandDetails).not.toHaveAttribute('open')
+  })
+
+  it('explains the empty state when no run or report is loaded', () => {
+    render(<ReportTimeline report={null} fixPackets={[]} run={null} />)
+    expect(screen.getByRole('heading', { name: 'Sniffer Agent Trace' })).toBeInTheDocument()
+    expect(screen.getByText('No agent trace yet')).toBeInTheDocument()
+    expect(screen.getByText(/Run an audit from Summary/)).toBeInTheDocument()
   })
 })
 

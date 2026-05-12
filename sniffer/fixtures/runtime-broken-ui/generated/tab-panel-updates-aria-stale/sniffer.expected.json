@@ -1,0 +1,23 @@
+{
+  "id": "tab-panel-updates-aria-stale",
+  "template": "navigation-tab",
+  "mutation": "tab-panel-updates-aria-stale",
+  "title": "Broken tab: aria-selected does not update",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "workflow_confusion",
+      "titleIncludes": "Details tab did not change content"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "tab-panel-updates-aria-stale",
+      "failedAssertionIncludes": "Details tab changes visible content"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

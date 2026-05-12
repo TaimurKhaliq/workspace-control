@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Broken tab: aria-selected does not update</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #f7f8fb; color: #1f2937; }
+    main { max-width: 980px; margin: 0 auto; padding: 28px; }
+    h1 { font-size: 24px; margin: 0 0 8px; }
+    .fixture-note { color: #53606f; margin-bottom: 20px; }
+    .panel, .card { background: white; border: 1px solid #d8dee8; border-radius: 8px; padding: 16px; margin: 12px 0; }
+    button, a[role="button"], .tab { border: 1px solid #b7c2d0; background: #fff; border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+    [role="tablist"] { display: flex; gap: 8px; margin: 14px 0; }
+    [role="tab"][aria-selected="true"] { background: #dbeafe; border-color: #60a5fa; }
+    input { display: block; margin: 8px 0 12px; padding: 8px; width: min(360px, 100%); }
+    pre { background: #111827; color: #e5e7eb; padding: 12px; border-radius: 6px; overflow: auto; }
+    .wide-table { width: 1800px; border-collapse: collapse; background: white; }
+    .wide-table td, .wide-table th { border: 1px solid #d8dee8; padding: 10px; white-space: nowrap; }
+    .screenshot-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .shot { border: 1px solid #d8dee8; border-radius: 6px; padding: 8px; background: white; }
+    .fake-image { height: 110px; background: linear-gradient(135deg, #dbeafe, #fef3c7); border-radius: 4px; }
+  </style>
+</head>
+<body data-fixture-template="navigation-tab" data-fixture-mutation="tab-panel-updates-aria-stale">
+  <main>
+    <h1>Broken tab: aria-selected does not update</h1>
+    <p class="fixture-note">Broken tab: aria-selected does not update. This fixture intentionally violates the navigation-tab runtime expectation using mutation &quot;tab-panel-updates-aria-stale&quot;.</p>
+    <section class="panel" aria-label="Tabbed report">
+  <div role="tablist" aria-label="Report tabs">
+    <button role="tab" aria-selected="true" id="tab-overview">Overview</button>
+    <button role="tab" aria-selected="false" id="tab-details" onclick="document.getElementById('active-panel').textContent = 'Overview panel';">Details</button>
+    <button role="tab" aria-selected="false" id="tab-settings">Settings</button>
+  </div>
+  <div id="active-panel" role="tabpanel" aria-labelledby="tab-overview">Overview panel</div>
+</section>
+  </main>
+</body>
+</html>

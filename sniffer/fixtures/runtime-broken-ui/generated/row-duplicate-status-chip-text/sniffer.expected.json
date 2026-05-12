@@ -1,0 +1,23 @@
+{
+  "id": "row-duplicate-status-chip-text",
+  "template": "row-action",
+  "mutation": "duplicate-status-chip-text",
+  "title": "Broken row action: duplicate status text",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "locator_quality_issue",
+      "titleIncludes": "Repeated Open buttons have ambiguous accessible names"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "row-duplicate-status-chip-text",
+      "failedAssertionIncludes": "Repeated row actions have unique accessible names"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

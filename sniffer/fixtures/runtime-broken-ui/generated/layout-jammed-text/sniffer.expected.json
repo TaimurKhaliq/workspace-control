@@ -1,0 +1,23 @@
+{
+  "id": "layout-jammed-text",
+  "template": "table-layout",
+  "mutation": "jammed-text",
+  "title": "Broken layout: jammed text",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "layout_issue",
+      "titleIncludes": "Wide table causes horizontal overflow"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "layout-jammed-text",
+      "failedAssertionIncludes": "Page does not horizontally overflow viewport"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

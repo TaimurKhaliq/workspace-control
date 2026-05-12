@@ -1,0 +1,23 @@
+{
+  "id": "api-500-no-controlled-error",
+  "template": "api-loading",
+  "mutation": "api-500-without-controlled-error",
+  "title": "Broken API: 500 without controlled error",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "api_error",
+      "titleIncludes": "API request returns 500 during runtime flow"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "api-500-no-controlled-error",
+      "failedAssertionIncludes": "API failures show controlled error state"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 1,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

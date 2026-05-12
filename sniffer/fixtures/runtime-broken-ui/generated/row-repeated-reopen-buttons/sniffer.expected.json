@@ -1,0 +1,23 @@
+{
+  "id": "row-repeated-reopen-buttons",
+  "template": "row-action",
+  "mutation": "repeated-reopen-buttons",
+  "title": "Broken row action: repeated Reopen buttons",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "locator_quality_issue",
+      "titleIncludes": "Repeated Open buttons have ambiguous accessible names"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "row-repeated-reopen-buttons",
+      "failedAssertionIncludes": "Repeated row actions have unique accessible names"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

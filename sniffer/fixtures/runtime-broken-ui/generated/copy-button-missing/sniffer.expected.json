@@ -1,0 +1,23 @@
+{
+  "id": "copy-button-missing",
+  "template": "copy-export",
+  "mutation": "copy-button-missing",
+  "title": "Broken copy: button missing near output",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "copy_action_failure",
+      "titleIncludes": "Copy action is missing or not discoverable"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "copy-button-missing",
+      "failedAssertionIncludes": "Copy action provides success feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

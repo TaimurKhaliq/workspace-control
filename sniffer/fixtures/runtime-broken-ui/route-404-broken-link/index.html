@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8" /><title>Broken Link Fixture</title></head>
+<body>
+  <main>
+    <h1>Docs</h1>
+    <a href="/missing">Missing page</a>
+    <section id="not-found" hidden>404 Not found</section>
+  </main>
+  <script>
+    if (location.pathname === '/missing') {
+      document.querySelector('main').innerHTML = '<h1>404 Not found</h1><p>This route has no screen.</p>';
+    }
+  </script>
+</body>
+</html>

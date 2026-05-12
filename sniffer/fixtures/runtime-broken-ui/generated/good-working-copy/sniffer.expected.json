@@ -1,0 +1,13 @@
+{
+  "id": "good-working-copy",
+  "template": "good-baseline",
+  "mutation": "working-copy",
+  "title": "Good baseline: working copy action",
+  "difficulty": "simple",
+  "expectedFindings": [],
+  "expectedScenarioFailures": [],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": false
+}

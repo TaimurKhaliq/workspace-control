@@ -1,0 +1,23 @@
+{
+  "id": "copy-buttons-ambiguous",
+  "template": "copy-export",
+  "mutation": "multiple-copy-buttons-ambiguous",
+  "title": "Broken copy: multiple ambiguous copy buttons",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "copy_action_failure",
+      "titleIncludes": "Copy action does not provide success feedback"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "copy-buttons-ambiguous",
+      "failedAssertionIncludes": "Copy action provides success feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

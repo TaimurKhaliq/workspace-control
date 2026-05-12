@@ -621,6 +621,14 @@ export interface ServerStatus {
     repoPath?: string
     appUrl?: string
   } | null
+  runtimeCalibration?: {
+    status?: string
+    generatedAt?: string
+    fixturesCount?: number
+    passedFixtures?: number
+    failedFixtures?: number
+    reportPath?: string
+  } | null
   reportDir: string
   projects?: SnifferProject[]
 }
@@ -775,6 +783,10 @@ export interface RepairRunRecord {
 
 export async function getStatus(): Promise<ServerStatus> {
   return request('/api/status')
+}
+
+export async function startRuntimeCalibration(): Promise<{ runId: string; command?: string[] }> {
+  return request('/api/calibrations/runtime', { method: 'POST' })
 }
 
 export async function getProjects(): Promise<SnifferProject[]> {

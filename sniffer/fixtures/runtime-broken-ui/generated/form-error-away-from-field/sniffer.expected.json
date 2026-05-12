@@ -1,0 +1,23 @@
+{
+  "id": "form-error-away-from-field",
+  "template": "form-validation",
+  "mutation": "error-away-from-field",
+  "title": "Broken form: error away from field",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "form_validation_issue",
+      "titleIncludes": "Required form can be submitted without validation feedback"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "form-error-away-from-field",
+      "failedAssertionIncludes": "Empty required form shows validation feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

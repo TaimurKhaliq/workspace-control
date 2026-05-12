@@ -161,6 +161,9 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'POST' && parsed.pathname === '/api/audits') {
     return startAudit(req, res)
   }
+  if (req.method === 'POST' && parsed.pathname === '/api/calibrations/runtime') {
+    return startRuntimeCalibration(res)
+  }
   const auditMatch = parsed.pathname.match(/^\/api\/audits\/([^/]+)$/)
   if (req.method === 'GET' && auditMatch) {
     return json(res, 200, runs.get(auditMatch[1]) ?? { error: 'Run not found' })
@@ -278,6 +281,16 @@ async function startAudit(req: IncomingMessage, res: ServerResponse): Promise<vo
 function startGenerateFixes(res: ServerResponse, reportPath: string, projectId?: string, issueIds?: string[]): void {
   const run = spawnCliRun('generate-fixes', ['generate-fixes', '--report', reportPath], reportPath, projectId)
   json(res, 202, { runId: run.runId, issueIds })
+}
+
+function startRuntimeCalibration(res: ServerResponse): void {
+  if ([...runs.values()].some((run) => run.status === 'running')) {
+    json(res, 409, { error: 'A Sniffer run is already active.' })
+    return
+  }
+  const reportPath = path.join(reportsRoot, 'runtime_calibration', 'latest', 'latest_runtime_calibration.json')
+  const run = spawnCliRun('runtime calibration', ['audit-runtime-calibration'], reportPath)
+  json(res, 202, { runId: run.runId, command: run.command })
 }
 
 async function generateFixesNow(res: ServerResponse, reportPath: string, reportDir: string, issueIds?: string[]): Promise<void> {
@@ -593,6 +606,7 @@ async function writeRunLog(run: RunRecord): Promise<void> {
 async function statusPayload(): Promise<Record<string, unknown>> {
   const pkg = JSON.parse(await readFile(path.join(snifferRoot, 'package.json'), 'utf8')) as { version?: string }
   const latest = await readJsonFile<Record<string, unknown>>(latestReportPath).catch(() => undefined)
+  const runtimeCalibration = await readJsonFile<Record<string, unknown>>(path.join(reportsRoot, 'runtime_calibration', 'latest', 'latest_runtime_calibration.json')).catch(() => undefined)
   const projects = await listProjects(snifferRoot).catch(() => [])
   const providerConfigured = isOpenAICompatibleProviderConfigured(process.env)
   return {
@@ -617,6 +631,16 @@ async function statusPayload(): Promise<Record<string, unknown>> {
         rawFindings: Array.isArray(latest.rawFindings) ? latest.rawFindings.length : 0,
         repoPath: nested(latest, ['sourceGraph', 'repoPath']),
         appUrl: nested(latest, ['crawlGraph', 'startUrl'])
+      }
+      : null,
+    runtimeCalibration: runtimeCalibration
+      ? {
+        status: runtimeCalibration.status,
+        generatedAt: runtimeCalibration.generatedAt,
+        fixturesCount: runtimeCalibration.fixturesCount,
+        passedFixtures: runtimeCalibration.passedFixtures,
+        failedFixtures: runtimeCalibration.failedFixtures,
+        reportPath: path.join(reportsRoot, 'runtime_calibration', 'latest', 'latest_runtime_calibration.md')
       }
       : null,
     reportDir: latestDir

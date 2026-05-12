@@ -1,0 +1,23 @@
+{
+  "id": "screenshots-broken-url",
+  "template": "screenshot-evidence",
+  "mutation": "broken-screenshot-url",
+  "title": "Broken screenshot evidence: artifact URL broken",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "product_experience_gap",
+      "titleIncludes": "Screenshot gallery lacks scenario/action context"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "screenshots-broken-url",
+      "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

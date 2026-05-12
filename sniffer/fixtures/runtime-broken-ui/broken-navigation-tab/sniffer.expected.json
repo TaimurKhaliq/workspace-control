@@ -1,0 +1,9 @@
+{
+  "id": "broken-navigation-tab",
+  "expectedFindings": [
+    { "type": "workflow_confusion", "titleIncludes": "Details tab did not change content", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "broken-navigation-tab", "failedAssertionIncludes": "Details tab changes visible content" }
+  ]
+}

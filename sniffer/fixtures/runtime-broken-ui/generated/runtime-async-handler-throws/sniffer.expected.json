@@ -1,0 +1,23 @@
+{
+  "id": "runtime-async-handler-throws",
+  "template": "runtime-exception",
+  "mutation": "async-handler-throws",
+  "title": "Runtime exception: async handler throws",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "console_error",
+      "titleIncludes": "Runtime exception after click"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "runtime-async-handler-throws",
+      "failedAssertionIncludes": "Click action does not throw runtime exception"
+    }
+  ],
+  "expectedConsoleErrors": 1,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

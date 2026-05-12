@@ -1,0 +1,23 @@
+{
+  "id": "screenshots-filenames-only",
+  "template": "screenshot-evidence",
+  "mutation": "gallery-filenames-only",
+  "title": "Broken screenshot evidence: filenames only",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "product_experience_gap",
+      "titleIncludes": "Screenshot gallery lacks scenario/action context"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "screenshots-filenames-only",
+      "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

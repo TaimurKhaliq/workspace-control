@@ -1,0 +1,23 @@
+{
+  "id": "screenshots-no-action-context",
+  "template": "screenshot-evidence",
+  "mutation": "cards-lack-action-context",
+  "title": "Broken screenshot evidence: no action context",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "product_experience_gap",
+      "titleIncludes": "Screenshot gallery lacks scenario/action context"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "screenshots-no-action-context",
+      "failedAssertionIncludes": "Screenshot gallery cards include scenario/action context"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

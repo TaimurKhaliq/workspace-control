@@ -1,0 +1,23 @@
+{
+  "id": "layout-long-path-unwrapped",
+  "template": "table-layout",
+  "mutation": "long-path-not-truncated",
+  "title": "Broken layout: long path not wrapped",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "layout_issue",
+      "titleIncludes": "Wide table causes horizontal overflow"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "layout-long-path-unwrapped",
+      "failedAssertionIncludes": "Page does not horizontally overflow viewport"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

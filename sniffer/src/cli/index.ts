@@ -41,6 +41,8 @@ import { buildRuntimeAppModel, buildRuntimeIntentContext } from '../runtime/runt
 import type { DiscoveryMode, RuntimeAppModel, RuntimeDomSnapshot, RuntimeLlmIntent } from '../types.js'
 import { runVerificationMatrix } from '../verification/matrix.js'
 import { runProductExperienceCalibration, runProductExperienceModelComparison } from '../verification/productExperienceCalibration.js'
+import { runRuntimeBrokenUiCalibration } from '../verification/runtimeBrokenUiCalibration.js'
+import { generateRuntimeFixtures } from '../calibration/runtimeFixtureGenerator.js'
 import { runProductExperienceCritic } from '../critic/productExperienceCritic.js'
 import type { GraphRefinerMode, ProductExperienceCriticMode } from '../types.js'
 import { runGraphStructureRefiner } from '../evidence/graphRefiner.js'
@@ -130,6 +132,48 @@ async function main(): Promise<void> {
     }
     console.log(`Wrote ${calibration.reportMarkdownPath}`)
     if (calibration.status === 'failed') process.exitCode = 1
+    return
+  }
+
+  if (command === 'audit-runtime-calibration') {
+    const fixtureIds = typeof args.fixture === 'string'
+      ? args.fixture.split(',').map((item) => item.trim()).filter(Boolean)
+      : undefined
+    const calibration = await runRuntimeBrokenUiCalibration({
+      snifferRoot: process.cwd(),
+      fixtureIds,
+      criticMode: typeof args['critic-mode'] === 'string' ? args['critic-mode'] : undefined,
+      provider: typeof args.provider === 'string' ? args.provider : undefined,
+      includeProductCritic: boolArg(args, 'include-product-critic'),
+      count: numberArg(args, 'count'),
+      seed: numberArg(args, 'seed'),
+      difficulty: typeof args.difficulty === 'string' ? args.difficulty as 'simple' | 'medium' | 'subtle' | 'all' : undefined,
+      stopOnFailure: boolArg(args, 'stop-on-failure'),
+      parallel: numberArg(args, 'parallel')
+    })
+    console.log(`Runtime Broken UI Calibration ${calibration.status.toUpperCase()}`)
+    for (const target of calibration.targets) {
+      const missing = target.missedExpectedFindings.length || target.missedScenarioFailures.length
+        ? ` missing=${[...target.missedExpectedFindings.map((finding) => finding.titleIncludes), ...target.missedScenarioFailures.map((failure) => failure.failedAssertionIncludes)].join('; ')}`
+        : ''
+      const unexpected = target.unexpectedFindings.length ? ` unexpected=${target.unexpectedFindings.map((finding) => finding.title).join('; ')}` : ''
+      console.log(`- ${target.status.toUpperCase()} ${target.fixture}: findings=${target.detectedFindings.length} scenarioFailures=${target.detectedScenarioFailures.length}${missing}${unexpected}`)
+    }
+    console.log(`Wrote ${calibration.reportMarkdownPath}`)
+    if (calibration.status === 'failed') process.exitCode = 1
+    return
+  }
+
+  if (command === 'generate-runtime-fixtures') {
+    const manifest = await generateRuntimeFixtures({
+      snifferRoot: process.cwd(),
+      count: numberArg(args, 'count') ?? 40,
+      seed: numberArg(args, 'seed') ?? 1234,
+      difficulty: typeof args.difficulty === 'string' ? args.difficulty as 'simple' | 'medium' | 'subtle' | 'all' : 'all'
+    })
+    console.log(`Generated ${manifest.fixtures.length} runtime calibration fixtures (${manifest.requestedBrokenCount} broken + ${manifest.fixtures.length - manifest.requestedBrokenCount} good baselines)`)
+    console.log(`Seed: ${manifest.seed}`)
+    console.log(`Wrote fixtures/runtime-broken-ui/generated/manifest.json`)
     return
   }
 
@@ -1083,6 +1127,8 @@ Commands:
   sniffer run-tests [--project <id>] [--use-llm]
   sniffer verify-matrix
   sniffer audit-product-calibration [--product-experience-critic deterministic|llm|auto] [--critic-mode deterministic|llm|auto] [--provider mock|openai-compatible|auto] [--fixture id[,id]] [--include-good] [--models gpt-4.1-mini,gpt-5.5]
+  sniffer generate-runtime-fixtures [--count 40] [--seed 1234] [--difficulty simple|medium|subtle|all]
+  sniffer audit-runtime-calibration [--fixture id[,id]] [--count 40] [--seed 1234] [--difficulty simple|medium|subtle|all] [--parallel 2] [--stop-on-failure] [--critic-mode deterministic|llm] [--provider openai-compatible|mock|auto] [--include-product-critic]
 `)
 }
 

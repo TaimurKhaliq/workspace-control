@@ -1,0 +1,23 @@
+{
+  "id": "copy-throws-console-error",
+  "template": "copy-export",
+  "mutation": "copy-throws-console-error",
+  "title": "Broken copy: console error",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "copy_action_failure",
+      "titleIncludes": "Copy action throws a console error"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "copy-throws-console-error",
+      "failedAssertionIncludes": "Copy action provides success feedback"
+    }
+  ],
+  "expectedConsoleErrors": 1,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

@@ -1,0 +1,23 @@
+{
+  "id": "api-network-failure-no-retry",
+  "template": "api-loading",
+  "mutation": "network-failure-no-retry",
+  "title": "Broken API: network failure without retry",
+  "difficulty": "simple",
+  "expectedFindings": [
+    {
+      "type": "api_error",
+      "titleIncludes": "API request returns 500 during runtime flow"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "api-network-failure-no-retry",
+      "failedAssertionIncludes": "API failures show controlled error state"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 1,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

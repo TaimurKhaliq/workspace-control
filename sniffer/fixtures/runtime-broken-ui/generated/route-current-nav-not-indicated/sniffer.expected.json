@@ -1,0 +1,23 @@
+{
+  "id": "route-current-nav-not-indicated",
+  "template": "route-link",
+  "mutation": "current-nav-not-indicated",
+  "title": "Broken route: current nav not indicated",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "broken_navigation",
+      "titleIncludes": "Navigation link opens a missing route"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "route-current-nav-not-indicated",
+      "failedAssertionIncludes": "Missing page link reaches a valid route"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

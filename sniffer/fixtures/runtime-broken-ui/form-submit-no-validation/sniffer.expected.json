@@ -1,0 +1,9 @@
+{
+  "id": "form-submit-no-validation",
+  "expectedFindings": [
+    { "type": "form_validation_issue", "titleIncludes": "Required form can be submitted without validation feedback", "severity": "medium" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "form-submit-no-validation", "failedAssertionIncludes": "Empty required form shows validation feedback" }
+  ]
+}

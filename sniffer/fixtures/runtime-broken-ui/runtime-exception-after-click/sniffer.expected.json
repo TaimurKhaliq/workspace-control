@@ -1,0 +1,9 @@
+{
+  "id": "runtime-exception-after-click",
+  "expectedFindings": [
+    { "type": "console_error", "titleIncludes": "Runtime exception after click", "severity": "high" }
+  ],
+  "expectedScenarioFailures": [
+    { "scenarioId": "runtime-exception-after-click", "failedAssertionIncludes": "Click action does not throw runtime exception" }
+  ]
+}

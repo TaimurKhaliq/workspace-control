@@ -1,0 +1,23 @@
+{
+  "id": "form-disabled-no-reason",
+  "template": "form-validation",
+  "mutation": "submit-disabled-no-reason",
+  "title": "Broken form: submit disabled with no reason",
+  "difficulty": "medium",
+  "expectedFindings": [
+    {
+      "type": "form_validation_issue",
+      "titleIncludes": "Required form can be submitted without validation feedback"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "form-disabled-no-reason",
+      "failedAssertionIncludes": "Empty required form shows validation feedback"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}

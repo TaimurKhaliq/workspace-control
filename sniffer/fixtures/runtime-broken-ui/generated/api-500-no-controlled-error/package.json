@@ -1,0 +1,6 @@
+{
+  "name": "sniffer-runtime-fixture-api-500-no-controlled-error",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module"
+}

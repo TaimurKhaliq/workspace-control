@@ -1,0 +1,23 @@
+{
+  "id": "api-stale-loading-with-content",
+  "template": "api-loading",
+  "mutation": "stale-loading-with-content",
+  "title": "Broken API: stale loading with content",
+  "difficulty": "subtle",
+  "expectedFindings": [
+    {
+      "type": "loading_state_stuck",
+      "titleIncludes": "Loading state remains stuck without guidance"
+    }
+  ],
+  "expectedScenarioFailures": [
+    {
+      "scenarioId": "api-stale-loading-with-content",
+      "failedAssertionIncludes": "Loading state resolves or gives guidance"
+    }
+  ],
+  "expectedConsoleErrors": 0,
+  "expectedNetworkFailures": 0,
+  "expectedScreenshotsMin": 2,
+  "shouldGenerateFixPacket": true
+}
