@@ -1692,6 +1692,28 @@ code {
   color: var(--muted);
 }
 
+.agent-event-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0.8rem 0;
+  padding-left: 1.2rem;
+}
+
+.agent-event-list li {
+  padding: 0.35rem 0;
+}
+
+.agent-event-list span {
+  color: var(--muted);
+  margin-left: 0.45rem;
+  text-transform: capitalize;
+}
+
+.agent-event-list p {
+  margin: 0.25rem 0 0;
+  color: var(--text);
+}
+
 .config-card {
   display: grid;
   align-content: start;

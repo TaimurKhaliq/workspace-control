@@ -10,6 +10,7 @@ import { latestReportDir, projectLatestReportDir } from '../src/reporting/paths.
 import { generateFixPackets } from '../src/repair/fixPackets.js'
 import type { FixPacket, SnifferReport } from '../src/types.js'
 import { retrieveEvidenceFromReport } from '../src/evidence/retrieval.js'
+import { runRepairAgent } from '../src/agent/runRepairAgent.js'
 import { resolveReportArtifact } from './artifacts.js'
 import {
   buildDashboardAuditCommand,
@@ -231,6 +232,9 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'POST' && parsed.pathname === '/api/repairs/start') {
     return startRepair(req, res)
   }
+  if (req.method === 'POST' && parsed.pathname === '/api/agents/repair') {
+    return startAgentRepair(req, res)
+  }
   if (req.method === 'GET' && parsed.pathname === '/api/repairs/history') {
     const projectId = projectQuery(parsed)
     const issueId = parsed.searchParams.get('issueId')?.trim() || undefined
@@ -353,6 +357,39 @@ async function startRepair(req: IncomingMessage, res: ServerResponse): Promise<v
     commandSummary: spec.commandSummary
   })
   return json(res, 202, { repairRunId: run.repairRunId, status: run.status })
+}
+
+async function startAgentRepair(req: IncomingMessage, res: ServerResponse): Promise<void> {
+  const body = await readJsonBody<{
+    project?: string
+    issueId?: string
+    agent?: RepairAgent
+    maxRetries?: number
+    autoApprove?: boolean
+    dryRun?: boolean
+  }>(req)
+  const projectId = body.project?.trim() || undefined
+  const reportPath = reportPathForProject(projectId)
+  const result = await runRepairAgent({
+    snifferRoot,
+    projectId,
+    reportPath,
+    issueId: body.issueId?.trim() || undefined,
+    agent: body.agent === 'codex' ? 'codex' : 'manual',
+    maxRetries: body.maxRetries ?? 1,
+    autoApprove: Boolean(body.autoApprove),
+    dryRun: Boolean(body.dryRun)
+  })
+  return json(res, 200, {
+    agentRunId: result.state.agentRunId,
+    status: result.state.status,
+    finalDecision: result.finalDecision,
+    currentNode: result.state.traceEvents.at(-1)?.node,
+    traceEvents: result.state.traceEvents,
+    traceJsonPath: result.traceJsonPath,
+    traceMarkdownPath: result.traceMarkdownPath,
+    approval: result.state.approval
+  })
 }
 
 async function startRepairVerification(req: IncomingMessage, res: ServerResponse, repairRunId: string): Promise<void> {

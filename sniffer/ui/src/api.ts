@@ -781,6 +781,29 @@ export interface RepairRunRecord {
   }
 }
 
+export interface AgentRepairTrace {
+  agentRunId: string
+  status: 'queued' | 'running' | 'awaiting_approval' | 'succeeded' | 'failed'
+  finalDecision?: 'fixed' | 'retry' | 'human_review' | 'unsafe' | 'failed'
+  currentNode?: string
+  traceEvents: Array<{
+    id: string
+    timestamp: string
+    node: string
+    status: string
+    message: string
+    decision?: string
+  }>
+  traceJsonPath: string
+  traceMarkdownPath: string
+  approval: {
+    required: boolean
+    approved: boolean
+    status: string
+    reason?: string
+  }
+}
+
 export async function getStatus(): Promise<ServerStatus> {
   return request('/api/status')
 }
@@ -903,6 +926,17 @@ export async function startRepair(input: {
   allowDestructiveConfirmed?: boolean
 }): Promise<{ repairRunId: string; status: RepairRunRecord['status'] }> {
   return request('/api/repairs/start', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export async function startAgentRepair(input: {
+  project?: string
+  issueId: string
+  agent: 'manual' | 'codex'
+  maxRetries?: number
+  autoApprove?: boolean
+  dryRun?: boolean
+}): Promise<AgentRepairTrace> {
+  return request('/api/agents/repair', { method: 'POST', body: JSON.stringify(input) })
 }
 
 export async function getRepairRun(repairRunId: string): Promise<RepairRunRecord> {

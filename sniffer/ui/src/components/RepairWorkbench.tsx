@@ -6,12 +6,14 @@ import {
   getRepairHistory,
   getRepairRun,
   rerunRepairAudit,
+  startAgentRepair,
   startRepair,
   verifyRepair,
   type AuditForm,
   type FixPacketDetail,
   type LatestIssueSummary,
   type RepairAttemptSummary,
+  type AgentRepairTrace,
   type RepairRunRecord,
   type ServerStatus,
   type SnifferReport
@@ -41,6 +43,7 @@ export function RepairWorkbench({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [fixPacket, setFixPacket] = useState<FixPacketDetail | null>(null)
   const [repairRun, setRepairRun] = useState<RepairRunRecord | null>(null)
+  const [agentTrace, setAgentTrace] = useState<AgentRepairTrace | null>(null)
   const [history, setHistory] = useState<RepairAttemptSummary[]>([])
   const [agent, setAgent] = useState<'manual' | 'codex'>('manual')
   const [mode, setMode] = useState<'repair-proof' | 'apply-fix'>('repair-proof')
@@ -135,6 +138,28 @@ export function RepairWorkbench({
       })
       const next = await getRepairRun(started.repairRunId)
       setRepairRun(next)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setLoading('')
+    }
+  }
+
+  async function runAgentRepair() {
+    if (!selectedIssueId) return
+    setLoading('Running agent repair graph')
+    setError('')
+    try {
+      const trace = await startAgentRepair({
+        project: projectId,
+        issueId: selectedIssueId,
+        agent,
+        maxRetries: 1,
+        autoApprove: false,
+        dryRun: mode === 'repair-proof'
+      })
+      setAgentTrace(trace)
+      await refreshIssues()
     } catch (err) {
       setError(errorMessage(err))
     } finally {
@@ -298,9 +323,13 @@ export function RepairWorkbench({
             <button type="button" className="primary-button" disabled={!selectedIssueId || codexUnavailable || Boolean(loading)} onClick={() => void runRepair()}>
               Run {mode === 'repair-proof' ? 'repair proof' : agent === 'codex' ? 'Codex repair' : 'manual apply-fix'}
             </button>
+            <button type="button" className="secondary-button" disabled={!selectedIssueId || Boolean(loading)} onClick={() => void runAgentRepair()}>
+              Run Agent Repair
+            </button>
             <button type="button" className="secondary-button" disabled={!repairRun || repairRun.verification.status === 'running'} onClick={() => void runVerification()}>Run verification</button>
             <button type="button" className="secondary-button" disabled={!repairRun} onClick={() => void rerunAudit()}>Rerun audit</button>
           </div>
+          {agentTrace && <AgentTracePanel trace={agentTrace} />}
           {repairRun ? <RepairRunPanel run={repairRun} /> : <p className="muted">Manual repair proof is the default. It writes a repair result and should not modify files.</p>}
           {history.length > 0 && <RepairHistory attempts={history} />}
         </section>
@@ -399,6 +428,29 @@ function RepairRunPanel({ run }: { run: RepairRunRecord }) {
         )}
       </div>
     </div>
+  )
+}
+
+function AgentTracePanel({ trace }: { trace: AgentRepairTrace }) {
+  return (
+    <details className="packet-section-card" open>
+      <summary>Agent trace · {trace.finalDecision ?? trace.status}</summary>
+      <div className="repair-status-timeline">
+        <span className={`status-chip ${trace.status === 'succeeded' ? 'good' : trace.status === 'failed' ? 'danger' : 'warn'}`}>{trace.status}</span>
+        <span className="status-chip muted">{trace.currentNode ?? 'agent graph'}</span>
+        <span className="status-chip muted">approval {trace.approval.status}</span>
+      </div>
+      <ol className="agent-event-list">
+        {trace.traceEvents.map((event) => (
+          <li key={event.id}>
+            <strong>{event.node}</strong>
+            <span>{event.status}</span>
+            <p>{event.message}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="muted" title={trace.traceMarkdownPath}>Trace: {trace.traceMarkdownPath}</p>
+    </details>
   )
 }
 

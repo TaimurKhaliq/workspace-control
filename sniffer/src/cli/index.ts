@@ -46,6 +46,7 @@ import { generateRuntimeFixtures } from '../calibration/runtimeFixtureGenerator.
 import { runProductExperienceCritic } from '../critic/productExperienceCritic.js'
 import type { GraphRefinerMode, ProductExperienceCriticMode } from '../types.js'
 import { runGraphStructureRefiner } from '../evidence/graphRefiner.js'
+import { runRepairAgent } from '../agent/runRepairAgent.js'
 
 loadSnifferEnv()
 
@@ -65,6 +66,30 @@ async function main(): Promise<void> {
 
   if (command === 'llm-check') {
     await handleProviderCheck(typeof args.provider === 'string' ? args.provider : 'openai-compatible')
+    return
+  }
+
+  if (command === 'agent') {
+    const subcommand = rest[0]
+    if (subcommand !== 'repair') throw new Error('Supported agent command: sniffer agent repair')
+    const result = await runRepairAgent({
+      snifferRoot: process.cwd(),
+      projectId: typeof args.project === 'string' ? args.project : undefined,
+      reportPath: typeof args.report === 'string' ? args.report : undefined,
+      issueId: typeof args.issue === 'string' ? args.issue : undefined,
+      agent: args.agent === 'codex' ? 'codex' : 'manual',
+      maxRetries: numberArg(args, 'max-retries') ?? 1,
+      autoApprove: boolArg(args, 'auto-approve'),
+      dryRun: boolArg(args, 'dry-run'),
+      allowDestructive: boolArg(args, 'allow-destructive'),
+      appUrl: typeof args.url === 'string' ? args.url : undefined
+    })
+    console.log(`Sniffer repair agent ${result.finalDecision ?? 'unknown'}`)
+    console.log(`- Status: ${result.state.status}`)
+    console.log(`- Issue: ${result.state.issueId ?? 'none'}`)
+    console.log(`- Approval: ${result.state.approval.status}`)
+    console.log(`- Trace: ${result.traceMarkdownPath}`)
+    if (result.state.status === 'failed') process.exitCode = 1
     return
   }
 
@@ -1114,6 +1139,7 @@ Commands:
   sniffer projects remove --id <id>
   sniffer providers check --provider openai-compatible
   sniffer llm-check [--provider openai-compatible]
+  sniffer agent repair --project <id> | --report <latest_report.json> [--issue <issue_id>] [--agent manual|codex] [--max-retries 1] [--auto-approve] [--dry-run]
   sniffer inspect-url --url <url> | --project <id>
   sniffer discover --repo <path> | --project <id> [--include-test-sources|--include-tests] [--include-fixtures] [--graph-refiner off|llm|auto] [--provider mock|openai-compatible|auto]
   sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]

@@ -52,8 +52,9 @@ describe('runtime broken UI calibration', () => {
   }, 30_000)
 
   it('serves and audits a generated runtime exception fixture', async () => {
+    const root = await tempReportRoot()
     const result = await runRuntimeBrokenUiCalibration({
-      snifferRoot,
+      snifferRoot: root,
       fixtureIds: ['runtime-click-throws'],
       count: 40,
       seed: 1234
