@@ -20,6 +20,11 @@ export interface DashboardAuditRequest {
   auditDepth?: DashboardAuditDepth
   executeGeneratedScenarios?: boolean
   productExperienceCritic?: string
+  crawlMode?: 'safe' | 'deep' | 'live'
+  allowLongRunningActions?: boolean
+  liveObserveMs?: number
+  livePollMs?: number
+  maxDepth?: number
 }
 
 export interface DashboardRunEvent {
@@ -61,6 +66,7 @@ export function buildDashboardAuditCommand(input: DashboardAuditRequest, options
   cliArgs.push(
     '--discovery-mode', input.discoveryMode ?? 'hybrid',
     '--scenario', scenarioFor(input),
+    '--crawl-mode', input.crawlMode ?? (depth === 'deep' ? 'deep' : 'safe'),
     '--critic-mode', input.criticMode ?? 'deterministic',
     '--ux-critic', input.uxCritic ?? 'deterministic',
     '--intent-mode', input.intentMode ?? 'deterministic',
@@ -70,6 +76,10 @@ export function buildDashboardAuditCommand(input: DashboardAuditRequest, options
 
   const executeGeneratedScenarios = input.executeGeneratedScenarios ?? true
   if (executeGeneratedScenarios) cliArgs.push('--execute-generated-scenarios')
+  if (input.allowLongRunningActions) cliArgs.push('--allow-long-running-actions')
+  if (input.liveObserveMs) cliArgs.push('--live-observe-ms', String(input.liveObserveMs))
+  if (input.livePollMs) cliArgs.push('--live-poll-ms', String(input.livePollMs))
+  if (input.maxDepth) cliArgs.push('--max-depth', String(input.maxDepth))
   if (productExperienceCritic && productExperienceCritic !== 'auto') cliArgs.push('--product-experience-critic', productExperienceCritic)
   if (input.consistencyCheck) cliArgs.push('--consistency-check')
   if (input.productGoal?.trim()) cliArgs.push('--product-goal', input.productGoal.trim())

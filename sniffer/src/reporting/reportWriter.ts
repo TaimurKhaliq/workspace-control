@@ -292,11 +292,20 @@ export function renderMarkdown(report: SnifferReport): string {
     `- Final URL: ${report.crawlGraph.finalUrl}`,
     `- States captured: ${report.crawlGraph.states.length}`,
     `- Actions attempted: ${report.crawlGraph.actions.length}`,
+    `- Crawl mode: ${report.crawlGraph.crawlMode ?? 'safe'}`,
     `- Console errors: ${report.crawlGraph.consoleErrors.length}`,
     `- Network failures: ${report.crawlGraph.networkFailures.length}`,
     `- Discovery mode: ${report.discoveryMode ?? 'source'}`,
     `- Raw findings: ${rawFindings.length}`,
     `- Triaged issues / repair groups: ${report.issues.length}`,
+    '',
+    '## Runtime Graph Coverage',
+    '',
+    renderRuntimeGraphCoverage(report),
+    '',
+    '## Runtime Observations',
+    '',
+    renderRuntimeObservations(report),
     '',
     '## Suppressed Runtime Events',
     '',
@@ -1113,6 +1122,38 @@ function renderSuppressedRuntimeEvents(report: SnifferReport): string {
     event.failureText ? `  - Failure: ${event.failureText}` : undefined,
     `  - Provenance: ${event.provenance}`,
     `  - Reason suppressed: ${event.reason}`
+  ].filter(Boolean).join('\n')).join('\n')
+}
+
+function renderRuntimeGraphCoverage(report: SnifferReport): string {
+  const coverage = report.crawlGraph.runtimeGraphCoverage
+  if (!coverage) return 'Runtime graph coverage was not recorded for this report. Run with `--crawl-mode deep` or `--crawl-mode live`.'
+  const unresolved = report.crawlGraph.runtimeGraph?.unresolvedFrontier?.length ?? 0
+  return [
+    `- Mode: ${coverage.crawlMode}`,
+    `- States discovered: ${coverage.statesDiscovered}`,
+    `- Edges explored: ${coverage.edgesExplored}`,
+    `- Frontier exhausted: ${coverage.frontierExhausted ? 'yes' : 'no'}`,
+    `- Max depth reached: ${coverage.maxDepthReached ? 'yes' : 'no'}`,
+    `- Unresolved frontier items: ${unresolved}`,
+    `- Unvisited safe actions: ${coverage.unvisitedSafeActions}`,
+    `- Long-running actions skipped: ${coverage.longRunningActionsSkipped}`,
+    `- Long-running actions executed: ${coverage.longRunningActionsExecuted}`,
+    `- Dynamic observations captured: ${coverage.dynamicObservationsCaptured}`,
+    `- Live observation windows: ${coverage.liveObservationWindows}`
+  ].join('\n')
+}
+
+function renderRuntimeObservations(report: SnifferReport): string {
+  const observations = report.crawlGraph.runtimeObservations ?? report.crawlGraph.runtimeGraph?.observations ?? []
+  if (observations.length === 0) return 'No dynamic runtime observations were recorded.'
+  return observations.slice(0, 40).map((observation) => [
+    `- ${observation.kind}: ${observation.text}`,
+    `  - State: ${observation.stateId}`,
+    observation.actionId ? `  - Action: ${observation.actionId}` : undefined,
+    observation.selector ? `  - Selector/context: ${observation.selector}` : undefined,
+    observation.screenshotPath ? `  - Screenshot: ${observation.screenshotPath}` : undefined,
+    `  - Timestamp: ${observation.timestamp}`
   ].filter(Boolean).join('\n')).join('\n')
 }
 

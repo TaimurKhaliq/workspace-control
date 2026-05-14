@@ -47,6 +47,11 @@ const emptyForm: AuditForm = {
   discoveryMode: 'hybrid',
   scenario: 'all',
   executeGeneratedScenarios: true,
+  crawlMode: 'safe',
+  allowLongRunningActions: false,
+  liveObserveMs: 10000,
+  livePollMs: 500,
+  maxDepth: 4,
   criticMode: 'deterministic',
   uxCritic: 'deterministic',
   intentMode: 'deterministic',
@@ -119,7 +124,8 @@ export default function App() {
       productExperienceCritic: status.provider.configured ? 'llm' : 'deterministic',
       provider: status.provider.configured ? 'openai-compatible' : 'auto',
       scenario: 'all',
-      executeGeneratedScenarios: true
+      executeGeneratedScenarios: true,
+      crawlMode: status.provider.configured ? 'deep' : 'safe'
     }))
     setProviderDefaultsPending(false)
   }, [status, providerDefaultsPending])

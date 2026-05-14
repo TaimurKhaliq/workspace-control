@@ -9,6 +9,8 @@ export function CrawlPathView({ report, projectId, projectName }: { report?: Sni
   const coverage = useMemo(() => buildCrawlCoverage(report), [report])
   const [screenshot, setScreenshot] = useState<ScreenshotContext | null>(null)
   const errors = [...(report?.crawlGraph?.consoleErrors ?? []), ...(report?.crawlGraph?.networkFailures ?? [])]
+  const runtimeCoverage = report?.crawlGraph?.runtimeGraphCoverage
+  const observations = report?.crawlGraph?.runtimeObservations ?? report?.crawlGraph?.runtimeGraph?.observations ?? []
   return (
     <section className="page-stack" data-testid="crawl-path-view">
       <ReportContextStrip report={report} projectId={projectId} projectName={projectName} />
@@ -23,7 +25,43 @@ export function CrawlPathView({ report, projectId, projectName }: { report?: Sni
         <Metric label="Workflows exercised" value={`${coverage.workflowsExercised}/${coverage.workflowsDiscovered}`} />
         <Metric label="Scenarios" value={`${coverage.scenariosPassed} passed / ${coverage.scenariosFailed} failed`} tone={coverage.scenariosFailed ? 'danger' : 'good'} />
         <Metric label="Skipped safe actions" value={coverage.safeActionsSkipped.length} tone={coverage.safeActionsSkipped.length ? 'warn' : 'good'} />
+        <Metric label="Crawl mode" value={runtimeCoverage?.crawlMode ?? report?.crawlGraph?.crawlMode ?? 'safe'} />
+        <Metric label="Runtime edges" value={runtimeCoverage?.edgesExplored ?? report?.crawlGraph?.actions?.length ?? 0} />
+        <Metric label="Live observations" value={runtimeCoverage?.dynamicObservationsCaptured ?? observations.length} tone={observations.length ? 'good' : 'muted'} />
       </section>
+      {runtimeCoverage && (
+        <section className="card-panel">
+          <div className="section-heading compact">
+            <div>
+              <p className="eyebrow">Runtime Graph Coverage</p>
+              <h2>Frontier and live observation status</h2>
+            </div>
+            <span className={`status-chip ${runtimeCoverage.frontierExhausted ? 'good' : 'warn'}`}>{runtimeCoverage.frontierExhausted ? 'frontier exhausted' : 'frontier remaining'}</span>
+          </div>
+          <div className="chip-row">
+            <span className="status-chip muted">states {runtimeCoverage.statesDiscovered}</span>
+            <span className="status-chip muted">edges {runtimeCoverage.edgesExplored}</span>
+            <span className="status-chip muted">unvisited {runtimeCoverage.unvisitedSafeActions}</span>
+            <span className="status-chip muted">long-running executed {runtimeCoverage.longRunningActionsExecuted}</span>
+            <span className="status-chip muted">long-running skipped {runtimeCoverage.longRunningActionsSkipped}</span>
+            <span className="status-chip muted">live windows {runtimeCoverage.liveObservationWindows}</span>
+          </div>
+        </section>
+      )}
+      {observations.length > 0 && (
+        <section className="card-panel">
+          <p className="eyebrow">Runtime Observations</p>
+          <h2>Dynamic output and status changes</h2>
+          <ul className="evidence-list">
+            {observations.slice(0, 20).map((observation) => (
+              <li key={observation.id}>
+                <strong>{observation.kind}</strong>: {observation.text}
+                {observation.actionId ? ` · ${observation.actionId}` : ''}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
       <section className="card-panel">
         <div className="coverage-grid">
           <RouteList title="Source routes" routes={coverage.sourceRoutes} empty="No source routes inferred." />

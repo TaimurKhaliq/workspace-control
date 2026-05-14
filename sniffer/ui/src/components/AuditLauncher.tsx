@@ -90,12 +90,14 @@ export function AuditLauncher({
               auditDepth: auditDepth as 'fast' | 'deep',
               provider: auditDepth === 'deep' ? 'openai-compatible' : 'auto',
               productExperienceCritic: auditDepth === 'deep' ? 'llm' : 'deterministic',
+              crawlMode: auditDepth === 'deep' ? 'deep' : 'safe',
               scenario: 'all',
               executeGeneratedScenarios: true
             })}
           />
           <Select label="Discovery mode" value={form.discoveryMode} values={['hybrid', 'runtime', 'source']} onChange={(discoveryMode) => onChange({ discoveryMode })} />
           <Select label="Scenario mode" value={form.scenario} values={['auto', 'off', 'all']} onChange={(scenario) => onChange({ scenario })} />
+          <Select label="Crawl mode" value={form.crawlMode} values={['safe', 'deep', 'live']} onChange={(crawlMode) => onChange({ crawlMode: crawlMode as 'safe' | 'deep' | 'live' })} />
           <label className="checkbox-line">
             <input
               type="checkbox"
@@ -103,6 +105,14 @@ export function AuditLauncher({
               onChange={(event) => onChange({ executeGeneratedScenarios: event.target.checked })}
             />
             Execute generated scenarios
+          </label>
+          <label className="checkbox-line">
+            <input
+              type="checkbox"
+              checked={form.allowLongRunningActions}
+              onChange={(event) => onChange({ allowLongRunningActions: event.target.checked })}
+            />
+            Allow long-running actions
           </label>
           <Select label="Critic mode" value={form.criticMode} values={['deterministic', 'llm', 'auto']} onChange={(criticMode) => onChange({ criticMode })} />
           <Select label="UX critic" value={form.uxCritic} values={['off', 'deterministic', 'llm']} onChange={(uxCritic) => onChange({ uxCritic })} />
@@ -119,6 +129,40 @@ export function AuditLauncher({
               onChange={(event) => onChange({ maxIterations: Number(event.target.value) })}
             />
           </label>
+          <label>
+            Max crawl depth
+            <input
+              type="number"
+              min={1}
+              max={12}
+              value={form.maxDepth}
+              onChange={(event) => onChange({ maxDepth: Number(event.target.value) })}
+            />
+          </label>
+          {form.crawlMode === 'live' && (
+            <>
+              <label>
+                Live observe ms
+                <input
+                  type="number"
+                  min={500}
+                  max={60000}
+                  value={form.liveObserveMs}
+                  onChange={(event) => onChange({ liveObserveMs: Number(event.target.value) })}
+                />
+              </label>
+              <label>
+                Live poll ms
+                <input
+                  type="number"
+                  min={100}
+                  max={5000}
+                  value={form.livePollMs}
+                  onChange={(event) => onChange({ livePollMs: Number(event.target.value) })}
+                />
+              </label>
+            </>
+          )}
           <label className="checkbox-line">
             <input
               type="checkbox"
@@ -179,9 +223,16 @@ export function buildAuditCommandPreview(form: AuditForm): string {
   else args.push('--repo', form.repoPath || '<repo>', '--url', form.url || '<url>')
   args.push(
     '--discovery-mode', form.discoveryMode || 'hybrid',
-    '--scenario', form.scenario || 'all'
+    '--scenario', form.scenario || 'all',
+    '--crawl-mode', form.crawlMode || 'safe'
   )
   if (form.executeGeneratedScenarios) args.push('--execute-generated-scenarios')
+  if (form.allowLongRunningActions) args.push('--allow-long-running-actions')
+  if (form.maxDepth) args.push('--max-depth', String(form.maxDepth))
+  if (form.crawlMode === 'live') {
+    args.push('--live-observe-ms', String(form.liveObserveMs ?? 10000))
+    args.push('--live-poll-ms', String(form.livePollMs ?? 500))
+  }
   args.push(
     '--critic-mode', form.criticMode || 'deterministic',
     '--ux-critic', form.uxCritic || 'deterministic',

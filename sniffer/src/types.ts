@@ -608,14 +608,140 @@ export interface CrawlGraph {
   startUrl: string
   title: string
   finalUrl: string
+  crawlMode?: CrawlMode
   states: CrawlState[]
   actions: CrawlAction[]
   unvisitedSafeActions?: SkippedSafeAction[]
   coverage?: CrawlCoverage
+  runtimeGraph?: RuntimeGraph
+  runtimeObservations?: RuntimeObservation[]
+  runtimeGraphCoverage?: RuntimeGraphCoverage
   consoleErrors: RuntimeMessage[]
   networkFailures: NetworkFailure[]
   screenshots: string[]
   generatedAt: string
+}
+
+export type CrawlMode = 'safe' | 'deep' | 'live'
+export type FrontierStrategy = 'priority' | 'bfs'
+export type RuntimeActionCategory =
+  | 'navigation'
+  | 'tab'
+  | 'modal'
+  | 'form_input'
+  | 'copy'
+  | 'generate'
+  | 'run_audit'
+  | 'repair'
+  | 'verify'
+  | 'refresh'
+  | 'submit'
+  | 'apply_fix'
+  | 'unknown'
+
+export type RuntimeObservationKind =
+  | 'dom_mutation'
+  | 'text_change'
+  | 'status_change'
+  | 'log_added'
+  | 'network_response'
+  | 'console_error'
+  | 'spinner_started'
+  | 'spinner_stopped'
+  | 'output_generated'
+  | 'mismatch_detected'
+
+export interface RuntimeStateNode {
+  id: string
+  url: string
+  route?: string
+  inferredScreenName?: string
+  pageType?: string
+  domSignature: string
+  textSignature: string
+  controlSignature: string
+  screenshotPath?: string
+  timestamp: string
+  parentActionId?: string
+  depth: number
+  visitCount: number
+  observedDuringRunId?: string
+}
+
+export interface RuntimeActionEdge {
+  id: string
+  fromStateId: string
+  toStateId?: string
+  actionLabel: string
+  actionKind: 'click' | 'type' | 'open' | 'close' | 'skip'
+  locator?: string
+  safe: boolean
+  actionCategory: RuntimeActionCategory
+  startedAt: string
+  endedAt?: string
+  changedUrl?: boolean
+  changedDom?: boolean
+  changedText?: boolean
+  changedControls?: boolean
+  producedConsoleErrors?: number
+  producedNetworkFailures?: number
+  producedRuntimeObservations?: string[]
+  screenshotBefore?: string
+  screenshotAfter?: string
+}
+
+export interface RuntimeObservation {
+  id: string
+  stateId: string
+  actionId?: string
+  kind: RuntimeObservationKind
+  text: string
+  selector?: string
+  context?: string
+  timestamp: string
+  screenshotPath?: string
+}
+
+export interface ActionFrontierItem {
+  id: string
+  stateId: string
+  stateHash: string
+  actionKey: string
+  label: string
+  locatorUsed: string
+  actionCategory: RuntimeActionCategory
+  priority: number
+  depth: number
+  path: RuntimePathStep[]
+  reason?: string
+}
+
+export interface RuntimePathStep {
+  label: string
+  role?: string
+  actionType: 'click' | 'type'
+  selectorHint?: string
+  target?: string
+}
+
+export interface RuntimeGraph {
+  nodes: RuntimeStateNode[]
+  edges: RuntimeActionEdge[]
+  observations: RuntimeObservation[]
+  unresolvedFrontier: ActionFrontierItem[]
+}
+
+export interface RuntimeGraphCoverage {
+  crawlMode: CrawlMode
+  statesDiscovered: number
+  edgesExplored: number
+  frontierExhausted: boolean
+  maxDepthReached: boolean
+  unvisitedSafeActions: number
+  longRunningActionsSkipped: number
+  longRunningActionsExecuted: number
+  dynamicObservationsCaptured: number
+  liveObservationWindows: number
 }
 
 export type DiscoveryMode = 'source' | 'runtime' | 'hybrid'
@@ -838,6 +964,14 @@ export interface CrawlState {
   inferredScreenName?: string
   inferredPageType?: string
   screenshotPath?: string
+  timestamp?: string
+  parentActionId?: string
+  depth?: number
+  visitCount?: number
+  observedDuringRunId?: string
+  domSignature?: string
+  textSignature?: string
+  controlSignature?: string
   visibleControlSummary?: VisibleControlSummary
   primaryVisibleText?: string[]
   matchedSourceWorkflows?: string[]
@@ -870,11 +1004,21 @@ export interface CrawlAction {
   role?: string
   locatorUsed?: string
   target: string
+  actionCategory?: RuntimeActionCategory
   urlBefore: string
   urlAfter?: string
+  startedAt?: string
+  endedAt?: string
   stateHashBefore?: string
   stateHashAfter?: string
   changedState?: boolean
+  changedUrl?: boolean
+  changedDom?: boolean
+  changedText?: boolean
+  changedControls?: boolean
+  producedConsoleErrors?: number
+  producedNetworkFailures?: number
+  producedRuntimeObservations?: string[]
   safe: boolean
   safeReason?: string
   skipped?: boolean

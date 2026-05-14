@@ -415,6 +415,18 @@ async function main(): Promise<void> {
       activeCrawlGraph = mergeScenarioTracesIntoCrawlGraph(activeCrawlGraph, scenarioRuns)
       emitProgress('phase_completed', 'scenario execution', `Generated scenario execution completed with ${executedGenericRuns.length} run(s).`)
     }
+    if (scenarioRuns.length > 0) {
+      candidateIssues = classifyRuntimeIssues(runtimeValidationSourceGraph, activeCrawlGraph, runtimeWorkflowVerifications, scenarioRuns)
+      critic = await critiqueFindings({
+        sourceGraph: runtimeValidationSourceGraph,
+        crawlGraph: activeCrawlGraph,
+        workflowVerifications: runtimeWorkflowVerifications,
+        candidateIssues,
+        appUrl: url,
+        mode: criticMode,
+        provider: criticProvider
+      })
+    }
     emitProgress('phase_started', 'product experience critic', 'Running Product Experience Critic.')
     const productExperiencePreflight = productExperienceMode === 'llm'
       ? await productExperienceProviderPreflight(provider)
@@ -945,11 +957,22 @@ function shouldExecuteGeneratedScenarios(args: Record<string, string | boolean>,
 }
 
 function crawlOptions(args: Record<string, string | boolean>, reportDir: string) {
+  const crawlMode = typeof args['crawl-mode'] === 'string' && ['safe', 'deep', 'live'].includes(args['crawl-mode'])
+    ? args['crawl-mode'] as 'safe' | 'deep' | 'live'
+    : undefined
+  const frontierStrategy = typeof args['frontier-strategy'] === 'string' && ['priority', 'bfs'].includes(args['frontier-strategy'])
+    ? args['frontier-strategy'] as 'priority' | 'bfs'
+    : undefined
   return {
     reportDir,
+    crawlMode,
+    allowLongRunningActions: boolArg(args, 'allow-long-running-actions'),
+    liveObserveMs: numberArg(args, 'live-observe-ms'),
+    livePollMs: numberArg(args, 'live-poll-ms'),
     maxActions: numberArg(args, 'max-actions'),
     maxStates: numberArg(args, 'max-states'),
     maxDepth: numberArg(args, 'max-depth'),
+    frontierStrategy,
     maxPerRoute: numberArg(args, 'max-per-route'),
     maxDuplicateActions: numberArg(args, 'max-duplicate-actions')
   }
@@ -1142,8 +1165,8 @@ Commands:
   sniffer agent repair --project <id> | --report <latest_report.json> [--issue <issue_id>] [--agent manual|codex] [--max-retries 1] [--auto-approve] [--dry-run]
   sniffer inspect-url --url <url> | --project <id>
   sniffer discover --repo <path> | --project <id> [--include-test-sources|--include-tests] [--include-fixtures] [--graph-refiner off|llm|auto] [--provider mock|openai-compatible|auto]
-  sniffer crawl --url <url> | --project <id> [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
-  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--include-test-sources|--include-tests] [--include-fixtures] [--consistency-check] [--consistency-prompts built-in|path] [--graph-refiner off|llm|auto] [--ux-critic off|deterministic|llm] [--product-experience-critic off|llm|deterministic|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
+  sniffer crawl --url <url> | --project <id> [--crawl-mode safe|deep|live] [--allow-long-running-actions] [--live-observe-ms 10000] [--live-poll-ms 500] [--max-depth 4] [--frontier-strategy priority|bfs] [--max-actions 36] [--max-states 24] [--max-per-route 8] [--max-duplicate-actions 1]
+  sniffer audit --repo <path> --url <url> | --project <id> [--discovery-mode source|runtime|hybrid] [--scenario all|auto|generate-plan-bundle|review-plan-output|prompt-output-consistency] [--execute-generated-scenarios] [--crawl-mode safe|deep|live] [--allow-long-running-actions] [--live-observe-ms 10000] [--live-poll-ms 500] [--max-depth 4] [--frontier-strategy priority|bfs] [--include-test-sources|--include-tests] [--include-fixtures] [--consistency-check] [--consistency-prompts built-in|path] [--graph-refiner off|llm|auto] [--ux-critic off|deterministic|llm] [--product-experience-critic off|llm|deterministic|auto] [--intent-mode deterministic|llm|auto] [--product-goal "<text>"] [--use-llm] [--provider mock|openai-compatible|auto] [--critic-mode deterministic|llm|auto] [--max-iterations 0] [--max-actions 36] [--max-states 24]
   sniffer generate-fixes --report <path>
   sniffer repair-proof --issue <issue_id> --report <path> --agent manual
   sniffer apply-fix [--issue <issue_id>] [--report <path>] [--agent manual|mock|codex]

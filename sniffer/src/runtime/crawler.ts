@@ -1,7 +1,25 @@
 import { chromium, type Page } from 'playwright'
 import { mkdir } from 'node:fs/promises'
 import path from 'node:path'
-import type { CrawlAction, CrawlGraph, CrawlState, NetworkFailure, RuntimeMessage, SkippedSafeAction, VisibleControlSummary, VisibleElement } from '../types.js'
+import type {
+  ActionFrontierItem,
+  CrawlAction,
+  CrawlGraph,
+  CrawlMode,
+  CrawlState,
+  FrontierStrategy,
+  NetworkFailure,
+  RuntimeActionCategory,
+  RuntimeActionEdge,
+  RuntimeGraph,
+  RuntimeGraphCoverage,
+  RuntimeMessage,
+  RuntimeObservation,
+  RuntimeStateNode,
+  SkippedSafeAction,
+  VisibleControlSummary,
+  VisibleElement
+} from '../types.js'
 import { hashState } from '../graph/stateHash.js'
 import { classifyActionSafety } from './safeActions.js'
 
@@ -29,6 +47,7 @@ const navRouteByLabel = new Map([
 ])
 
 export interface CrawlOptions {
+  crawlMode?: CrawlMode
   maxDepth?: number
   maxActions?: number
   maxStates?: number
@@ -36,6 +55,10 @@ export interface CrawlOptions {
   maxDuplicateActions?: number
   staleIterations?: number
   timeBudgetMs?: number
+  allowLongRunningActions?: boolean
+  liveObserveMs?: number
+  livePollMs?: number
+  frontierStrategy?: FrontierStrategy
   reportDir: string
 }
 
@@ -61,9 +84,15 @@ export interface CrawlFrontierContext {
   maxDuplicateActions: number
   allowedOrigin?: string
   allowExternalOrigins?: boolean
+  crawlMode?: CrawlMode
+  allowLongRunningActions?: boolean
 }
 
 export async function crawlApp(url: string, options: CrawlOptions): Promise<CrawlGraph> {
+  const crawlMode = options.crawlMode ?? 'safe'
+  if (crawlMode === 'deep' || crawlMode === 'live') {
+    return crawlAppWithRuntimeGraph(url, { ...options, crawlMode })
+  }
   const maxActions = options.maxActions ?? 36
   const maxStates = options.maxStates ?? Math.max(12, Math.min(maxActions, 24))
   const maxPerRoute = options.maxPerRoute ?? 8
@@ -158,7 +187,9 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
         routeVisitCounts,
         maxPerRoute,
         maxDuplicateActions,
-        allowedOrigin: new URL(url).origin
+        allowedOrigin: new URL(url).origin,
+        crawlMode: 'safe',
+        allowLongRunningActions: options.allowLongRunningActions
       })
       recordSkippedFrontier(captured, candidates.skipped, unvisitedSafeActions)
       const candidate = candidates.next
@@ -243,6 +274,7 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
     startUrl: url,
     title: await safePageTitle(page),
     finalUrl: safePageUrl(page, url),
+    crawlMode: 'safe',
     states,
     actions,
     unvisitedSafeActions,
@@ -263,6 +295,599 @@ export async function crawlApp(url: string, options: CrawlOptions): Promise<Craw
     generatedAt: new Date().toISOString()
   }
 
+  await browser.close().catch(() => undefined)
+  return graph
+}
+
+async function captureAndRegisterState(page: Page, context: RuntimeGraphContext, parentActionId: string | undefined, depth: number): Promise<CrawlState> {
+  const captured = applyRouteHint(await withTimeout(captureState(page), 5_000, 'state capture timed out'), context.routeHintsByStateHash)
+  return registerCapturedState(page, captured, context, parentActionId, depth)
+}
+
+async function registerCapturedState(page: Page, captured: CrawlState, context: RuntimeGraphContext, parentActionId: string | undefined, depth: number): Promise<CrawlState> {
+  const existing = context.stateByHash.get(captured.hash)
+  if (existing) {
+    existing.duplicateCount = (existing.duplicateCount ?? 1) + 1
+    existing.visitCount = (existing.visitCount ?? 1) + 1
+    const node = context.runtimeGraph.nodes.find((item) => item.id === existing.id)
+    if (node) node.visitCount += 1
+    return existing
+  }
+  captured.id = `state-${context.states.length + 1}`
+  captured.sequenceNumber = context.states.length + 1
+  captured.duplicateCount = 1
+  captured.visitCount = 1
+  captured.depth = depth
+  captured.parentActionId = parentActionId
+  captured.timestamp = captured.timestamp ?? new Date().toISOString()
+  const screenshotPath = await captureScreenshot(page, context, `state-${context.states.length + 1}.png`)
+  if (screenshotPath) captured.screenshotPath = screenshotPath
+  context.states.push(captured)
+  context.stateByHash.set(captured.hash, captured)
+  context.routeVisitCounts.set(stateRouteKey(captured), (context.routeVisitCounts.get(stateRouteKey(captured)) ?? 0) + 1)
+  context.runtimeGraph.nodes.push(runtimeNodeFromState(captured, parentActionId, depth))
+  return captured
+}
+
+async function captureScreenshot(page: Page, context: RuntimeGraphContext, fileName: string): Promise<string | undefined> {
+  const screenshotPath = path.join(context.screenshotsDir, fileName)
+  const captured = await page.screenshot({ path: screenshotPath, fullPage: true, timeout: 5_000 }).then(() => true).catch(() => false)
+  if (!captured) return undefined
+  if (!context.screenshots.includes(screenshotPath)) context.screenshots.push(screenshotPath)
+  return screenshotPath
+}
+
+function runtimeNodeFromState(state: CrawlState, parentActionId: string | undefined, depth: number): RuntimeStateNode {
+  return {
+    id: state.id ?? state.hash,
+    url: state.url,
+    route: state.hashRoute,
+    inferredScreenName: state.inferredScreenName,
+    pageType: state.inferredPageType,
+    domSignature: state.domSignature ?? state.hash,
+    textSignature: state.textSignature ?? state.hash,
+    controlSignature: state.controlSignature ?? state.hash,
+    screenshotPath: state.screenshotPath,
+    timestamp: state.timestamp ?? new Date().toISOString(),
+    parentActionId,
+    depth,
+    visitCount: state.visitCount ?? 1,
+    observedDuringRunId: state.observedDuringRunId
+  }
+}
+
+function enqueueCandidates(state: CrawlState, parentPath: DeepFrontierItem['path'], context: RuntimeGraphContext, options: CrawlOptions & { crawlMode: 'deep' | 'live' }): DeepFrontierItem[] {
+  const candidates = buildCrawlCandidatesForFrontier(state, {
+    attemptedActionKeys: context.attemptedActionKeys,
+    ineffectiveActionKeys: context.ineffectiveActionKeys,
+    routeVisitCounts: context.routeVisitCounts,
+    maxPerRoute: context.maxPerRoute,
+    maxDuplicateActions: context.maxDuplicateActions,
+    allowedOrigin: context.allowedOrigin,
+    crawlMode: options.crawlMode,
+    allowLongRunningActions: options.allowLongRunningActions
+  }, context.unvisitedSafeActions)
+  const pathPrefix = parentPath.length ? parentPath : []
+  return candidates.map((candidate, index) => ({
+    id: `frontier-${state.id}-${index}-${slug(candidate.label)}`,
+    stateId: state.id ?? state.hash,
+    stateHash: state.hash,
+    actionKey: candidate.actionKey,
+    label: candidate.label,
+    locatorUsed: candidate.locatorUsed,
+    actionCategory: categorizeAction(candidate.label, candidate.role),
+    priority: candidate.priority,
+    depth: (state.depth ?? 0) + 1,
+    path: [...pathPrefix, pathStepFromCandidate(candidate)],
+    candidate,
+    reason: candidate.safeReason
+  }))
+}
+
+function buildCrawlCandidatesForFrontier(state: CrawlState, context: CrawlFrontierContext, skippedSink: SkippedSafeAction[]): CrawlCandidate[] {
+  const skipped: SkippedSafeAction[] = []
+  const candidates = state.visible
+    .map((element) => candidateFromElement(state, element, context, skipped))
+    .filter(Boolean) as CrawlCandidate[]
+  recordSkippedFrontier(state, skipped, skippedSink)
+  return candidates
+}
+
+function sortFrontier(frontier: DeepFrontierItem[], strategy: FrontierStrategy): DeepFrontierItem[] {
+  if (strategy === 'bfs') return frontier.sort((a, b) => a.depth - b.depth || b.priority - a.priority)
+  return frontier.sort((a, b) => b.priority - a.priority || a.depth - b.depth || a.label.localeCompare(b.label))
+}
+
+function pathStepFromCandidate(candidate: CrawlCandidate) {
+  return {
+    label: candidate.label,
+    role: candidate.role,
+    actionType: candidate.actionType,
+    selectorHint: candidate.element.selectorHint,
+    target: candidate.target
+  }
+}
+
+async function replayPath(page: Page, startUrl: string, pathSteps: DeepFrontierItem['path'], options: CrawlOptions): Promise<{ ok: boolean; reason?: string }> {
+  await page.goto(startUrl, { waitUntil: 'domcontentloaded', timeout: 10_000 }).catch((error) => {
+    throw new Error(`reload failed: ${errorMessage(error)}`)
+  })
+  await page.waitForLoadState('networkidle', { timeout: 1_000 }).catch(() => undefined)
+  if (options.crawlMode === 'live') await installRuntimeMutationObserver(page)
+  for (const step of pathSteps) {
+    const element: VisibleElement = {
+      kind: step.role === 'link' ? 'link' : step.role === 'tab' ? 'tab' : step.actionType === 'type' ? 'input' : 'button',
+      text: step.label,
+      name: step.label,
+      selectorHint: step.selectorHint
+    }
+    try {
+      if (step.actionType === 'type') await typeCandidate(page, element)
+      else await clickCandidate(page, element)
+      await page.waitForLoadState('domcontentloaded', { timeout: 1_500 }).catch(() => undefined)
+      await page.waitForTimeout(100)
+    } catch (error) {
+      return { ok: false, reason: `${step.label}: ${errorMessage(error)}` }
+    }
+  }
+  return { ok: true }
+}
+
+async function recordSkippedAction(
+  item: DeepFrontierItem,
+  sourceState: CrawlState,
+  context: RuntimeGraphContext,
+  reason: string,
+  details?: { sequenceNumber: number; urlBefore: string; stateHashBefore: string; screenshotBefore?: string; actionId: string; startedAt: string }
+): Promise<void> {
+  const sequenceNumber = details?.sequenceNumber ?? context.actions.length + 1
+  context.actions.push({
+    id: details?.actionId ?? `action-${sequenceNumber}`,
+    sequenceNumber,
+    type: 'skip',
+    actionType: 'skip',
+    label: item.label,
+    role: item.candidate.role,
+    locatorUsed: item.locatorUsed,
+    target: item.candidate.target,
+    actionCategory: item.actionCategory,
+    urlBefore: details?.urlBefore ?? sourceState.url,
+    startedAt: details?.startedAt ?? new Date().toISOString(),
+    endedAt: new Date().toISOString(),
+    stateHashBefore: details?.stateHashBefore ?? sourceState.hash,
+    safe: true,
+    safeReason: item.candidate.safeReason,
+    skipped: true,
+    skippedReason: reason,
+    screenshotBefore: details?.screenshotBefore ?? sourceState.screenshotPath,
+    reason
+  })
+}
+
+async function installRuntimeMutationObserver(page: Page): Promise<void> {
+  await page.evaluate(`(() => {
+    if (window.__snifferMutationObserverInstalled) return;
+    window.__snifferMutations = [];
+    const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim().slice(0, 300);
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        const target = mutation.target instanceof HTMLElement ? mutation.target : mutation.target?.parentElement;
+        const text = normalize(target?.innerText || target?.textContent || '');
+        if (!text) continue;
+        window.__snifferMutations.push({
+          text,
+          selector: target?.getAttribute('data-testid') || target?.getAttribute('role') || target?.tagName?.toLowerCase() || 'node',
+          timestamp: new Date().toISOString()
+        });
+      }
+      window.__snifferMutations = window.__snifferMutations.slice(-80);
+    });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
+    window.__snifferMutationObserverInstalled = true;
+  })()`).catch(() => undefined)
+}
+
+async function observeLiveWindow(page: Page, edge: RuntimeActionEdge, before: CrawlState, context: RuntimeGraphContext, options: CrawlOptions): Promise<RuntimeObservation[]> {
+  context.liveObservationWindows += 1
+  await installRuntimeMutationObserver(page)
+  const observeMs = Math.max(0, options.liveObserveMs ?? 10_000)
+  const pollMs = Math.max(100, options.livePollMs ?? 500)
+  const deadline = Date.now() + observeMs
+  const observations: RuntimeObservation[] = []
+  let lastDigest = await liveDigest(page)
+  let stablePolls = 0
+  while (Date.now() < deadline) {
+    await page.waitForTimeout(pollMs)
+    const digest = await liveDigest(page)
+    const kind = classifyObservation(lastDigest, digest)
+    if (kind) {
+      stablePolls = 0
+      const screenshotPath = observations.length < 4 ? await captureScreenshot(page, context, `live-${edge.id}-${observations.length + 1}.png`) : undefined
+      const observation: RuntimeObservation = {
+        id: `obs-${context.runtimeGraph.observations.length + observations.length + 1}`,
+        stateId: edge.fromStateId,
+        actionId: edge.id,
+        kind,
+        text: observationText(kind, lastDigest, digest),
+        selector: digest.lastMutationSelector,
+        timestamp: new Date().toISOString(),
+        screenshotPath
+      }
+      observations.push(observation)
+      context.runtimeGraph.observations.push(observation)
+      lastDigest = digest
+    } else {
+      stablePolls += 1
+    }
+    if (stablePolls >= 4 || terminalStatusDetected(digest.text)) break
+  }
+  if (observations.length === 0 && before.textSignature !== lastDigest.signature) {
+    const observation: RuntimeObservation = {
+      id: `obs-${context.runtimeGraph.observations.length + 1}`,
+      stateId: edge.fromStateId,
+      actionId: edge.id,
+      kind: 'text_change',
+      text: 'Visible text changed during live observation.',
+      timestamp: new Date().toISOString()
+    }
+    observations.push(observation)
+    context.runtimeGraph.observations.push(observation)
+  }
+  return observations
+}
+
+interface LiveDigest {
+  signature: string
+  text: string
+  statusText: string
+  logText: string
+  spinnerVisible: boolean
+  mutationCount: number
+  lastMutationText?: string
+  lastMutationSelector?: string
+}
+
+async function liveDigest(page: Page): Promise<LiveDigest> {
+  const value = await page.evaluate(`(() => {
+    const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();
+    const textFor = (selector) => Array.from(document.querySelectorAll(selector)).map((el) => normalize(el.textContent || '')).filter(Boolean).join(' | ').slice(0, 1200);
+    const statusText = textFor('[role="status"],[role="alert"],[aria-live],.status,.alert,.error,.success,.toast,[data-testid*="status"]');
+    const logText = textFor('[role="log"],pre,code,.log,[data-testid*="log"],[data-testid*="output"]');
+    const text = normalize(document.body?.innerText || '').slice(0, 2200);
+    const spinnerVisible = Array.from(document.querySelectorAll('[role="progressbar"],.spinner,.loading,[aria-busy="true"],[data-testid*="loading"]')).some((el) => {
+      const rect = el.getBoundingClientRect();
+      const style = getComputedStyle(el);
+      return rect.width > 0 && rect.height > 0 && style.display !== 'none' && style.visibility !== 'hidden';
+    });
+    const mutations = window.__snifferMutations || [];
+    const last = mutations[mutations.length - 1];
+    return { text, statusText, logText, spinnerVisible, mutationCount: mutations.length, lastMutationText: last?.text, lastMutationSelector: last?.selector };
+  })()`) as Omit<LiveDigest, 'signature'>
+  return { ...value, signature: hashState(value) }
+}
+
+function classifyObservation(before: LiveDigest, after: LiveDigest): RuntimeObservation['kind'] | undefined {
+  if (before.spinnerVisible !== after.spinnerVisible) return after.spinnerVisible ? 'spinner_started' : 'spinner_stopped'
+  if (before.statusText !== after.statusText) return 'status_change'
+  if (before.logText !== after.logText) return 'log_added'
+  if (after.mutationCount > before.mutationCount) return 'dom_mutation'
+  if (before.text !== after.text) {
+    if (/generated|created|report|result|output|artifact|fix packet/i.test(after.text) && after.text.length > before.text.length) return 'output_generated'
+    return 'text_change'
+  }
+  if (/succeeded|success|passed/i.test(after.statusText) && /failed|error|exception/i.test(after.logText)) return 'mismatch_detected'
+  return undefined
+}
+
+function observationText(kind: RuntimeObservation['kind'], before: LiveDigest, after: LiveDigest): string {
+  if (kind === 'status_change') return `Status changed: ${before.statusText || '(empty)'} -> ${after.statusText || '(empty)'}`
+  if (kind === 'log_added') return `Log/output changed: ${after.logText.slice(0, 500)}`
+  if (kind === 'spinner_started') return 'Loading/progress indicator appeared.'
+  if (kind === 'spinner_stopped') return 'Loading/progress indicator disappeared.'
+  if (kind === 'mismatch_detected') return `Status/log mismatch: status="${after.statusText}" log="${after.logText.slice(0, 300)}"`
+  if (kind === 'output_generated') return `Output appeared: ${after.text.slice(0, 500)}`
+  return after.lastMutationText ?? `Visible text changed: ${after.text.slice(0, 500)}`
+}
+
+function terminalStatusDetected(text: string): boolean {
+  return /\b(succeeded|success|passed|failed|error|completed|complete|done|ready)\b/i.test(text)
+}
+
+function categorizeAction(label: string, role: string): RuntimeActionCategory {
+  const text = label.toLowerCase()
+  if (role === 'tab' || /tab|overview|details|settings/.test(text)) return 'tab'
+  if (/modal|dialog|add item|add project|create workspace|add repository/.test(text)) return 'modal'
+  if (/run audit|start audit|audit/.test(text)) return 'run_audit'
+  if (/repair|fix packet|apply fix|codex/.test(text)) return /apply/.test(text) ? 'apply_fix' : 'repair'
+  if (/verify/.test(text)) return 'verify'
+  if (/refresh|reload|sync/.test(text)) return 'refresh'
+  if (/generate|create|submit/.test(text)) return /submit/.test(text) ? 'submit' : 'generate'
+  if (/copy|export|download/.test(text)) return 'copy'
+  if (role === 'link' || /summary|projects|timeline|scenarios|crawl|workflow|issues|screenshots|graph|raw json|settings|home|next|back/.test(text)) return 'navigation'
+  if (role === 'input') return 'form_input'
+  return 'unknown'
+}
+
+function slug(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 48) || 'action'
+}
+
+interface DeepFrontierItem extends ActionFrontierItem {
+  candidate: CrawlCandidate
+}
+
+interface RuntimeGraphContext {
+  screenshotsDir: string
+  states: CrawlState[]
+  actions: CrawlAction[]
+  screenshots: string[]
+  stateByHash: Map<string, CrawlState>
+  runtimeGraph: RuntimeGraph
+  attemptedActionKeys: Set<string>
+  ineffectiveActionKeys: Map<string, number>
+  routeVisitCounts: Map<string, number>
+  unvisitedSafeActions: SkippedSafeAction[]
+  routeHintsByStateHash: Map<string, string>
+  longRunningSkipped: number
+  longRunningExecuted: number
+  liveObservationWindows: number
+  maxPerRoute: number
+  maxDuplicateActions: number
+  maxDepth: number
+  allowedOrigin: string
+  startUrl: string
+}
+
+async function crawlAppWithRuntimeGraph(url: string, options: CrawlOptions & { crawlMode: 'deep' | 'live' }): Promise<CrawlGraph> {
+  const maxActions = options.maxActions ?? 60
+  const maxStates = options.maxStates ?? Math.max(16, Math.min(maxActions + 1, 48))
+  const maxDepth = options.maxDepth ?? 4
+  const screenshotsDir = path.join(options.reportDir, 'screenshots')
+  await mkdir(screenshotsDir, { recursive: true })
+
+  const browser = await chromium.launch()
+  const page = await browser.newPage()
+  page.setDefaultTimeout(5_000)
+  page.setDefaultNavigationTimeout(10_000)
+  const consoleErrors: RuntimeMessage[] = []
+  const networkFailures: NetworkFailure[] = []
+  const deadline = Date.now() + (options.timeBudgetMs ?? 60_000)
+  const context: RuntimeGraphContext = {
+    screenshotsDir,
+    states: [],
+    actions: [],
+    screenshots: [],
+    stateByHash: new Map(),
+    runtimeGraph: { nodes: [], edges: [], observations: [], unresolvedFrontier: [] },
+    attemptedActionKeys: new Set(),
+    ineffectiveActionKeys: new Map(),
+    routeVisitCounts: new Map(),
+    unvisitedSafeActions: [],
+    routeHintsByStateHash: new Map(),
+    longRunningSkipped: 0,
+    longRunningExecuted: 0,
+    liveObservationWindows: 0,
+    maxPerRoute: options.maxPerRoute ?? 10,
+    maxDuplicateActions: options.maxDuplicateActions ?? 2,
+    maxDepth,
+    allowedOrigin: new URL(url).origin,
+    startUrl: url
+  }
+
+  page.on('console', (message) => {
+    if (message.type() === 'error') {
+      const runtimeMessage = { text: message.text(), location: message.location().url }
+      consoleErrors.push(runtimeMessage)
+      const state = context.states.at(-1)
+      if (state?.id) {
+        context.runtimeGraph.observations.push({
+          id: `obs-${context.runtimeGraph.observations.length + 1}`,
+          stateId: state.id,
+          kind: 'console_error',
+          text: message.text(),
+          context: message.location().url,
+          timestamp: new Date().toISOString()
+        })
+      }
+    }
+  })
+  page.on('requestfailed', (request) => {
+    networkFailures.push({
+      url: request.url(),
+      method: request.method(),
+      failureText: request.failure()?.errorText ?? 'request failed'
+    })
+  })
+  page.on('response', async (response) => {
+    const request = response.request()
+    if (response.ok() || !response.url().includes('/api/')) return
+    let body = ''
+    try {
+      body = (await response.text()).replace(/\s+/g, ' ').trim().slice(0, 1000)
+    } catch {
+      body = ''
+    }
+    networkFailures.push({
+      url: response.url(),
+      method: request.method(),
+      failureText: `HTTP ${response.status()} ${response.statusText()}`.trim(),
+      statusCode: response.status(),
+      responseBody: body
+    })
+  })
+
+  try {
+    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 10_000 })
+    if (options.crawlMode === 'live') await installRuntimeMutationObserver(page)
+    const initial = await captureAndRegisterState(page, context, undefined, 0)
+    let frontier = enqueueCandidates(initial, [], context, options)
+
+    while (frontier.length > 0 && context.actions.length < maxActions && context.states.length < maxStates && Date.now() < deadline) {
+      frontier = sortFrontier(frontier, options.frontierStrategy ?? 'priority')
+      const item = frontier.shift()!
+      if (item.depth > maxDepth) {
+        context.unvisitedSafeActions.push({ label: item.label, reason: `max depth ${maxDepth} reached`, stateId: item.stateId, route: routeKey(item.locatorUsed) })
+        continue
+      }
+      const sourceState = context.states.find((state) => state.id === item.stateId)
+      if (!sourceState) continue
+      if (context.attemptedActionKeys.has(item.actionKey)) continue
+      const replayed = await replayPath(page, url, item.path.slice(0, -1), options)
+      if (!replayed.ok) {
+        await recordSkippedAction(item, sourceState, context, `path replay failed: ${replayed.reason}`)
+        continue
+      }
+
+      const before = applyRouteHint(await withTimeout(captureState(page), 5_000, 'state capture timed out before deep action'), context.routeHintsByStateHash)
+      const urlBefore = safePageUrl(page, url)
+      const sequenceNumber = context.actions.length + 1
+      const actionId = `action-${sequenceNumber}`
+      const startedAt = new Date().toISOString()
+      let edge: RuntimeActionEdge = {
+        id: actionId,
+        fromStateId: sourceState.id ?? item.stateId,
+        actionLabel: item.label,
+        actionKind: item.candidate.actionType,
+        locator: item.locatorUsed,
+        safe: true,
+        actionCategory: item.actionCategory,
+        startedAt,
+        screenshotBefore: sourceState.screenshotPath
+      }
+      let crawlAction: CrawlAction | undefined
+      try {
+        if (isLongRunningToolAction(item.label)) context.longRunningExecuted += 1
+        if (item.candidate.actionType === 'type') await typeCandidate(page, item.candidate.element)
+        else await clickCandidate(page, item.candidate.element)
+        await page.waitForLoadState('domcontentloaded', { timeout: 2_000 }).catch(() => undefined)
+        await page.waitForTimeout(options.crawlMode === 'live' ? 350 : 200)
+
+        const liveObservations = options.crawlMode === 'live'
+          ? await observeLiveWindow(page, edge, before, context, options)
+          : []
+        const after = applyRouteHint(await withTimeout(captureState(page), 5_000, 'state capture timed out after deep action'), context.routeHintsByStateHash)
+        const afterState = await registerCapturedState(page, after, context, actionId, item.depth)
+        const screenshotAfterPath = await captureScreenshot(page, context, `action-${sequenceNumber}-after.png`)
+        if (screenshotAfterPath && !afterState.screenshotPath) afterState.screenshotPath = screenshotAfterPath
+
+        const changedUrl = safePageUrl(page, url) !== urlBefore
+        const changedDom = after.domSignature !== before.domSignature || after.hash !== before.hash
+        const changedText = after.textSignature !== before.textSignature
+        const changedControls = after.controlSignature !== before.controlSignature
+        const changedState = changedUrl || changedDom || changedText || changedControls
+        if (!changedState) {
+          context.ineffectiveActionKeys.set(item.candidate.ineffectiveKey, (context.ineffectiveActionKeys.get(item.candidate.ineffectiveKey) ?? 0) + 1)
+        }
+        edge = {
+          ...edge,
+          toStateId: afterState.id,
+          endedAt: new Date().toISOString(),
+          changedUrl,
+          changedDom,
+          changedText,
+          changedControls,
+          producedConsoleErrors: consoleErrors.length,
+          producedNetworkFailures: networkFailures.length,
+          producedRuntimeObservations: liveObservations.map((observation) => observation.id),
+          screenshotAfter: screenshotAfterPath
+        }
+        crawlAction = {
+          id: actionId,
+          sequenceNumber,
+          type: item.candidate.actionType,
+          actionType: item.candidate.actionType,
+          label: item.label,
+          role: item.candidate.role,
+          locatorUsed: item.locatorUsed,
+          target: item.candidate.target,
+          actionCategory: item.actionCategory,
+          urlBefore,
+          urlAfter: safePageUrl(page, url),
+          startedAt,
+          endedAt: edge.endedAt,
+          stateHashBefore: before.hash,
+          stateHashAfter: after.hash,
+          changedState,
+          changedUrl,
+          changedDom,
+          changedText,
+          changedControls,
+          producedConsoleErrors: edge.producedConsoleErrors,
+          producedNetworkFailures: edge.producedNetworkFailures,
+          producedRuntimeObservations: edge.producedRuntimeObservations,
+          safe: true,
+          safeReason: item.candidate.safeReason,
+          screenshotBefore: edge.screenshotBefore,
+          screenshotAfter: edge.screenshotAfter,
+          reason: item.candidate.safeReason
+        }
+        context.attemptedActionKeys.add(item.actionKey)
+        context.actions.push(crawlAction)
+        context.runtimeGraph.edges.push(edge)
+        if (context.states.length < maxStates) {
+          frontier.push(...enqueueCandidates(afterState, item.path, context, options))
+        }
+      } catch (error) {
+        context.attemptedActionKeys.add(item.actionKey)
+        await recordSkippedAction(item, sourceState, context, errorMessage(error), {
+          sequenceNumber,
+          urlBefore,
+          stateHashBefore: before.hash,
+          screenshotBefore: sourceState.screenshotPath,
+          actionId,
+          startedAt
+        })
+        context.runtimeGraph.edges.push({ ...edge, endedAt: new Date().toISOString() })
+      }
+    }
+    context.runtimeGraph.unresolvedFrontier = frontier.slice(0, 100).map((item) => {
+      const { candidate: _candidate, ...serializable } = item
+      return serializable
+    })
+  } catch (error) {
+    consoleErrors.push({ text: `Deep crawler failed: ${errorMessage(error)}`, location: safePageUrl(page, url) })
+  }
+
+  annotateActionStateLinks(context.states, context.actions)
+  const coverage: RuntimeGraphCoverage = {
+    crawlMode: options.crawlMode,
+    statesDiscovered: context.states.length,
+    edgesExplored: context.runtimeGraph.edges.length,
+    frontierExhausted: context.runtimeGraph.unresolvedFrontier.length === 0,
+    maxDepthReached: context.runtimeGraph.unresolvedFrontier.some((item) => item.depth >= maxDepth),
+    unvisitedSafeActions: context.unvisitedSafeActions.length,
+    longRunningActionsSkipped: context.longRunningSkipped + context.unvisitedSafeActions.filter((item) => /long-running/.test(item.reason)).length,
+    longRunningActionsExecuted: context.longRunningExecuted,
+    dynamicObservationsCaptured: context.runtimeGraph.observations.length,
+    liveObservationWindows: context.liveObservationWindows
+  }
+  const graph: CrawlGraph = {
+    startUrl: url,
+    title: await safePageTitle(page),
+    finalUrl: safePageUrl(page, url),
+    crawlMode: options.crawlMode,
+    states: context.states,
+    actions: context.actions,
+    unvisitedSafeActions: context.unvisitedSafeActions,
+    coverage: {
+      sourceRoutes: [],
+      visitedRoutes: unique(context.states.map((state) => state.hashRoute ?? routeKey(state.url))),
+      missedRoutes: [],
+      workflowsDiscovered: 0,
+      workflowsExercised: 0,
+      scenariosPassed: 0,
+      scenariosFailed: 0,
+      scenariosSkipped: 0,
+      safeActionsSkipped: context.unvisitedSafeActions
+    },
+    runtimeGraph: context.runtimeGraph,
+    runtimeObservations: context.runtimeGraph.observations,
+    runtimeGraphCoverage: coverage,
+    consoleErrors,
+    networkFailures,
+    screenshots: context.screenshots,
+    generatedAt: new Date().toISOString()
+  }
   await browser.close().catch(() => undefined)
   return graph
 }
@@ -351,15 +976,52 @@ export async function captureState(page: Page): Promise<CrawlState> {
     return elements;
   })()`) as VisibleElement[]
 
-  const hashPayload = {
-    url: page.url(),
-    title: await page.title(),
-    visible: visible.map(({ kind, text, name, href, type }) => ({ kind, text, name, href, type }))
-  }
   const primaryVisibleText = await page.evaluate(`(() => {
     const text = (document.body?.innerText || '').replace(/\\s+/g, ' ').trim();
     return text ? text.split(/(?<=[.!?])\\s+|\\n+/).map((item) => item.trim()).filter(Boolean).slice(0, 12) : [];
   })()`) as string[]
+  const dynamic = await page.evaluate(`(() => {
+    const normalize = (value) => (value || '').replace(/\\s+/g, ' ').trim();
+    const pickText = (selector) => Array.from(document.querySelectorAll(selector))
+      .map((el) => normalize(el.textContent || ''))
+      .filter(Boolean)
+      .slice(0, 12);
+    const headings = pickText('h1,h2,h3,[role="heading"]');
+    const statusText = pickText('[role="status"],[role="alert"],[role="log"],[aria-live],.status,.alert,.error,.success,.toast,.log,[data-testid*="status"],[data-testid*="log"],[data-testid*="output"]');
+    const selected = Array.from(document.querySelectorAll('[aria-selected="true"],[aria-current],.active,[data-active="true"]'))
+      .map((el) => normalize(el.textContent || el.getAttribute('aria-label') || el.getAttribute('data-testid') || ''))
+      .filter(Boolean)
+      .slice(0, 12);
+    const dataTestIds = Array.from(document.querySelectorAll('[data-testid]'))
+      .map((el) => String(el.getAttribute('data-testid') || '') + ':' + normalize(el.textContent || '').slice(0, 80))
+      .filter(Boolean)
+      .slice(0, 80);
+    const bodyText = normalize(document.body?.innerText || '').slice(0, 2500);
+    return { headings, statusText, selected, dataTestIds, bodyText };
+  })()`) as {
+    headings: string[]
+    statusText: string[]
+    selected: string[]
+    dataTestIds: string[]
+    bodyText: string
+  }
+  const controlSignature = hashState({
+    visible: visible.map(({ kind, text, name, href, type }) => ({ kind, text, name, href, type }))
+  })
+  const textSignature = hashState({
+    text: primaryVisibleText,
+    bodyText: dynamic.bodyText,
+    headings: dynamic.headings,
+    statusText: dynamic.statusText,
+    selected: dynamic.selected,
+    dataTestIds: dynamic.dataTestIds
+  })
+  const hashPayload = {
+    url: page.url(),
+    title: await page.title(),
+    controlSignature,
+    textSignature
+  }
   const hashRoute = routeKey(page.url())
   const inferred = inferScreen(page.url(), visible, primaryVisibleText)
 
@@ -369,6 +1031,10 @@ export async function captureState(page: Page): Promise<CrawlState> {
     title: await page.title(),
     hash: hashState(hashPayload),
     stateHash: hashState(hashPayload),
+    domSignature: hashState(hashPayload),
+    textSignature,
+    controlSignature,
+    timestamp: new Date().toISOString(),
     inferredScreenName: inferred.name,
     inferredPageType: inferred.pageType,
     visibleControlSummary: summarizeVisibleControls(visible),
@@ -426,8 +1092,20 @@ function candidateFromElement(state: CrawlState, element: VisibleElement, contex
   const clickable = element.kind === 'link' || element.kind === 'tab' || element.kind === 'button'
   if (!wantsTyping && !clickable) return undefined
   if (isLongRunningToolAction(label)) {
-    skipped.push({ label, reason: 'long-running tool action skipped during passive crawl', stateId: state.id, route: state.hashRoute })
-    return undefined
+    const mode = context.crawlMode ?? 'safe'
+    const allowedInMode = (mode === 'deep' || mode === 'live') && Boolean(context.allowLongRunningActions)
+    const destructive = /delete|remove|destroy|drop|wipe|clear all|production/i.test(label)
+    if (!allowedInMode || destructive) {
+      skipped.push({
+        label,
+        reason: destructive
+          ? 'destructive long-running action skipped'
+          : `long-running tool action skipped in ${mode} mode`,
+        stateId: state.id,
+        route: state.hashRoute
+      })
+      return undefined
+    }
   }
   const decision = classifyActionSafety(label, wantsTyping ? 'input' : role)
   if (!decision.safe && !wantsTyping) {

@@ -133,10 +133,30 @@ export interface SnifferReport {
   crawlGraph?: {
     startUrl: string
     finalUrl: string
+    crawlMode?: 'safe' | 'deep' | 'live'
     states?: CrawlState[]
     actions?: CrawlAction[]
     unvisitedSafeActions?: SkippedSafeAction[]
     coverage?: CrawlCoverage
+    runtimeGraph?: {
+      nodes: unknown[]
+      edges: unknown[]
+      observations: RuntimeObservation[]
+      unresolvedFrontier: unknown[]
+    }
+    runtimeObservations?: RuntimeObservation[]
+    runtimeGraphCoverage?: {
+      crawlMode: 'safe' | 'deep' | 'live'
+      statesDiscovered: number
+      edgesExplored: number
+      frontierExhausted: boolean
+      maxDepthReached: boolean
+      unvisitedSafeActions: number
+      longRunningActionsSkipped: number
+      longRunningActionsExecuted: number
+      dynamicObservationsCaptured: number
+      liveObservationWindows: number
+    }
     consoleErrors: unknown[]
     networkFailures: NetworkFailure[]
     screenshots: string[]
@@ -642,6 +662,11 @@ export interface AuditForm {
   discoveryMode: string
   scenario: string
   executeGeneratedScenarios: boolean
+  crawlMode: 'safe' | 'deep' | 'live'
+  allowLongRunningActions: boolean
+  liveObserveMs: number
+  livePollMs: number
+  maxDepth: number
   criticMode: string
   uxCritic: string
   intentMode: string
@@ -656,6 +681,18 @@ export interface RunEvent {
   phase: string
   message: string
   timestamp: string
+}
+
+export interface RuntimeObservation {
+  id: string
+  stateId: string
+  actionId?: string
+  kind: string
+  text: string
+  selector?: string
+  context?: string
+  timestamp: string
+  screenshotPath?: string
 }
 
 export interface RunRecord {

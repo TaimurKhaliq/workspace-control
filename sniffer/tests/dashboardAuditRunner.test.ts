@@ -13,6 +13,7 @@ describe('dashboard audit runner command builder', () => {
       '--project', 'sniffer',
       '--discovery-mode', 'hybrid',
       '--scenario', 'all',
+      '--crawl-mode', 'safe',
       '--execute-generated-scenarios',
       '--critic-mode', 'deterministic',
       '--ux-critic', 'deterministic',
@@ -32,6 +33,7 @@ describe('dashboard audit runner command builder', () => {
       '--project', 'sniffer',
       '--discovery-mode', 'hybrid',
       '--scenario', 'all',
+      '--crawl-mode', 'deep',
       '--execute-generated-scenarios',
       '--product-experience-critic', 'llm',
       '--provider', 'openai-compatible',
@@ -47,6 +49,27 @@ describe('dashboard audit runner command builder', () => {
     expect(built.auditDepth).toBe('deep')
     expect(built.provider).toBe('openai-compatible')
     expect(built.productExperienceCritic).toBe('llm')
+    expect(built.cliArgs).toEqual(expect.arrayContaining(['--crawl-mode', 'deep']))
+  })
+
+  it('passes live crawl options through when requested', () => {
+    const built = buildDashboardAuditCommand({
+      projectId: 'sniffer',
+      auditDepth: 'fast',
+      crawlMode: 'live',
+      allowLongRunningActions: true,
+      liveObserveMs: 15000,
+      livePollMs: 250,
+      maxDepth: 5
+    }, { providerConfigured: false })
+
+    expect(built.cliArgs).toEqual(expect.arrayContaining([
+      '--crawl-mode', 'live',
+      '--allow-long-running-actions',
+      '--live-observe-ms', '15000',
+      '--live-poll-ms', '250',
+      '--max-depth', '5'
+    ]))
   })
 
   it('does not require LLM configuration for fast audits', () => {
