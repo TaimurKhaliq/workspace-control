@@ -782,6 +782,7 @@ export interface RepairRunRecord {
 }
 
 export interface AgentRepairTrace {
+  graphEngine?: 'langgraph'
   agentRunId: string
   status: 'queued' | 'running' | 'awaiting_approval' | 'succeeded' | 'failed'
   finalDecision?: 'fixed' | 'retry' | 'human_review' | 'unsafe' | 'failed'

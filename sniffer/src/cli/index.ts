@@ -84,7 +84,7 @@ async function main(): Promise<void> {
       allowDestructive: boolArg(args, 'allow-destructive'),
       appUrl: typeof args.url === 'string' ? args.url : undefined
     })
-    console.log(`Sniffer repair agent ${result.finalDecision ?? 'unknown'}`)
+    console.log(`Sniffer LangGraph repair agent ${result.finalDecision ?? 'unknown'}`)
     console.log(`- Status: ${result.state.status}`)
     console.log(`- Issue: ${result.state.issueId ?? 'none'}`)
     console.log(`- Approval: ${result.state.approval.status}`)

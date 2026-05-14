@@ -381,6 +381,7 @@ async function startAgentRepair(req: IncomingMessage, res: ServerResponse): Prom
     dryRun: Boolean(body.dryRun)
   })
   return json(res, 200, {
+    graphEngine: 'langgraph',
     agentRunId: result.state.agentRunId,
     status: result.state.status,
     finalDecision: result.finalDecision,

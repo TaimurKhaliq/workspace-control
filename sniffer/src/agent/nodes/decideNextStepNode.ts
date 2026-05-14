@@ -13,6 +13,9 @@ export async function decideNextStepNode(state: SnifferAgentState): Promise<Agen
   else decision = state.repairAttempt ? 'failed' : 'human_review'
 
   state.finalDecision = decision
+  state.finalStatus = decision
+  if (decision === 'retry') state.retryCount += 1
+  if (decision === 'human_review') state.humanReviewReason = state.approval.reason ?? 'Human review is required before the agent can continue.'
   state.status = decision === 'fixed' ? 'succeeded' : decision === 'failed' || decision === 'unsafe' ? 'failed' : 'awaiting_approval'
   state.completedAt = new Date().toISOString()
   pushTrace(state, node, 'completed', `Decision: ${decision}`, { decision })

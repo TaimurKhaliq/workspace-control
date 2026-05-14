@@ -324,7 +324,7 @@ export function RepairWorkbench({
               Run {mode === 'repair-proof' ? 'repair proof' : agent === 'codex' ? 'Codex repair' : 'manual apply-fix'}
             </button>
             <button type="button" className="secondary-button" disabled={!selectedIssueId || Boolean(loading)} onClick={() => void runAgentRepair()}>
-              Run Agent Repair
+              Run LangGraph Agent Repair
             </button>
             <button type="button" className="secondary-button" disabled={!repairRun || repairRun.verification.status === 'running'} onClick={() => void runVerification()}>Run verification</button>
             <button type="button" className="secondary-button" disabled={!repairRun} onClick={() => void rerunAudit()}>Rerun audit</button>
@@ -434,7 +434,7 @@ function RepairRunPanel({ run }: { run: RepairRunRecord }) {
 function AgentTracePanel({ trace }: { trace: AgentRepairTrace }) {
   return (
     <details className="packet-section-card" open>
-      <summary>Agent trace · {trace.finalDecision ?? trace.status}</summary>
+      <summary>{trace.graphEngine === 'langgraph' ? 'LangGraph agent trace' : 'Agent trace'} · {trace.finalDecision ?? trace.status}</summary>
       <div className="repair-status-timeline">
         <span className={`status-chip ${trace.status === 'succeeded' ? 'good' : trace.status === 'failed' ? 'danger' : 'warn'}`}>{trace.status}</span>
         <span className="status-chip muted">{trace.currentNode ?? 'agent graph'}</span>

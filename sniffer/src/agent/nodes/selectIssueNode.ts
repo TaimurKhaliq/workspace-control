@@ -11,7 +11,15 @@ export async function selectIssueNode(state: SnifferAgentState): Promise<AgentNo
   const issue = state.issueId
     ? state.report.issues.find((item) => item.issue_id === state.issueId)
     : selectHighestSeverityIssue(state.report.issues)
-  if (!issue) throw new Error(state.issueId ? `Issue not found: ${state.issueId}` : 'No open issue found in report.')
+  if (!issue && !state.issueId) {
+    state.finalDecision = 'fixed'
+    state.finalStatus = 'fixed'
+    state.status = 'succeeded'
+    state.completedAt = new Date().toISOString()
+    pushTrace(state, node, 'completed', 'No open issue found; no repair needed.', { decision: 'fixed' })
+    return { node, status: 'completed', message: 'No repair needed', decision: 'fixed' }
+  }
+  if (!issue) throw new Error(`Issue not found: ${state.issueId}`)
   if (!issue.issue_id) throw new Error(`Selected issue is missing issue_id: ${issue.title}`)
   state.selectedIssue = issue
   state.issueId = issue.issue_id

@@ -8,9 +8,16 @@ import { runRepairAgent } from '../src/agent/runRepairAgent.js'
 import { createInitialAgentState } from '../src/agent/snifferAgentState.js'
 import { decideNextStepNode } from '../src/agent/nodes/decideNextStepNode.js'
 import { verifyIssueNode } from '../src/agent/nodes/verifyIssueNode.js'
+import { createSnifferRepairGraph } from '../src/agent/langgraph/snifferRepairGraph.js'
 import type { RepairAttempt, SnifferReport } from '../src/types.js'
 
 describe('repair agent graph', () => {
+  it('compiles a real LangGraph repair graph', () => {
+    const graph = createSnifferRepairGraph()
+
+    expect(typeof graph.invoke).toBe('function')
+  })
+
   it('loads report, selects requested issue, retrieves evidence, creates fix packet, and waits for approval', async () => {
     const { reportPath } = await writeReportFixture()
 
@@ -28,7 +35,21 @@ describe('repair agent graph', () => {
     expect(result.state.approval.status).toBe('required')
     expect(result.finalDecision).toBe('human_review')
     await expect(readFile(result.traceJsonPath, 'utf8')).resolves.toContain('AuditReportLoaded')
+    await expect(readFile(result.traceMarkdownPath, 'utf8')).resolves.toContain('LangGraph JS')
     await expect(readFile(result.traceMarkdownPath, 'utf8')).resolves.toContain('Human approval')
+  })
+
+  it('returns fixed/noop when no issue needs repair', async () => {
+    const { reportPath } = await writeReportFixture([])
+
+    const result = await runRepairAgent({
+      reportPath,
+      agent: 'manual'
+    })
+
+    expect(result.finalDecision).toBe('fixed')
+    expect(result.state.status).toBe('succeeded')
+    expect(result.state.evidencePacket).toBeUndefined()
   })
 
   it('manual dry-run records a repair attempt without editing files', async () => {
@@ -152,7 +173,7 @@ function repairAttempt(): RepairAttempt {
   }
 }
 
-async function writeReportFixture(): Promise<{ root: string; reportPath: string }> {
+async function writeReportFixture(issues?: SnifferReport['issues']): Promise<{ root: string; reportPath: string }> {
   const root = path.join(os.tmpdir(), `sniffer-agent-${randomUUID()}`)
   await mkdir(path.join(root, 'src'), { recursive: true })
   await writeFile(path.join(root, 'src', 'api.ts'), 'export function load() { return fetch("/api/status") }\n')
@@ -162,11 +183,21 @@ async function writeReportFixture(): Promise<{ root: string; reportPath: string 
   const reportDir = path.join(root, 'reports', 'sniffer', 'latest')
   await mkdir(reportDir, { recursive: true })
   const reportPath = path.join(reportDir, 'latest_report.json')
-  await writeFile(reportPath, JSON.stringify(report(root), null, 2))
+  await writeFile(reportPath, JSON.stringify(report(root, issues), null, 2))
   return { root, reportPath }
 }
 
-function report(root: string): SnifferReport {
+function report(root: string, issues: SnifferReport['issues'] = [{
+  issue_id: 'issue-1',
+  severity: 'high',
+  type: 'api_error',
+  title: 'Status API returns 500',
+  description: 'The status endpoint fails during the runtime flow.',
+  evidence: ['GET /api/status 500'],
+  suspected_files: ['src/api.ts'],
+  suggestedFixPrompt: 'Handle status API errors with a controlled error state.',
+  status: 'open'
+}]): SnifferReport {
   return {
     sourceGraph: {
       repoPath: root,
@@ -201,17 +232,7 @@ function report(root: string): SnifferReport {
     deferredFindings: [],
     blockedChecks: [],
     needsMoreCrawling: [],
-    issues: [{
-      issue_id: 'issue-1',
-      severity: 'high',
-      type: 'api_error',
-      title: 'Status API returns 500',
-      description: 'The status endpoint fails during the runtime flow.',
-      evidence: ['GET /api/status 500'],
-      suspected_files: ['src/api.ts'],
-      suggestedFixPrompt: 'Handle status API errors with a controlled error state.',
-      status: 'open'
-    }],
+    issues,
     generatedAt: ''
   }
 }

@@ -21,7 +21,10 @@ export async function humanApprovalNode(state: SnifferAgentState): Promise<Agent
     reason: 'Human approval is required before applying repair.'
   }
   state.status = 'awaiting_approval'
+  state.humanReviewReason = state.approval.reason
   const decision: AgentDecision = 'human_review'
+  state.finalDecision = decision
+  state.finalStatus = decision
   pushTrace(state, node, 'completed', state.approval.reason ?? 'Human approval required', { decision })
   return { node, status: 'completed', message: 'Human approval required', decision }
 }

@@ -5,14 +5,7 @@ import { writeJson } from '../reporting/json.js'
 import { getProject } from '../projects/registry.js'
 import type { AgentDecision, RepairAgentName, SnifferAgentState } from './snifferAgentState.js'
 import { createInitialAgentState, pushTrace } from './snifferAgentState.js'
-import { applyRepairNode } from './nodes/applyRepairNode.js'
-import { decideNextStepNode } from './nodes/decideNextStepNode.js'
-import { generateFixPacketNode } from './nodes/generateFixPacketNode.js'
-import { humanApprovalNode } from './nodes/humanApprovalNode.js'
-import { loadReportNode } from './nodes/loadReportNode.js'
-import { retrieveEvidenceNode } from './nodes/retrieveEvidenceNode.js'
-import { selectIssueNode } from './nodes/selectIssueNode.js'
-import { verifyIssueNode } from './nodes/verifyIssueNode.js'
+import { snifferRepairGraph } from './langgraph/snifferRepairGraph.js'
 
 export interface RunRepairAgentOptions {
   snifferRoot?: string
@@ -55,36 +48,34 @@ export async function runRepairAgent(options: RunRepairAgentOptions): Promise<Ru
   state.agentRunDir = path.join(state.reportDir, 'agent_runs', state.agentRunId)
   await mkdir(state.agentRunDir, { recursive: true })
 
+  let finalState = state
   try {
-    await loadReportNode(state)
-    await selectIssueNode(state)
-    await retrieveEvidenceNode(state)
-    await generateFixPacketNode(state)
-    const approval = await humanApprovalNode(state)
-    if (approval.decision !== 'human_review') {
-      await applyRepairNode(state)
-      await verifyIssueNode(state)
-    }
-    await decideNextStepNode(state)
+    finalState = await snifferRepairGraph.invoke(state) as SnifferAgentState
   } catch (error) {
-    state.status = 'failed'
-    state.finalDecision = 'failed'
-    state.completedAt = new Date().toISOString()
-    pushTrace(state, 'AgentError', 'failed', error instanceof Error ? error.message : String(error), { decision: 'failed' })
+    finalState = state
+    const message = error instanceof Error ? error.message : String(error)
+    finalState.errors = [...finalState.errors, message]
+    finalState.status = 'failed'
+    finalState.finalDecision = 'failed'
+    finalState.finalStatus = 'failed'
+    finalState.completedAt = new Date().toISOString()
+    pushTrace(finalState, 'AgentError', 'failed', message, { decision: 'failed' })
   }
 
-  const traceJsonPath = path.join(state.agentRunDir, 'agent_trace.json')
-  const traceMarkdownPath = path.join(state.agentRunDir, 'agent_trace.md')
-  await writeJson(traceJsonPath, publicAgentState(state))
-  await writeFile(traceMarkdownPath, renderAgentTraceMarkdown(state), 'utf8')
-  return { state, finalDecision: state.finalDecision, traceJsonPath, traceMarkdownPath }
+  const traceJsonPath = path.join(finalState.agentRunDir ?? state.agentRunDir ?? state.reportDir, 'agent_trace.json')
+  const traceMarkdownPath = path.join(finalState.agentRunDir ?? state.agentRunDir ?? state.reportDir, 'agent_trace.md')
+  await writeJson(traceJsonPath, publicAgentState(finalState))
+  await writeFile(traceMarkdownPath, renderAgentTraceMarkdown(finalState), 'utf8')
+  return { state: finalState, finalDecision: finalState.finalDecision, traceJsonPath, traceMarkdownPath }
 }
 
 function publicAgentState(state: SnifferAgentState): Record<string, unknown> {
   return {
+    graphEngine: 'langgraph',
     agentRunId: state.agentRunId,
     status: state.status,
     finalDecision: state.finalDecision,
+    finalStatus: state.finalStatus,
     reportPath: state.reportPath,
     projectId: state.projectId,
     issueId: state.issueId,
@@ -104,6 +95,8 @@ function publicAgentState(state: SnifferAgentState): Record<string, unknown> {
     agent: state.agent,
     autoApprove: state.autoApprove,
     dryRun: state.dryRun,
+    errors: state.errors,
+    humanReviewReason: state.humanReviewReason,
     startedAt: state.startedAt,
     completedAt: state.completedAt,
     traceEvents: state.traceEvents
@@ -114,6 +107,7 @@ function renderAgentTraceMarkdown(state: SnifferAgentState): string {
   return [
     `# Sniffer Repair Agent Trace`,
     '',
+    `- Graph engine: LangGraph JS (@langchain/langgraph)`,
     `- Agent run: ${state.agentRunId}`,
     `- Status: ${state.status}`,
     `- Final decision: ${state.finalDecision ?? 'pending'}`,

@@ -69,6 +69,7 @@ export interface AgentNodeResult {
 export interface SnifferAgentState {
   agentRunId: string
   status: AgentRunStatus
+  finalStatus?: AgentDecision
   reportPath: string
   reportDir: string
   projectId?: string
@@ -92,6 +93,8 @@ export interface SnifferAgentState {
   autoApprove: boolean
   dryRun: boolean
   allowDestructive: boolean
+  errors: string[]
+  humanReviewReason?: string
   traceEvents: AgentTraceEvent[]
   startedAt: string
   completedAt?: string
@@ -126,6 +129,7 @@ export function createInitialAgentState(input: {
     autoApprove: Boolean(input.autoApprove),
     dryRun: Boolean(input.dryRun),
     allowDestructive: Boolean(input.allowDestructive),
+    errors: [],
     traceEvents: [],
     startedAt: new Date().toISOString()
   }
