@@ -9,6 +9,7 @@ import { snifferRepairGraph } from './langgraph/snifferRepairGraph.js'
 
 export interface RunRepairAgentOptions {
   snifferRoot?: string
+  agentRunId?: string
   projectId?: string
   reportPath?: string
   issueId?: string
@@ -33,7 +34,7 @@ export async function runRepairAgent(options: RunRepairAgentOptions): Promise<Ru
   const reportPath = path.resolve(options.reportPath ?? path.join(reportDir, 'latest_report.json'))
   const project = options.projectId ? await getProject(options.projectId, snifferRoot).catch(() => undefined) : undefined
   const state = createInitialAgentState({
-    agentRunId: `agent-${new Date().toISOString().replace(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 8)}`,
+    agentRunId: options.agentRunId ?? `agent-${new Date().toISOString().replace(/[:.]/g, '-')}-${Math.random().toString(36).slice(2, 8)}`,
     reportPath,
     projectId: options.projectId,
     issueId: options.issueId,

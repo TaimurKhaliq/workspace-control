@@ -784,17 +784,63 @@ export interface RepairRunRecord {
 export interface AgentRepairTrace {
   graphEngine?: 'langgraph'
   agentRunId: string
-  status: 'queued' | 'running' | 'awaiting_approval' | 'succeeded' | 'failed'
+  runId?: string
+  status: 'queued' | 'running' | 'waiting_for_human' | 'awaiting_approval' | 'succeeded' | 'failed'
   finalDecision?: 'fixed' | 'retry' | 'human_review' | 'unsafe' | 'failed'
+  finalStatus?: 'fixed' | 'retry' | 'human_review' | 'unsafe' | 'failed'
   currentNode?: string
+  issueId?: string
+  selectedIssue?: {
+    issue_id: string
+    title: string
+    severity: string
+    type: string
+  }
   traceEvents: Array<{
     id: string
     timestamp: string
     node: string
+    type?: string
     status: string
+    title?: string
+    summary?: string
     message: string
+    toolCall?: {
+      id: string
+      toolName: string
+      inputSummary: string
+      outputSummary?: string
+      status: string
+      startedAt: string
+      completedAt?: string
+    }
     decision?: string
+    evidence?: AgentRepairTrace['evidencePacketSummary']
   }>
+  nodeStatuses?: Array<{
+    id: string
+    label: string
+    status: 'pending' | 'running' | 'succeeded' | 'failed' | 'blocked' | 'waiting_for_human' | 'skipped'
+    summary?: string
+    durationMs?: number
+    badges: {
+      evidence?: number
+      filesChanged?: number
+      logs?: number
+      errors?: number
+      retries?: number
+    }
+  }>
+  evidencePacketSummary?: {
+    query: string
+    retrievedDocumentCount: number
+    sourceFactCount: number
+    runtimeFactCount: number
+    screenshotCount: number
+    contradictionCount: number
+  }
+  fixPacketSummary?: { path?: string; ready: boolean }
+  fixPacketPath?: string
   traceJsonPath: string
   traceMarkdownPath: string
   approval: {
@@ -803,6 +849,27 @@ export interface AgentRepairTrace {
     status: string
     reason?: string
   }
+  repairAttempt?: {
+    issueId: string
+    attemptDir?: string
+    agent: string
+    status: string
+    changedFiles: string[]
+    diffSummary?: string
+  }
+  verification?: {
+    issueId: string
+    status: string
+    reportPath?: string
+    command?: string
+  }
+  changedFiles?: string[]
+  diffSummary?: string
+  startedAt?: string
+  completedAt?: string
+  durationMs?: number
+  errors?: string[]
+  humanReviewReason?: string
 }
 
 export async function getStatus(): Promise<ServerStatus> {
@@ -931,13 +998,34 @@ export async function startRepair(input: {
 
 export async function startAgentRepair(input: {
   project?: string
+  reportPath?: string
   issueId: string
   agent: 'manual' | 'codex'
   maxRetries?: number
   autoApprove?: boolean
   dryRun?: boolean
 }): Promise<AgentRepairTrace> {
-  return request('/api/agents/repair', { method: 'POST', body: JSON.stringify(input) })
+  return request('/api/agent/repair/start', { method: 'POST', body: JSON.stringify(input) })
+}
+
+export async function getAgentRuns(projectId?: string): Promise<AgentRepairTrace[]> {
+  return request(projectPath('/api/agent/runs', projectId))
+}
+
+export async function getAgentRun(runId: string, projectId?: string): Promise<AgentRepairTrace> {
+  return request(projectPath(`/api/agent/runs/${encodeURIComponent(runId)}`, projectId))
+}
+
+export async function approveAgentRun(runId: string, input?: { project?: string; appUrl?: string; allowDestructiveConfirmed?: boolean }): Promise<AgentRepairTrace> {
+  return request(`/api/agent/runs/${encodeURIComponent(runId)}/approve`, { method: 'POST', body: JSON.stringify(input ?? {}) })
+}
+
+export async function rejectAgentRun(runId: string, input?: { project?: string; reason?: string }): Promise<AgentRepairTrace> {
+  return request(`/api/agent/runs/${encodeURIComponent(runId)}/reject`, { method: 'POST', body: JSON.stringify(input ?? {}) })
+}
+
+export async function verifyAgentRun(runId: string, input?: { project?: string; url?: string }): Promise<AgentRepairTrace> {
+  return request(`/api/agent/runs/${encodeURIComponent(runId)}/verify`, { method: 'POST', body: JSON.stringify(input ?? {}) })
 }
 
 export async function getRepairRun(repairRunId: string): Promise<RepairRunRecord> {

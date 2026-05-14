@@ -52,11 +52,16 @@ export interface AgentTraceEvent {
   id: string
   timestamp: string
   node: string
+  type?: 'node_started' | 'node_completed' | 'tool_call' | 'tool_result' | 'evidence_retrieved' | 'fix_packet_generated' | 'approval_required' | 'approval_granted' | 'approval_rejected' | 'repair_started' | 'repair_completed' | 'verification_started' | 'verification_completed' | 'decision_routed' | 'run_completed' | 'run_failed' | 'error'
   status: AgentNodeStatus
+  title?: string
+  summary?: string
   message: string
   toolCall?: AgentToolCall
   decision?: AgentDecision
   evidence?: AgentEvidencePacketRef
+  relatedFiles?: string[]
+  durationMs?: number
 }
 
 export interface AgentNodeResult {
@@ -142,11 +147,15 @@ export function pushTrace(
   message: string,
   extra: Partial<Omit<AgentTraceEvent, 'id' | 'timestamp' | 'node' | 'status' | 'message'>> = {}
 ): void {
+  const type = extra.type ?? traceType(node, status, extra)
   state.traceEvents.push({
     id: `${state.traceEvents.length + 1}-${node}-${status}`,
     timestamp: new Date().toISOString(),
     node,
+    type,
     status,
+    title: extra.title ?? node,
+    summary: extra.summary ?? message,
     message,
     ...extra
   })
@@ -161,4 +170,19 @@ export function evidenceRef(packet: EvidencePacket): AgentEvidencePacketRef {
     screenshotCount: packet.screenshots.length,
     contradictionCount: packet.contradictions.length
   }
+}
+
+function traceType(
+  node: string,
+  status: AgentNodeStatus,
+  extra: Partial<Omit<AgentTraceEvent, 'id' | 'timestamp' | 'node' | 'status' | 'message'>>
+): NonNullable<AgentTraceEvent['type']> {
+  if (extra.toolCall) return status === 'started' ? 'tool_call' : 'tool_result'
+  if (extra.evidence) return 'evidence_retrieved'
+  if (extra.decision) return 'decision_routed'
+  if (status === 'failed') return 'run_failed'
+  if (node === 'HumanApproval' && status === 'completed') return extra.decision === 'human_review' ? 'approval_required' : 'approval_granted'
+  if (node === 'ApplyRepair') return status === 'started' ? 'repair_started' : 'repair_completed'
+  if (node === 'VerifyIssue') return status === 'started' ? 'verification_started' : 'verification_completed'
+  return status === 'started' ? 'node_started' : 'node_completed'
 }

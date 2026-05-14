@@ -12,6 +12,7 @@ import type { FixPacket, SnifferReport } from '../src/types.js'
 import { retrieveEvidenceFromReport } from '../src/evidence/retrieval.js'
 import { runRepairAgent } from '../src/agent/runRepairAgent.js'
 import { resolveReportArtifact } from './artifacts.js'
+import { listAgentRuns, readAgentRun, writeRejectedAgentRun, type AgentRunRecord } from './agentRuns.js'
 import {
   buildDashboardAuditCommand,
   isOpenAICompatibleProviderConfigured,
@@ -102,6 +103,7 @@ const latestReportPath = path.join(latestDir, 'latest_report.json')
 const latestMarkdownPath = path.join(latestDir, 'latest_report.md')
 const runs = new Map<string, RunRecord>()
 const repairRuns = new Map<string, RepairRunRecord>()
+const activeAgentRuns = new Set<string>()
 
 const port = Number(process.env.SNIFFER_UI_PORT ?? 4877)
 const host = process.env.SNIFFER_UI_HOST ?? '127.0.0.1'
@@ -235,6 +237,29 @@ async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
   if (req.method === 'POST' && parsed.pathname === '/api/agents/repair') {
     return startAgentRepair(req, res)
   }
+  if (req.method === 'GET' && parsed.pathname === '/api/agent/runs') {
+    return json(res, 200, await listAgentRuns(latestDirForProject(projectQuery(parsed)), projectQuery(parsed)))
+  }
+  const agentRunMatch = parsed.pathname.match(/^\/api\/agent\/runs\/([^/]+)$/)
+  if (req.method === 'GET' && agentRunMatch) {
+    const run = await readAgentRunFromRequest(parsed, decodeURIComponent(agentRunMatch[1]))
+    return run ? json(res, 200, run) : json(res, 404, { error: 'Agent run not found' })
+  }
+  if (req.method === 'POST' && parsed.pathname === '/api/agent/repair/start') {
+    return startAgentRepair(req, res)
+  }
+  const agentApproveMatch = parsed.pathname.match(/^\/api\/agent\/runs\/([^/]+)\/approve$/)
+  if (req.method === 'POST' && agentApproveMatch) {
+    return approveAgentRun(req, res, decodeURIComponent(agentApproveMatch[1]))
+  }
+  const agentRejectMatch = parsed.pathname.match(/^\/api\/agent\/runs\/([^/]+)\/reject$/)
+  if (req.method === 'POST' && agentRejectMatch) {
+    return rejectAgentRun(req, res, decodeURIComponent(agentRejectMatch[1]))
+  }
+  const agentVerifyMatch = parsed.pathname.match(/^\/api\/agent\/runs\/([^/]+)\/verify$/)
+  if (req.method === 'POST' && agentVerifyMatch) {
+    return verifyAgentRun(req, res, decodeURIComponent(agentVerifyMatch[1]))
+  }
   if (req.method === 'GET' && parsed.pathname === '/api/repairs/history') {
     const projectId = projectQuery(parsed)
     const issueId = parsed.searchParams.get('issueId')?.trim() || undefined
@@ -362,6 +387,7 @@ async function startRepair(req: IncomingMessage, res: ServerResponse): Promise<v
 async function startAgentRepair(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const body = await readJsonBody<{
     project?: string
+    reportPath?: string
     issueId?: string
     agent?: RepairAgent
     maxRetries?: number
@@ -369,7 +395,13 @@ async function startAgentRepair(req: IncomingMessage, res: ServerResponse): Prom
     dryRun?: boolean
   }>(req)
   const projectId = body.project?.trim() || undefined
-  const reportPath = reportPathForProject(projectId)
+  const reportPath = body.reportPath?.trim() || reportPathForProject(projectId)
+  const activeKey = `${projectId ?? 'ad_hoc'}:${body.issueId ?? 'auto'}`
+  if (activeAgentRuns.has(activeKey)) return json(res, 409, { error: 'A LangGraph repair agent run is already active for this project/issue.' })
+  if (body.agent === 'codex' && body.autoApprove && !process.env.SNIFFER_CODEX_COMMAND) {
+    return json(res, 400, { error: 'Codex is not configured. Set SNIFFER_CODEX_COMMAND before approving codex repairs.' })
+  }
+  activeAgentRuns.add(activeKey)
   const result = await runRepairAgent({
     snifferRoot,
     projectId,
@@ -379,18 +411,62 @@ async function startAgentRepair(req: IncomingMessage, res: ServerResponse): Prom
     maxRetries: body.maxRetries ?? 1,
     autoApprove: Boolean(body.autoApprove),
     dryRun: Boolean(body.dryRun)
+  }).finally(() => activeAgentRuns.delete(activeKey))
+  return json(res, 200, await agentRunFromResult(result.traceJsonPath))
+}
+
+async function approveAgentRun(req: IncomingMessage, res: ServerResponse, runId: string): Promise<void> {
+  const body = await readJsonBody<{ project?: string; appUrl?: string; allowDestructiveConfirmed?: boolean }>(req)
+  const run = await readAgentRun(latestDirForProject(body.project?.trim() || undefined), runId)
+    ?? await readAgentRunFromAnyProject(runId)
+  if (!run) return json(res, 404, { error: 'Agent run not found' })
+  if (!run.approval.required) return json(res, 409, { error: 'This agent run is not waiting for approval.' })
+  if (run.repairAttempt && run.repairAttempt.status !== 'not_run') return json(res, 409, { error: 'Repair has already been attempted for this run.' })
+  if (run.reportPath && run.issueId) {
+    const result = await runRepairAgent({
+      snifferRoot,
+      agentRunId: run.runId,
+      projectId: run.projectId,
+      reportPath: run.reportPath,
+      issueId: run.issueId,
+      agent: run.agent === 'codex' ? 'codex' : 'manual',
+      maxRetries: 1,
+      autoApprove: true,
+      allowDestructive: Boolean(body.allowDestructiveConfirmed),
+      appUrl: body.appUrl
+    })
+    return json(res, 200, await agentRunFromResult(result.traceJsonPath))
+  }
+  return json(res, 400, { error: 'Agent run is missing report path or issue id.' })
+}
+
+async function rejectAgentRun(req: IncomingMessage, res: ServerResponse, runId: string): Promise<void> {
+  const body = await readJsonBody<{ project?: string; reason?: string }>(req)
+  const run = await readAgentRun(latestDirForProject(body.project?.trim() || undefined), runId)
+    ?? await readAgentRunFromAnyProject(runId)
+  if (!run) return json(res, 404, { error: 'Agent run not found' })
+  return json(res, 200, await writeRejectedAgentRun(run, body.reason?.trim() || 'Human rejected repair approval.'))
+}
+
+async function verifyAgentRun(req: IncomingMessage, res: ServerResponse, runId: string): Promise<void> {
+  const body = await readJsonBody<{ project?: string; url?: string }>(req)
+  const run = await readAgentRun(latestDirForProject(body.project?.trim() || undefined), runId)
+    ?? await readAgentRunFromAnyProject(runId)
+  if (!run) return json(res, 404, { error: 'Agent run not found' })
+  if (!run.repairAttempt) return json(res, 409, { error: 'No repair attempt is available to verify.' })
+  if (!run.reportPath || !run.issueId) return json(res, 400, { error: 'Agent run is missing report path or issue id.' })
+  const result = await runRepairAgent({
+    snifferRoot,
+    agentRunId: run.runId,
+    projectId: run.projectId,
+    reportPath: run.reportPath,
+    issueId: run.issueId,
+      agent: run.agent === 'codex' ? 'codex' : 'manual',
+    maxRetries: 1,
+    autoApprove: true,
+    appUrl: body.url
   })
-  return json(res, 200, {
-    graphEngine: 'langgraph',
-    agentRunId: result.state.agentRunId,
-    status: result.state.status,
-    finalDecision: result.finalDecision,
-    currentNode: result.state.traceEvents.at(-1)?.node,
-    traceEvents: result.state.traceEvents,
-    traceJsonPath: result.traceJsonPath,
-    traceMarkdownPath: result.traceMarkdownPath,
-    approval: result.state.approval
-  })
+  return json(res, 200, await agentRunFromResult(result.traceJsonPath))
 }
 
 async function startRepairVerification(req: IncomingMessage, res: ServerResponse, repairRunId: string): Promise<void> {
@@ -705,6 +781,32 @@ function latestDirForProject(project?: string): string {
 
 function reportPathForProject(project?: string): string {
   return path.join(latestDirForProject(project), 'latest_report.json')
+}
+
+async function readAgentRunFromRequest(parsed: URL, runId: string): Promise<AgentRunRecord | undefined> {
+  return await readAgentRun(latestDirForProject(projectQuery(parsed)), runId) ?? await readAgentRunFromAnyProject(runId)
+}
+
+async function readAgentRunFromAnyProject(runId: string): Promise<AgentRunRecord | undefined> {
+  const candidates = [latestDir, ...await projectReportDirs()]
+  for (const dir of candidates) {
+    const run = await readAgentRun(dir, runId)
+    if (run) return run
+  }
+  return undefined
+}
+
+async function projectReportDirs(): Promise<string[]> {
+  const projects = await listProjects(snifferRoot).catch(() => [])
+  return projects.map((project) => projectLatestReportDir(project.id, snifferRoot))
+}
+
+async function agentRunFromResult(traceJsonPath: string): Promise<AgentRunRecord> {
+  const reportDir = path.dirname(path.dirname(traceJsonPath))
+  const runId = path.basename(path.dirname(traceJsonPath))
+  const run = await readAgentRun(reportDir, runId)
+  if (!run) throw new Error('Agent trace was not written.')
+  return run
 }
 
 async function screenshotList(baseDir = latestDir, projectId?: string): Promise<Array<Record<string, string>>> {

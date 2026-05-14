@@ -259,6 +259,7 @@ beforeEach(() => {
       }
     })
     if (url.startsWith('/api/repairs/history')) return response([])
+    if (url.startsWith('/api/agent/runs')) return response([])
     if (url === '/api/audits' && init?.method === 'POST') return response({ runId: 'run-1', command: ['tsx', 'src/cli/index.ts', 'audit', '--execute-generated-scenarios'] }, 202)
     if (url === '/api/calibrations/runtime' && init?.method === 'POST') return response({ runId: 'runtime-calibration-1', command: ['tsx', 'src/cli/index.ts', 'audit-runtime-calibration'] }, 202)
     if (url === '/api/audits/run-1') return response({
@@ -311,6 +312,7 @@ describe('Sniffer UI dashboard', () => {
       if (url.startsWith('/api/reports/latest/issues')) return response([])
       if (url.startsWith('/api/reports/latest/fix-packets')) return response([])
       if (url.startsWith('/api/repairs/history')) return response([])
+      if (url.startsWith('/api/agent/runs')) return response([])
       return response({})
     })
     render(<App />)
@@ -368,6 +370,7 @@ describe('Sniffer UI dashboard', () => {
       if (url === '/api/projects') return response([])
       if (url.startsWith('/api/reports/latest')) return response(url.includes('screenshots') || url.includes('fix-packets') || url.includes('issues') ? [] : { ...report, issues: [] })
       if (url.startsWith('/api/repairs/history')) return response([])
+      if (url.startsWith('/api/agent/runs')) return response([])
       if (url === '/api/audits' && init?.method === 'POST') return response({ error: 'LLM provider is not configured. Run provider check or use fast deterministic audit.' }, 400)
       return response({})
     })
@@ -530,6 +533,10 @@ describe('issue and fix packet components', () => {
       })
       if (url.startsWith('/api/repairs/history')) return response([])
       if (url === '/api/repairs/start' && init?.method === 'POST') return response({ repairRunId: 'repair-1', status: 'running' }, 202)
+      if (url === '/api/agent/repair/start' && init?.method === 'POST') return response(agentTraceFixture())
+      if (url === '/api/agent/runs/agent-1/approve' && init?.method === 'POST') return response({ ...agentTraceFixture(), approval: { required: true, approved: true, status: 'approved' }, status: 'succeeded', finalDecision: 'fixed' })
+      if (url === '/api/agent/runs/agent-1/reject' && init?.method === 'POST') return response({ ...agentTraceFixture(), approval: { required: true, approved: false, status: 'rejected' }, status: 'waiting_for_human', finalDecision: 'human_review' })
+      if (url.startsWith('/api/agent/runs')) return response([])
       if (url === '/api/repairs/repair-1') return response({
         repairRunId: 'repair-1',
         status: 'succeeded',
@@ -555,6 +562,14 @@ describe('issue and fix packet components', () => {
     expect((await screen.findAllByText('Plan output review is hard to scan')).length).toBeGreaterThan(0)
     fireEvent.click(screen.getByRole('button', { name: /Run repair proof/i }))
     expect(await screen.findByText(/No files changed/)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Run LangGraph Repair Agent/i }))
+    expect(await screen.findByTestId('agent-node-graph')).toBeInTheDocument()
+    expect(screen.getAllByText('Load Report').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('human-approval-gate')).toBeInTheDocument()
+    expect(screen.getByTestId('evidence-packet-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('raw-trace-drawer')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Approve repair/i }))
+    await waitFor(() => expect(screen.getAllByText(/fixed/i).length).toBeGreaterThan(0))
   })
 })
 
@@ -665,6 +680,42 @@ function response(body: unknown, status = 200): Response {
     status,
     headers: { 'Content-Type': 'application/json' }
   })
+}
+
+function agentTraceFixture() {
+  return {
+    graphEngine: 'langgraph',
+    agentRunId: 'agent-1',
+    runId: 'agent-1',
+    status: 'waiting_for_human',
+    finalDecision: 'human_review',
+    issueId: 'issue-1',
+    selectedIssue: { issue_id: 'issue-1', title: 'Plan output review is hard to scan', severity: 'high', type: 'usability_issue' },
+    traceEvents: [
+      { id: '1-AuditReportLoaded-started', timestamp: '2026-04-28T12:00:00.000Z', node: 'AuditReportLoaded', type: 'node_started', status: 'started', title: 'Load Report', summary: 'Loading report', message: 'Loading report' },
+      { id: '2-AuditReportLoaded-completed', timestamp: '2026-04-28T12:00:01.000Z', node: 'AuditReportLoaded', type: 'node_completed', status: 'completed', title: 'Load Report', summary: 'Loaded report', message: 'Loaded report' },
+      { id: '3-RetrieveEvidence-completed', timestamp: '2026-04-28T12:00:02.000Z', node: 'RetrieveEvidence', type: 'evidence_retrieved', status: 'completed', title: 'Retrieve Evidence', summary: 'Retrieved 8 evidence docs', message: 'Retrieved 8 evidence docs' },
+      { id: '4-HumanApproval-completed', timestamp: '2026-04-28T12:00:03.000Z', node: 'HumanApproval', type: 'approval_required', status: 'completed', title: 'Human Approval', summary: 'Approval required', message: 'Human approval is required before applying repair.', decision: 'human_review' }
+    ],
+    nodeStatuses: [
+      { id: 'AuditReportLoaded', label: 'Load Report', status: 'succeeded', summary: 'Loaded report', badges: { logs: 2 } },
+      { id: 'SelectIssue', label: 'Select Issue', status: 'succeeded', summary: 'Selected issue', badges: { logs: 1 } },
+      { id: 'RetrieveEvidence', label: 'Retrieve Evidence', status: 'succeeded', summary: 'Retrieved evidence', badges: { evidence: 8, logs: 1 } },
+      { id: 'GenerateFixPacket', label: 'Generate Fix Packet', status: 'succeeded', summary: 'Fix packet ready', badges: { logs: 1 } },
+      { id: 'HumanApproval', label: 'Human Approval', status: 'waiting_for_human', summary: 'Approval required', badges: { logs: 1 } },
+      { id: 'ApplyRepair', label: 'Apply Repair', status: 'pending', badges: {} },
+      { id: 'VerifyIssue', label: 'Verify Issue', status: 'pending', badges: {} },
+      { id: 'DecideNextStep', label: 'Decide Next Step', status: 'pending', badges: {} }
+    ],
+    evidencePacketSummary: { query: 'issue-1 evidence', retrievedDocumentCount: 8, sourceFactCount: 3, runtimeFactCount: 2, screenshotCount: 1, contradictionCount: 0 },
+    fixPacketSummary: { path: '/tmp/fix_packets/issue-1.md', ready: true },
+    fixPacketPath: '/tmp/fix_packets/issue-1.md',
+    approval: { required: true, approved: false, status: 'required', reason: 'Human approval is required before applying repair.' },
+    changedFiles: [],
+    traceJsonPath: '/tmp/agent_trace.json',
+    traceMarkdownPath: '/tmp/agent_trace.md',
+    startedAt: '2026-04-28T12:00:00.000Z'
+  }
 }
 
 function auditForm(): AuditForm {
